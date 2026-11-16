@@ -50,12 +50,15 @@ harness and in time-away catch-up.
   Shared strictness options live in `tsconfig.base.json`.
 - **TypeScript is pinned to 6.0.x.** `typescript-eslint` does not support TypeScript 7 yet;
   move up when it does.
-- **Tests** live in `test/`, mirroring `src/`, and run in Node. Component tests add a DOM
-  environment when the kit needs one.
+- **Tests** live in `test/`, mirroring `src/`, and run in Node. Component tests opt into a DOM
+  with a `// @vitest-environment jsdom` comment at the top of the file and use Testing Library
+  (`@testing-library/react`, `@testing-library/user-event`).
 - **Offline enforcement:** production builds get a `Content-Security-Policy` meta tag
   (`default-src 'self'`, set in `vite.config.ts`) so the browser or webview refuses any request
   to another origin. It is left off the dev server, whose hot reload needs inline scripts.
   Tauri's IPC will need its own `connect-src` entry when packaging is added (§8.4).
+- **Fonts** come from `@fontsource` npm packages, so Vite bundles the files. A build plugin
+  in `vite.config.ts` copies their OFL license texts to `dist/licenses/`.
 - **Commands:** `npm run dev`, `build`, `preview`, `typecheck`, `lint`, `test`, and `check`
   (type-check, lint and test in one go).
 
@@ -713,6 +716,12 @@ carry game-wide behavior:
   contributing modifiers in its tooltip.
 - **`Explain`:** wraps any mention of a content id and shows its Codex entry on hover.
 - **`NodeGraph`:** draws an upgrade tree as SVG from each node's `tier` and `column`.
+
+`Panel`, `Card`, `Button`, `Tabs`, `Tooltip` and `Bar` exist (ETH-011) and are exported from
+`ui/kit/index.ts`; the others arrive with the features that first need them. Kit stylesheets
+use tokens only, which `test/ui/tokens.test.ts` enforces. In dev mode, `?kit` on the dev server
+URL opens `ui/dev/KitGallery`, which shows every component and state; production builds drop
+it.
 
 ### 8.2 Map renderer (`ui/map/`)
 

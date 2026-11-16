@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
@@ -37,8 +39,35 @@ function offlineCsp(): Plugin {
   };
 }
 
+/** Bundled fonts and the license text that must travel with them (SIL OFL 1.1). */
+const FONT_LICENSES = [
+  { pkg: '@fontsource/inter', file: 'Inter-OFL.txt' },
+  { pkg: '@fontsource/jetbrains-mono', file: 'JetBrainsMono-OFL.txt' },
+];
+
+/**
+ * The OFL requires each font's license to ship with it, so the build copies both license texts
+ * from the npm packages into `dist/licenses/`.
+ */
+function fontLicenses(): Plugin {
+  const require = createRequire(import.meta.url);
+  return {
+    name: 'ethuathia:font-licenses',
+    apply: 'build',
+    generateBundle() {
+      for (const { pkg, file } of FONT_LICENSES) {
+        this.emitFile({
+          type: 'asset',
+          fileName: `licenses/${file}`,
+          source: readFileSync(require.resolve(`${pkg}/LICENSE`)),
+        });
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), offlineCsp()],
+  plugins: [react(), offlineCsp(), fontLicenses()],
   // The sim worker (src/ui/host/sim.worker.ts) is a module worker, bundled like the app.
   worker: { format: 'es' },
   test: {

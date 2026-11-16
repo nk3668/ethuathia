@@ -7,8 +7,9 @@ requirements) and the technical design is in [`ARCHITECTURE.md`](ARCHITECTURE.md
 dense, set in a sans-serif. Monospace is used only where alignment matters: the dungeon map
 and the log. Panels stay quiet so the colored map is the most vivid thing on screen.
 
-Hex values below are starting points. ETH-011 checks each text and background pair for at
-least 4.5:1 contrast and adjusts where needed.
+The hex values below are the ones in `src/ui/tokens.css`. `test/ui/tokens.test.ts` checks
+that the two agree and that every text color has at least 4.5:1 contrast on the surfaces it is
+used on (§2.6).
 
 ---
 
@@ -39,10 +40,10 @@ Defined once as CSS custom properties in `src/ui/tokens.css`. Components never u
 | `--bg-raised` | `#1c232c` | Cards, inputs, tree nodes |
 | `--bg-hover` | `#242d38` | Hover and pressed states |
 | `--border` | `#2a333f` | Panel and card borders |
-| `--border-strong` | `#3a4656` | Focus outlines, dividers that need weight |
+| `--border-strong` | `#3a4656` | Hover borders, tooltip borders, dividers that need weight |
 | `--text` | `#e3e8ee` | Primary text |
 | `--text-muted` | `#97a3b3` | Labels, secondary text |
-| `--text-faint` | `#64707f` | Disabled text, placeholders |
+| `--text-faint` | `#7e8a99` | Disabled text, placeholders |
 | `--accent` | `#e8a33d` | Selection, primary buttons, possession |
 | `--on-accent` | `#1a1204` | Text on accent fills |
 
@@ -50,44 +51,82 @@ Defined once as CSS custom properties in `src/ui/tokens.css`. Components never u
 
 | Token | Value | Use | Also shown as |
 |---|---|---|---|
-| `--hp` | `#d9534f` | Health | "HP" label, heart icon |
-| `--mp` | `#4f8fd9` | Mana | "MP" label, drop icon |
+| `--hp` | `#e0726f` | Health | "HP" label, heart icon |
+| `--mp` | `#5a96db` | Mana | "MP" label, drop icon |
 | `--xp` | `#6fbf73` | Experience | "XP" label |
 | `--renown` | `#e6c35c` | Renown | laurel icon |
 | `--trophies` | `#d8d2c4` | Trophies | skull icon |
 | `--favor` | `#a886e0` | Favor | flame icon |
 | `--good` | `#6fbf73` | Positive change | `+` sign, up arrow |
 | `--warn` | `#e0a84a` | Caution | triangle icon |
-| `--danger` | `#e0625c` | Harm, death | cross icon |
+| `--danger` | `#e3706b` | Harm, death | cross icon |
 
 ### 2.3 Log categories
 
-| Category | Color | Prefix |
-|---|---|---|
-| Combat | `#e0625c` | `⚔` |
-| Loot | `#e6c35c` | `◆` |
-| Discovery | `#5cc2c7` | `✦` |
-| AI | `#a886e0` | `➤` |
-| System | `--text-muted` | `·` |
+| Token | Color | Category | Prefix |
+|---|---|---|---|
+| `--log-combat` | `#e3706b` (same as `--danger`) | Combat | `⚔` |
+| `--log-loot` | `#e6c35c` (same as `--renown`) | Loot | `◆` |
+| `--log-discovery` | `#5cc2c7` | Discovery | `✦` |
+| `--log-ai` | `#a886e0` (same as `--favor`) | AI | `➤` |
+| `--log-system` | `--text-muted` | System | `·` |
 
 ### 2.4 Type
 
-| Role | Font | Size / line | Notes |
-|---|---|---|---|
-| UI text | Inter | 13 / 18 | Bundled from npm (`@fontsource`), open license |
-| Small labels | Inter | 11 / 14 | Uppercase, +4% letter spacing, `--text-muted` |
-| Headings | Inter 600 | 15 / 20 | Panel titles |
-| Numbers | Inter, tabular figures | as context | Columns of numbers line up |
-| Map and log | JetBrains Mono | map: fitted; log: 12 / 17 | Bundled, open license |
+| Role | Font | Size / line | Tokens | Notes |
+|---|---|---|---|---|
+| UI text | Inter 400 | 13 / 18 | `--font-ui`, `--font-size-body`, `--line-height-body` | |
+| Small labels | Inter | 11 / 14 | `--font-size-label`, `--line-height-label`, `--letter-spacing-label` | Uppercase, +4% letter spacing, `--text-muted` |
+| Headings | Inter 600 | 15 / 20 | `--font-size-heading`, `--line-height-heading`, `--font-weight-heading` | Panel titles |
+| Buttons, tabs | Inter 500 | 13 / 18 | `--font-weight-medium` | |
+| Numbers | Inter, tabular figures | as context | `font-variant-numeric: tabular-nums` | Columns of numbers line up |
+| Map and log | JetBrains Mono 400, 700 | map: fitted; log: 12 / 17 | `--font-mono`, `--font-size-log`, `--line-height-log` | 700 for bold glyphs such as stairs |
 
-No fonts load from the network; both families ship in the app bundle.
+No fonts load from the network; both families ship in the app bundle. They come from the
+`@fontsource/inter` and `@fontsource/jetbrains-mono` npm packages (imported in
+`src/ui/fonts.css`), which Vite copies into the build. Both are under the SIL Open Font
+License 1.1, and the build writes the two license texts to `dist/licenses/`.
 
 ### 2.5 Shape and spacing
 
-- Spacing scale on a 4px grid: 4, 8, 12, 16, 24.
-- Radius: 8px for cards and panels, 6px for buttons and chips, 999px for pills.
-- Borders: 1px `--border`. No drop shadows except on tooltips and modals.
-- Focus: 2px `--accent` outline with 2px offset, on every interactive element.
+- Spacing scale on a 4px grid: 4, 8, 12, 16, 24 (`--space-1` to `--space-5`).
+- Radius: 8px for cards and panels (`--radius-card`), 6px for buttons and chips
+  (`--radius-control`), 999px for pills (`--radius-pill`).
+- Borders: 1px (`--border-width`) `--border`. No drop shadows except on tooltips and modals
+  (`--shadow-overlay`).
+- Focus: 2px `--accent` outline with 2px offset (`--focus-width`, `--focus-offset`), on every
+  interactive element. Set once in `base.css` with `:focus-visible`.
+- Component sizes: `--control-height` 28px (buttons, tabs), `--bar-height` 6px,
+  `--tooltip-max-width` 280px.
+- Motion: `--duration-fast` 120ms for fades and bar changes. It is 0 under
+  `prefers-reduced-motion`, where `base.css` also turns off every transition and animation.
+
+### 2.6 Contrast
+
+Every text color has at least 4.5:1 contrast on each surface it is used on: `--text`,
+`--text-muted`, `--accent`, the meaning colors and the log colors on all four `--bg-*`
+surfaces; `--text-faint` on `--bg-app`, `--bg-panel` and `--bg-raised` (disabled controls never
+show the hover fill); and `--on-accent` on `--accent`.
+
+ETH-011 raised four starting values to meet this: `--text-faint` (`#64707f` → `#7e8a99`),
+`--hp` (`#d9534f` → `#e0726f`), `--mp` (`#4f8fd9` → `#5a96db`) and `--danger` with the combat
+log color (`#e0625c` → `#e3706b`). Each kept its hue and only gained lightness.
+
+### 2.7 Kit
+
+The first kit components (`src/ui/kit/`, see `ARCHITECTURE.md` §8.1) and how each shows its
+state without relying on color:
+
+| Component | States | Second signal |
+|---|---|---|
+| `Button` | primary, secondary, ghost, disabled, pressed (toggle) | pressed: accent fill and `aria-pressed`; disabled: faint text, `not-allowed` cursor |
+| `Tabs` | selected, disabled | selected: accent underline, heavier text, `aria-selected` |
+| `Card` | default, selected | selected border is twice as thick |
+| `Panel` | with or without a title and actions | |
+| `Tooltip` | opens on hover (250ms delay) and on focus; Escape closes it | linked with `aria-describedby` |
+| `Bar` | any value from empty to full | visible label ("HP") and `value / max` text; `role="meter"` |
+
+In dev mode, `?kit` on the dev server URL opens a gallery of every component and state.
 
 ---
 

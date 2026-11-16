@@ -1,0 +1,66 @@
+.tabs {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.tab {
+  position: relative;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: color var(--duration-fast) ease-out;
+}
+
+.tab:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.tab:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+.tab:focus-visible {
+  outline-offset: calc(var(--focus-offset) * -1);
+}
+
+.selected {
+  color: var(--text);
+  font-weight: var(--font-weight-heading);
+}
+
+/* The selection underline: a shape, not only a color change. */
+.selected::after {
+  content: '';
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: calc(var(--border-width) * -1);
+  height: var(--focus-width);
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+}
+
+.panel {
+  padding: var(--space-3) 0;
+  min-height: 0;
+}
+
+.panel:focus-visible {
+  outline-offset: calc(var(--focus-offset) * -1);
+}
