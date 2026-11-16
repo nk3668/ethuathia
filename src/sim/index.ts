@@ -37,6 +37,20 @@ export { floorToText, parseFloorText, planToText } from './floorText';
 export type { FloorPlan } from './floorText';
 export { checkFloorType, defineGenStep, GEN_STEPS, generateFloor, readParams, rectTiles } from './gen';
 export type { BoundGenStep, FloorDraft, GenStepDef, NumberParam, Rect } from './gen';
+export {
+  buildFleeMap,
+  buildGoalMap,
+  canStep,
+  FLEE_FACTOR,
+  floorPathGrid,
+  memoryPathGrid,
+  OPEN_DOOR_COST,
+  pathAlong,
+  STEP_COST,
+  stepToward,
+  UNREACHABLE,
+} from './goalMap';
+export type { Passability, PathGrid } from './goalMap';
 export { computeFov } from './fov';
 export type { FovInput } from './fov';
 export {

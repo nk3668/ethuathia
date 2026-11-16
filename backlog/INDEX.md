@@ -36,7 +36,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-005](sim-core/ETH-005-action-pipeline.md) | Action pipeline: move, wait and open door | sim-core | M0 | P0 | done | S |
 | [ETH-006](dungeon-gen/ETH-006-dungeon-gen-pipeline.md) | Dungeon gen pipeline: rooms-and-corridors floor | dungeon-gen | M0 | P0 | done | M |
 | [ETH-007](sim-core/ETH-007-fov-map-memory.md) | FOV and map memory | sim-core | M0 | P0 | done | S |
-| [ETH-008](sim-core/ETH-008-goal-maps-pathing.md) | Goal maps (Dijkstra) and pathing | sim-core | M0 | P0 | ready | S |
+| [ETH-008](sim-core/ETH-008-goal-maps-pathing.md) | Goal maps (Dijkstra) and pathing | sim-core | M0 | P0 | done | S |
 | [ETH-009](adventurer-ai/ETH-009-decision-engine-baseline-explore.md) | Decision engine with baseline exploration, trace and stuck detection | adventurer-ai | M0 | P0 | ready | M |
 | [ETH-010](sim-core/ETH-010-sim-host.md) | SimHost: inline and Web Worker hosts, snapshot protocol and speed | sim-core | M0 | P0 | ready | M |
 | [ETH-013](map-renderer/ETH-013-canvas-map-renderer.md) | Canvas map renderer: glyph atlas, fog and camera follow | map-renderer | M0 | P0 | ready | M |
