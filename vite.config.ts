@@ -39,6 +39,8 @@ function offlineCsp(): Plugin {
 
 export default defineConfig({
   plugins: [react(), offlineCsp()],
+  // The sim worker (src/ui/host/sim.worker.ts) is a module worker, bundled like the app.
+  worker: { format: 'es' },
   test: {
     environment: 'node',
     include: ['test/**/*.test.{ts,tsx}'],
