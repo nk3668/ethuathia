@@ -30,5 +30,5 @@ A deterministic, serializable turn-based simulation that runs the same in a work
 - [x] [ETH-004 Energy scheduler and step loop with commands and events](ETH-004-scheduler-step-loop.md)
 - [x] [ETH-005 Action pipeline: move, wait and open door](ETH-005-action-pipeline.md)
 - [x] [ETH-007 FOV and map memory](ETH-007-fov-map-memory.md)
-- [ ] [ETH-008 Goal maps (Dijkstra) and pathing](ETH-008-goal-maps-pathing.md)
+- [x] [ETH-008 Goal maps (Dijkstra) and pathing](ETH-008-goal-maps-pathing.md)
 - [ ] [ETH-010 SimHost: inline and Web Worker hosts, snapshot protocol and speed](ETH-010-sim-host.md)

@@ -172,10 +172,37 @@ Events are the sim's only output besides snapshots. Consumers:
 
 ### 2.5 Goal maps
 
-`buildGoalMap(floor, goals, passable) -> Int16Array` gives the distance from every tile to the
-nearest goal. Stepping "downhill" approaches the goal; stepping "uphill" flees it. Exploration
-uses frontier tiles as goals; retreat uses the up stairs; regroup uses allies. Maps are cached
-per floor and invalidated when the floor or the known map changes.
+`buildGoalMap(paths, goals)` gives the cost from every tile to the nearest goal. Stepping
+"downhill" approaches the goal; stepping downhill on a flee map gets away from it. Exploration
+uses frontier tiles as goals; retreat uses the up stairs; regroup uses allies.
+
+As built in `src/sim/goalMap.ts` (ETH-008):
+
+- **`PathGrid`** is the passability rule as data: a `Uint16Array` cost to step onto each tile
+  (0 = can't be entered) and a `Uint8Array` of doorways. `floorPathGrid` builds it from the real
+  floor (monsters, tests); `memoryPathGrid` from the party's memory (§3.7), where unseen tiles
+  can't be entered and doors are as last seen, so adventurers never path on knowledge they
+  lack. Both take `{ closedDoorCost }`: `null` (the default) blocks closed doors like the move
+  action does; `OPEN_DOOR_COST` (2: open, then step) lets the AI plan through them and open them
+  on the way. Callers may raise costs on the grid before building a map.
+- **Step rules match `stepBlocker`** (§2.3): an orthogonal or diagonal step costs the target's
+  cost, and a diagonal step can't enter or leave a doorway. `canStep` is the fast version; a
+  test compares it with `stepBlocker` for every tile and direction on hand-built and generated
+  floors, and another checks every map is a true fixed point under `canStep`.
+- **Maps are `i32` `Grid`s**, not `i16`: costs above 1 could overflow 16 bits on a large floor.
+  `UNREACHABLE` (the `i32` maximum) marks tiles no goal can be reached from, walls included.
+  The algorithm is Dijkstra with a binary heap; distances don't depend on goal order.
+- **`stepToward(paths, map, from)`** returns the step (a `DIRS_8` entry) onto a cheapest route:
+  the neighbor minimizing value + cost to step there, always lower than `from`. Ties go to the
+  first in `DIRS_8` order, so straight steps win. `null` at a goal or where nothing is reachable.
+  `pathAlong` repeats it, for previews and tests.
+- **Fleeing:** `buildFleeMap(paths, toward)` scales a goal map by `FLEE_FACTOR` (-1.2) and
+  relaxes it again, so the walker heads for open ground instead of the nearest dead end, which
+  naive "uphill" stepping picks.
+- **Speed** (`npm run bench`, 80×40 floor): about 0.36 ms for an open room (the worst case),
+  0.08 ms for a rooms-and-corridors floor and 0.6 ms for a flee map, including building the
+  path grid. That is cheap enough to rebuild every turn, so there is no cache yet; add one
+  (keyed on floor, memory and door changes) when profiling asks for it.
 
 ---
 
