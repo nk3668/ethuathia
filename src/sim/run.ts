@@ -4,6 +4,7 @@
 import { clonePlain, Grid, Rng, seedStreams } from '../core';
 import type { Pos } from '../core';
 import { FLOOR_HALLS, FLOOR_TYPES } from '../content';
+import { newAiPart } from './ai/types';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { parseFloorText } from './floorText';
 import type { FloorPlan } from './floorText';
@@ -64,6 +65,7 @@ export function createRun(config: RunConfig, seed: number): RunState {
       pos: starts[i] as Pos,
       actor: ADVENTURER_ACTOR,
       adventurer: { name: member.name, classId: member.classId, raceId: member.raceId },
+      ai: newAiPart(),
     });
     state.party.push(entity.id);
   });

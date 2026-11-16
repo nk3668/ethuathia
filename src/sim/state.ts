@@ -7,9 +7,10 @@
  */
 import type { GridBuffer, Pos, RngState } from '../core';
 import type { ActionRequest } from './actions';
+import type { AiPart } from './ai/types';
 
 /** Bumped whenever the shape of `RunState` changes. Saves from other versions need a migration. */
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 
 /**
  * Entity ids are positive integers handed out in order from `RunState.nextEntityId` and never
@@ -170,6 +171,8 @@ export interface Entity {
   actor?: ActorPart;
   adventurer?: AdventurerPart;
   feature?: FeaturePart;
+  /** Rules and decision memory, for actors the decision engine drives (docs/ARCHITECTURE.md §4). */
+  ai?: AiPart;
 }
 
 /** An entity known to have an actor part. */

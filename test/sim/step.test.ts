@@ -10,6 +10,7 @@ import {
   removeEntity,
   serialize,
   step,
+  waitDecide,
 } from '../../src/sim';
 import type { ActionRequest, ActorPart, Command, Decide, EntityId, RunConfig, RunState, SimEvent } from '../../src/sim';
 
@@ -42,10 +43,19 @@ describe('step', () => {
   it('lets a speed-100 adventurer act once per step, one turn apart', () => {
     const state = createRun(ONE, 1);
     const id = state.party[0] as EntityId;
-    expect(step(state, [])).toEqual([{ type: 'waited', actor: id, turn: 1 }]);
+    const options = { decide: waitDecide };
+    expect(step(state, [], options)).toEqual([{ type: 'waited', actor: id, turn: 1 }]);
     expect(state.turn).toBe(1);
     expect(getEntity(state, id).actor?.energy).toBe(0);
-    expect(step(state, [])).toEqual([{ type: 'waited', actor: id, turn: 2 }]);
+    expect(step(state, [], options)).toEqual([{ type: 'waited', actor: id, turn: 2 }]);
+  });
+
+  it('decides with the decision engine by default', () => {
+    // The whole room is in view from the start, so the baseline has nothing to explore and waits.
+    const state = createRun(ONE, 1);
+    const id = state.party[0] as EntityId;
+    expect(step(state, []).map((e) => e.type)).toEqual(['ruleFired', 'waited']);
+    expect(getEntity(state, id).ai?.memory.intent?.action).toBe('act.wait');
   });
 
   it('gives actors turns in proportion to their speed', () => {
