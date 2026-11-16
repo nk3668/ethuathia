@@ -1,7 +1,11 @@
 /**
  * core: seeded RNG, Grid, Registry, ids and number formatting.
  * May import: nothing. See docs/ARCHITECTURE.md §1.
- *
- * Placeholder so the folder exists and type-checks. Remove it when the first real module lands.
  */
-export {};
+export { formatNumber } from './format';
+export { DIRS_4, DIRS_8, Grid } from './grid';
+export type { GridCells, GridData, GridKind, Pos } from './grid';
+export { Registry } from './registry';
+export type { Def } from './registry';
+export { isRngState, Rng, seedState, seedStreams } from './rng';
+export type { RngState } from './rng';
