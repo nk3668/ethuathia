@@ -5,7 +5,7 @@
  * `entities` list always matches its entities' `floor` fields. Changing an entity's `pos` on the
  * same floor is safe anywhere, as long as it gets a new object (`moveEntity` does that).
  */
-import { clonePlain } from '../core';
+import { clonePlain, Grid } from '../core';
 import type { Pos } from '../core';
 import type { FloorPlan } from './floorText';
 import type { Entity, EntityId, Floor, FloorId, RunState } from './state';
@@ -21,8 +21,9 @@ export function getFloor(state: RunState, id: FloorId): Floor {
 }
 
 /**
- * Builds floor `id` from a plan: stores its terrain and creates its features. The floor must be a
- * node of the dungeon graph and must not have been built already.
+ * Builds floor `id` from a plan: stores its terrain, creates its features and gives the party an
+ * empty memory of it. The floor must be a node of the dungeon graph and must not have been built
+ * already.
  */
 export function addFloor(state: RunState, id: FloorId, plan: FloorPlan): Floor {
   const node = state.dungeon.nodes[id];
@@ -30,6 +31,7 @@ export function addFloor(state: RunState, id: FloorId, plan: FloorPlan): Floor {
   if (state.floors[id] !== undefined) throw new Error(`Floor "${id}" has already been built`);
   const floor: Floor = { id, depth: node.depth, terrain: plan.terrain.clone().toBuffer(), entities: [] };
   state.floors[id] = floor;
+  state.memory[id] = { terrain: new Grid(plan.terrain.width, plan.terrain.height, 'u8').toBuffer(), features: {} };
   for (const { def, pos, feature } of plan.features) addEntity(state, { def, floor: id, pos, feature });
   return floor;
 }

@@ -60,6 +60,9 @@ export default tseslint.config(
     rules: {
       // Needed for the `import type` exception in the layer rule, and matches `verbatimModuleSyntax`.
       '@typescript-eslint/consistent-type-imports': 'error',
+      // Same exemption as TypeScript's `noUnusedParameters`: a leading `_` marks a parameter that
+      // is part of a signature but not read yet.
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
 

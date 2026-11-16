@@ -227,6 +227,8 @@ As built in `src/sim/state.ts` (ETH-003):
   `<`/`>` stairs, `@` party start) and read by `parseFloorText`. `floorToText` prints a floor
   back for tests, and `planToText` prints a generated `FloorPlan`. `RunConfig.floorText`
   supplies a hand-built first floor; without it `createRun` generates one (§3.6).
+- **Party memory:** `RunState.memory` holds what the party has seen of each built floor, keyed
+  like `floors` (§3.7). `STATE_VERSION` went to 2 when it was added.
 
 ### 3.2 Entities
 
@@ -289,6 +291,7 @@ As built in `src/sim/step.ts` (ETH-004):
   queued player action (below) takes the place of one decision.
 - **A decision that can't be done never stalls the loop:** it emits `actionFailed` and the
   actor waits, paying the wait cost.
+- **Party members perceive** before deciding and after acting (§3.7).
 
 ### 3.4 RNG
 
@@ -400,6 +403,31 @@ As built in `src/sim/gen/` (ETH-006):
 Symmetric shadowcasting for field of view. Each adventurer keeps a memory grid (last seen
 terrain and items) and the party shares map knowledge. The snapshot's fog comes straight from
 these grids.
+
+As built (ETH-007):
+
+- **FOV** (`src/sim/fov.ts`): `computeFov` is Albert Ford's symmetric shadowcasting, pure and
+  independent of run state. If one see-through tile is visible from another, the reverse is
+  true too; a test checks every pair on hand-built maps and a generated floor. Slopes are
+  integer fractions, so no result depends on floating-point rounding. Opaque tiles are seen
+  when light reaches them. The radius is the circle `dx² + dy² <= r² + r`.
+- **What blocks sight:** walls and closed doors (`sightBlockers`); open doors don't. The edge
+  of the floor blocks too.
+- **Sight radius** comes only from `sightRadius(state, actor)`, `BASE_SIGHT_RADIUS` (8) for now.
+  Gloom, blindness and light sources change it there once stats exist.
+- **Memory is the party's, one per floor:** `RunState.memory[floorId]` rather than a grid per
+  adventurer, since party members share everything they see. `addFloor` creates it empty.
+  `terrain` is a `u8` grid of 0 (never seen) or 1 + the `Terrain` code last seen;
+  `features` copies each seen feature (`def` and part) by tile index. Tiles out of view keep
+  their last known state, so a door shut behind the party is still remembered open. Monsters
+  are never remembered; items will be added beside features when they exist.
+- **When it updates:** `createRun` records what the starting party sees, and in `step` each
+  party member perceives before deciding (§5.1) and again after acting, so the memory already
+  includes what a move revealed when the step returns. Other actors don't perceive yet.
+- **Reading it:** `explored(state, floorId)` gives seen and total floor tiles (walls don't
+  count) and their fraction, for stuck detection and "floor explored ≥ X%" rules.
+  `partyVisible` is the "in view" mask for the snapshot's fog; anything remembered and not in
+  view is drawn as memory.
 
 ---
 

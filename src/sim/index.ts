@@ -37,6 +37,22 @@ export { floorToText, parseFloorText, planToText } from './floorText';
 export type { FloorPlan } from './floorText';
 export { checkFloorType, defineGenStep, GEN_STEPS, generateFloor, readParams, rectTiles } from './gen';
 export type { BoundGenStep, FloorDraft, GenStepDef, NumberParam, Rect } from './gen';
+export { computeFov } from './fov';
+export type { FovInput } from './fov';
+export {
+  BASE_SIGHT_RADIUS,
+  canSee,
+  explored,
+  fieldOfView,
+  getMemory,
+  partyVisible,
+  perceive,
+  perceiveParty,
+  rememberedTerrain,
+  sightBlockers,
+  sightRadius,
+} from './perception';
+export type { Explored } from './perception';
 export { createRun, FIRST_FLOOR_TYPE } from './run';
 export { deserialize, serialize } from './serialize';
 export { DEFS, RNG_STREAMS, STATE_VERSION, Terrain, TERRAIN_IDS } from './state';
@@ -52,7 +68,9 @@ export type {
   FeaturePart,
   Floor,
   FloorId,
+  FloorMemory,
   FloorNode,
+  RememberedFeature,
   RngStream,
   RunConfig,
   RunState,
