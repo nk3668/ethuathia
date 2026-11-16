@@ -64,7 +64,7 @@ export interface RunConfig {
   party: AdventurerConfig[];
   /**
    * A hand-built first floor as text (see `parseFloorText`). Tests use it for hand-built maps.
-   * Leave it out to use the built-in M0 floor, until generation arrives with ETH-006.
+   * Leave it out to generate the first floor from the run's seed.
    */
   floorText?: string[];
 }

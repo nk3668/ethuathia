@@ -225,8 +225,8 @@ As built in `src/sim/state.ts` (ETH-003):
   Doors and stairs are feature entities on floor tiles, not terrain.
 - **Hand-built floors** are written as text (`#` wall, `.` floor, `+`/`'` closed and open door,
   `<`/`>` stairs, `@` party start) and read by `parseFloorText`. `floorToText` prints a floor
-  back for tests. `RunConfig.floorText` supplies the first floor; without it `createRun` uses
-  the built-in `M0_FLOOR` until generation arrives (§3.6).
+  back for tests, and `planToText` prints a generated `FloorPlan`. `RunConfig.floorText`
+  supplies a hand-built first floor; without it `createRun` generates one (§3.6).
 
 ### 3.2 Entities
 
@@ -365,6 +365,35 @@ automata; a big room skips connection. Most steps are shared.
 
 The dungeon itself is a small graph of floor nodes (`DungeonGraph`). M0 and M1 use a straight
 line; route forks in M6 add branches with no change to the floor code.
+
+As built in `src/sim/gen/` (ETH-006):
+
+- **Floor types are content** (`src/content/floors.ts`, registry `FLOOR_TYPES`): a size and a
+  list of `{ step, params? }`. The first is `floor.halls` (Hewn Halls, 64×32). The steps are
+  code, in the sim's `GEN_STEPS` registry, so content names them by id only.
+- **A step is a `GenStepDef`** made with `defineGenStep({ id, …, parse, run })`. `parse` checks
+  the untyped params (usually with `readParams`, which fills in defaults and rejects unknown
+  keys and out-of-range numbers), and `bind(params)` returns the step ready to run, so `run`
+  only ever sees checked, typed params.
+- **`generateFloor(type, rng)`** binds every step first, so a bad floor type fails before any
+  draw, then runs them in order on an all-wall `FloorDraft` (a `FloorPlan` plus the `rooms`
+  that later steps read) and returns the `FloorPlan` for `addFloor`. Errors name the floor
+  type, the step's position and its id. `checkFloorType` does the binding alone, for validation.
+- **`createRun`** generates the first floor from `FIRST_FLOOR_TYPE` with
+  `new Rng(state.rng.dungeon)`; generation draws from nothing else.
+- **The rooms-and-corridors steps:**
+  - `gen.rooms`: tries random rectangles and carves each one that keeps `gap` wall tiles from
+    the others, inside a one-tile wall border.
+  - `gen.corridors`: joins the rooms along a minimum spanning tree of their centers (Prim's,
+    ties to the lowest index) with L-shaped passages between random tiles of each pair, then
+    adds a few extra passages for loops. Every floor tile is then reachable orthogonally.
+  - `gen.doors`: puts a door (sometimes open) in some room mouths: tiles of the wall ring round
+    a room with floor in front and behind and wall on both sides. That shape fits the
+    orthogonal-only doorway rule (§2.3), so a door never cuts a route. No two doors touch.
+  - `gen.stairs`: up stairs on a random room tile, down stairs in a random room from the half
+    farthest from it by walking distance.
+- A test floods 200 seeds from the up stairs and checks that every floor tile and the down
+  stairs are reached. Seed 1's floor is pinned as text, so any change to a step's draws shows.
 
 ### 3.7 Perception
 

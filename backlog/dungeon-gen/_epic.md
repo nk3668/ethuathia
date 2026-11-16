@@ -23,4 +23,4 @@ Varied, always-connected floors built from reusable generation steps, linked int
 - `docs/ARCHITECTURE.md` §3.6
 
 ## Items
-- [ ] [ETH-006 Dungeon gen pipeline: rooms-and-corridors floor](ETH-006-dungeon-gen-pipeline.md)
+- [x] [ETH-006 Dungeon gen pipeline: rooms-and-corridors floor](ETH-006-dungeon-gen-pipeline.md)

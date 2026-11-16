@@ -40,7 +40,7 @@ describe('serialize and deserialize', () => {
     const json = JSON.parse(serialize(createRun({ party: [{ name: 'A', classId: 'c', raceId: 'r' }] }, 1))) as {
       floors: { d1: { terrain: unknown } };
     };
-    expect(json.floors.d1.terrain).toMatchObject({ $grid: { width: 44, height: 13, kind: 'u8' } });
+    expect(json.floors.d1.terrain).toMatchObject({ $grid: { width: 64, height: 32, kind: 'u8' } }); // the generated first floor
   });
 
   it('serializing twice gives the same text', () => {
