@@ -1,0 +1,478 @@
+# Ethania architecture
+
+The technical design for the game described in [`../CLAUDE.md`](../CLAUDE.md). The look of the
+game is in [`VISUAL-DESIGN.md`](VISUAL-DESIGN.md).
+
+Two goals shape everything here:
+
+- **Extensible:** adding a monster, Omen, rule condition, upgrade or floor type should be a
+  data entry, not a code change.
+- **Reuse:** a small set of shared building blocks (§2) is built once and used by every feature.
+
+Type sketches in this document show intent. Exact names and fields are settled in the backlog
+item that builds each piece.
+
+---
+
+## 1. Layers
+
+```
+src/
+  core/      seeded RNG, Grid, Registry, ids, number formatting   imports: nothing
+  content/   typed data definitions and validation               imports: core
+  sim/       deterministic simulation, no DOM                    imports: core, content
+  meta/      profile, town, rewards, saves, time-away            imports: core, content, sim
+  platform/  storage and window adapters                         imports: core, meta (types)
+  ui/        React app, canvas map, input                        imports: everything above
+tools/       balance harness, content validation
+test/
+```
+
+**Rule: imports only point downward.** Two mechanisms enforce it:
+
+1. ESLint `no-restricted-imports` zones per folder.
+2. A separate `tsconfig.sim.json` covering `core`, `content`, `sim` and `meta` with
+   `lib: ["ES2022"]` and no DOM types. A `document` or `window` reference in those folders
+   fails to compile.
+
+Because of this rule the simulation runs unchanged in a Web Worker, in tests, in the balance
+harness and in time-away catch-up.
+
+---
+
+## 2. Shared building blocks
+
+| Building block | What it is | Reused by |
+|---|---|---|
+| **Registry** | Id-keyed store of content definitions, validated at load | Every content type, Codex, tooltips, saves |
+| **Modifiers** | Sourced stat changes; a stat is its base plus all active modifiers | Race, class, gear, statuses, traits, blessings, Omens, upgrades, veteran jobs |
+| **Effects** | Data primitives run by one interpreter | Items, spells, traps, altars, blessings, taboo punishments |
+| **Triggers** | "When this event happens, run these effects" | Statuses, Omens, heirloom perks, blessings |
+| **Actions** | The only way anything changes the world | Baseline AI, behavior rules, monster AI, possession |
+| **Sim events** | Typed stream of everything that happened | Log, AI trace, conducts, currencies, Codex discovery, run summary, map animation |
+| **Goal maps** | Dijkstra distance maps over a floor | Exploring, fleeing, stairs, regrouping, looting, monster chase |
+| **Upgrade engine** | Generic tree of nodes with costs, prerequisites and grants | All town buildings, deity devotion trees |
+
+### 2.1 Registry
+
+```ts
+interface Def { id: string; name: string; description: string; tags: string[] }
+
+class Registry<T extends Def> {
+  register(def: T): void          // throws on a duplicate id
+  get(id: string): T              // throws on an unknown id
+  all(): readonly T[]
+}
+```
+
+- Ids are namespaced strings: `monster.cave_rat`, `omen.gloom`, `cond.hp_below`.
+- Shape is validated with Zod schemas (bundled). After all content is registered, a
+  cross-reference pass checks that every id mentioned by another def exists.
+- Saves and sim state store **ids only**, never copies of definitions. Content can then change
+  between versions without rewriting saves.
+
+### 2.2 Modifiers, effects and triggers: the "bundle"
+
+```ts
+interface Modifier { stat: StatId; op: 'add' | 'mul'; value: number; source: string }
+
+type Effect =
+  | { kind: 'damage'; amount: Dice; damageType: DamageType }
+  | { kind: 'heal'; amount: Dice }
+  | { kind: 'applyStatus'; status: string; turns: number }
+  | { kind: 'teleport' | 'reveal' | 'spawn'; /* … */ }
+
+interface Trigger { on: SimEvent['type']; filter?: TriggerFilter; effects: Effect[] }
+
+interface Bundle { modifiers: Modifier[]; triggers: Trigger[] }
+```
+
+- `getStat(entity, stat)` returns the value **and** the list of contributing modifiers. The
+  `source` on each one ("Dwarf", "Iron helm", "Omen: Gloom II") is what the UI shows in the
+  number's tooltip, so "every number has a tooltip" costs nothing extra per feature.
+- A status effect, a trait, a deity blessing, an Omen rank and an heirloom perk are all a
+  `Bundle`. Attaching one to an actor, the party or the run is the same operation.
+- New effect kinds are added to the interpreter once and are then available to every item,
+  spell and trigger.
+
+### 2.3 Actions
+
+```ts
+interface ActionDef<P> {
+  id: string
+  validate(ctx: ActionCtx, params: P): Validity   // ok, or a reason it can't be done
+  execute(ctx: ActionCtx, params: P): void        // mutates state, emits events
+}
+```
+
+Move, attack, quaff, pick up, pray, take stairs: each is one `ActionDef`. AI, rules, monsters
+and a possessed adventurer all produce actions and submit them through the same pipeline, so a
+possessed character can never do something the AI could not, and the reverse.
+
+### 2.4 Sim events
+
+```ts
+type SimEvent =
+  | { type: 'moved'; actor: EntityId; from: Pos; to: Pos }
+  | { type: 'attacked'; actor: EntityId; target: EntityId; damage: number; hit: boolean }
+  | { type: 'died'; actor: EntityId; cause: DeathCause }
+  | { type: 'ruleFired'; actor: EntityId; rule: RuleRef; detail: string }
+  | /* … */
+```
+
+Events are the sim's only output besides snapshots. Consumers:
+
+- **Log:** one text template per event type, stored in content.
+- **AI trace:** `ruleFired` drives the party card intent line and the rules editor counters.
+- **Rewards and conducts:** reducers over the stream (§6).
+- **Codex:** first sighting of an id marks it discovered.
+- **Triggers:** bundles subscribe to events inside the sim.
+
+### 2.5 Goal maps
+
+`buildGoalMap(floor, goals, passable) -> Int16Array` gives the distance from every tile to the
+nearest goal. Stepping "downhill" approaches the goal; stepping "uphill" flees it. Exploration
+uses frontier tiles as goals; retreat uses the up stairs; regroup uses allies. Maps are cached
+per floor and invalidated when the floor or the known map changes.
+
+---
+
+## 3. Simulation (`src/sim/`)
+
+### 3.1 State
+
+One `RunState` object, plain data only: no class instances, closures, `Map` or `Set`.
+
+```ts
+interface RunState {
+  version: number
+  rng: Record<RngStream, RngState>     // 'dungeon' | 'combat' | 'loot' | 'ai'
+  turn: number
+  config: RunConfig                    // party, omens, patron, dungeon variant
+  dungeon: DungeonGraph                // floor nodes and their connections
+  floors: Record<FloorId, Floor>       // generated lazily on arrival
+  entities: Record<EntityId, Entity>
+  party: EntityId[]
+  runBundles: Bundle[]                 // Omens, blessing: apply to the whole run
+  nextEntityId: number
+}
+```
+
+Inside `step` the state is mutated in place for speed. Determinism is the contract:
+**the same seed and the same command sequence always produce the same state.**
+
+### 3.2 Entities
+
+```ts
+interface Entity {
+  id: EntityId
+  def: string                 // content id
+  floor: FloorId
+  pos: Pos
+  actor?: { energy: number; speed: number; hp: number; mp: number; faction: Faction }
+  stats?: { base: Record<StatId, number>; bundles: AttachedBundle[] }
+  inventory?: { items: EntityId[]; equipped: Record<Slot, EntityId | null> }
+  ai?: { rules: RuleSet; memory: AiMemory; possessed: boolean }
+  item?: { count: number; identified: boolean; cursed: boolean }
+  feature?: { kind: 'door' | 'stairs' | 'altar' | 'grave' | 'fountain'; /* … */ }
+}
+```
+
+This is not a full entity-component system: just one entity type with optional parts, and
+systems written as functions over `RunState`. Adventurers and monsters are both actors, so
+combat, statuses and inventory are written once.
+
+### 3.3 Time
+
+Each tick every actor gains `speed` energy. An actor with at least 100 energy takes one
+decision (§4), pays the action's energy cost, and the scheduler moves on. One `step` call
+advances the sim until every party member has acted once (a "party turn"), which is the unit
+the UI and speed controls work in.
+
+### 3.4 RNG
+
+`sfc32`, seeded from the run seed, with its four-word state stored in `RunState`. The run seed
+is split into named streams so that, for example, adding a monster to the spawn table does not
+change the dungeon layout for the same seed. `Math.random()` is banned in the lower layers by
+a lint rule.
+
+### 3.5 Public API
+
+```ts
+createRun(config: RunConfig, seed: number): RunState
+step(state: RunState, commands: Command[]): SimEvent[]
+snapshot(state: RunState, viewer: ViewOptions): Snapshot
+serialize(state: RunState): string
+deserialize(text: string): RunState
+
+type Command =
+  | { type: 'setRules'; actor: EntityId; rules: RuleSet }
+  | { type: 'setDoctrine'; doctrine: Doctrine }
+  | { type: 'possess' | 'release'; actor: EntityId }
+  | { type: 'playerAction'; actor: EntityId; action: ActionRequest }
+  | { type: 'retreat' }
+```
+
+A `Snapshot` is a read-only view built for the UI: the current floor as the party knows it
+(glyph ids, visibility, memory), party summaries with computed stats and current intent, and
+run counters. The UI never sees `RunState`.
+
+### 3.6 Dungeon generation
+
+```ts
+type GenStep = (floor: FloorDraft, params: unknown, rng: Rng) => void
+
+interface FloorTypeDef extends Def {
+  size: { w: number; h: number }
+  steps: { step: string; params?: unknown }[]   // ids into a GenStep registry
+}
+```
+
+A floor type is an ordered list of steps: lay out rooms, connect them, place doors, add
+features, place stairs, populate, place graves. Caves swap the layout step for cellular
+automata; a big room skips connection. Most steps are shared.
+
+The dungeon itself is a small graph of floor nodes (`DungeonGraph`). M0 and M1 use a straight
+line; route forks in M6 add branches with no change to the floor code.
+
+### 3.7 Perception
+
+Symmetric shadowcasting for field of view. Each adventurer keeps a memory grid (last seen
+terrain and items) and the party shares map knowledge. The snapshot's fog comes straight from
+these grids.
+
+---
+
+## 4. AI: one decision engine
+
+```
+decide(actor) = possession input  >  behavior rules, top to bottom  >  baseline rules
+```
+
+```ts
+interface Rule { condition: { id: string; params: unknown }
+                 action:    { id: string; params: unknown }
+                 enabled: boolean }
+
+interface ConditionDef extends Def {
+  paramSchema: ParamSchema
+  evaluate(ctx: AiCtx, params: unknown): { ok: boolean; detail: string }
+  describe(params: unknown): string            // "HP below 30%"
+}
+
+interface RuleActionDef extends Def {
+  paramSchema: ParamSchema
+  resolve(ctx: AiCtx, params: unknown): ActionRequest | null   // null: not valid right now
+  describe(params: unknown): string            // "quaff best healing potion"
+}
+```
+
+- The engine walks the rule list and takes the first rule whose condition is true and whose
+  action resolves. It then emits `ruleFired` with the condition's `detail`.
+- **The baseline is a rule set too.** Explore the frontier, fight adjacent enemies, flee at
+  low HP, leave a finished floor, get unstuck: these are built-in rules appended after the
+  player's. Nothing is special-cased, and each baseline behavior is also a rule action the
+  Library can hand to the player.
+- **Monsters use the same engine** with rule sets from their content definitions.
+- **The rules editor is generated from the registries.** `paramSchema` describes each
+  parameter (percentage, item category, target choice) and `describe` renders the row. A new
+  condition appears in the editor as soon as it is registered and unlocked.
+- **Stuck detection** lives in `AiMemory`: if position and explored percentage are unchanged
+  for N turns, the current goal is dropped, a different one is chosen and the change is logged.
+- **Presets and doctrine** are data: a preset is a saved `RuleSet`; doctrine is a small set of
+  party-wide parameters that conditions and actions read from `AiCtx`.
+
+---
+
+## 5. Content (`src/content/`)
+
+- One folder per type (`monsters/`, `items/`, `classes/`, `races/`, `omens/`, `deities/`,
+  `upgrades/`, `floors/`, `conditions/`, `ruleActions/`, `text/`).
+- Definitions are written through helpers such as `defineMonster({...})`, which give type
+  checking in the editor and register the result.
+- Every def carries what the Codex and tooltips need (`name`, `description`, `tags`, and
+  `glyph` and `color` where it appears on the map). There is no separate Codex data to keep in sync.
+- Log lines and UI labels for mechanics are templates under `text/`
+  (`"{actor} hits {target} for {n}"`), keyed by event type or content id.
+- `tools/validate-content` runs the same validation as game start-up, and is part of `npm test`.
+
+---
+
+## 6. Meta (`src/meta/`)
+
+### 6.1 Profile
+
+Everything that persists between runs:
+
+```ts
+interface Profile {
+  currencies: { renown: number; trophies: number; favor: Record<DeityId, number> }
+  upgrades: { owned: string[] }               // upgrade node ids
+  roster: Adventurer[]
+  graveyard: Gravestone[]
+  codex: { discovered: string[] }
+  presets: Record<string, RuleSet>
+  settings: Settings
+  history: RunSummary[]                       // recent runs, for stats and time-away estimates
+}
+```
+
+The profile is changed only by pure functions: `purchase(profile, nodeId)`,
+`respec(profile, groupId)`, `applyRunResult(profile, result)`. They return a new profile, which
+makes them easy to test and safe to autosave after.
+
+### 6.2 Upgrade engine
+
+```ts
+interface UpgradeNode extends Def {
+  tree: string                     // 'guild_hall', 'smithy', 'deity.<id>', …
+  tier: number; column: number     // layout hints for the node graph
+  cost: Partial<Record<CurrencyId, number>>
+  requires: string[]               // node ids
+  exclusiveGroup?: string          // pick one of the nodes sharing this group
+  grants: Grant[]
+}
+
+type Grant =
+  | { kind: 'bundle'; scope: 'party' | 'run'; bundle: Bundle }
+  | { kind: 'unlock'; id: string }                // class, race, condition, Omen, floor type…
+  | { kind: 'capacity'; what: CapacityId; amount: number }   // rule slots, party size…
+```
+
+One engine and one tree view serve every building. `isUnlocked(profile, id)` and
+`capacity(profile, what)` are derived from owned nodes, so nothing else tracks unlock state.
+
+### 6.3 From profile to run
+
+`buildRunConfig(profile, choices)` turns the Prepare screen's choices into the `RunConfig` the
+sim takes: party members with their bundles, rule sets, patron blessing, Omen bundles and the
+reward multiplier, the dungeon variant, and any gravestones to place.
+
+### 6.4 Rewards and conducts
+
+```ts
+interface RunTracker<S> { init(): S; reduce(state: S, event: SimEvent): S }
+```
+
+Currency earnings and each conduct are small trackers over the event stream. At run end their
+states become the `RunResult`, and `applyRunResult` applies the Omen multiplier and updates the
+profile. A new conduct is one tracker plus a content entry.
+
+### 6.5 Saves (`src/platform/`)
+
+```ts
+interface SaveStore { load(): Promise<string | null>; save(data: string): Promise<void> }
+```
+
+Implementations: Tauri file in the app data folder, IndexedDB for the dev browser tab, and an
+in-memory store for tests. The save is a versioned envelope
+`{ version, profile, activeRun? }`; loading runs every migration from the save's version to the
+current one. Export and import use the same string. Autosave runs on a timer, at run end and
+on window close.
+
+### 6.6 Time-away
+
+On load, the elapsed time (capped, 8 hours by default) becomes a budget of party turns run on
+the `InlineHost` (§7). If a wall-clock limit is hit first, the remainder is estimated from the
+averages in `profile.history`, and the "While you were away" summary says which part was
+simulated and which was estimated.
+
+---
+
+## 7. Running the sim: `SimHost`
+
+```ts
+interface SimHost {
+  start(config: RunConfig, seed: number): void
+  send(command: Command): void
+  setSpeed(speed: 0 | 1 | 2 | 4 | 8 | 'max'): void
+  onSnapshot(cb: (s: Snapshot) => void): void
+  onEvents(cb: (e: SimEvent[]) => void): void
+}
+```
+
+- **WorkerHost:** runs the sim in a Web Worker. It steps on a timer according to speed, sends
+  at most about 30 snapshots per second however fast the sim is running, and batches events.
+- **InlineHost:** runs the sim synchronously with no timers, for tests, the balance harness
+  and time-away catch-up.
+
+---
+
+## 8. UI (`src/ui/`)
+
+- **React** with function components. **Zustand** stores:
+  - `simStore`: latest snapshot and a ring buffer of recent events.
+  - `profileStore`: the profile, with actions that call the pure meta functions and then save.
+  - `uiStore`: selection, open tab, modals, log filters.
+- Components subscribe to narrow slices so a new snapshot re-renders only what changed.
+- **Styling:** CSS Modules and design tokens as CSS custom properties (see `VISUAL-DESIGN.md`).
+
+### 8.1 Kit (`ui/kit/`)
+
+Small presentational components used by every screen: `Panel`, `Card`, `Button`, `Tabs`,
+`Modal`, `Bar`, `Badge`, `Tooltip` (Floating UI), `SortableList` (dnd-kit), and three that
+carry game-wide behavior:
+
+- **`NumberText`:** formats with suffixes (1.2k, 3.4M) and, given a stat breakdown, shows the
+  contributing modifiers in its tooltip.
+- **`Explain`:** wraps any mention of a content id and shows its Codex entry on hover.
+- **`NodeGraph`:** draws an upgrade tree as SVG from each node's `tier` and `column`.
+
+### 8.2 Map renderer (`ui/map/`)
+
+A plain class with no React dependency:
+
+```ts
+class MapRenderer {
+  constructor(canvas: HTMLCanvasElement, theme: GlyphTheme)
+  draw(snapshot: Snapshot, view: { camera: Camera; selected?: EntityId; hover?: Pos }): void
+}
+
+interface GlyphTheme { cell: { w: number; h: number }
+                       drawCell(ctx, x, y, glyphId: string, state: 'visible' | 'remembered'): void }
+```
+
+Glyphs are pre-rendered to an offscreen atlas and copied with `drawImage`. Draw order: terrain,
+features, items, actors, fog and memory dimming, overlays (selection ring, goal line, hover).
+A tileset later is a second `GlyphTheme`.
+
+### 8.3 Input
+
+A keymap table maps keys to either a UI action (pause, speed, cycle adventurer) or a sim
+command (movement while possessed). Rebinding later means editing the table.
+
+### 8.4 Desktop packaging
+
+Tauri is added in M2, when file saves are needed. Before that the game runs in a dev browser
+tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
+
+---
+
+## 9. Extending the game
+
+| To add… | Touch |
+|---|---|
+| Monster, item, class, race | One content def |
+| Omen, blessing, trait, status effect | One content def (a bundle) |
+| A new kind of effect | One case in the effect interpreter |
+| Rule condition or rule action | One registry entry, and a Library node to unlock it |
+| Town upgrade | One node def |
+| Town building | Node defs with a new `tree` id, and a panel title |
+| Floor type | A step list; a new `GenStep` only if the shape is new |
+| Conduct | One `RunTracker` and a content def |
+| Tileset | One `GlyphTheme` |
+| Storage backend | One `SaveStore` |
+
+---
+
+## 10. Testing
+
+- **Determinism:** the same seed and commands give the same state hash, run twice.
+- **Save round-trip:** serialize mid-run, deserialize, continue; the result matches an
+  uninterrupted run.
+- **AI behavior:** hand-built maps with a fixed seed, asserting on the actions taken and the
+  `ruleFired` trace.
+- **Content:** validation runs in `npm test`.
+- **Balance:** `tools/balance` runs N seeded headless runs and reports depth, death causes and
+  currency per hour. Run it before and after any balance change.
+- **UI:** component tests for the kit; the map renderer is checked by eye in the dev tab.

@@ -1,0 +1,26 @@
+---
+epic: adventurer-ai
+title: Decision engine and baseline AI
+status: active
+milestones: [M0, M1]
+---
+
+## Goal
+Adventurers that explore, fight and survive competently with zero player rules, and explain every decision.
+
+## Scope
+**In:**
+- Decision engine shared by adventurers and monsters
+- Baseline rule set: explore, fight, flee, leave floor, inventory
+- Stuck detection
+- Decision trace events
+
+**Out (later or elsewhere):**
+- Player-editable rules and the editor (see `behavior-rules`)
+
+## Design refs
+- `CLAUDE.md` §5.3: Baseline behavior
+- `docs/ARCHITECTURE.md` §4
+
+## Items
+- [ ] [ETH-009 Decision engine with baseline exploration, trace and stuck detection](ETH-009-decision-engine-baseline-explore.md)
