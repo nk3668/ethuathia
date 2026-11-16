@@ -713,8 +713,9 @@ As built (ETH-012), the stores are in `ui/stores/`:
   `WorkerHost`; tests pass an `InlineHost`), binds it and starts a demo run at 1× until the
   Prepare screen and speed controls exist.
 - `profileStore`: only the currencies for now, all zero. M2 replaces it with the meta `Profile`.
-- `uiStore`: `selected`, `tab`, `drawerOpen`, `logHeight` and `logFilter`. Zustand's `persist`
-  keeps `logHeight` and `tab` in `localStorage` (key `ethuathia.ui`), through a wrapper that
+- `uiStore`: `selected`, `tab`, `drawerOpen`, `logHeight`, `logFilter` and `mapCamera`
+  (ETH-013). Zustand's `persist` keeps `logHeight`, `tab` and `mapCamera` in `localStorage`
+  (key `ethuathia.ui`), through a wrapper that
   never throws and a merge that drops invalid values.
 - Selectors return primitives or use `useShallow`, e.g. a party card picks its member's fields
   as primitives, so cards re-render only when what they show changes.
@@ -755,6 +756,38 @@ Glyphs are pre-rendered to an offscreen atlas and copied with `drawImage`. Draw 
 features, items, actors, fog and memory dimming, overlays (selection ring, goal line, hover).
 A tileset later is a second `GlyphTheme`.
 
+As built (ETH-013), in `ui/map/`. Only `MapCanvas` and `MapControls` use React; everything
+else is plain TypeScript, and all but `MapRenderer` and `AsciiTheme` run without a canvas:
+
+- **Scene** (`scene.ts`): `buildScene(snapshot, { selected, hover }, glyphs)` packs each tile
+  into one integer: an interned glyph id (`GlyphTable`), the fog state (unknown, remembered,
+  visible) and overlay bits (hover, selected). Layers resolve topmost-wins: terrain, then a
+  feature, then an actor, with party members over anything else and dead ones not drawn.
+  `changedTiles` diffs two scenes; `describeTile` gives the hover tooltip's text.
+- **Camera** (`camera.ts`): all in whole device pixels, so glyphs stay on the pixel grid.
+  `fitView` picks the largest whole cell size that shows the floor and centers it.
+  `followView` uses `FOLLOW_CELL_HEIGHT` (20 CSS px) cells and keeps its scroll until the
+  target comes within `FOLLOW_MARGIN` (25%) of an edge, never scrolling past the floor's edges
+  and centering a floor smaller than the view. `followTarget` is the selected adventurer if
+  alive on the shown floor, else the first living one.
+- **`GlyphTheme`**: `aspect` (cell width over height), `setCellSize(w, h)` in device pixels,
+  `invalidate()` and `drawCell(ctx, x, y, glyphId, state)`. The cell size is the renderer's
+  choice (it changes with the camera mode and pixel ratio), so it is set on the theme rather
+  than fixed by it. A cell's drawing covers the whole cell, background included.
+- **`AsciiTheme`** draws `glyphStyle(id)` (`glyphs.ts`) into a `GlyphAtlas` (`atlas.ts`): one
+  slot per glyph and fog state, painted the first time it is needed, in a canvas that doubles
+  when full and is dropped when the cell size changes or the font loads.
+- **`MapRenderer`**: `resize(deviceW, deviceH, dpr)`, `draw(snapshot, { mode, selected, hover })`,
+  `tileAt` and `tileRect` (CSS pixels) for hit-testing, and `invalidate()`. When the view
+  (cell size and scroll) is unchanged it redraws only the tiles whose code changed; otherwise it
+  redraws every tile in view. The selection ring and hover outline are drawn inside the cell,
+  so a tile never draws over its neighbors and the diff stays exact.
+- **`MapCanvas`** subscribes to `simStore` outside React's render and draws at most once per
+  animation frame, so a fast sim never re-renders it. It sizes the backing store from a
+  `ResizeObserver` (`device-pixel-content-box` where supported) plus a `resolution` media
+  query for pixel-ratio changes, and reads its colors and font from the design tokens.
+- The camera mode lives in `uiStore` (`mapCamera`) and is remembered like the log height.
+
 ### 8.3 Input
 
 A keymap table maps keys to either a UI action (pause, speed, cycle adventurer) or a sim
@@ -794,4 +827,7 @@ tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
 - **Content:** validation runs in `npm test`.
 - **Balance:** `tools/balance` runs N seeded headless runs and reports depth, death causes and
   currency per hour. Run it before and after any balance change.
-- **UI:** component tests for the kit; the map renderer is checked by eye in the dev tab.
+- **UI:** component tests for the kit and shell. The map renderer's scene, camera, atlas and
+  color logic are unit-tested without a canvas, and `MapRenderer` and `AsciiTheme` run against
+  a recording fake context (`test/ui/map.test.ts`); how the map looks is checked by eye in the
+  dev tab.

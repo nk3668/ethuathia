@@ -14,7 +14,7 @@ beforeEach(() => {
   useSimStore.getState().reset();
 });
 afterEach(() => {
-  useUiStore.setState({ logHeight: LOG_HEIGHT.default, tab: 'rules', selected: null, drawerOpen: false });
+  useUiStore.setState({ logHeight: LOG_HEIGHT.default, tab: 'rules', selected: null, drawerOpen: false, mapCamera: 'follow' });
   localStorage.clear();
 });
 
@@ -73,23 +73,30 @@ describe('uiStore', () => {
     expect(clampLogHeight(200.4)).toBe(200);
   });
 
-  it('remembers the log height and open tab in localStorage, but not the selection', () => {
+  it('remembers the log height, open tab and map camera in localStorage, but not the selection', () => {
     useUiStore.getState().setLogHeight(240);
     useUiStore.getState().openTab('codex');
+    useUiStore.getState().setMapCamera('fit');
     useUiStore.getState().select(3);
     const saved = JSON.parse(localStorage.getItem(UI_STORAGE_KEY) ?? 'null') as { state: unknown };
-    expect(saved.state).toEqual({ logHeight: 240, tab: 'codex' });
+    expect(saved.state).toEqual({ logHeight: 240, tab: 'codex', mapCamera: 'fit' });
   });
 
   it('restores remembered values and ignores invalid ones', async () => {
-    localStorage.setItem(UI_STORAGE_KEY, JSON.stringify({ version: 1, state: { logHeight: 300, tab: 'codex' } }));
+    localStorage.setItem(
+      UI_STORAGE_KEY,
+      JSON.stringify({ version: 1, state: { logHeight: 300, tab: 'codex', mapCamera: 'fit' } }),
+    );
     await useUiStore.persist.rehydrate();
-    expect(useUiStore.getState()).toMatchObject({ logHeight: 300, tab: 'codex' });
+    expect(useUiStore.getState()).toMatchObject({ logHeight: 300, tab: 'codex', mapCamera: 'fit' });
 
-    localStorage.setItem(UI_STORAGE_KEY, JSON.stringify({ version: 1, state: { logHeight: 'tall', tab: 'nope' } }));
-    useUiStore.setState({ logHeight: LOG_HEIGHT.default, tab: 'rules' });
+    localStorage.setItem(
+      UI_STORAGE_KEY,
+      JSON.stringify({ version: 1, state: { logHeight: 'tall', tab: 'nope', mapCamera: 'zoom' } }),
+    );
+    useUiStore.setState({ logHeight: LOG_HEIGHT.default, tab: 'rules', mapCamera: 'follow' });
     await useUiStore.persist.rehydrate();
-    expect(useUiStore.getState()).toMatchObject({ logHeight: LOG_HEIGHT.default, tab: 'rules' });
+    expect(useUiStore.getState()).toMatchObject({ logHeight: LOG_HEIGHT.default, tab: 'rules', mapCamera: 'follow' });
 
     localStorage.setItem(UI_STORAGE_KEY, JSON.stringify({ version: 1, state: { logHeight: 99_999 } }));
     await useUiStore.persist.rehydrate();
