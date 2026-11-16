@@ -1,4 +1,4 @@
-# Ethania Backlog
+# Ethuathia Backlog
 
 Every planned piece of work is a markdown file in this folder. The game design itself
 lives in [`../CLAUDE.md`](../CLAUDE.md). This backlog breaks that design into work items.
