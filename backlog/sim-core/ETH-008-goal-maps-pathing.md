@@ -27,5 +27,10 @@ One pathing tool serves exploring, fleeing, stairs, regrouping and monster chase
 ## Notes
 Caching and invalidation can wait until profiling shows a need.
 
+Step rules must match the move action, or the AI will plan paths it can't walk. Reuse
+`stepBlocker` from `src/sim/actions.ts` (walls, closed doors, no diagonal steps into or out of a
+doorway), or a fast equivalent tested against it. Closed doors are the passability parameter's
+main case: the AI opens them on the way.
+
 ## Log
 - 2026-11-16: Created.

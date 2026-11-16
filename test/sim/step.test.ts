@@ -143,7 +143,7 @@ describe('step', () => {
     const id = state.party[0] as EntityId;
     const decide: Decide = () => ({ id: 'fly' }) as unknown as ActionRequest;
     expect(step(state, [], { decide })).toEqual([
-      { type: 'actionFailed', actor: id, action: 'fly', reason: 'Unknown action', turn: 1 },
+      { type: 'actionFailed', actor: id, action: 'fly', reason: 'Unknown action "fly"', turn: 1 },
       { type: 'waited', actor: id, turn: 1 },
     ]);
     expect(getEntity(state, id).actor?.energy).toBe(0);

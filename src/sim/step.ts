@@ -13,13 +13,10 @@ import type { ActionRequest } from './actions';
 import { applyCommand } from './commands';
 import type { Command } from './commands';
 import type { Emit, SimEvent } from './events';
-import type { ActorPart, Entity, EntityId, RunState } from './state';
+import type { ActorEntity, Entity, EntityId, RunState } from './state';
 
 /** Energy an actor needs before it can act. */
 export const ENERGY_THRESHOLD = 100;
-
-/** An entity known to have an actor part. */
-export type ActorEntity = Entity & { actor: ActorPart };
 
 /** What a decide function gets to look at. Later items add perception and AI memory here. */
 export interface DecideCtx {
@@ -85,7 +82,7 @@ function takeTurn(state: RunState, actor: ActorEntity, decide: Decide, emit: Emi
   } else {
     delete actor.actor.queued;
   }
-  actor.actor.energy -= performAction(actor, request, emit);
+  actor.actor.energy -= performAction(state, actor, request, emit);
 }
 
 /** One tick: every scheduled actor gains its speed in energy, and the turn counter moves on. */

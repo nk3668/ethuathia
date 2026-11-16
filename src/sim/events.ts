@@ -5,15 +5,20 @@
  * reward and conduct trackers and the Codex all read this one stream. Events are plain data so
  * a worker host can post them as they are.
  */
+import type { Pos } from '../core';
 import type { EntityId } from './state';
 
 /** What each kind of event carries. `emit` adds the `turn`. */
 export type SimEventBody =
   /** An actor spent its turn doing nothing. */
   | { type: 'waited'; actor: EntityId }
+  /** An actor stepped from one tile to a neighboring one on the same floor. */
+  | { type: 'moved'; actor: EntityId; from: Pos; to: Pos }
+  /** An actor opened the door entity `door`, which stands at `pos`. */
+  | { type: 'doorOpened'; actor: EntityId; door: EntityId; pos: Pos }
   /**
-   * An actor's chosen action could not be done. The actor waits instead, so a bad decision
-   * still costs a turn and can never stall the scheduler.
+   * An actor's chosen action could not be done, for `reason`. The actor waits instead, so a bad
+   * decision still costs a turn and can never stall the scheduler.
    */
   | { type: 'actionFailed'; actor: EntityId; action: string; reason: string }
   /** A command was ignored. `command` is its `type`, or `"?"` if it had none. Nothing changed. */
