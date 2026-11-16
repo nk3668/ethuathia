@@ -9,6 +9,7 @@
  * member who can act has acted once, and returns the events in the order they happened.
  */
 import { performAction } from './actions';
+import { ruleDecide } from './ai/engine';
 import type { ActionRequest } from './actions';
 import { applyCommand } from './commands';
 import type { Command } from './commands';
@@ -29,15 +30,15 @@ export interface DecideCtx {
 
 /**
  * Chooses an actor's action for this turn. Randomness must come from `state.rng.ai`, never
- * `Math.random()`. The decision engine (ETH-009) plugs in here.
+ * `Math.random()`. The default is the decision engine, `ruleDecide` (`src/sim/ai`).
  */
 export type Decide = (ctx: DecideCtx) => ActionRequest;
 
-/** The decide function used until the decision engine exists: always wait. */
+/** A decide function that always waits, for tests of the scheduler itself. */
 export const waitDecide: Decide = () => ({ id: 'wait' });
 
 export interface StepOptions {
-  /** Chooses every actor's action. Defaults to `waitDecide`. */
+  /** Chooses every actor's action. Defaults to the decision engine, `ruleDecide`. */
   decide?: Decide;
 }
 
@@ -55,7 +56,7 @@ export interface StepOptions {
 export function step(state: RunState, commands: readonly Command[], options: StepOptions = {}): SimEvent[] {
   const events: SimEvent[] = [];
   const emit: Emit = (event) => events.push({ ...event, turn: state.turn });
-  const decide = options.decide ?? waitDecide;
+  const decide = options.decide ?? ruleDecide;
 
   for (const command of commands) applyCommand(state, command, emit);
 

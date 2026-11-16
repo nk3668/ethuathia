@@ -14,6 +14,46 @@ export type {
   RequestOf,
   WaitRequest,
 } from './actions';
+export {
+  ACT_BACK_OFF,
+  ACT_EXPLORE,
+  ACT_WAIT,
+  aiPathGrid,
+  BASELINE_RULES,
+  chooseRule,
+  COND_ALWAYS,
+  COND_STUCK,
+  CONDITIONS,
+  defineCondition,
+  defineRuleAction,
+  DROP_TURNS,
+  followMap,
+  frontier,
+  newAiPart,
+  noParams,
+  OCCUPIED_COST,
+  RULE_ACTIONS,
+  ruleDecide,
+  STUCK_TURNS,
+} from './ai';
+export type {
+  AiActor,
+  AiCtx,
+  AiMemory,
+  AiPart,
+  Choice,
+  ConditionDef,
+  ConditionResult,
+  DroppedGoal,
+  Intent,
+  ParamParser,
+  ProgressMark,
+  Resolved,
+  Rule,
+  RuleActionDef,
+  RulePart,
+  RuleRef,
+} from './ai';
 export { applyCommand } from './commands';
 export type { Command, CommandType, PlayerActionCommand } from './commands';
 export type { Emit, SimEvent, SimEventBody, SimEventType } from './events';

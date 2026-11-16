@@ -255,7 +255,8 @@ As built in `src/sim/state.ts` (ETH-003):
   back for tests, and `planToText` prints a generated `FloorPlan`. `RunConfig.floorText`
   supplies a hand-built first floor; without it `createRun` generates one (§3.6).
 - **Party memory:** `RunState.memory` holds what the party has seen of each built floor, keyed
-  like `floors` (§3.7). `STATE_VERSION` went to 2 when it was added.
+  like `floors` (§3.7). `STATE_VERSION` went to 2 when it was added, and to 3 when entities got
+  the `ai` part (§4).
 
 ### 3.2 Entities
 
@@ -279,8 +280,9 @@ systems written as functions over `RunState`. Adventurers and monsters are both 
 combat, statuses and inventory are written once.
 
 As built (ETH-003), parts are added by the item that first needs them. So far: `actor`
-(energy, speed, HP, MP, faction), `adventurer` (name, class id, race id) and `feature` (door
-with `open`, or stairs with `dir`). Adventurers have the def `actor.adventurer`.
+(energy, speed, HP, MP, faction), `adventurer` (name, class id, race id), `feature` (door
+with `open`, or stairs with `dir`) and `ai` (rules and decision memory, ETH-009, §4). Adventurers
+have the def `actor.adventurer`.
 
 - **Ids** are positive integers from `nextEntityId`, never reused in a run. As keys of
   `entities` they iterate in ascending order.
@@ -314,8 +316,8 @@ As built in `src/sim/step.ts` (ETH-004):
   and a party with nobody able to act returns straight after applying the commands.
 - **`decide` is pluggable:** `step(state, commands, { decide })` takes a
   `Decide = (ctx: DecideCtx) => ActionRequest`, where the context holds the state, the actor and
-  `emit`. The default, `waitDecide`, always waits; the decision engine (ETH-009) replaces it. A
-  queued player action (below) takes the place of one decision.
+  `emit`. The default is the decision engine, `ruleDecide` (§4); `waitDecide` always waits, for
+  tests of the scheduler itself. A queued player action (below) takes the place of one decision.
 - **A decision that can't be done never stalls the loop:** it emits `actionFailed` and the
   actor waits, paying the wait cost.
 - **Party members perceive** before deciding and after acting (§3.7).
@@ -496,6 +498,45 @@ interface RuleActionDef extends Def {
   for N turns, the current goal is dropped, a different one is chosen and the change is logged.
 - **Presets and doctrine** are data: a preset is a saved `RuleSet`; doctrine is a small set of
   party-wide parameters that conditions and actions read from `AiCtx`.
+
+As built in `src/sim/ai/` (ETH-009):
+
+- **The engine is `ruleDecide`**, the default `Decide` of `step` (§3.3). An actor is AI-driven
+  when it has an `ai` part (`{ rules, memory }`, plain data); adventurers get one in `createRun`
+  with no rules of their own. Actors without one (monsters, until they get rule sets in M1)
+  wait with no trace.
+- **Registries live in the sim, not content:** `CONDITIONS` and `RULE_ACTIONS` are `Registry`s
+  of code (they read run state), built with `defineCondition` / `defineRuleAction`, which parse
+  the rule's `params` before `evaluate`, `resolve` or `describe` see them (`noParams` for none).
+  Ids are `cond.*` and `act.*`. `paramSchema` arrives with the rules editor (M3).
+- **Walking the rules:** the actor's own rules, then `BASELINE_RULES`. A rule is taken if it is
+  enabled, isn't a dropped goal, names a registered condition and rule action with good params,
+  its condition holds, and its action resolves to a request that passes `validateAction`.
+  Anything else is skipped, never an error. `chooseRule` does the walk without side effects.
+- **Trace:** `ruleFired { actor, rule: RuleRef, condition, action, detail }`, where `RuleRef` is
+  `{ set: 'own' | 'baseline', index }` and `detail` reads "Explore: heading for unexplored ground
+  6 turns away", with the condition's detail in brackets when it has one. The same is kept as
+  `ai.memory.intent` for the party card.
+- **Baseline rules**, in order: `cond.stuck → act.back_off`, `cond.always → act.explore`,
+  `cond.always → act.wait`.
+  - `act.explore` is frontier-based: the goals are tiles the actor could enter (on the party
+    memory's path grid, closed doors at `OPEN_DOOR_COST`) with an unseen neighbor. Standing on one
+    always reveals its neighbors, so each goal reached shrinks the frontier, and explored dead
+    ends are never goals nor on a shortest route to one. A closed door next on the route becomes
+    `openDoor`; another actor on the next tile becomes a wait ("waiting for X to get out of the
+    way"). It returns `null` once no frontier tile is reachable, and the actor settles on
+    `act.wait`. Tiles where the actor knows another actor stands (party members, anyone adjacent)
+    cost `OCCUPIED_COST` (8) more, so it routes round them when it reasonably can.
+  - `act.back_off` follows a flee map away from where the actor got stuck, with occupied tiles
+    blocked.
+  - `act.wait` is marked `idle`.
+- **Stuck detection** runs before the walk. Each decision records the actor's floor, position and
+  the party's seen-tile count (`memory.last`). After `STUCK_TURNS` (10) decisions in a row with
+  none of them changing while the last rule fired was not `idle`, that rule becomes
+  `memory.dropped` and is skipped for `DROP_TURNS` (20) turns, a `stuck` event says why, and
+  `cond.stuck` holds meanwhile, so the actor backs off and then waits until the goal comes back.
+- **Speed:** a lone adventurer explores a generated Hewn Halls floor in about 200 party turns
+  (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite.
 
 ---
 

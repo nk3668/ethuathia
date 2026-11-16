@@ -6,6 +6,7 @@
  * a worker host can post them as they are.
  */
 import type { Pos } from '../core';
+import type { RuleRef } from './ai/types';
 import type { EntityId } from './state';
 
 /** What each kind of event carries. `emit` adds the `turn`. */
@@ -21,6 +22,17 @@ export type SimEventBody =
    * decision still costs a turn and can never stall the scheduler.
    */
   | { type: 'actionFailed'; actor: EntityId; action: string; reason: string }
+  /**
+   * The AI trace: the decision engine took `rule` for `actor`. `condition` and `action` are the
+   * rule's condition and rule action ids, and `detail` is the readable reason, e.g.
+   * "Explore: heading for unexplored ground 6 turns away".
+   */
+  | { type: 'ruleFired'; actor: EntityId; rule: RuleRef; condition: string; action: string; detail: string }
+  /**
+   * Stuck detection: `actor` neither moved nor saw anything new for `turns` decisions while
+   * following `rule` (rule action `action`), so that goal is dropped for a while. `detail` says so.
+   */
+  | { type: 'stuck'; actor: EntityId; rule: RuleRef; action: string; turns: number; detail: string }
   /** A command was ignored. `command` is its `type`, or `"?"` if it had none. Nothing changed. */
   | { type: 'commandRejected'; command: string; reason: string };
 
