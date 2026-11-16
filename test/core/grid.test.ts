@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DIRS_4, DIRS_8, Grid } from '../../src/core';
-import type { GridData } from '../../src/core';
+import { DIRS_4, DIRS_8, Grid, isGridBuffer } from '../../src/core';
+import type { GridBuffer, GridData } from '../../src/core';
 
 describe('Grid', () => {
   it('stores values per cell, row by row', () => {
@@ -107,6 +107,45 @@ describe('Grid', () => {
     const g = new Grid(80, 40, 'u8', 1);
     g.set(10, 10, 2);
     expect(g.toData().runs).toEqual([1, 810, 2, 1, 1, 2389]);
+  });
+
+  it('converts to a plain GridBuffer and wraps one without copying', () => {
+    const g = new Grid(3, 2, 'u16', 4);
+    const buffer = g.toBuffer();
+    expect(Object.getPrototypeOf(buffer)).toBe(Object.prototype);
+    expect(buffer).toEqual({ width: 3, height: 2, kind: 'u16', cells: g.cells });
+    expect(isGridBuffer(buffer)).toBe(true);
+
+    const wrapped = Grid.wrap(buffer);
+    expect(wrapped).toBeInstanceOf(Grid);
+    expect(wrapped.cells).toBe(buffer.cells);
+    wrapped.set(2, 1, 600);
+    expect(buffer.cells[5]).toBe(600);
+    expect(() => wrapped.set(0, 0, -1)).toThrow(RangeError);
+    expect(wrapped.toData()).toEqual(g.toData());
+  });
+
+  it('survives structured clone (worker transfer) as a GridBuffer', () => {
+    const buffer = new Grid(2, 2, 'i16', -3).toBuffer();
+    const copy = structuredClone(buffer);
+    expect(copy).toEqual(buffer);
+    expect(Grid.wrap(copy).get(1, 1)).toBe(-3);
+  });
+
+  it('refuses to wrap a malformed buffer', () => {
+    const ok: GridBuffer = { width: 2, height: 2, kind: 'u8', cells: new Uint8Array(4) };
+    expect(() => Grid.wrap(ok)).not.toThrow();
+    for (const bad of [
+      { ...ok, cells: new Uint8Array(3) },
+      { ...ok, cells: new Uint16Array(4) },
+      { ...ok, kind: 'f32' },
+      { ...ok, width: 0, cells: new Uint8Array(0) },
+      { ...ok, cells: [0, 0, 0, 0] },
+      null,
+    ]) {
+      expect(isGridBuffer(bad)).toBe(false);
+      expect(() => Grid.wrap(bad as GridBuffer)).toThrow(TypeError);
+    }
   });
 
   it('rejects malformed data', () => {

@@ -184,6 +184,31 @@ interface RunState {
 Inside `step` the state is mutated in place for speed. Determinism is the contract:
 **the same seed and the same command sequence always produce the same state.**
 
+As built in `src/sim/state.ts` (ETH-003):
+
+- **Plain data** is defined by `findNonPlain` in `src/core/plain.ts`: `null`, booleans,
+  strings, finite numbers, arrays without holes, plain objects, and integer typed arrays. It
+  must also be a tree, so no object appears twice: a shared reference would split into two
+  copies after a save and load. `undefined`, `NaN`, `Map`, `Set`, class instances and functions
+  are rejected. Leave optional fields out rather than setting them to `undefined`.
+- **Grids are stored as `GridBuffer`s**: `{ width, height, kind, cells }` with the typed array
+  itself. Code that needs the methods calls `Grid.wrap(buffer)`, which shares the cells (like
+  `new Rng(state)` for RNG state), so there is no copy or write-back. Typed arrays count as
+  plain data because structured clone copies them for the worker. `serialize` writes every
+  `GridBuffer` in the state as `{ "$grid": GridData }` (the run-length encoding) and
+  `deserialize` turns it back, so a new grid anywhere in the state needs no serializer change.
+- `serialize` checks the state is plain data and throws with the offending path. `deserialize`
+  throws on another `STATE_VERSION`; migrations belong to the save layer (§6.5).
+- `seed` is kept in the state for display and bug reports. `runBundles` is added when bundles
+  are built.
+- **Floors and terrain:** a `Floor` holds a `u8` terrain grid of `Terrain` codes (`0` wall,
+  `1` floor; `TERRAIN_IDS` maps each code to its content id) and the ids of the entities on it.
+  Doors and stairs are feature entities on floor tiles, not terrain.
+- **Hand-built floors** are written as text (`#` wall, `.` floor, `+`/`'` closed and open door,
+  `<`/`>` stairs, `@` party start) and read by `parseFloorText`. `floorToText` prints a floor
+  back for tests. `RunConfig.floorText` supplies the first floor; without it `createRun` uses
+  the built-in `M0_FLOOR` until generation arrives (§3.6).
+
 ### 3.2 Entities
 
 ```ts
@@ -204,6 +229,21 @@ interface Entity {
 This is not a full entity-component system: just one entity type with optional parts, and
 systems written as functions over `RunState`. Adventurers and monsters are both actors, so
 combat, statuses and inventory are written once.
+
+As built (ETH-003), parts are added by the item that first needs them. So far: `actor`
+(energy, speed, HP, MP, faction), `adventurer` (name, class id, race id) and `feature` (door
+with `open`, or stairs with `dir`). Adventurers have the def `actor.adventurer`.
+
+- **Ids** are positive integers from `nextEntityId`, never reused in a run. As keys of
+  `entities` they iterate in ascending order.
+- **Helpers** in `src/sim/entities.ts`: `addEntity` (assigns the id and deep-copies its input, so
+  a template object is never shared), `removeEntity` (also drops the id from its floor and the
+  party), `moveEntity` (within or between floors), `getEntity`, `getFloor`, `addFloor`,
+  `entitiesOnFloor`, `entitiesAt`, `actorAt` and `featureAt`.
+- Each floor's `entities` list is the only index. Only the helpers change which floor an entity
+  is on, which keeps the list in step. Position lookups scan the floor's list, which is fast
+  enough for M0's entity counts; add a position index if profiling says so.
+- An entity's `pos` is replaced, never mutated, so two entities never share a position object.
 
 ### 3.3 Time
 
@@ -236,6 +276,8 @@ As built in `src/core/rng.ts`:
 (`u8`, `u16`, `i16` or `i32`) whose `get`/`set` throw on out-of-bounds coordinates and on
 values that don't fit the cell type. Hot loops use `cells` directly. `toData()` gives a
 run-length-encoded `GridData` for saves, and `Grid.fromData` validates it on the way back.
+`toBuffer()` and `Grid.wrap` convert to and from the plain `GridBuffer` that run state stores
+(§3.1).
 Neighbors come in a fixed order, orthogonal steps first (`DIRS_4`, `DIRS_8`).
 
 ### 3.5 Public API
