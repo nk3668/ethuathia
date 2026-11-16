@@ -25,7 +25,11 @@ Actions are the only way the world changes, shared by AI, rules, monsters and po
 - [ ] Each action has an energy cost that the scheduler charges
 
 ## Notes
-None yet.
+ETH-004 left a stand-in in `src/sim/actions.ts`: `ActionRequest` (wait only), `ACTION_COSTS`
+and `performAction`, which the scheduler calls and charges. Replace its body with the registry,
+and keep the rule that a request failing validation emits `actionFailed` and costs a wait, so a
+bad decision can never stall the scheduler. `playerAction` commands check the action id with
+`isActionId`; extend that check to the new actions' parameters.
 
 ## Log
 - 2026-11-16: Created.

@@ -6,6 +6,7 @@
  * Content (classes, monsters, features) is referenced by id only, never copied in.
  */
 import type { GridBuffer, Pos, RngState } from '../core';
+import type { ActionRequest } from './actions';
 
 /** Bumped whenever the shape of `RunState` changes. Saves from other versions need a migration. */
 export const STATE_VERSION = 1;
@@ -108,7 +109,7 @@ export type Faction = 'party' | 'monster' | 'neutral';
 
 /** Anything that takes turns: adventurers and monsters. */
 export interface ActorPart {
-  /** Builds up by `speed` each tick; the actor acts at 100 (§3.3). */
+  /** Builds up by `speed` each tick; the actor acts at `ENERGY_THRESHOLD` (§3.3). */
   energy: number;
   speed: number;
   hp: number;
@@ -116,6 +117,11 @@ export interface ActorPart {
   mp: number;
   maxMp: number;
   faction: Faction;
+  /**
+   * An action a `playerAction` command asked for. The actor's next turn does it instead of
+   * deciding, then clears it.
+   */
+  queued?: ActionRequest;
 }
 
 /** The parts of a party member that monsters don't have. */

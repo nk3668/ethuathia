@@ -2,6 +2,13 @@
  * sim: the deterministic simulation. No DOM access.
  * May import: core, content. See docs/ARCHITECTURE.md §1.
  */
+export { ACTION_COSTS, isActionId } from './actions';
+export type { ActionId, ActionRequest, WaitRequest } from './actions';
+export { applyCommand } from './commands';
+export type { Command, CommandType, PlayerActionCommand } from './commands';
+export type { Emit, SimEvent, SimEventBody, SimEventType } from './events';
+export { ENERGY_THRESHOLD, step, waitDecide } from './step';
+export type { ActorEntity, Decide, DecideCtx, StepOptions } from './step';
 export {
   actorAt,
   addEntity,
