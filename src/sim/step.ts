@@ -13,6 +13,7 @@ import type { ActionRequest } from './actions';
 import { applyCommand } from './commands';
 import type { Command } from './commands';
 import type { Emit, SimEvent } from './events';
+import { perceive } from './perception';
 import type { ActorEntity, Entity, EntityId, RunState } from './state';
 
 /** Energy an actor needs before it can act. */
@@ -75,7 +76,14 @@ export function step(state: RunState, commands: readonly Command[], options: Ste
   return events;
 }
 
+/**
+ * One actor's turn. A party member first looks around (§5.1: perception before deciding, since a
+ * monster may have opened a door since its last turn), and looks again after acting, so the
+ * party's memory includes what the action revealed before the next snapshot.
+ */
 function takeTurn(state: RunState, actor: ActorEntity, decide: Decide, emit: Emit): void {
+  const inParty = state.party.includes(actor.id);
+  if (inParty) perceive(state, actor.id);
   let request = actor.actor.queued;
   if (request === undefined) {
     request = decide({ state, actor, emit });
@@ -83,6 +91,7 @@ function takeTurn(state: RunState, actor: ActorEntity, decide: Decide, emit: Emi
     delete actor.actor.queued;
   }
   actor.actor.energy -= performAction(state, actor, request, emit);
+  if (inParty && state.entities[actor.id] !== undefined) perceive(state, actor.id);
 }
 
 /** One tick: every scheduled actor gains its speed in energy, and the turn counter moves on. */

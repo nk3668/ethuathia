@@ -9,7 +9,7 @@ import type { GridBuffer, Pos, RngState } from '../core';
 import type { ActionRequest } from './actions';
 
 /** Bumped whenever the shape of `RunState` changes. Saves from other versions need a migration. */
-export const STATE_VERSION = 1;
+export const STATE_VERSION = 2;
 
 /**
  * Entity ids are positive integers handed out in order from `RunState.nextEntityId` and never
@@ -102,6 +102,27 @@ export interface Floor {
   entities: EntityId[];
 }
 
+/** A feature as the party last saw it: a copy, so it goes stale when the real one changes. */
+export interface RememberedFeature {
+  /** Content id, e.g. `feature.door`. */
+  def: string;
+  feature: FeaturePart;
+}
+
+/**
+ * What the party knows of one floor (docs/ARCHITECTURE.md §3.7). It is shared: whatever one
+ * member sees, they all know. Updated by `perceive` in `perception.ts`.
+ */
+export interface FloorMemory {
+  /** `u8` grid: 0 for a tile nobody has seen, otherwise 1 + the `Terrain` code last seen there. */
+  terrain: GridBuffer;
+  /**
+   * Features last seen, keyed by tile index (`y * width + x`). A tile last seen with no feature
+   * has no entry. Monsters are never remembered.
+   */
+  features: Record<number, RememberedFeature>;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Entities
 
@@ -167,6 +188,8 @@ export interface RunState {
   config: RunConfig;
   dungeon: DungeonGraph;
   floors: Record<FloorId, Floor>;
+  /** The party's memory of each built floor, with the same keys as `floors`. */
+  memory: Record<FloorId, FloorMemory>;
   entities: Record<EntityId, Entity>;
   /** Party members' entity ids, in party order. */
   party: EntityId[];

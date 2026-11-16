@@ -8,6 +8,7 @@ import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { parseFloorText } from './floorText';
 import type { FloorPlan } from './floorText';
 import { generateFloor } from './gen';
+import { perceiveParty } from './perception';
 import { DEFS, RNG_STREAMS, STATE_VERSION, Terrain } from './state';
 import type { ActorPart, FloorId, RunConfig, RunState } from './state';
 
@@ -30,7 +31,9 @@ const ADVENTURER_ACTOR: ActorPart = {
 /**
  * A new run: RNG streams seeded from `seed`, a one-floor dungeon built from `config.floorText`
  * or else generated from `FIRST_FLOOR_TYPE` with the `dungeon` stream, and the party placed at
- * the floor's `@` marks, or on its up stairs if it has none. Extra party members go on the nearest free floor tiles. `config` is copied, not kept.
+ * the floor's `@` marks, or on its up stairs if it has none. Extra party members go on the
+ * nearest free floor tiles, and the party's memory starts with what they can see. `config` is
+ * copied, not kept.
  */
 export function createRun(config: RunConfig, seed: number): RunState {
   if (config.party.length === 0) throw new Error('A run needs at least one adventurer');
@@ -42,6 +45,7 @@ export function createRun(config: RunConfig, seed: number): RunState {
     config: clonePlain(config),
     dungeon: { entry: FIRST_FLOOR, nodes: { [FIRST_FLOOR]: { id: FIRST_FLOOR, depth: 1, up: null, down: [] } } },
     floors: {},
+    memory: {},
     entities: {},
     party: [],
     nextEntityId: 1,
@@ -63,6 +67,7 @@ export function createRun(config: RunConfig, seed: number): RunState {
     });
     state.party.push(entity.id);
   });
+  perceiveParty(state);
   return state;
 }
 
