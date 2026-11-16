@@ -704,6 +704,20 @@ As built (ETH-010):
   - `profileStore`: the profile, with actions that call the pure meta functions and then save.
   - `uiStore`: selection, open tab, modals, log filters.
 - Components subscribe to narrow slices so a new snapshot re-renders only what changed.
+
+As built (ETH-012), the stores are in `ui/stores/`:
+
+- `simStore`: `snapshot` and `events`, a ring buffer of the last `EVENT_BUFFER_SIZE` (500)
+  events, each with a sequence number for list keys. `bindHost(host)` feeds a `SimHost`'s
+  snapshots and events into it and returns an unsubscribe. `App` creates the host (a
+  `WorkerHost`; tests pass an `InlineHost`), binds it and starts a demo run at 1× until the
+  Prepare screen and speed controls exist.
+- `profileStore`: only the currencies for now, all zero. M2 replaces it with the meta `Profile`.
+- `uiStore`: `selected`, `tab`, `drawerOpen`, `logHeight` and `logFilter`. Zustand's `persist`
+  keeps `logHeight` and `tab` in `localStorage` (key `ethuathia.ui`), through a wrapper that
+  never throws and a merge that drops invalid values.
+- Selectors return primitives or use `useShallow`, e.g. a party card picks its member's fields
+  as primitives, so cards re-render only when what they show changes.
 - **Styling:** CSS Modules and design tokens as CSS custom properties (see `VISUAL-DESIGN.md`).
 
 ### 8.1 Kit (`ui/kit/`)

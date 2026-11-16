@@ -98,6 +98,10 @@ License 1.1, and the build writes the two license texts to `dist/licenses/`.
   interactive element. Set once in `base.css` with `:focus-visible`.
 - Component sizes: `--control-height` 28px (buttons, tabs), `--bar-height` 6px,
   `--tooltip-max-width` 280px.
+- Layout sizes (§3): `--topbar-height` 44px, `--party-width` 260px (`--party-width-compact`
+  200px at narrow widths), `--side-width` 360px, `--drawer-width` 360px and `--log-max-height`
+  60vh. The log's own height is not a token: the shell sets it from `uiStore` as an inline
+  custom property.
 - Motion: `--duration-fast` 120ms for fades and bar changes. It is 0 under
   `prefers-reduced-motion`, where `base.css` also turns off every transition and animation.
 
@@ -162,6 +166,23 @@ In dev mode, `?kit` on the dev server URL opens a gallery of every component and
 - **Tablet width (under about 1000px):** the tab panel becomes a slide-over drawer opened from
   a button in the top bar, and party cards shrink to one line each (number, name, HP bar).
 
+As built (ETH-012), in `src/ui/shell/`:
+
+- `AppShell` is a two-row grid (top bar, then `main`), and `main` is the grid with the `party`,
+  `map`, `tabs` and `log` areas. The narrow breakpoint is `NARROW_QUERY` (`max-width: 999px`) in
+  `useMediaQuery.ts`; the shell sets `data-layout="wide" | "narrow"` from it and the stylesheets
+  follow that attribute, so the breakpoint is defined once.
+- The log strip's top edge is a `role="separator"` handle: drag it, or use the arrow keys
+  (Shift for bigger steps), Page Up / Page Down and Home / End. The height runs from 80px to
+  600px (never more than 60% of the window) and is remembered in `localStorage` along with the
+  open tab. These are per-machine conveniences, not part of the save.
+- The drawer is a modal dialog: everything behind it is `inert`, Escape, the backdrop and its
+  Close button close it, focus starts on Close and returns to the top-bar button.
+- Party cards: the name is a toggle button (`aria-pressed`) that selects the adventurer. A dead
+  member's card has a dashed border and reads "✝ Dead".
+- Slots left for later items: `data-slot="speed-controls"` in the top bar (ETH-014),
+  `map-canvas` and `map-controls` in the map area (ETH-013).
+
 ### 3.1 Top bar
 
 Currencies on the left, each an icon and a `NumberText` whose tooltip shows this run's earnings
@@ -188,6 +209,12 @@ header reading "Possessed", so the state is clear without relying on the border 
 
 Monospace, newest at the bottom, prefix icon and color by category. Entity and item names in a
 line are `Explain` links. AI lines always end with the rule and the reason in parentheses.
+
+Until M1 adds filters and links, the log (ETH-012) is plain text: a turn column, the category
+prefix and a sentence. It leaves out moves and waits, which the map shows, and shows an AI
+decision only when an adventurer's goal changes (a different rule or rule action from its
+previous `ruleFired`), since the engine traces every decision. It follows new lines while
+scrolled to the bottom and stays put when the player scrolls up.
 
 ---
 

@@ -71,6 +71,14 @@
   --bar-height: 6px;
   --tooltip-max-width: 280px;
 
+  /* In-run layout (§3). The log height is set from uiStore as --log-height. */
+  --topbar-height: 44px;
+  --party-width: 260px;
+  --party-width-compact: 200px;
+  --side-width: 360px;
+  --drawer-width: 360px;
+  --log-max-height: 60vh;
+
   /* Motion (§1.5): short fades only, and none under reduced motion */
   --duration-fast: 120ms;
 }

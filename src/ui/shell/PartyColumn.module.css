@@ -1,0 +1,94 @@
+.column {
+  min-height: 0;
+  overflow: auto;
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card[data-dead],
+.compact[data-dead] {
+  border-style: dashed;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* The name doubles as the select toggle. */
+.name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: transparent;
+  font-weight: var(--font-weight-heading);
+  text-align: left;
+  cursor: pointer;
+}
+
+.name:hover {
+  color: var(--accent);
+}
+
+.slot {
+  display: inline-grid;
+  place-items: center;
+  min-width: calc(var(--space-4) + var(--space-1));
+  height: calc(var(--space-4) + var(--space-1));
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--bg-panel);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.kind {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.intent {
+  margin: 0;
+  color: var(--text);
+}
+
+.rule {
+  color: var(--text-muted);
+}
+
+.dead {
+  margin: 0;
+  color: var(--danger);
+}
+
+/* Compact: one line per member. */
+.compact {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+}
+
+.compactBar {
+  min-width: 0;
+}

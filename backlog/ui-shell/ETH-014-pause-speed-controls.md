@@ -29,3 +29,4 @@ None yet.
 
 ## Log
 - 2026-11-16: Created.
+- 2026-11-16: ETH-012 left the `speed-controls` slot in the top bar for this item, starts the app's run at 1x in `App.tsx`, and already shows floor and turn from the snapshot.
