@@ -151,6 +151,9 @@ export interface Entity {
   feature?: FeaturePart;
 }
 
+/** An entity known to have an actor part. */
+export type ActorEntity = Entity & { actor: ActorPart };
+
 // ---------------------------------------------------------------------------------------------
 // The run
 

@@ -132,6 +132,25 @@ Move, attack, quaff, pick up, pray, take stairs: each is one `ActionDef`. AI, ru
 and a possessed adventurer all produce actions and submit them through the same pipeline, so a
 possessed character can never do something the AI could not, and the reverse.
 
+As built in `src/sim/actions.ts` (ETH-005):
+
+- **Requests are a typed union** keyed by `id` (`wait`, `move`, `openDoor`). Move and open door
+  take a one-tile step `dir` (`{ x, y }`, each -1, 0 or 1, as in `DIRS_8`).
+- **Definitions live in one `ACTIONS` record, not a `Registry`.** Actions are code, not data,
+  and the record's type makes the set exhaustive: a request type without a def, or a def
+  without a request type, fails to compile. Each `ActionDef` has `name` and `description` (Codex
+  and tooltip text), an energy `cost`, and three functions: `parse` builds a clean request from
+  untyped data, `validate` returns a reason or `null` and changes nothing, and `execute`.
+- **Entry points:** `parseRequest` (for anything crossing into the sim, such as a
+  `playerAction` command), `validateAction` (for the AI to check an action before choosing it)
+  and `performAction` (for the scheduler, which charges the returned cost). An invalid request
+  emits `actionFailed` with the reason and becomes a wait.
+- **Movement rules** live in `stepBlocker(state, floor, from, dir)`, which ignores creatures so
+  goal maps can share it: the target must be in bounds and not a wall, a closed door blocks, and
+  a doorway (a tile with a door, open or closed) can only be entered or left orthogonally. Move
+  adds that another actor's tile is blocked. Diagonal steps are otherwise allowed, including
+  between two walls.
+
 ### 2.4 Sim events
 
 ```ts
@@ -256,7 +275,7 @@ As built in `src/sim/step.ts` (ETH-004):
 
 - **`RunState.turn` counts ticks**, so it is game time: a speed-100 actor acts once per turn,
   a speed-200 actor twice, whatever the party's speed. `ENERGY_THRESHOLD` is 100 and each
-  action's cost is in `ACTION_COSTS` (wait is 100). Energy left over carries to the next turn.
+  action's cost is its `ActionDef.cost` (100 for wait, move and open door so far). Energy left over carries to the next turn.
 - **Order:** actors go in passes in ascending entity id, each acting at most once per pass;
   passes repeat while anyone has enough energy, then the next tick starts. Only actors on a
   floor with a party member are scheduled; other floors stay frozen. Actors with speed 0 or

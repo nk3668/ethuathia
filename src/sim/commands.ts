@@ -8,7 +8,7 @@
  * More commands arrive with the features that need them: `setRules` and `setDoctrine` with
  * behavior rules (M3), `possess` and `release` with possession, and `retreat` with run endings.
  */
-import { isActionId } from './actions';
+import { parseRequest } from './actions';
 import type { ActionRequest } from './actions';
 import type { Emit } from './events';
 import type { EntityId, RunState } from './state';
@@ -32,29 +32,24 @@ export type CommandType = Command['type'];
 export function applyCommand(state: RunState, command: Command, emit: Emit): void {
   const raw: unknown = command;
   const type = isRecord(raw) && typeof raw.type === 'string' ? raw.type : '?';
-  const reason = isRecord(raw) ? checkCommand(state, raw) : 'Not a command object';
-  if (reason !== null) {
-    emit({ type: 'commandRejected', command: type, reason });
-    return;
-  }
-  switch (command.type) {
-    case 'playerAction': {
-      const actor = state.entities[command.actor]?.actor;
-      if (actor !== undefined) actor.queued = { id: command.action.id };
-      return;
-    }
-  }
+  const reason = isRecord(raw) ? run(state, raw) : 'Not a command object';
+  if (reason !== null) emit({ type: 'commandRejected', command: type, reason });
 }
 
-/** Why `raw` cannot be applied, or `null` if it can. */
-function checkCommand(state: RunState, raw: Record<string, unknown>): string | null {
+/**
+ * Applies `raw` and returns `null`, or returns why it can't be applied. Every check comes before
+ * the first change, so a rejected command changes nothing.
+ */
+function run(state: RunState, raw: Readonly<Record<string, unknown>>): string | null {
   switch (raw.type) {
     case 'playerAction': {
       const entity = typeof raw.actor === 'number' ? state.entities[raw.actor] : undefined;
       if (entity === undefined) return `No entity ${String(raw.actor)}`;
       if (entity.actor === undefined) return `Entity ${entity.id} cannot act`;
-      const id = isRecord(raw.action) ? raw.action.id : undefined;
-      if (!isActionId(id)) return `Unknown action "${String(id)}"`;
+      // Parsed into a fresh object, so nothing the caller holds ends up in the state.
+      const request = parseRequest(raw.action);
+      if (typeof request === 'string') return request;
+      entity.actor.queued = request;
       return null;
     }
     default:
