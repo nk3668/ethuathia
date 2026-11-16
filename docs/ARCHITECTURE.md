@@ -80,9 +80,11 @@ harness and in time-away catch-up.
 interface Def { id: string; name: string; description: string; tags: string[] }
 
 class Registry<T extends Def> {
-  register(def: T): void          // throws on a duplicate id
+  constructor(kind: string)       // e.g. 'monster', used in error messages
+  register(def: T): T             // throws on a duplicate id
   get(id: string): T              // throws on an unknown id
-  all(): readonly T[]
+  has(id: string): boolean
+  all(): readonly T[]             // registration order
 }
 ```
 
@@ -216,6 +218,25 @@ the UI and speed controls work in.
 is split into named streams so that, for example, adding a monster to the spawn table does not
 change the dungeon layout for the same seed. `Math.random()` is banned in the lower layers by
 a lint rule.
+
+As built in `src/core/rng.ts`:
+
+- `RngState` is a plain `[number, number, number, number]` of unsigned 32-bit words.
+  `seedStreams(seed, names)` derives one per stream by mixing the seed with a hash of the
+  stream's name, so a stream never depends on which other streams exist.
+- `new Rng(state)` wraps a state **without copying it**: drawing advances the array in place,
+  so `new Rng(state.rng.combat)` keeps the run state current with no write-back step.
+- Helpers: `int(min, max)` (inclusive, unbiased), `float()`, `chance(p)` (always exactly one
+  draw, so tuning a probability doesn't shift the rest of the stream), `pick`, `shuffle` (in
+  place), `saveState` and `restoreState`.
+- A test pins the first outputs for seed 1. Changing the generator or the seeding changes every
+  existing seed, so it needs a save migration.
+
+`src/core/grid.ts` holds the `Grid` used for terrain, memory and goal maps: a typed array
+(`u8`, `u16`, `i16` or `i32`) whose `get`/`set` throw on out-of-bounds coordinates and on
+values that don't fit the cell type. Hot loops use `cells` directly. `toData()` gives a
+run-length-encoded `GridData` for saves, and `Grid.fromData` validates it on the way back.
+Neighbors come in a fixed order, orthogonal steps first (`DIRS_4`, `DIRS_8`).
 
 ### 3.5 Public API
 
