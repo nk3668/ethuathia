@@ -1,6 +1,6 @@
 /**
- * Floors written as text, for hand-built maps in tests and the M0 floor, and for printing a
- * floor to eyeball it in a test failure.
+ * Floors written as text, for hand-built maps in tests, and for printing a floor (built or
+ * generated) to eyeball it in a test failure.
  *
  * Legend:
  *
@@ -18,7 +18,7 @@
  */
 import { Grid } from '../core';
 import type { Pos } from '../core';
-import { getFloor } from './entities';
+import { getEntity, getFloor } from './entities';
 import { DEFS, Terrain } from './state';
 import type { FeaturePart, FloorId, RunState } from './state';
 
@@ -67,31 +67,45 @@ export function parseFloorText(rows: readonly string[]): FloorPlan {
   return plan;
 }
 
-/**
- * Prints a floor of a run as text using the legend above. Actors are drawn on top: party
- * members as `@`, anything else with an actor part as `m`.
- */
-export function floorToText(state: RunState, floorId: FloorId): string[] {
-  const floor = getFloor(state, floorId);
-  const terrain = Grid.wrap(floor.terrain);
+function featureChar(f: FeaturePart): string {
+  return f.kind === 'door' ? (f.open ? "'" : '+') : f.dir === 'up' ? '<' : '>';
+}
+
+/** Terrain as text, then each mark drawn over it in order (later marks win). */
+function render(terrain: Grid, marks: { pos: Pos; ch: string }[]): string[] {
   const rows: string[][] = [];
   for (let y = 0; y < terrain.height; y++) {
     const row: string[] = [];
     for (let x = 0; x < terrain.width; x++) row.push(terrain.get(x, y) === Terrain.Wall ? '#' : '.');
     rows.push(row);
   }
-  const draw = (pos: Pos, ch: string) => {
-    (rows[pos.y] as string[])[pos.x] = ch;
-  };
-  const entities = floor.entities.map((id) => state.entities[id]);
-  for (const e of entities) {
-    if (e?.feature === undefined) continue;
-    const f = e.feature;
-    draw(e.pos, f.kind === 'door' ? (f.open ? "'" : '+') : f.dir === 'up' ? '<' : '>');
-  }
-  for (const e of entities) {
-    if (e?.actor === undefined) continue;
-    draw(e.pos, e.actor.faction === 'party' ? '@' : 'm');
-  }
+  for (const { pos, ch } of marks) (rows[pos.y] as string[])[pos.x] = ch;
   return rows.map((row) => row.join(''));
+}
+
+/**
+ * Prints a floor of a run as text using the legend above. Actors are drawn on top: party
+ * members as `@`, anything else with an actor part as `m`.
+ */
+export function floorToText(state: RunState, floorId: FloorId): string[] {
+  const floor = getFloor(state, floorId);
+  const entities = floor.entities.map((id) => getEntity(state, id));
+  return render(Grid.wrap(floor.terrain), [
+    ...entities.flatMap((e) => (e.feature === undefined ? [] : [{ pos: e.pos, ch: featureChar(e.feature) }])),
+    ...entities.flatMap((e) =>
+      e.actor === undefined ? [] : [{ pos: e.pos, ch: e.actor.faction === 'party' ? '@' : 'm' }],
+    ),
+  ]);
+}
+
+/**
+ * Prints a plan, such as a generated floor, as text using the legend above. Starts are drawn as
+ * `@` over anything else, so `parseFloorText(planToText(plan))` gives the plan back unless a start
+ * shares a tile with a feature.
+ */
+export function planToText(plan: FloorPlan): string[] {
+  return render(plan.terrain, [
+    ...plan.features.map((f) => ({ pos: f.pos, ch: featureChar(f.feature) })),
+    ...plan.starts.map((pos) => ({ pos, ch: '@' })),
+  ]);
 }

@@ -1,32 +1,20 @@
 /**
  * Starting a run: `createRun` builds the initial `RunState` from a config and a seed.
  */
-import { clonePlain, Grid, seedStreams } from '../core';
+import { clonePlain, Grid, Rng, seedStreams } from '../core';
 import type { Pos } from '../core';
+import { FLOOR_HALLS, FLOOR_TYPES } from '../content';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { parseFloorText } from './floorText';
 import type { FloorPlan } from './floorText';
+import { generateFloor } from './gen';
 import { DEFS, RNG_STREAMS, STATE_VERSION, Terrain } from './state';
 import type { ActorPart, FloorId, RunConfig, RunState } from './state';
 
-/** The floor every run starts on until generation arrives (ETH-006). */
-export const M0_FLOOR: readonly string[] = [
-  '############################################',
-  '#........#############......################',
-  '#.<.@....+...........+......################',
-  '#........######.######......################',
-  '#........######.######......######.......###',
-  "######.########.######......'.....+......###",
-  '######.########.#################........###',
-  '######.########.#################.....>..###',
-  '######.########...........#######........###',
-  '######.###################.######.......####',
-  '######.....+.......#######.......#..########',
-  '################.......................#####',
-  '############################################',
-];
-
 const FIRST_FLOOR: FloorId = 'd1';
+
+/** The floor type the first floor is generated from when the config has no `floorText`. */
+export const FIRST_FLOOR_TYPE = FLOOR_HALLS.id;
 
 /** Starting actor values for an adventurer, until classes and races supply them (ETH-015). */
 const ADVENTURER_ACTOR: ActorPart = {
@@ -41,8 +29,8 @@ const ADVENTURER_ACTOR: ActorPart = {
 
 /**
  * A new run: RNG streams seeded from `seed`, a one-floor dungeon built from `config.floorText`
- * (or `M0_FLOOR`), and the party placed at the floor's `@` marks, or on its up stairs if it has
- * none. Extra party members go on the nearest free floor tiles. `config` is copied, not kept.
+ * or else generated from `FIRST_FLOOR_TYPE` with the `dungeon` stream, and the party placed at
+ * the floor's `@` marks, or on its up stairs if it has none. Extra party members go on the nearest free floor tiles. `config` is copied, not kept.
  */
 export function createRun(config: RunConfig, seed: number): RunState {
   if (config.party.length === 0) throw new Error('A run needs at least one adventurer');
@@ -59,7 +47,10 @@ export function createRun(config: RunConfig, seed: number): RunState {
     nextEntityId: 1,
   };
 
-  const plan = parseFloorText(config.floorText ?? M0_FLOOR);
+  const plan =
+    config.floorText !== undefined
+      ? parseFloorText(config.floorText)
+      : generateFloor(FLOOR_TYPES.get(FIRST_FLOOR_TYPE), new Rng(state.rng.dungeon));
   addFloor(state, FIRST_FLOOR, plan);
   const starts = startPositions(state, FIRST_FLOOR, plan, config.party.length);
   config.party.forEach((member, i) => {

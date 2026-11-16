@@ -1,13 +1,42 @@
 import { describe, expect, it } from 'vitest';
-import { DIRS_8, findNonPlain, Grid, Rng, seedState } from '../../src/core';
-import { createRun, DEFS, entitiesOnFloor, floorToText, getEntity, M0_FLOOR, STATE_VERSION, Terrain } from '../../src/sim';
+import { findNonPlain, Rng, seedState } from '../../src/core';
+import { FLOOR_TYPES } from '../../src/content';
+import {
+  createRun,
+  DEFS,
+  entitiesOnFloor,
+  FIRST_FLOOR_TYPE,
+  floorToText,
+  generateFloor,
+  getEntity,
+  planToText,
+  RNG_STREAMS,
+  STATE_VERSION,
+} from '../../src/sim';
 import type { RunConfig } from '../../src/sim';
 
 const ONE: RunConfig = { party: [{ name: 'Brannoc', classId: 'class.test', raceId: 'race.test' }] };
 
+/** A hand-built floor (the first floor before generation existed). */
+const HALL: readonly string[] = [
+  '############################################',
+  '#........#############......################',
+  '#.<.@....+...........+......################',
+  '#........######.######......################',
+  '#........######.######......######.......###',
+  "######.########.######......'.....+......###",
+  '######.########.#################........###',
+  '######.########.#################.....>..###',
+  '######.########...........#######........###',
+  '######.###################.######.......####',
+  '######.....+.......#######.......#..########',
+  '################.......................#####',
+  '############################################',
+];
+
 describe('createRun', () => {
   it('builds one floor and one adventurer from a config and seed', () => {
-    const state = createRun(ONE, 7);
+    const state = createRun({ ...ONE, floorText: [...HALL] }, 7);
     expect(state.version).toBe(STATE_VERSION);
     expect(state.seed).toBe(7);
     expect(state.turn).toBe(0);
@@ -18,7 +47,7 @@ describe('createRun', () => {
     const hero = getEntity(state, state.party[0] as number);
     expect(hero.def).toBe(DEFS.adventurer);
     expect(hero.floor).toBe('d1');
-    expect(hero.pos).toEqual({ x: 4, y: 2 }); // the @ in M0_FLOOR
+    expect(hero.pos).toEqual({ x: 4, y: 2 }); // the @ in HALL
     expect(hero.adventurer).toEqual({ name: 'Brannoc', classId: 'class.test', raceId: 'race.test' });
     expect(hero.actor).toMatchObject({ faction: 'party', energy: 0, speed: 100 });
   });
@@ -30,7 +59,7 @@ describe('createRun', () => {
   });
 
   it('seeds one independent RNG stream per system from the seed', () => {
-    const state = createRun(ONE, 42);
+    const state = createRun({ ...ONE, floorText: [...HALL] }, 42); // a hand-built floor draws nothing
     expect(state.rng.dungeon).toEqual(seedState(42, 'dungeon'));
     expect(state.rng.combat).toEqual(seedState(42, 'combat'));
     new Rng(state.rng.combat).nextU32();
@@ -39,12 +68,27 @@ describe('createRun', () => {
   });
 
   it('creates the floor features as entities', () => {
-    const state = createRun(ONE, 1);
+    const state = createRun({ ...ONE, floorText: [...HALL] }, 1);
     const features = entitiesOnFloor(state, 'd1').filter((e) => e.feature !== undefined);
     expect(features.map((e) => e.def).sort()).toEqual(
       [DEFS.door, DEFS.door, DEFS.door, DEFS.door, DEFS.door, DEFS.stairsDown, DEFS.stairsUp].sort(),
     );
-    expect(floorToText(state, 'd1')).toEqual(M0_FLOOR);
+    expect(floorToText(state, 'd1')).toEqual(HALL);
+  });
+
+  it('generates the first floor from the dungeon stream when there is no floor text', () => {
+    const state = createRun(ONE, 5);
+    const expected = generateFloor(FLOOR_TYPES.get(FIRST_FLOOR_TYPE), Rng.seeded(5, 'dungeon'));
+    const hero = getEntity(state, state.party[0] as number);
+    const up = expected.features.find((f) => f.feature.kind === 'stairs' && f.feature.dir === 'up');
+    expect(hero.pos).toEqual(up?.pos); // no @ marks, so the party starts on the up stairs
+    expect(floorToText(state, 'd1')).toEqual(planToText({ ...expected, starts: [hero.pos] }));
+
+    // Generation drew from the dungeon stream and no other.
+    expect(state.rng.dungeon).not.toEqual(seedState(5, 'dungeon'));
+    for (const stream of RNG_STREAMS.filter((s) => s !== 'dungeon')) {
+      expect(state.rng[stream]).toEqual(seedState(5, stream));
+    }
   });
 
   it('copies the config instead of keeping the caller’s objects', () => {
@@ -79,28 +123,5 @@ describe('createRun', () => {
     const two = { party: [...ONE.party, ...ONE.party] };
     expect(() => createRun({ ...two, floorText: ['###', '#@#', '###'] }, 1)).toThrow(/No room/);
     expect(() => createRun(ONE, 1.5)).toThrow(RangeError);
-  });
-
-  it('the M0 floor is fully connected from the start', () => {
-    const state = createRun(ONE, 1);
-    const terrain = Grid.wrap(state.floors.d1?.terrain ?? new Grid(1, 1, 'u8').toBuffer());
-    const seen = new Grid(terrain.width, terrain.height, 'u8');
-    const queue = [{ x: 4, y: 2 }];
-    seen.set(4, 2, 1);
-    // for-of also visits the tiles pushed during the loop.
-    for (const p of queue) {
-      terrain.forEachNeighbor(
-        p.x,
-        p.y,
-        (x, y) => {
-          if (seen.get(x, y) || terrain.get(x, y) !== Terrain.Floor) return;
-          seen.set(x, y, 1);
-          queue.push({ x, y });
-        },
-        DIRS_8,
-      );
-    }
-    const floorTiles = terrain.cells.filter((c) => c === Terrain.Floor).length;
-    expect(queue.length).toBe(floorTiles);
   });
 });

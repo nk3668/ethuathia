@@ -34,7 +34,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-003](sim-core/ETH-003-run-state-entities.md) | Run state and entity model with serialize round-trip | sim-core | M0 | P0 | done | M |
 | [ETH-004](sim-core/ETH-004-scheduler-step-loop.md) | Energy scheduler and step loop with commands and events | sim-core | M0 | P0 | done | M |
 | [ETH-005](sim-core/ETH-005-action-pipeline.md) | Action pipeline: move, wait and open door | sim-core | M0 | P0 | done | S |
-| [ETH-006](dungeon-gen/ETH-006-dungeon-gen-pipeline.md) | Dungeon gen pipeline: rooms-and-corridors floor | dungeon-gen | M0 | P0 | ready | M |
+| [ETH-006](dungeon-gen/ETH-006-dungeon-gen-pipeline.md) | Dungeon gen pipeline: rooms-and-corridors floor | dungeon-gen | M0 | P0 | done | M |
 | [ETH-007](sim-core/ETH-007-fov-map-memory.md) | FOV and map memory | sim-core | M0 | P0 | ready | S |
 | [ETH-008](sim-core/ETH-008-goal-maps-pathing.md) | Goal maps (Dijkstra) and pathing | sim-core | M0 | P0 | ready | S |
 | [ETH-009](adventurer-ai/ETH-009-decision-engine-baseline-explore.md) | Decision engine with baseline exploration, trace and stuck detection | adventurer-ai | M0 | P0 | ready | M |

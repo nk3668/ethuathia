@@ -33,9 +33,11 @@ export {
   removeEntity,
 } from './entities';
 export type { NewEntity } from './entities';
-export { floorToText, parseFloorText } from './floorText';
+export { floorToText, parseFloorText, planToText } from './floorText';
 export type { FloorPlan } from './floorText';
-export { createRun, M0_FLOOR } from './run';
+export { checkFloorType, defineGenStep, GEN_STEPS, generateFloor, readParams, rectTiles } from './gen';
+export type { BoundGenStep, FloorDraft, GenStepDef, NumberParam, Rect } from './gen';
+export { createRun, FIRST_FLOOR_TYPE } from './run';
 export { deserialize, serialize } from './serialize';
 export { DEFS, RNG_STREAMS, STATE_VERSION, Terrain, TERRAIN_IDS } from './state';
 export type {
