@@ -63,8 +63,36 @@ export interface GridData {
   runs: number[];
 }
 
+/**
+ * A grid as plain data that is cheap to use: the fields of a `Grid` without its methods, with
+ * the typed array itself rather than an encoding of it. Run state stores grids in this form,
+ * because it holds no class instances (docs/ARCHITECTURE.md §3.1). `Grid.wrap` gives a `Grid`
+ * over the same cells to work with, and structured clone (worker transfer) copies it as is.
+ */
+export interface GridBuffer {
+  width: number;
+  height: number;
+  kind: GridKind;
+  cells: GridCells;
+}
+
 function isGridKind(kind: unknown): kind is GridKind {
   return typeof kind === 'string' && Object.hasOwn(ARRAYS, kind);
+}
+
+/** Checks that `value` is a well-formed `GridBuffer`: its cells match its kind and size. */
+export function isGridBuffer(value: unknown): value is GridBuffer {
+  if (typeof value !== 'object' || value === null) return false;
+  const { width, height, kind, cells } = value as Partial<GridBuffer>;
+  return (
+    isGridKind(kind) &&
+    Number.isSafeInteger(width) &&
+    Number.isSafeInteger(height) &&
+    (width as number) >= 1 &&
+    (height as number) >= 1 &&
+    cells instanceof ARRAYS[kind] &&
+    cells.length === (width as number) * (height as number)
+  );
 }
 
 function checkSize(width: number, height: number): void {
@@ -112,6 +140,27 @@ export class Grid {
       throw new RangeError(`Grid data: runs cover ${i} cells, expected ${grid.cells.length}`);
     }
     return grid;
+  }
+
+  /**
+   * A `Grid` over the cells of `buffer`, without copying them: writes through the grid change
+   * the buffer, as `new Rng(state)` does for RNG state. Throws if the buffer is malformed.
+   */
+  static wrap(buffer: GridBuffer): Grid {
+    if (!isGridBuffer(buffer)) throw new TypeError('Grid.wrap: not a valid grid buffer');
+    // Skips the constructor, which would allocate new cells.
+    const grid = Object.create(Grid.prototype) as Grid;
+    return Object.assign(grid, {
+      width: buffer.width,
+      height: buffer.height,
+      kind: buffer.kind,
+      cells: buffer.cells,
+    });
+  }
+
+  /** This grid as a plain `GridBuffer` sharing its cells. `Grid.wrap` reverses it. */
+  toBuffer(): GridBuffer {
+    return { width: this.width, height: this.height, kind: this.kind, cells: this.cells };
   }
 
   inBounds(x: number, y: number): boolean {

@@ -26,7 +26,7 @@ A deterministic, serializable turn-based simulation that runs the same in a work
 
 ## Items
 - [x] [ETH-002 Core utilities: seeded RNG streams, Grid and Registry](ETH-002-core-utilities.md)
-- [ ] [ETH-003 Run state and entity model with serialize round-trip](ETH-003-run-state-entities.md)
+- [x] [ETH-003 Run state and entity model with serialize round-trip](ETH-003-run-state-entities.md)
 - [ ] [ETH-004 Energy scheduler and step loop with commands and events](ETH-004-scheduler-step-loop.md)
 - [ ] [ETH-005 Action pipeline: move, wait and open door](ETH-005-action-pipeline.md)
 - [ ] [ETH-007 FOV and map memory](ETH-007-fov-map-memory.md)
