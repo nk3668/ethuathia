@@ -1,0 +1,16 @@
+/* Placeholder page defaults. ETH-011 replaces this with tokens.css and the bundled fonts. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #0e1116;
+  color: #e3e8ee;
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+}

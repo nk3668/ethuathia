@@ -27,5 +27,10 @@ A single plain-data state is what makes saving, worker transfer and headless run
 ## Notes
 Floors can be supplied directly in this item; generation arrives in ETH-006.
 
+Open decision from ETH-002: `Grid` (in `src/core/grid.ts`) is a class around a typed array,
+which conflicts with "no class instances". Either store `GridData` in `RunState` and wrap it on
+use, or allow typed arrays as plain data (structured clone handles them; `serialize` would
+convert via `toData`/`fromData`). Settle it here and record the choice in ARCHITECTURE §3.1.
+
 ## Log
 - 2026-11-16: Created.

@@ -1,4 +1,4 @@
-# Ethania architecture
+# Ethuathia architecture
 
 The technical design for the game described in [`../CLAUDE.md`](../CLAUDE.md). The look of the
 game is in [`VISUAL-DESIGN.md`](VISUAL-DESIGN.md).
@@ -30,13 +30,34 @@ test/
 
 **Rule: imports only point downward.** Two mechanisms enforce it:
 
-1. ESLint `no-restricted-imports` zones per folder.
+1. ESLint `no-restricted-imports` zones per folder, generated from the `LAYERS` table in
+   `eslint.config.js`. `platform` may use `import type` from `meta` but not import values.
 2. A separate `tsconfig.sim.json` covering `core`, `content`, `sim` and `meta` with
-   `lib: ["ES2022"]` and no DOM types. A `document` or `window` reference in those folders
-   fails to compile.
+   `lib: ["ES2022"]`, `types: []` and no DOM types. A `document`, `window` or `setTimeout`
+   reference in those folders fails to compile.
+
+`test/lint-rules.test.ts` checks the lint rules against the table above, so a change to the
+layers must update this section, `eslint.config.js` and that test together.
 
 Because of this rule the simulation runs unchanged in a Web Worker, in tests, in the balance
 harness and in time-away catch-up.
+
+### 1.1 Tooling
+
+- **Type-checking** is split into four projects that `tsc -b` runs together: `tsconfig.sim.json`
+  (lower layers, no DOM), `tsconfig.app.json` (all of `src/` with DOM types),
+  `tsconfig.test.json` (`test/`) and `tsconfig.node.json` (`vite.config.ts` and `tools/`).
+  Shared strictness options live in `tsconfig.base.json`.
+- **TypeScript is pinned to 6.0.x.** `typescript-eslint` does not support TypeScript 7 yet;
+  move up when it does.
+- **Tests** live in `test/`, mirroring `src/`, and run in Node. Component tests add a DOM
+  environment when the kit needs one.
+- **Offline enforcement:** production builds get a `Content-Security-Policy` meta tag
+  (`default-src 'self'`, set in `vite.config.ts`) so the browser or webview refuses any request
+  to another origin. It is left off the dev server, whose hot reload needs inline scripts.
+  Tauri's IPC will need its own `connect-src` entry when packaging is added (§8.4).
+- **Commands:** `npm run dev`, `build`, `preview`, `typecheck`, `lint`, `test`, and `check`
+  (type-check, lint and test in one go).
 
 ---
 
@@ -59,9 +80,11 @@ harness and in time-away catch-up.
 interface Def { id: string; name: string; description: string; tags: string[] }
 
 class Registry<T extends Def> {
-  register(def: T): void          // throws on a duplicate id
+  constructor(kind: string)       // e.g. 'monster', used in error messages
+  register(def: T): T             // throws on a duplicate id
   get(id: string): T              // throws on an unknown id
-  all(): readonly T[]
+  has(id: string): boolean
+  all(): readonly T[]             // registration order
 }
 ```
 
@@ -195,6 +218,25 @@ the UI and speed controls work in.
 is split into named streams so that, for example, adding a monster to the spawn table does not
 change the dungeon layout for the same seed. `Math.random()` is banned in the lower layers by
 a lint rule.
+
+As built in `src/core/rng.ts`:
+
+- `RngState` is a plain `[number, number, number, number]` of unsigned 32-bit words.
+  `seedStreams(seed, names)` derives one per stream by mixing the seed with a hash of the
+  stream's name, so a stream never depends on which other streams exist.
+- `new Rng(state)` wraps a state **without copying it**: drawing advances the array in place,
+  so `new Rng(state.rng.combat)` keeps the run state current with no write-back step.
+- Helpers: `int(min, max)` (inclusive, unbiased), `float()`, `chance(p)` (always exactly one
+  draw, so tuning a probability doesn't shift the rest of the stream), `pick`, `shuffle` (in
+  place), `saveState` and `restoreState`.
+- A test pins the first outputs for seed 1. Changing the generator or the seeding changes every
+  existing seed, so it needs a save migration.
+
+`src/core/grid.ts` holds the `Grid` used for terrain, memory and goal maps: a typed array
+(`u8`, `u16`, `i16` or `i32`) whose `get`/`set` throw on out-of-bounds coordinates and on
+values that don't fit the cell type. Hot loops use `cells` directly. `toData()` gives a
+run-length-encoded `GridData` for saves, and `Grid.fromData` validates it on the way back.
+Neighbors come in a fixed order, orthogonal steps first (`DIRS_4`, `DIRS_8`).
 
 ### 3.5 Public API
 

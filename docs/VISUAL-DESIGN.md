@@ -1,4 +1,4 @@
-# Ethania visual design
+# Ethuathia visual design
 
 How the game looks. The game design is in [`../CLAUDE.md`](../CLAUDE.md) (§8 for UI
 requirements) and the technical design is in [`ARCHITECTURE.md`](ARCHITECTURE.md).

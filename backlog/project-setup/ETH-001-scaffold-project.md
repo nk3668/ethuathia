@@ -2,7 +2,7 @@
 id: ETH-001
 title: "Scaffold Vite, React, strict TS, Vitest and ESLint layer rules"
 type: chore
-status: ready
+status: done
 priority: P0
 milestone: M0
 epic: project-setup
@@ -19,14 +19,16 @@ Create the project skeleton: build, test and lint tooling, the `src/` folder lay
 Everything else builds on this. Enforcing the layers from day one keeps the sim free of DOM code. See `docs/ARCHITECTURE.md` §1 and `CLAUDE.md` §9.
 
 ## Acceptance criteria
-- [ ] `npm run dev` serves a placeholder React page; `npm run build` succeeds
-- [ ] `npm test` runs Vitest with one passing sample test; `npm run lint` passes
-- [ ] TypeScript is strict; `core`, `content`, `sim` and `meta` type-check without DOM types
-- [ ] A deliberate upward import (e.g. `sim` importing `ui`) and a `Math.random()` call in `sim` each fail lint
-- [ ] No dependency or asset loads from a network at runtime
+- [x] `npm run dev` serves a placeholder React page; `npm run build` succeeds
+- [x] `npm test` runs Vitest with one passing sample test; `npm run lint` passes
+- [x] TypeScript is strict; `core`, `content`, `sim` and `meta` type-check without DOM types
+- [x] A deliberate upward import (e.g. `sim` importing `ui`) and a `Math.random()` call in `sim` each fail lint
+- [x] No dependency or asset loads from a network at runtime
 
 ## Notes
 Folders: `src/{core,content,sim,meta,platform,ui}`, `tools/`, `test/`. Consider `git init` and a `.gitignore` here; ask the user first.
 
 ## Log
 - 2026-11-16: Created.
+- 2026-11-16: Started. Git and `.gitignore` already exist, so that note is moot.
+- 2026-11-16: Done. Vite 8, React 19, Vitest 5, ESLint 10. TypeScript is pinned to 6.0.x because `typescript-eslint` does not support TypeScript 7 yet. The layer rule and the `Math.random()` ban are covered by `test/lint-rules.test.ts`. Production builds carry a Content-Security-Policy that blocks requests to other origins; checked in the browser against `vite preview`. Tooling notes are in `docs/ARCHITECTURE.md` §1.1.

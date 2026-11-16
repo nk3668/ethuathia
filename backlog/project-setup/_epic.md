@@ -23,4 +23,4 @@ A project that builds, tests and lints from a clean checkout, with the layer rul
 - `docs/ARCHITECTURE.md` §1: Layers
 
 ## Items
-- [ ] [ETH-001 Scaffold Vite, React, strict TS, Vitest and ESLint layer rules](ETH-001-scaffold-project.md)
+- [x] [ETH-001 Scaffold Vite, React, strict TS, Vitest and ESLint layer rules](ETH-001-scaffold-project.md)

@@ -1,11 +1,11 @@
-# Ethania (working title)
+# Ethuathia (working title)
 
 An idle dungeon crawler inspired by Roguathia (seiyria/Roguathia, archived 2020).
 A party of adventurers explores a procedurally generated dungeon on its own. The
 player shapes how they play, what they bring and how dangerous the dungeon is, and
 builds up a town and a roster of adventurers between runs.
 
-> **Status:** pre-production, with no code yet. Sections marked **(default)** are
+> **Status:** M0 in progress. The project scaffold exists; there is no game code yet. Sections marked **(default)** are
 > provisional choices. Confirm them with the user before building on them heavily.
 >
 > **Hard constraint: offline only.** Single-player, runs entirely on the player's
@@ -18,7 +18,7 @@ builds up a town and a roster of adventurers between runs.
 
 Roguathia's gaps, and our answers to them:
 
-| Roguathia problem | Ethania answer |
+| Roguathia problem | Ethuathia answer |
 |---|---|
 | Upgrades are linear +N chains with no choices | Branching upgrade trees with mutually exclusive picks; every numeric upgrade comes with a tradeoff or a new option |
 | You only watch; the AI wanders for hours and hoards corpses | **Behavior rules** (if-then rules the player orders) are the main progression system, on top of a competent built-in AI |
@@ -219,6 +219,7 @@ A desktop app (§9) with a dark theme. The dungeon uses colored monospace ASCII 
 - **Stack:** Vite, Vitest and **React** (with Zustand stores and CSS Modules). The map renders to `<canvas>`.
 - **Design docs:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) is the technical design (layers, shared building blocks, sim API, AI engine). [`docs/VISUAL-DESIGN.md`](docs/VISUAL-DESIGN.md) is the look: tokens, fonts, map glyphs and screen mock-ups. Read the relevant one before starting an item, and update it in the same change when a decision in it changes.
 - **Distribution:** packaged as a desktop app with **Tauri** (default; Electron is the fallback if Tauri causes trouble), so it installs and runs with no browser or network. During development, run it with `npm run dev` in a local browser tab.
+- **Commands:** `npm run dev` (dev server), `npm run build`, `npm test`, `npm run lint`, `npm run typecheck`, and `npm run check` (type-check, lint and test together). Run `npm run check` before calling an item done.
 - **Offline only:** no `fetch` to remote hosts, no CDN links, no analytics. Bundle every dependency and font. If a feature seems to need the network, stop and ask the user.
 - **Separate the simulation from the UI:**
   - `src/sim/` is pure TypeScript with **no DOM access**, is deterministic with a seeded RNG, and is serializable. That lets it run in a Web Worker, run headless for offline catch-up, and run in tests.
