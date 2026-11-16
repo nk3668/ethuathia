@@ -252,6 +252,25 @@ decision (§4), pays the action's energy cost, and the scheduler moves on. One `
 advances the sim until every party member has acted once (a "party turn"), which is the unit
 the UI and speed controls work in.
 
+As built in `src/sim/step.ts` (ETH-004):
+
+- **`RunState.turn` counts ticks**, so it is game time: a speed-100 actor acts once per turn,
+  a speed-200 actor twice, whatever the party's speed. `ENERGY_THRESHOLD` is 100 and each
+  action's cost is in `ACTION_COSTS` (wait is 100). Energy left over carries to the next turn.
+- **Order:** actors go in passes in ascending entity id, each acting at most once per pass;
+  passes repeat while anyone has enough energy, then the next tick starts. Only actors on a
+  floor with a party member are scheduled; other floors stay frozen. Actors with speed 0 or
+  HP 0 neither gain energy nor act.
+- **A step stops right after the last party member's action**, so actors later in the order
+  act at the start of the next step. Party members removed during a step stop being waited for,
+  and a party with nobody able to act returns straight after applying the commands.
+- **`decide` is pluggable:** `step(state, commands, { decide })` takes a
+  `Decide = (ctx: DecideCtx) => ActionRequest`, where the context holds the state, the actor and
+  `emit`. The default, `waitDecide`, always waits; the decision engine (ETH-009) replaces it. A
+  queued player action (below) takes the place of one decision.
+- **A decision that can't be done never stalls the loop:** it emits `actionFailed` and the
+  actor waits, paying the wait cost.
+
 ### 3.4 RNG
 
 `sfc32`, seeded from the run seed, with its four-word state stored in `RunState`. The run seed
@@ -296,6 +315,15 @@ type Command =
   | { type: 'playerAction'; actor: EntityId; action: ActionRequest }
   | { type: 'retreat' }
 ```
+
+As built (ETH-004): `step` takes an optional third argument, `{ decide }` (§3.3). Events
+(`src/sim/events.ts`) are returned as a plain array, never sent on a global bus, and each one is
+stamped with the `turn` it happened on; code inside a step records them through an `emit`
+function. Commands (`src/sim/commands.ts`) are applied in order before time advances. Because
+they can arrive from a worker or a file, each is checked at run time, and a bad one (unknown
+`type`, missing actor, unknown action) produces a `commandRejected` event and changes nothing; it
+never throws. The only command so far is `playerAction`, which stores the request in the actor's
+`queued` field to run in place of its next decision. The others are added with their features.
 
 A `Snapshot` is a read-only view built for the UI: the current floor as the party knows it
 (glyph ids, visibility, memory), party summaries with computed stats and current intent, and

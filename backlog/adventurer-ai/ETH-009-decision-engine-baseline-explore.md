@@ -28,5 +28,8 @@ Competent exploration with zero player rules is the answer to Roguathia's main c
 ## Notes
 Fixed seed and hand-built maps for behavior tests, per `CLAUDE.md` conventions. Combat and flee rules arrive in M1.
 
+The engine plugs into the scheduler as a `Decide` function (`src/sim/step.ts`); make it the
+default in place of `waitDecide`. `DecideCtx.emit` is how it records `ruleFired`.
+
 ## Log
 - 2026-11-16: Created.
