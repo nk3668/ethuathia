@@ -60,8 +60,8 @@ Roguathia's gaps, and our answers to them:
 
 ### Ending a run
 - **Victory:** recover the run's objective (the relic at the bottom, survive N turns, and so on) and get out or ascend.
-- **Retreat:** a rule or a manual command sends the party back up. Rewards are partial, but every survivor returns to the roster.
-- **Wipe:** the whole party dies. Each death leaves a gravestone (§7).
+- **Retreat:** a rule or a manual command sends the party back up. The party keeps everything earned this run, and every survivor returns to the roster.
+- **Wipe:** the whole party dies. Each death leaves a gravestone (§7), and **25% (default)** of the currency earned this run is lost (§3).
 - **Run summary screen:** cause of death, conducts kept, currency breakdown with the Omen multiplier, heirlooms dropped, and an epitaph.
 
 ---
@@ -76,7 +76,11 @@ Each currency rewards a different playstyle. No currency only buys "make it hard
 | **Trophies** | Kills, weighted by monster difficulty | Smithy (starting gear, enchantments), Bestiary unlocks |
 | **Favor** (per deity) | Victories, kept conducts, honoring your patron | Temple / devotion trees; the prestige layer |
 
-The Omen multiplier applies to all three. Numbers should stay readable: use suffixes (1.2k, 3.4M), not scientific notation.
+The Omen multiplier applies to all three.
+
+**Banked vs. at-risk currency.** Currency earned during a run is tracked separately, as the run's *at-risk* total, and moves into the player's *banked* total only when the run ends. Banked currency is never at risk. On a victory or a retreat the whole at-risk total is banked. On a wipe, **25% (default)** of each currency's at-risk total is lost and the rest is banked. The HUD shows banked and at-risk amounts separately, and the run summary shows the amount lost as its own line.
+
+Numbers should stay readable: use suffixes (1.2k, 3.4M), not scientific notation.
 
 ---
 
