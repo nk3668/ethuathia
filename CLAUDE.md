@@ -45,7 +45,8 @@ Roguathia's gaps, and our answers to them:
    └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- Runs auto-restart after a short respawn timer. The player can turn this off to review the summary first.
+- **Waiting for the player is the default.** When a run ends, the game shows the run summary and waits. The player can spend currencies in town, then press **Descend** on the Prepare screen to start the next run.
+- **Auto-restart** is a player toggle (off by default) in Options and on the run summary. When it is on, the next run starts after a short timer with the previous run's Prepare settings. Turning it off again takes effect at the end of the current run.
 - Town upgrades can be bought at any time; most take effect at the **next run**.
 - **Behavior rules can be edited during a run.** This is the main way to interact mid-run.
 
@@ -59,8 +60,8 @@ Roguathia's gaps, and our answers to them:
 
 ### Ending a run
 - **Victory:** recover the run's objective (the relic at the bottom, survive N turns, and so on) and get out or ascend.
-- **Retreat:** a rule or a manual command sends the party back up. Rewards are partial, but every survivor returns to the roster.
-- **Wipe:** the whole party dies. Each death leaves a gravestone (§7).
+- **Retreat:** a rule or a manual command sends the party back up. The party keeps everything earned this run, and every survivor returns to the roster.
+- **Wipe:** the whole party dies. Each death leaves a gravestone (§7), and **25% (default)** of the currency earned this run is lost (§3).
 - **Run summary screen:** cause of death, conducts kept, currency breakdown with the Omen multiplier, heirlooms dropped, and an epitaph.
 
 ---
@@ -75,7 +76,11 @@ Each currency rewards a different playstyle. No currency only buys "make it hard
 | **Trophies** | Kills, weighted by monster difficulty | Smithy (starting gear, enchantments), Bestiary unlocks |
 | **Favor** (per deity) | Victories, kept conducts, honoring your patron | Temple / devotion trees; the prestige layer |
 
-The Omen multiplier applies to all three. Numbers should stay readable: use suffixes (1.2k, 3.4M), not scientific notation.
+The Omen multiplier applies to all three.
+
+**Banked vs. at-risk currency.** Currency earned during a run is tracked separately, as the run's *at-risk* total, and moves into the player's *banked* total only when the run ends. Banked currency is never at risk. On a victory or a retreat the whole at-risk total is banked. On a wipe, **25% (default)** of each currency's at-risk total is lost and the rest is banked. The HUD shows banked and at-risk amounts separately, and the run summary shows the amount lost as its own line.
+
+Numbers should stay readable: use suffixes (1.2k, 3.4M), not scientific notation.
 
 ---
 
@@ -136,6 +141,7 @@ unrelated to the offline-only constraint.
 - On load, simulate the time away headlessly at max speed, capped at **8h (default)**, which Tavern upgrades raise.
 - If full simulation is too slow, fall back to a statistical estimate from the player's recent run averages, and say so in the summary.
 - Show a "While you were away" summary.
+- If auto-restart (§2) is off, the time-away simulation finishes only the current run and then stops, the same way the game does while open.
 
 ---
 

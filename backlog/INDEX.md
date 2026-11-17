@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-023**
+**Next ID: ETH-024**
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
@@ -50,4 +50,5 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-020](ui-shell/ETH-020-cycle-adventurers-key.md) | Key to cycle the selected adventurer | ui-shell | M1 | P2 | idea | S |
 | [ETH-021](ui-shell/ETH-021-show-sim-errors.md) | Tell the player when the sim stops on an error | ui-shell | M1 | P2 | idea | S |
 | [ETH-022](tools-balance/ETH-022-validate-content-cli.md) | Run content validation as a tsx command | tools-balance | M1 | P3 | idea | S |
+| [ETH-023](town-meta/ETH-023-at-risk-run-currency.md) | Track run earnings as at-risk currency and lose 25% on a wipe | town-meta | M2 | P1 | idea | M |
 | [ETH-018](ui-shell/ETH-018-trim-font-bundle.md) | Ship only the font files the app needs | ui-shell | later | P3 | idea | S |

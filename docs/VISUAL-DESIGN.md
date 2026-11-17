@@ -388,7 +388,10 @@ toggled, and its tooltip lists each Omen's contribution.
 
 A centred modal: outcome heading (Victory, Retreat or Wipe, each with its own icon), one row
 per adventurer with fate and cause of death, conducts kept, a currency table (base, multiplier,
-total), heirlooms dropped, and an epitaph. Buttons: **Continue** and **Review log**.
+total), heirlooms dropped, and an epitaph. Buttons: **Continue** (to the town and Prepare
+screen) and **Review log**, plus an **Auto-restart** toggle (off by default, mirrored in
+Options). While it is on, the modal shows a countdown to the next run and the countdown can be
+cancelled.
 
 ### 6.3 While you were away
 
