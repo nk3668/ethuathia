@@ -26,6 +26,7 @@ A consistent, readable dark interface: shared tokens and components, the in-run 
 - `docs/ARCHITECTURE.md` §8
 
 ## Items
-- [ ] [ETH-011 Design tokens, bundled fonts and first kit primitives](ETH-011-tokens-fonts-kit.md)
+- [x] [ETH-011 Design tokens, bundled fonts and first kit primitives](ETH-011-tokens-fonts-kit.md)
 - [ ] [ETH-012 App shell layout: top bar, party column, map area, tabs and log](ETH-012-app-shell-layout.md)
 - [ ] [ETH-014 Pause, speed controls and keyboard shortcuts](ETH-014-pause-speed-controls.md)
+- [ ] [ETH-018 Ship only the font files the app needs](ETH-018-trim-font-bundle.md)

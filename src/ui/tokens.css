@@ -1,0 +1,82 @@
+/*
+ * Design tokens (docs/VISUAL-DESIGN.md §2). Every color, font, size, spacing and radius the UI
+ * uses is defined here once; components refer to these custom properties and never to raw
+ * values. test/ui/tokens.test.ts checks the contrast of each text and background pair.
+ */
+
+:root {
+  /* 2.1 Surfaces and text */
+  --bg-app: #0e1116;
+  --bg-panel: #151a21;
+  --bg-raised: #1c232c;
+  --bg-hover: #242d38;
+  --border: #2a333f;
+  --border-strong: #3a4656;
+  --text: #e3e8ee;
+  --text-muted: #97a3b3;
+  --text-faint: #7e8a99;
+  --accent: #e8a33d;
+  --on-accent: #1a1204;
+
+  /* 2.2 Meaning */
+  --hp: #e0726f;
+  --mp: #5a96db;
+  --xp: #6fbf73;
+  --renown: #e6c35c;
+  --trophies: #d8d2c4;
+  --favor: #a886e0;
+  --good: #6fbf73;
+  --warn: #e0a84a;
+  --danger: #e3706b;
+
+  /* 2.3 Log categories */
+  --log-combat: var(--danger);
+  --log-loot: var(--renown);
+  --log-discovery: #5cc2c7;
+  --log-ai: var(--favor);
+  --log-system: var(--text-muted);
+
+  /* 2.4 Type */
+  --font-ui: 'Inter', system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --font-size-body: 13px;
+  --line-height-body: 18px;
+  --font-size-label: 11px;
+  --line-height-label: 14px;
+  --letter-spacing-label: 0.04em;
+  --font-size-heading: 15px;
+  --line-height-heading: 20px;
+  --font-size-log: 12px;
+  --line-height-log: 17px;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-heading: 600;
+
+  /* 2.5 Shape and spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --radius-pill: 999px;
+  --border-width: 1px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --shadow-overlay: 0 6px 20px rgb(0 0 0 / 45%);
+
+  /* Component sizes built on the scale */
+  --control-height: 28px;
+  --bar-height: 6px;
+  --tooltip-max-width: 280px;
+
+  /* Motion (§1.5): short fades only, and none under reduced motion */
+  --duration-fast: 120ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+  }
+}

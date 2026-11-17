@@ -1,4 +1,4 @@
-/* Placeholder page defaults. ETH-011 replaces this with tokens.css and the bundled fonts. */
+/* Page defaults, built on tokens.css. */
 
 *,
 *::before,
@@ -8,9 +8,37 @@
 
 body {
   margin: 0;
-  background: #0e1116;
-  color: #e3e8ee;
-  font-family: system-ui, 'Segoe UI', sans-serif;
-  font-size: 13px;
-  line-height: 18px;
+  background: var(--bg-app);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  font-weight: var(--font-weight-regular);
+}
+
+/* Form controls don't inherit fonts by default. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* One focus style for every interactive element (§2.5). */
+:focus-visible {
+  outline: var(--focus-width) solid var(--accent);
+  outline-offset: var(--focus-offset);
+}
+
+/* Quiet motion: everything off under reduced motion (§1.5, §7). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }
