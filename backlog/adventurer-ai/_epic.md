@@ -24,4 +24,4 @@ Adventurers that explore, fight and survive competently with zero player rules, 
 
 ## Items
 - [x] [ETH-009 Decision engine with baseline exploration, trace and stuck detection](ETH-009-decision-engine-baseline-explore.md)
-- [ ] [ETH-017 Party members yield or swap places in narrow passages](ETH-017-party-yield-in-corridors.md)
+- [x] [ETH-017 Party members yield or swap places in narrow passages](ETH-017-party-yield-in-corridors.md)

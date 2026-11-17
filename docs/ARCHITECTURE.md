@@ -367,8 +367,13 @@ possessed character can never do something the AI could not, and the reverse.
 
 As built in `src/sim/actions.ts` (ETH-005):
 
-- **Requests are a typed union** keyed by `id` (`wait`, `move`, `openDoor`). Move and open door
-  take a one-tile step `dir` (`{ x, y }`, each -1, 0 or 1, as in `DIRS_8`).
+- **Requests are a typed union** keyed by `id` (`wait`, `move`, `openDoor`, `swap`). Move, open
+  door and swap take a one-tile step `dir` (`{ x, y }`, each -1, 0 or 1, as in `DIRS_8`).
+- **Swap** (ETH-017) trades places with the creature on the next tile. Both must be of faction
+  `party` (monsters and neutrals are never swapped with), and `stepBlocker` must allow the step
+  both ways. Only the actor spends energy. It emits `swapped { actor, other, from, to }`. The
+  action itself doesn't ask whether the other member is willing: the AI decides that (§4), and
+  manual control may later let the player swap freely.
 - **Definitions live in exhaustive records, not a `Registry`.** Actions are code, not data.
   Since ETH-055 each domain has an `ActionRecord<R>` over its own request union (the core
   actions are `CORE_ACTIONS` in `coreActions.ts`) and the hub joins them into `ACTIONS`
@@ -786,7 +791,11 @@ As built in `src/sim/ai/` (ETH-009):
     always reveals its neighbors, so each goal reached shrinks the frontier, and explored dead
     ends are never goals nor on a shortest route to one. A closed door next on the route becomes
     `openDoor`; another actor on the next tile becomes a wait ("waiting for X to get out of the
-    way"). It returns `null` once no frontier tile is reachable, and the actor settles on
+    way"), recorded as `memory.waitingFor`, unless it is a party member willing to swap
+    (`willingToSwap`, ETH-017): one whose own last decision waited on this actor, or one with no
+    decision yet or an `idle` one. Then it becomes a `swap` ("squeezing past X"). A member busy
+    heading elsewhere is waited behind, never pushed back the way it came. This lives in
+    `followMap`, so every map-following rule action gets it. It returns `null` once no frontier tile is reachable, and the actor settles on
     `act.wait`. Tiles where the actor knows another actor stands (party members, anyone adjacent)
     cost `OCCUPIED_COST` (8) more, so it routes round them when it reasonably can.
   - `act.back_off` follows a flee map away from where the actor got stuck, with occupied tiles

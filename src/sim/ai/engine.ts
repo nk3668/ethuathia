@@ -14,10 +14,11 @@
 import { validateAction } from '../actions';
 import type { ActionRequest } from '../actions';
 import type { Emit } from '../events';
+import { registerInvariant } from '../invariants';
 import { explored } from '../perception';
 import { CONDITIONS, RULE_ACTIONS } from '../registries';
 import type { Decide } from '../step';
-import type { RunState } from '../state';
+import type { EntityId, RunState } from '../state';
 import type { AiActor, AiCtx, AiMemory, Rule, RuleRef } from './types';
 
 /** Decisions in a row without progress after which the current goal is dropped. */
@@ -46,6 +47,8 @@ export interface Choice {
   request: ActionRequest;
   /** The readable reason, e.g. "Explore: heading for unexplored ground 6 turns away". */
   detail: string;
+  /** Who the action waits on to get out of the way, if anyone (`AiMemory.waitingFor`). */
+  waitingFor: EntityId | null;
 }
 
 /**
@@ -60,6 +63,7 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
   checkProgress(ctx, emit);
 
   const choice = chooseRule(ctx);
+  memory.waitingFor = choice?.waitingFor ?? null;
   if (choice === null) {
     memory.intent = null;
     return { id: 'wait' };
@@ -99,6 +103,7 @@ export function chooseRule(ctx: AiCtx): Choice | null {
       action: action.id,
       request: resolved.request,
       detail: `${action.name}: ${resolved.detail}${because}`,
+      waitingFor: resolved.waitingFor ?? null,
     };
   }
   return null;
@@ -160,3 +165,22 @@ function checkProgress({ state, actor }: AiCtx, emit: Emit): void {
     detail: `No progress in ${STUCK_TURNS} turns (${intent.detail}). Giving up on ${goal} for ${DROP_TURNS} turns.`,
   });
 }
+
+/**
+ * AI memory holds sane values: `still` is a count, and `waitingFor` is `null` or another entity's
+ * id that was handed out (the entity itself may have left the run since).
+ */
+registerInvariant('core.aiMemory', (state) => {
+  const problems: string[] = [];
+  for (const entity of Object.values(state.entities)) {
+    const memory = entity.ai?.memory;
+    if (memory === undefined) continue;
+    if (!Number.isSafeInteger(memory.still) || memory.still < 0) problems.push(`actor ${entity.id} has still ${memory.still}`);
+    const waitingFor = memory.waitingFor;
+    if (waitingFor === null) continue;
+    if (!Number.isSafeInteger(waitingFor) || waitingFor < 1 || waitingFor >= state.nextEntityId || waitingFor === entity.id) {
+      problems.push(`actor ${entity.id} is waiting for ${waitingFor}, which is not another entity`);
+    }
+  }
+  return problems;
+});

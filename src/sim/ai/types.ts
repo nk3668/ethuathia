@@ -8,7 +8,7 @@
  */
 import type { Def, Pos } from '../../core';
 import type { ActionRequest } from '../actions';
-import type { ActorEntity, FloorId, RunState } from '../state';
+import type { ActorEntity, EntityId, FloorId, RunState } from '../state';
 
 // ---------------------------------------------------------------------------------------------
 // Rules (plain data)
@@ -80,6 +80,12 @@ export interface AiMemory {
   still: number;
   /** The goal stuck detection last dropped, while it is still being skipped. */
   dropped: DroppedGoal | null;
+  /**
+   * The actor its last decision waited on to get out of the way, or `null`. A party member it
+   * waits on takes this as an offer to swap places (`act.explore` and other map-following
+   * actions; see `followMap`).
+   */
+  waitingFor: EntityId | null;
 }
 
 /**
@@ -93,7 +99,7 @@ export interface AiPart {
 
 /** A fresh AI part with no rules and an empty memory. */
 export function newAiPart(rules: Rule[] = []): AiPart {
-  return { rules, memory: { intent: null, last: null, still: 0, dropped: null } };
+  return { rules, memory: { intent: null, last: null, still: 0, dropped: null, waitingFor: null } };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -118,6 +124,8 @@ export interface ConditionResult {
 export interface Resolved {
   request: ActionRequest;
   detail: string;
+  /** Set when the action is waiting for this actor to get out of the way (`AiMemory.waitingFor`). */
+  waitingFor?: EntityId;
 }
 
 /**
