@@ -13,6 +13,9 @@ import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx } from '../domain';
 import { registerInvariant } from '../invariants';
 import type { RunConfig } from '../state';
+import type { RewardAmounts } from './result';
+
+export * from './result';
 
 /** The events this domain emits (bodies, without `turn`). Each needs a formatter in `ui/shell/logText/run.ts`. */
 export type RunDomainEvent = never;
@@ -22,12 +25,6 @@ export type RunDomainRequest = never;
 
 /** The commands this domain accepts. Each needs an entry in `RUN_DOMAIN_COMMANDS`. */
 export type RunDomainCommand = never;
-
-/**
- * Currency earned this run, keyed by currency id. The ids are settled with the currencies
- * (M2): `renown`, `trophies`, and favor per deity. Absent means 0.
- */
-export type RewardAmounts = Record<string, number>;
 
 /** This domain's slice of the run state, at `state.domains.run`. Plain data. */
 export interface RunDomainState {

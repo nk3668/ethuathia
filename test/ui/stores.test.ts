@@ -2,7 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { InlineHost } from '../../src/sim';
 import type { SimEvent } from '../../src/sim';
-import { INITIAL_PROFILE, totalFavor, useProfileStore } from '../../src/ui/stores/profileStore';
+import { newProfile } from '../../src/meta';
+import { totalFavor, useProfileStore } from '../../src/ui/stores/profileStore';
 import { bindHost, EVENT_BUFFER_SIZE, useSimStore } from '../../src/ui/stores/simStore';
 import { clampLogHeight, LOG_HEIGHT, UI_STORAGE_KEY, useUiStore } from '../../src/ui/stores/uiStore';
 
@@ -59,7 +60,7 @@ describe('simStore', () => {
 
 describe('profileStore', () => {
   it('starts with zero currencies and sums Favor across deities', () => {
-    expect(useProfileStore.getState()).toEqual(INITIAL_PROFILE);
+    expect(useProfileStore.getState().profile).toEqual(newProfile());
     expect(totalFavor({})).toBe(0);
     expect(totalFavor({ 'deity.a': 3, 'deity.b': 4 })).toBe(7);
   });

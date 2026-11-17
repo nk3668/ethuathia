@@ -133,6 +133,7 @@ Rules:
 | A rule condition / rule action | `defineCondition` / `defineRuleAction` in the domain, listed in its `conditions` / `ruleActions` (§4) |
 | A generation step | `defineGenStep` in the domain, listed in `genSteps`; a floor type names it in content (§3.6) |
 | A run tracker | a `RunTracker<S>` listed in the domain's `trackers` |
+| Data kept between runs | a profile slice in `src/meta/slices/`, one line in `PROFILE_SLICES` (see "Profile slices") |
 | An invariant | `registerInvariant('<domain>.name', …)` in the domain module (§11.1) |
 | Content data | the kind's file in `src/content/` (§5) |
 
@@ -188,10 +189,38 @@ sim events ──► RunTrackers ──► state.domains.run.rewards.atRisk ─�
 
 - Trackers turn events (kills, depth reached, conducts kept) into at-risk amounts. Nothing else
   writes `rewards.atRisk`.
-- At run end the run domain puts the at-risk totals in the `RunResult` (ETH-062).
-- `applyRunResult` in meta (§6.4) applies the wipe loss and the Omen multiplier and adds the
-  result to the profile's banked currency. Currency ids are settled with the currencies in M2:
-  `renown`, `trophies` and favor per deity.
+- **Currency ids** (ETH-059): `renown`, `trophies`, and `favor:<deity id>` for each deity's
+  Favor (`favorKey('deity.dawn')` builds it, `favorDeity(key)` reads it back; both in
+  `src/sim/run/result.ts`). Absent means 0.
+- At run end the run domain puts the at-risk totals in the `RunResult` (ETH-062). The type is in
+  `src/sim/run/result.ts` and is plain data:
+  `{ outcome: 'victory' | 'retreat' | 'wipe', atRisk, lost, turns, deepestDepth, extras }`.
+  `atRisk` and `lost` are `RewardAmounts` (currency id → amount); `lost` is what a wipe took
+  (ETH-023 fills it; empty otherwise) and is never more than `atRisk`. `extras` is an open
+  record that later trackers write under their own id (`'track.kills'`).
+- `applyRunResult` in meta (§6.4) checks the result (it throws a `RangeError` on a malformed
+  one), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
+  `atRisk - lost`, the `history` slice records the run. The Omen multiplier is not applied yet;
+  ETH-067 adds it, either as a field on `RunResult` or by multiplying in the trackers.
+
+### Profile slices
+
+The `Profile` (§6.1) is composed from slices the way `RunState` is composed from domains. A
+feature that keeps data between runs (town, codex, roster, graveyard, presets, settings, Omens,
+deities) adds:
+
+1. `src/meta/slices/<feature>.ts` exporting `defineSlice<S>({ version, schema, init, migrations?,
+   onRunResult? })`: its type, a Zod schema that validates it on load, its default, its
+   migration steps and its step in the `applyRunResult` pipeline.
+2. One line in `PROFILE_SLICES` (`src/meta/slices/index.ts`). The `Profile` type, `newProfile`,
+   `applyRunResult`, `checkProfile` and the save format follow from it. The order of the record
+   is the pipeline order.
+
+Each slice is versioned on its own: change a slice's stored shape by bumping its `version` and
+adding `migrations[newVersion]`. A save without the slice starts it at `init()`, so a new slice
+needs no migration. The save envelope's own `SAVE_VERSION` changes only if the envelope layout
+does (§6.5). Slices are plain data and change only through pure functions that return a new
+slice.
 
 ### State version
 
@@ -849,6 +878,12 @@ The profile is changed only by pure functions: `purchase(profile, nodeId)`,
 `respec(profile, groupId)`, `applyRunResult(profile, result)`. They return a new profile, which
 makes them easy to test and safe to autosave after.
 
+As built (ETH-059), `src/meta/profile.ts` composes the profile from slices (Contracts, "Profile
+slices"). The slices so far are `currencies` (banked Renown, Trophies and Favor per deity id,
+`{ renown, trophies, favor: Record<deity id, number> }`) and `history` (lifetime totals and the
+last `HISTORY_LIMIT` (20) runs as `RunRecord`s). `checkProfile(profile)` returns one line per
+problem. Currency names and tooltip text are `CURRENCY_INFO` in `src/meta/currencies.ts`.
+
 ### 6.2 Upgrade engine
 
 ```ts
@@ -897,6 +932,25 @@ in-memory store for tests. The save is a versioned envelope
 `{ version, profile, activeRun? }`; loading runs every migration from the save's version to the
 current one. Export and import use the same string. Autosave runs on a timer, at run end and
 on window close.
+
+As built (ETH-059):
+
+- `src/platform/saveStore.ts`: `SaveStore { label, load, save, clear }` with
+  `MemorySaveStore`, `IndexedDbSaveStore` (database `ethuathia`, store `saves`, key `profile`)
+  and `TauriSaveStore`, a stub that rejects every call until packaging lands (§8.4).
+  `createSaveStore()` picks IndexedDB, or memory where there is none (jsdom).
+- `src/platform/autosave.ts`: `startAutosave(save, { intervalMs, target })` saves every 30 s
+  and on `beforeunload`, `pagehide` and the page becoming hidden.
+- `src/meta/save.ts`: `encodeSave(profile, savedAt)` and `decodeSave(text)`. The envelope is
+  `{ format: 'ethuathia.save', version: SAVE_VERSION, savedAt, slices: { <key>: { version, data } } }`.
+  Loading runs `ENVELOPE_MIGRATIONS` up to `SAVE_VERSION`, then each slice's own migrations,
+  then its schema; it never throws and returns `{ ok: false, error }` for a save it can't read
+  (not a save, from a newer game, damaged, invalid). A missing slice starts at its default and
+  an unknown one is dropped, both with a note. The mid-run `activeRun` is not saved yet.
+- `profileStore` (§8) loads on start; while loading, or after a failed load, it writes nothing,
+  so an unreadable save is never overwritten until the player imports a save or resets. The
+  Options tab's Save section has save now, export as text or to a file, import from text or a
+  file, and a hard reset behind a confirmation.
 
 ### 6.6 Time-away
 
@@ -979,7 +1033,12 @@ As built (ETH-012), the stores are in `ui/stores/`:
   launch) after `start`. The speed is not saved between sessions. Since ETH-021 `bindHost`
   also feeds `onError` into `hostFailed`, which sets `error` and speed 0; while `error` is set
   `setSpeed` refuses anything but 0 (the run can't be resumed), and `reset` clears it.
-- `profileStore`: only the currencies for now, all zero. M2 replaces it with the meta `Profile`.
+- `profileStore` (ETH-059): `profile` (the meta `Profile`), `status` (`detached`, `loading`,
+  `ready`, `failed`), `error`, `notes`, `lastSavedAt` and `dirty`. Actions `applyRunResult`,
+  `save`, `exportSave`, `importSave` and `hardReset` call the pure meta functions.
+  `bindSaveStore(store)` loads the save and starts autosave; `App` binds the store from its
+  `createSaveStore` prop (default `createSaveStore()` from platform). The top bar shows the
+  profile's banked currencies.
 - `uiStore`: `selected`, `tab`, `drawerOpen`, `logHeight`, `logFilter` and `mapCamera`
   (ETH-013). Zustand's `persist` keeps `logHeight`, `tab` and `mapCamera` in `localStorage`
   (key `ethuathia.ui`), through a wrapper that

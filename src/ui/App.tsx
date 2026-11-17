@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
+import { createSaveStore } from '../platform';
+import type { SaveStore } from '../platform';
 import type { SimHost } from '../sim';
 import { DEMO_RUN } from './demoRun';
 import { WorkerHost } from './host/workerHost';
 import { AppShell } from './shell/AppShell';
+import { bindSaveStore } from './stores/profileStore';
 import { bindHost, useSimStore } from './stores/simStore';
 
 export interface AppProps {
@@ -10,6 +13,8 @@ export interface AppProps {
   createHost?: () => SimHost;
   /** The run's seed. Defaults to a new one each launch. */
   seed?: number;
+  /** Where the profile is saved. Defaults to IndexedDB (memory if unavailable); tests pass a `MemorySaveStore`. */
+  createSaveStore?: () => SaveStore;
 }
 
 function createWorkerHost(): SimHost {
@@ -21,7 +26,10 @@ function createWorkerHost(): SimHost {
  * reads snapshots and events from the store and talks to the run through the host (the speed
  * control sends through `simStore.setSpeed`, which `bindHost` connects to this host).
  */
-export function App({ createHost = createWorkerHost, seed }: AppProps) {
+export function App({ createHost = createWorkerHost, seed, createSaveStore: makeSaveStore = createSaveStore }: AppProps) {
+  // Loads the profile and autosaves it (on a timer and when the window closes).
+  useEffect(() => bindSaveStore(makeSaveStore()).unbind, [makeSaveStore]);
+
   useEffect(() => {
     const host = createHost();
     useSimStore.getState().reset();
