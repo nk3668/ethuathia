@@ -6,6 +6,11 @@
   box-sizing: border-box;
 }
 
+/* Native scrollbars and form controls in their dark style. */
+:root {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   background: var(--bg-app);
@@ -23,6 +28,19 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+/* Text for screen readers only, e.g. the name beside an icon. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* One focus style for every interactive element (§2.5). */

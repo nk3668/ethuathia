@@ -120,7 +120,7 @@ describe('stylesheets use tokens', () => {
     const css = read(file);
     const local = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]));
     // Set from component code through inline styles.
-    const inline = new Set(['--bar-fraction', '--swatch']);
+    const inline = new Set(['--bar-fraction', '--swatch', '--log-height']);
     const unknown = [...css.matchAll(/var\((--[\w-]+)/g)]
       .map((m) => m[1] as string)
       .filter((name) => !TOKENS.has(name) && !local.has(name) && !inline.has(name));
