@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { Pos } from '../../core';
 import { useSimStore } from '../stores/simStore';
 import { useUiStore } from '../stores/uiStore';
+import type { MapFocus } from '../stores/uiStore';
 import { followTarget } from './camera';
 import styles from './MapCanvas.module.css';
 import { MapRenderer } from './MapRenderer';
@@ -46,7 +47,8 @@ const ARROWS: Readonly<Record<string, Pos>> = {
  *
  * Hovering a tile (or moving the keyboard cursor with the arrow keys while the map has focus)
  * outlines it and shows a tooltip naming what is there. Clicking an adventurer, or pressing
- * Enter on one, selects it.
+ * Enter on one, selects it. A map focus from `uiStore` (a clicked highlight) is centered and
+ * marked while it is on the shown floor; Escape clears it.
  */
 export function MapCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -55,18 +57,20 @@ export function MapCanvas() {
   const mode = useUiStore((s) => s.mapCamera);
   const selected = useUiStore((s) => s.selected);
   const select = useUiStore((s) => s.select);
+  const focus = useUiStore((s) => s.mapFocus);
+  const focusMap = useUiStore((s) => s.focusMap);
   const depth = useSimStore((s) => s.snapshot?.floor.depth ?? null);
   const [hover, setHover] = useState<Pos | null>(null);
-  const viewRef = useRef<MapView>({ mode, selected, hover });
+  const viewRef = useRef<Omit<MapView, 'focus'> & { focus: MapFocus | null }>({ mode, selected, hover, focus });
   /** The pointer's position over the canvas in CSS pixels, or `null` when it is elsewhere. */
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
 
   // Camera mode, selection and hover are drawn on the next frame. A layout effect declared
   // before `useFloating`, so the tooltip's anchor already reads the new hover tile.
   useLayoutEffect(() => {
-    viewRef.current = { mode, selected, hover };
+    viewRef.current = { mode, selected, hover, focus };
     scheduleRef.current();
-  }, [mode, selected, hover]);
+  }, [mode, selected, hover, focus]);
 
   const lines = useTileLines(hover);
   const tooltipOpen = hover !== null && lines.length > 0;
@@ -126,7 +130,9 @@ export function MapCanvas() {
       const snap = useSimStore.getState().snapshot;
       if (!snap) return;
       const start = performance.now();
-      renderer.draw(snap, viewRef.current);
+      const { focus: place, ...view } = viewRef.current;
+      // A focus on another floor can't be shown; the camera follows as usual.
+      renderer.draw(snap, { ...view, focus: place && place.floor === snap.floor.id ? place.pos : null });
       if (import.meta.env.DEV) canvas.dataset.frameMs = (performance.now() - start).toFixed(2);
       // The floor may have moved under a resting pointer.
       const pointer = pointerRef.current;
@@ -235,9 +241,10 @@ export function MapCanvas() {
         x: Math.min(Math.max(from.x + (hover ? step.x : 0), 0), snap.floor.width - 1),
         y: Math.min(Math.max(from.y + (hover ? step.y : 0), 0), snap.floor.height - 1),
       });
-    } else if (e.key === 'Escape' && hover) {
+    } else if (e.key === 'Escape' && (hover || focus)) {
       e.preventDefault();
-      setHover(null);
+      if (hover) setHover(null);
+      else focusMap(null);
     } else if (e.key === 'Enter') {
       selectAt(hover);
     }

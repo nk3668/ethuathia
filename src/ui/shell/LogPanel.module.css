@@ -2,6 +2,34 @@
   min-height: 0;
 }
 
+.filters {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.notice {
+  margin-right: var(--space-2);
+  color: var(--warn);
+  font-size: var(--font-size-label);
+}
+
+/* A highlight line: the sentence is a button that centers the map where it happened. */
+.highlight {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.highlight:hover {
+  text-decoration: underline;
+}
+
 /* The panel body: fill the strip and let the list scroll. */
 .log > :last-child {
   flex: 1;

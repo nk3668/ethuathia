@@ -80,7 +80,7 @@ describe('uiStore', () => {
     useUiStore.getState().setMapCamera('fit');
     useUiStore.getState().select(3);
     const saved = JSON.parse(localStorage.getItem(UI_STORAGE_KEY) ?? 'null') as { state: unknown };
-    expect(saved.state).toEqual({ logHeight: 240, tab: 'codex', mapCamera: 'fit' });
+    expect(saved.state).toEqual({ logHeight: 240, tab: 'codex', mapCamera: 'fit', autoPause: [] });
   });
 
   it('restores remembered values and ignores invalid ones', async () => {

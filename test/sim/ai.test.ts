@@ -306,6 +306,8 @@ describe('stuck detection', () => {
       detail:
         `No progress in ${STUCK_TURNS} turns (Explore: heading for unexplored ground 16 turns away; ` +
         `waiting for entity ${blocker} to get out of the way). Giving up on Explore for ${DROP_TURNS} turns.`,
+      floor: 'd1',
+      pos: { x: 4, y: 1 }, // waiting behind the blocker at (5, 1)
       turn: stuck.turn,
     });
 

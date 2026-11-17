@@ -5,6 +5,7 @@ import type { SimHost } from '../sim';
 import { DEMO_RUN } from './demoRun';
 import { WorkerHost } from './host/workerHost';
 import { AppShell } from './shell/AppShell';
+import { watchAutoPause } from './shell/autoPause';
 import { bindSaveStore } from './stores/profileStore';
 import { bindHost, useSimStore } from './stores/simStore';
 
@@ -35,11 +36,14 @@ export function App({ createHost = createWorkerHost, seed, createSaveStore: make
     useSimStore.getState().reset();
     // Also records a host error, which pauses the run and shows a banner over the map.
     const unbind = bindHost(host);
+    // Pauses on the highlight kinds ticked in Options.
+    const unwatch = watchAutoPause();
     host.start(DEMO_RUN, seed ?? Date.now() % 2 ** 31);
     // Runs at the speed the player last chose (1× at launch); the top bar's control changes it.
     host.setSpeed(useSimStore.getState().speed);
     return () => {
       unbind();
+      unwatch();
       host.dispose();
     };
   }, [createHost, seed]);

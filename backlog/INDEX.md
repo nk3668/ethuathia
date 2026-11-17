@@ -84,7 +84,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-042](bestiary/ETH-042-monster-families-floor-themes.md) | Monster families and floor themes | bestiary | M2 | P2 | idea | M |
 | [ETH-052](bestiary/ETH-052-elites-mini-bosses.md) | Elite monsters and mini-bosses with better loot | bestiary | M2 | P2 | idea | M |
 | [ETH-045](combat-items/ETH-045-affixes-artifacts.md) | Light affixes and named artifacts | combat-items | M2 | P2 | idea | M |
-| [ETH-047](ui-shell/ETH-047-highlights-auto-pause.md) | Highlights feed and optional auto-pause | ui-shell | M2 | P2 | idea | M |
+| [ETH-047](ui-shell/ETH-047-highlights-auto-pause.md) | Highlights feed and optional auto-pause | ui-shell | M2 | P2 | done | M |
 | [ETH-054](combat-items/ETH-054-food-buffs.md) | Food as consumables that grant short-term buffs | combat-items | M2 | P2 | idea | M |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | idea | S |
 | [ETH-031](quests/ETH-031-quest-rule-conditions-ai.md) | Quest rule conditions and objective weighting in the AI | quests | M3 | P2 | idea | M |
