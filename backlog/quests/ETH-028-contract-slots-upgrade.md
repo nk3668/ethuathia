@@ -7,7 +7,7 @@ priority: P2
 milestone: M2
 epic: quests
 size: S
-depends_on: [ETH-024]
+depends_on: [ETH-024, ETH-063, ETH-064]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -28,3 +28,4 @@ Taking more contracts is a risk the player chooses, paid with more rewards. See 
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

@@ -7,7 +7,7 @@ priority: P1
 milestone: M1
 epic: combat-items
 size: M
-depends_on: [ETH-033]
+depends_on: [ETH-033, ETH-061]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -29,3 +29,4 @@ The base of the gear model: roguelike base items plus light affixes. See `CLAUDE
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

@@ -7,7 +7,7 @@ priority: P2
 milestone: M2
 epic: quests
 size: M
-depends_on: [ETH-024, ETH-023]
+depends_on: [ETH-023, ETH-024, ETH-064]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -30,3 +30,4 @@ Side goals that shape what the party chases without replacing the main goal. See
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

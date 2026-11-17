@@ -28,3 +28,5 @@ Adventurers persist, and their deaths leave gravestones, heirlooms, ghosts and d
 - [ ] [ETH-051 Gravestone interactions: minor loot, a patron boon and an epitaph](ETH-051-gravestone-interactions.md)
 
 More items are added when M5 becomes the current milestone.
+- [ ] [ETH-068 Persistent roster, graveyard and Graveyard tab](ETH-068-roster-lineage-core.md)
+- [ ] [ETH-069 Gravestones and heirlooms in the dungeon](ETH-069-gravestones-heirlooms.md)

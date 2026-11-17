@@ -32,3 +32,6 @@ A deterministic, serializable turn-based simulation that runs the same in a work
 - [x] [ETH-007 FOV and map memory](ETH-007-fov-map-memory.md)
 - [x] [ETH-008 Goal maps (Dijkstra) and pathing](ETH-008-goal-maps-pathing.md)
 - [x] [ETH-010 SimHost: inline and Web Worker hosts, snapshot protocol and speed](ETH-010-sim-host.md)
+- [ ] [ETH-055 Extension seams so feature work lands in per-domain files](ETH-055-extension-seams.md)
+- [ ] [ETH-058 Multiple floors: stairs, lazily generated floors and a baseline descend rule](ETH-058-multi-floor-descent.md)
+- [ ] [ETH-062 Run end (victory, retreat, wipe), run trackers, run summary and auto-restart](ETH-062-run-end-summary.md)

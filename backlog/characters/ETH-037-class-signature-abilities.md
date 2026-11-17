@@ -7,7 +7,7 @@ priority: P2
 milestone: M3
 epic: characters
 size: M
-depends_on: [ETH-034]
+depends_on: [ETH-034, ETH-057]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -28,3 +28,4 @@ Gives each class a clear role in a fight. See `CLAUDE.md` §5.2.
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

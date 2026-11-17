@@ -7,7 +7,7 @@ priority: P1
 milestone: M1
 epic: bestiary
 size: M
-depends_on: []
+depends_on: [ETH-060]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -28,3 +28,4 @@ Readable, varied fights from a few rules. See `CLAUDE.md` §1 (Readable).
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

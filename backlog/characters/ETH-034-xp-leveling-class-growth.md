@@ -7,7 +7,7 @@ priority: P1
 milestone: M1
 epic: characters
 size: M
-depends_on: [ETH-033]
+depends_on: [ETH-033, ETH-060]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -29,3 +29,4 @@ Growth within a run and across runs for roster adventurers. See `CLAUDE.md` §7.
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

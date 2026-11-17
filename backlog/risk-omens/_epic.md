@@ -26,3 +26,4 @@ The player can opt into harder runs for a visible reward multiplier, and is paid
 - [ ] [ETH-053 Redefine the Ravenous Omen for food buffs (no hunger)](ETH-053-ravenous-omen-without-food.md)
 
 More items are added when M4 becomes the current milestone.
+- [ ] [ETH-067 Omens with ranks, the reward multiplier and conduct tracking](ETH-067-omens-conducts-core.md)

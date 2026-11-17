@@ -7,7 +7,7 @@ priority: P2
 milestone: M2
 epic: combat-items
 size: M
-depends_on: [ETH-043]
+depends_on: [ETH-043, ETH-057]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -34,3 +34,4 @@ Adds a small, readable consumable layer without the chore of managing hunger. Se
 ## Log
 - 2026-11-17: Created. The player wants food only for short-term buffs, with no hunger or starvation.
 - 2026-11-17: Stacking decided: different effect types stack, the same type refreshes instead.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

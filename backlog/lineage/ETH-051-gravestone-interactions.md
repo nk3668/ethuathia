@@ -7,7 +7,7 @@ priority: P2
 milestone: M5
 epic: lineage
 size: M
-depends_on: []
+depends_on: [ETH-069, ETH-070]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -29,3 +29,4 @@ Makes past runs matter in new ones. See `CLAUDE.md` §7.
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

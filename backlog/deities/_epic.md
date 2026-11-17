@@ -23,3 +23,4 @@ An optional patron gives each run a blessing and a taboo, with a devotion tree a
 
 ## Items
 - None yet. Items are added when M6 becomes the current milestone.
+- [ ] [ETH-070 Patron deities with a blessing, a taboo and Favor](ETH-070-deity-core.md)

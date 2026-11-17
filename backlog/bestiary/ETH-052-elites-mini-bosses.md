@@ -7,7 +7,7 @@ priority: P2
 milestone: M2
 epic: bestiary
 size: M
-depends_on: [ETH-041, ETH-045]
+depends_on: [ETH-041, ETH-045, ETH-067]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -30,3 +30,4 @@ Regular peaks of danger and reward between floors. See `CLAUDE.md` §6.
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

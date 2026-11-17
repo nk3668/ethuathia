@@ -7,7 +7,7 @@ priority: P1
 milestone: M1
 epic: quests
 size: M
-depends_on: []
+depends_on: [ETH-058, ETH-061, ETH-062]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -33,3 +33,4 @@ Gives runs a goal beyond "go deeper" and a clear Victory state. See `CLAUDE.md` 
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

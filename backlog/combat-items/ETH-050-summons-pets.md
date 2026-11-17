@@ -7,7 +7,7 @@ priority: P3
 milestone: later
 epic: combat-items
 size: M
-depends_on: [ETH-040]
+depends_on: [ETH-040, ETH-060]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -28,3 +28,4 @@ Adds to party play, and later supports the Ossuary's ghost allies. See `CLAUDE.m
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
