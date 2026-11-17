@@ -36,15 +36,23 @@ export interface SimStoreState {
   speed: Speed;
   /** The speed resuming goes back to: the last running speed chosen. */
   resumeSpeed: RunningSpeed;
+  /**
+   * Why the host stopped the run, or `null` while it is fine. While set, the run stays paused:
+   * `setSpeed` and `togglePause` refuse to resume it.
+   */
+  error: string | null;
   receiveSnapshot(snapshot: Snapshot): void;
   receiveEvents(events: readonly SimEvent[]): void;
-  /** Records `speed` and sends it to the bound host, if there is one. */
+  /**
+   * Records `speed` and sends it to the bound host, if there is one. Does nothing but pause
+   * after a host error.
+   */
   setSpeed(speed: Speed): void;
   /** Pauses a running sim, or resumes a paused one at `resumeSpeed`. */
   togglePause(): void;
-  /** Records that the host paused by itself (the worker does after an error). Sends nothing. */
-  hostPaused(): void;
-  /** Forgets the snapshot and events, e.g. when a new run starts. The speed is kept. */
+  /** Records that the host stopped the run on an error and paused it. Sends nothing. */
+  hostFailed(message: string): void;
+  /** Forgets the snapshot, events and error, e.g. when a new run starts. The speed is kept. */
   reset(): void;
 }
 
@@ -54,6 +62,7 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
   nextSeq: 0,
   speed: DEFAULT_SPEED,
   resumeSpeed: DEFAULT_SPEED,
+  error: null,
   receiveSnapshot: (snapshot) => set({ snapshot }),
   receiveEvents: (incoming) =>
     set((state) => {
@@ -65,6 +74,7 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
       return { events, nextSeq: state.nextSeq + incoming.length };
     }),
   setSpeed: (speed) => {
+    if (speed !== 0 && get().error !== null) return;
     set(speed === 0 ? { speed } : { speed, resumeSpeed: speed });
     boundHost?.setSpeed(speed);
   },
@@ -72,23 +82,26 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
     const { speed, resumeSpeed, setSpeed } = get();
     setSpeed(speed === 0 ? resumeSpeed : 0);
   },
-  hostPaused: () => set({ speed: 0 }),
-  reset: () => set({ snapshot: null, events: [], nextSeq: 0 }),
+  hostFailed: (message) => set({ speed: 0, error: message }),
+  reset: () => set({ snapshot: null, events: [], nextSeq: 0, error: null }),
 }));
 
 /**
- * Feeds a host's snapshots and events into `simStore`, and makes `setSpeed` send to it, until the
+ * Feeds a host's snapshots, events and errors into `simStore`, and makes `setSpeed` send to it, until the
  * returned function is called. Binding sends nothing: the caller sends the store's speed once the
  * run has started.
  */
 export function bindHost(host: SimHost): Unsubscribe {
-  const { receiveSnapshot, receiveEvents } = useSimStore.getState();
+  const { receiveSnapshot, receiveEvents, hostFailed } = useSimStore.getState();
   const offEvents = host.onEvents(receiveEvents);
   const offSnapshots = host.onSnapshot(receiveSnapshot);
+  // The host pauses itself on an error; the store records why, so the UI can say so.
+  const offErrors = host.onError(hostFailed);
   boundHost = host;
   return () => {
     offEvents();
     offSnapshots();
+    offErrors();
     if (boundHost === host) boundHost = null;
   };
 }

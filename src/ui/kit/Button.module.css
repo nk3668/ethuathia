@@ -17,12 +17,13 @@
     border-color var(--duration-fast) ease-out;
 }
 
-.button:hover:not(:disabled) {
+.button:hover:not(:disabled, [aria-disabled='true']) {
   background: var(--bg-hover);
   border-color: var(--border-strong);
 }
 
-.button:disabled {
+.button:disabled,
+.button[aria-disabled='true'] {
   color: var(--text-faint);
   cursor: not-allowed;
 }
@@ -34,13 +35,19 @@
   color: var(--on-accent);
 }
 
-.primary:hover:not(:disabled),
-.pressed:hover:not(:disabled) {
+.primary:hover:not(:disabled, [aria-disabled='true']),
+.pressed:hover:not(:disabled, [aria-disabled='true']) {
   background: var(--accent);
   border-color: var(--text);
 }
 
-.primary:disabled {
+/* A pressed toggle that can't change (e.g. Pause after a sim error) keeps its fill and contrast. */
+.pressed[aria-disabled='true'] {
+  color: var(--on-accent);
+}
+
+.primary:disabled,
+.primary[aria-disabled='true'] {
   background: var(--bg-raised);
   border-color: var(--border);
 }
@@ -51,6 +58,6 @@
   color: var(--text-muted);
 }
 
-.ghost:hover:not(:disabled) {
+.ghost:hover:not(:disabled, [aria-disabled='true']) {
   color: var(--text);
 }

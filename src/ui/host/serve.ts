@@ -55,7 +55,8 @@ export function serveSim(port: ServePort, now: Clock = () => performance.now()):
   port.addEventListener('message', (event) => {
     const request = readHostRequest(event.data);
     if (typeof request === 'string') {
-      port.postMessage({ type: 'error', message: request });
+      // A bad request pauses too, so the run is always paused when the host reports an error.
+      fail(request);
       return;
     }
     try {

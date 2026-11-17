@@ -31,7 +31,7 @@ A consistent, readable dark interface: shared tokens and components, the in-run 
 - [x] [ETH-014 Pause, speed controls and keyboard shortcuts](ETH-014-pause-speed-controls.md)
 - [x] [ETH-018 Ship only the font files the app needs](ETH-018-trim-font-bundle.md)
 - [x] [ETH-020 Key to cycle the selected adventurer](ETH-020-cycle-adventurers-key.md)
-- [ ] [ETH-021 Tell the player when the sim stops on an error](ETH-021-show-sim-errors.md)
+- [x] [ETH-021 Tell the player when the sim stops on an error](ETH-021-show-sim-errors.md)
 - [ ] [ETH-047 Highlights feed and optional auto-pause](ETH-047-highlights-auto-pause.md)
 - [ ] [ETH-064 Prepare screen and building a run config from the profile](ETH-064-prepare-screen.md)
 - [ ] [ETH-066 Possess an adventurer and play them directly](ETH-066-possession.md)
