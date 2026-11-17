@@ -180,14 +180,21 @@ As built (ETH-012), in `src/ui/shell/`:
   Close button close it, focus starts on Close and returns to the top-bar button.
 - Party cards: the name is a toggle button (`aria-pressed`) that selects the adventurer. A dead
   member's card has a dashed border and reads "✝ Dead".
-- Slots left for later items: `data-slot="speed-controls"` in the top bar (ETH-014). The map
-  area's `map-canvas` and `map-controls` slots hold the map and its camera toggle (ETH-013, §4).
+- The map area's `map-canvas` and `map-controls` slots hold the map and its camera toggle
+  (ETH-013, §4). The top bar's speed control filled its slot in ETH-014 (§3.1).
 
 ### 3.1 Top bar
 
 Currencies on the left, each an icon and a `NumberText` whose tooltip shows this run's earnings
 and the Omen multiplier. Run position in the centre. Pause and speed on the right as a
 segmented control; the active speed is filled with `--accent` and also marked `aria-pressed`.
+
+As built (ETH-014): `SpeedControls`, a `group` named "Sim speed" of kit `Button`s with shared
+borders and rounded ends: Pause (two drawn bars rather than a ⏸ character, which some systems
+render as a color emoji, plus a screen-reader label), `1×`, `2×`, `4×`, `8×` and `Max`. While
+paused only Pause is pressed; pressing it again resumes at the last speed. Each button's
+tooltip says what it does (turns a second at each speed) and its key from the keymap, which is
+also in `aria-keyshortcuts`.
 
 ### 3.2 Party card
 

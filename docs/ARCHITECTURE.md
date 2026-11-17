@@ -710,8 +710,12 @@ As built (ETH-012), the stores are in `ui/stores/`:
 - `simStore`: `snapshot` and `events`, a ring buffer of the last `EVENT_BUFFER_SIZE` (500)
   events, each with a sequence number for list keys. `bindHost(host)` feeds a `SimHost`'s
   snapshots and events into it and returns an unsubscribe. `App` creates the host (a
-  `WorkerHost`; tests pass an `InlineHost`), binds it and starts a demo run at 1× until the
-  Prepare screen and speed controls exist.
+  `WorkerHost`; tests pass an `InlineHost`), binds it and starts a demo run until the Prepare
+  screen exists. Since ETH-014 it also holds `speed` (0 is paused) and `resumeSpeed` (the last
+  running speed); `setSpeed` records a speed and sends it to the host `bindHost` connected, and
+  `togglePause` switches between 0 and `resumeSpeed`. `App` sends the store's speed (1× at
+  launch) after `start`, and records a pause when `WorkerHost.onError` fires (the worker pauses
+  itself). The speed is not saved between sessions.
 - `profileStore`: only the currencies for now, all zero. M2 replaces it with the meta `Profile`.
 - `uiStore`: `selected`, `tab`, `drawerOpen`, `logHeight`, `logFilter` and `mapCamera`
   (ETH-013). Zustand's `persist` keeps `logHeight`, `tab` and `mapCamera` in `localStorage`
@@ -792,6 +796,23 @@ else is plain TypeScript, and all but `MapRenderer` and `AsciiTheme` run without
 
 A keymap table maps keys to either a UI action (pause, speed, cycle adventurer) or a sim
 command (movement while possessed). Rebinding later means editing the table.
+
+As built (ETH-014), in `ui/input/`:
+
+- **`keymap.ts`:** `KEYMAP`, a list of `{ code, label, action }`. `code` is
+  `KeyboardEvent.code` (the physical key, so the digits work on any layout), `label` is how the
+  key is shown and goes into `aria-keyshortcuts`. Actions are `togglePause` and
+  `setSpeed(speed)`: `Space` pauses or resumes, `1`–`5` (number row, not numpad) pick 1×, 2×,
+  4×, 8× and max. `keysFor(action)` gives the labels for tooltips. `bindingFor(event)` returns
+  the binding a key press triggers, or nothing when a modifier (Ctrl, Alt, Meta) is held, the
+  event is composing or already `defaultPrevented`, focus is in a text field, textarea, select
+  or editable content, or the key is Space on a checkbox, radio or switch.
+- **`useKeymap()`:** listens on `window` while the in-run screen (`AppShell`) is mounted. Focused
+  widgets handle keys first (the map's arrows, Enter and Escape, the tabs' and log edge's
+  arrows), so a key they mark with `preventDefault` never reaches the keymap. A key the keymap
+  takes has its default prevented on keydown and on the matching keyup, so Space on a focused
+  button pauses without also pressing it (Enter still does) and never scrolls. Held keys act
+  once. Speed actions go through `simStore`, never to the sim directly.
 
 ### 8.4 Desktop packaging
 

@@ -3,6 +3,7 @@ import { formatNumber } from '../../core';
 import { Button, Tooltip } from '../kit';
 import { totalFavor, useProfileStore } from '../stores/profileStore';
 import { useSimStore } from '../stores/simStore';
+import { SpeedControls } from './SpeedControls';
 import styles from './TopBar.module.css';
 
 const TURN_FORMAT = new Intl.NumberFormat('en-US');
@@ -18,7 +19,7 @@ export interface TopBarProps {
 
 /**
  * The top bar (docs/VISUAL-DESIGN.md §3.1): currencies on the left, run position in the centre,
- * and on the right the slot for the pause and speed control (ETH-014).
+ * and on the right the pause and speed control.
  */
 export function TopBar({ narrow, drawerOpen, drawerId, onToggleDrawer, drawerButtonRef }: TopBarProps) {
   return (
@@ -26,8 +27,7 @@ export function TopBar({ narrow, drawerOpen, drawerId, onToggleDrawer, drawerBut
       <Currencies />
       <RunPosition />
       <div className={styles.end}>
-        {/* ETH-014 puts the pause and speed control here. */}
-        <div className={styles.speed} data-slot="speed-controls" />
+        <SpeedControls />
         {narrow && (
           <Button
             ref={drawerButtonRef}

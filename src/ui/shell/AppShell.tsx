@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react';
 import type { CSSProperties } from 'react';
+import { useKeymap } from '../input/useKeymap';
 import { useUiStore } from '../stores/uiStore';
 import styles from './AppShell.module.css';
 import { LogPanel } from './LogPanel';
@@ -22,6 +23,8 @@ export function AppShell() {
   const setDrawerOpen = useUiStore((s) => s.setDrawerOpen);
   const drawerId = useId();
   const drawerButton = useRef<HTMLButtonElement>(null);
+  // Space and 1–5 (src/ui/input/keymap.ts) work anywhere on this screen, drawer open or not.
+  useKeymap();
 
   // The drawer only exists in the narrow layout; widening the window shows the panel in place.
   const drawerShown = narrow && drawerOpen;

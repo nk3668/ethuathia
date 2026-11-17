@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-020**
+**Next ID: ETH-022**
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
@@ -42,9 +42,11 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-013](map-renderer/ETH-013-canvas-map-renderer.md) | Canvas map renderer: glyph atlas, fog and camera follow | map-renderer | M0 | P0 | done | M |
 | [ETH-011](ui-shell/ETH-011-tokens-fonts-kit.md) | Design tokens, bundled fonts and first kit primitives | ui-shell | M0 | P1 | done | M |
 | [ETH-012](ui-shell/ETH-012-app-shell-layout.md) | App shell layout: top bar, party column, map area, tabs and log | ui-shell | M0 | P1 | done | M |
-| [ETH-014](ui-shell/ETH-014-pause-speed-controls.md) | Pause, speed controls and keyboard shortcuts | ui-shell | M0 | P1 | ready | S |
+| [ETH-014](ui-shell/ETH-014-pause-speed-controls.md) | Pause, speed controls and keyboard shortcuts | ui-shell | M0 | P1 | done | S |
 | [ETH-015](content/ETH-015-content-registry-first-defs.md) | Content registry with validation and first definitions | content | M0 | P1 | ready | S |
 | [ETH-016](tools-balance/ETH-016-determinism-headless-run.md) | Determinism test and headless run script | tools-balance | M0 | P1 | ready | S |
 | [ETH-019](map-renderer/ETH-019-map-overlays-goal-possession-flash.md) | Map overlays: goal line, possession frame and hit flash | map-renderer | M1 | P2 | idea | S |
 | [ETH-017](adventurer-ai/ETH-017-party-yield-in-corridors.md) | Party members yield or swap places in narrow passages | adventurer-ai | M1 | P2 | idea | S |
+| [ETH-020](ui-shell/ETH-020-cycle-adventurers-key.md) | Key to cycle the selected adventurer | ui-shell | M1 | P2 | idea | S |
+| [ETH-021](ui-shell/ETH-021-show-sim-errors.md) | Tell the player when the sim stops on an error | ui-shell | M1 | P2 | idea | S |
 | [ETH-018](ui-shell/ETH-018-trim-font-bundle.md) | Ship only the font files the app needs | ui-shell | later | P3 | idea | S |
