@@ -24,6 +24,7 @@ Adventurers have attributes, grow by class when they level, have race aptitudes 
 - `CLAUDE.md` §4: Guild Hall
 - `CLAUDE.md` §5: The idle player
 - `docs/ARCHITECTURE.md` §2.2: Modifiers
+- `docs/ROGUELIKE-SURVEY.md`: clean-room ideas from other roguelikes
 
 ## Items
 - [ ] [ETH-033 Four attributes and the stats derived from them](ETH-033-attributes-derived-stats.md)
@@ -32,4 +33,4 @@ Adventurers have attributes, grow by class when they level, have race aptitudes 
 - [ ] [ETH-036 Milestone-gated class and race unlocks bought at the Guild Hall](ETH-036-milestone-unlocks-guild-hall.md)
 - [ ] [ETH-037 A signature ability per class](ETH-037-class-signature-abilities.md)
 - [ ] [ETH-038 Class-aware AI roles](ETH-038-class-aware-ai-roles.md)
-- [ ] [ETH-039 Survey ideas from DCSS and NetHack with clean-room notes](ETH-039-survey-roguelike-ideas.md)
+- [x] [ETH-039 Survey ideas from DCSS and NetHack with clean-room notes](ETH-039-survey-roguelike-ideas.md)
