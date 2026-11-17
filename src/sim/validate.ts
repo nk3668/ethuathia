@@ -7,22 +7,22 @@
 import { checkContent, ContentError, FEATURES, FLOOR_TYPES, TERRAIN } from '../content';
 import type { FloorTypeDef } from '../content';
 import { BASELINE_RULES } from './ai/engine';
-import { CONDITIONS } from './ai/conditions';
-import { RULE_ACTIONS } from './ai/ruleActions';
-import { checkFloorType, GEN_STEPS } from './gen';
+import { checkFloorType } from './gen';
+import { CONDITIONS, GEN_STEPS, RULE_ACTIONS } from './registries';
+import { STAT_REFS } from './stats';
 import { DEFS, TERRAIN_IDS } from './state';
 
 /**
  * Every problem found, as lines naming the def or table at fault; empty when all is well:
  *
  * - content shapes and cross-references (`checkContent`), with floor types' steps looked up in
- *   `GEN_STEPS`;
+ *   `GEN_STEPS` and stat ids in `STAT_REFS`;
  * - each floor type's step parameters, when all its steps exist;
  * - the content ids the sim names in code: `TERRAIN_IDS` and the feature ids in `DEFS`;
  * - the conditions and rule actions the baseline rules name.
  */
 export function checkGame(): string[] {
-  const problems = checkContent([GEN_STEPS]);
+  const problems = checkContent([GEN_STEPS, STAT_REFS]);
   problems.push(...checkFloorParams(FLOOR_TYPES.all()));
 
   TERRAIN_IDS.forEach((id, code) => {

@@ -1,9 +1,23 @@
 /**
  * Plain-text wording for the shell: content names, rule references and log lines. M1 replaces
  * the log wording with category filters and `Explain` links (docs/VISUAL-DESIGN.md §3.3).
+ *
+ * Each event type's wording lives with its domain in `logText/<domain>.ts`; `LOG_TEXT` here only
+ * joins them (docs/ARCHITECTURE.md, Contracts, "Log text").
  */
 import { findDef } from '../../content';
-import type { EntityId, RuleRef, SimEvent } from '../../sim';
+import type { EntityId, SimEvent } from '../../sim';
+import { COMBAT_LOG_TEXT } from './logText/combat';
+import { CORE_LOG_TEXT } from './logText/core';
+import { FLOORS_LOG_TEXT } from './logText/floors';
+import { ITEMS_LOG_TEXT } from './logText/items';
+import { QUESTS_LOG_TEXT } from './logText/quests';
+import { RUN_DOMAIN_LOG_TEXT } from './logText/run';
+import { STATS_LOG_TEXT } from './logText/stats';
+import type { LogCategory, LogText, LogTextRecord, NameOf } from './logText/types';
+
+export { ruleLabel } from './logText/core';
+export type { LogCategory, LogText, LogTextRecord, NameOf } from './logText/types';
 
 /**
  * The name of a content id: its def's `name`, or for an id with no def (monsters until M1) the
@@ -15,14 +29,6 @@ export function contentName(id: string): string {
   const last = id.slice(id.lastIndexOf('.') + 1).replace(/[-_]/g, ' ');
   return last.charAt(0).toUpperCase() + last.slice(1);
 }
-
-/** `rule #3` for the adventurer's own rules, `baseline #2` for the built-in ones (1-based). */
-export function ruleLabel(rule: RuleRef): string {
-  return `${rule.set === 'own' ? 'rule' : 'baseline'} #${rule.index + 1}`;
-}
-
-/** Log categories (docs/VISUAL-DESIGN.md §2.3). */
-export type LogCategory = 'combat' | 'loot' | 'discovery' | 'ai' | 'system';
 
 /** Each category's prefix, so a line's category never rests on its color alone. */
 export const LOG_PREFIX: Readonly<Record<LogCategory, string>> = {
@@ -41,25 +47,38 @@ export interface LogLine {
   text: string;
 }
 
-/** Event types the log leaves out: the map shows them, and they happen every turn. */
-const QUIET: ReadonlySet<SimEvent['type']> = new Set(['moved', 'waited']);
+/**
+ * The wording of every event type, one domain per line. The annotation makes it exhaustive: an
+ * event type no domain file covers fails to compile.
+ */
+export const LOG_TEXT: LogTextRecord<SimEvent> = {
+  ...CORE_LOG_TEXT,
+  ...STATS_LOG_TEXT,
+  ...FLOORS_LOG_TEXT,
+  ...COMBAT_LOG_TEXT,
+  ...ITEMS_LOG_TEXT,
+  ...QUESTS_LOG_TEXT,
+  ...RUN_DOMAIN_LOG_TEXT,
+};
+
+/** The wording for an event. The cast is safe because `LOG_TEXT` pairs every type with its entry. */
+function textOf<E extends SimEvent>(event: E): LogText<E> {
+  return LOG_TEXT[event.type as SimEvent['type']] as unknown as LogText<E>;
+}
 
 /**
  * The log's lines for a run of events, oldest first.
  *
- * - Moves and waits are left out.
+ * - Quiet events (moves and waits) are left out.
  * - An AI decision is shown when an adventurer's goal changes: a `ruleFired` for the same rule
  *   and rule action as that adventurer's previous one is left out, since the engine traces
  *   every decision and most just continue the same goal.
  */
-export function logLines(
-  events: readonly { seq: number; event: SimEvent }[],
-  nameOf: (id: EntityId) => string,
-): LogLine[] {
+export function logLines(events: readonly { seq: number; event: SimEvent }[], nameOf: NameOf): LogLine[] {
   const goals = new Map<EntityId, string>();
   const lines: LogLine[] = [];
   for (const { seq, event } of events) {
-    if (QUIET.has(event.type)) continue;
+    if (textOf(event).quiet === true) continue;
     if (event.type === 'ruleFired') {
       const goal = `${event.rule.set}:${event.rule.index}:${event.action}`;
       if (goals.get(event.actor) === goal) continue;
@@ -72,21 +91,7 @@ export function logLines(
 }
 
 /** One event as a category and a sentence. */
-export function describe(event: SimEvent, nameOf: (id: EntityId) => string): Pick<LogLine, 'category' | 'text'> {
-  switch (event.type) {
-    case 'moved':
-      return { category: 'system', text: `${nameOf(event.actor)} moves.` };
-    case 'waited':
-      return { category: 'system', text: `${nameOf(event.actor)} waits.` };
-    case 'doorOpened':
-      return { category: 'discovery', text: `${nameOf(event.actor)} opens a door.` };
-    case 'actionFailed':
-      return { category: 'system', text: `${nameOf(event.actor)} can't ${event.action} (${event.reason})` };
-    case 'ruleFired':
-      return { category: 'ai', text: `${nameOf(event.actor)}: ${event.detail} (${ruleLabel(event.rule)})` };
-    case 'stuck':
-      return { category: 'ai', text: `${nameOf(event.actor)}: ${event.detail} (${ruleLabel(event.rule)})` };
-    case 'commandRejected':
-      return { category: 'system', text: `Command "${event.command}" ignored (${event.reason})` };
-  }
+export function describe(event: SimEvent, nameOf: NameOf): Pick<LogLine, 'category' | 'text'> {
+  const entry = textOf(event);
+  return { category: entry.category, text: entry.text(event, nameOf) };
 }

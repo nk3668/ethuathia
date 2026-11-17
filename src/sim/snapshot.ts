@@ -12,6 +12,8 @@ import { getFloor } from './entities';
 import { explored, getMemory, partyVisible } from './perception';
 import type { Explored } from './perception';
 import type { Intent } from './ai/types';
+import type { DomainSnapshots } from './domain';
+import { domainSnapshots } from './domains';
 import type { EntityId, Faction, FeaturePart, FloorId, RunState } from './state';
 
 /** What a snapshot should show. */
@@ -86,6 +88,11 @@ export interface Snapshot {
   floor: FloorView;
   /** The party, in party order, including members who have died but are still in the state. */
   party: PartyMemberView[];
+  /**
+   * Each domain's slice, keyed by domain (`snapshot.domains.combat`), from its snapshot builder.
+   * Per-member data goes in a domain's slice keyed by entity id, not in `PartyMemberView`.
+   */
+  domains: DomainSnapshots;
 }
 
 /**
@@ -93,11 +100,13 @@ export interface Snapshot {
  * result is shared with `state`.
  */
 export function snapshot(state: RunState, view: ViewOptions = {}): Snapshot {
+  const floor = view.floor ?? shownFloor(state);
   return {
     turn: state.turn,
     seed: state.seed,
-    floor: floorView(state, view.floor ?? shownFloor(state)),
+    floor: floorView(state, floor),
     party: state.party.flatMap((id) => memberView(state, id)),
+    domains: domainSnapshots({ state, floor }),
   };
 }
 

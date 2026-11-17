@@ -5,6 +5,7 @@ import { clonePlain, Grid, Rng, seedStreams } from '../core';
 import type { Pos } from '../core';
 import { CLASSES, FLOOR_HALLS, FLOOR_TYPES, RACES } from '../content';
 import { newAiPart } from './ai/types';
+import { initDomains } from './domains';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { parseFloorText } from './floorText';
 import type { FloorPlan } from './floorText';
@@ -39,7 +40,8 @@ export function adventurerActor(member: AdventurerConfig): ActorPart {
  * the floor's `@` marks, or on its up stairs if it has none. Extra party members go on the
  * nearest free floor tiles, and the party's memory starts with what they can see. Each
  * adventurer's HP, MP and speed come from its class and race (`adventurerActor`), so an unknown
- * class or race id throws. `config` is copied, not kept.
+ * class or race id throws. Each domain's state slice comes from `initDomains(config)`.
+ * `config` is copied, not kept.
  */
 export function createRun(config: RunConfig, seed: number): RunState {
   if (config.party.length === 0) throw new Error('A run needs at least one adventurer');
@@ -56,6 +58,7 @@ export function createRun(config: RunConfig, seed: number): RunState {
     entities: {},
     party: [],
     nextEntityId: 1,
+    domains: clonePlain(initDomains(config)),
   };
 
   const plan =

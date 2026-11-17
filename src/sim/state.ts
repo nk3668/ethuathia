@@ -9,9 +9,20 @@ import type { GridBuffer, Pos, RngState } from '../core';
 import { FEATURE_DOOR, FEATURE_STAIRS_DOWN, FEATURE_STAIRS_UP, TERRAIN_FLOOR, TERRAIN_WALL } from '../content';
 import type { ActionRequest } from './actions';
 import type { AiPart } from './ai/types';
+import type { CombatConfig, CombatParts } from './combat';
+import type { DomainStates } from './domain';
+import type { FloorsConfig, FloorsParts } from './floors';
+import type { ItemsConfig, ItemsParts } from './items';
+import type { QuestsConfig, QuestsParts } from './quests';
+import type { RunDomainConfig, RunDomainParts } from './run';
+import type { StatsConfig, StatsParts } from './stats';
 
-/** Bumped whenever the shape of `RunState` changes. Saves from other versions need a migration. */
-export const STATE_VERSION = 3;
+/**
+ * Bumped whenever the shape of `RunState` changes. Saves from other versions need a migration.
+ * A branch that changes the shape sets it to (the version on main) + 1 when it rebases, so two
+ * branches never ship different shapes under one number (docs/ARCHITECTURE.md, Contracts).
+ */
+export const STATE_VERSION = 4;
 
 /**
  * Entity ids are positive integers handed out in order from `RunState.nextEntityId` and never
@@ -63,8 +74,12 @@ export interface AdventurerConfig {
   raceId: string;
 }
 
-/** What the sim needs to start a run. Built from the Prepare screen's choices (§6.3). */
-export interface RunConfig {
+/**
+ * What the sim needs to start a run. Built from the Prepare screen's choices (§6.3). Each domain
+ * adds its own optional fields (depth, contracts, Omens, …) in its `<Domain>Config` interface.
+ */
+export interface RunConfig
+  extends StatsConfig, FloorsConfig, CombatConfig, ItemsConfig, QuestsConfig, RunDomainConfig {
   /** At least one adventurer. */
   party: AdventurerConfig[];
   /**
@@ -162,10 +177,12 @@ export type FeaturePart = { kind: 'door'; open: boolean } | { kind: 'stairs'; di
 
 /**
  * One entity type with optional parts, not a full entity-component system. Systems are
- * functions over `RunState` that look for the parts they need. Later items add parts such as
- * `stats`, `inventory`, `ai` and `item`.
+ * functions over `RunState` that look for the parts they need. The core parts are below; each
+ * domain adds its own (`stats`, `inventory`, `item`, …) as optional fields of its `<Domain>Parts`
+ * interface, which `Entity` extends. Two domains naming the same part fails to compile.
  */
-export interface Entity {
+export interface Entity
+  extends StatsParts, FloorsParts, CombatParts, ItemsParts, QuestsParts, RunDomainParts {
   id: EntityId;
   /** Content id of what this is: `actor.adventurer`, `monster.cave_rat`, `feature.door`. */
   def: string;
@@ -201,4 +218,9 @@ export interface RunState {
   /** Party members' entity ids, in party order. */
   party: EntityId[];
   nextEntityId: EntityId;
+  /**
+   * Each domain's slice, keyed by domain (`state.domains.combat`), built by `initDomains` from
+   * the config. Domains keep their run-wide state here, never in new top-level fields.
+   */
+  domains: DomainStates;
 }

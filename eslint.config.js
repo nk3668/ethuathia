@@ -67,6 +67,14 @@ export default tseslint.config(
   },
 
   {
+    // Sim domain modules start with empty interfaces (state, snapshot, entity parts, config) that
+    // their owning items fill in (docs/ARCHITECTURE.md, Contracts).
+    name: 'ethuathia/sim-domains',
+    files: ['src/sim/*/index.ts'],
+    rules: { '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'always' }] },
+  },
+
+  {
     name: 'ethuathia/browser',
     files: ['src/platform/**/*.{ts,tsx}', 'src/ui/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },

@@ -10,6 +10,7 @@ import { LOG_RESIZE_STEP } from '../../src/ui/shell/LogResizer';
 import { contentName, describe as describeEvent, logLines, ruleLabel } from '../../src/ui/shell/text';
 import { useSimStore } from '../../src/ui/stores/simStore';
 import { LOG_HEIGHT, UI_STORAGE_KEY, useUiStore } from '../../src/ui/stores/uiStore';
+import { fixtureDomains } from './fixtures';
 
 /** Makes `matchMedia` report `narrow` for every query, as a window under 1000px would. */
 function setNarrow(narrow: boolean) {
@@ -52,6 +53,7 @@ const SNAPSHOT: Snapshot = {
     explored: { seen: 1, total: 1, fraction: 1 },
   },
   party: [member(1, 'Mira', 12), member(2, 'Oren', 0)],
+  domains: fixtureDomains(),
 };
 
 const fired = (turn: number, actor: EntityId, index: number, detail: string): SimEvent => ({
