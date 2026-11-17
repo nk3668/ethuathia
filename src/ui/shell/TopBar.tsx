@@ -129,13 +129,36 @@ function Currency({ icon, id, tone, value, detail }: CurrencyProps) {
   );
 }
 
-/** "Floor 1 · Turn 4,812" from the latest snapshot, or a dash before the first one. */
+/**
+ * "Floor 3/10 · Turn 4,812" from the latest snapshot: the floor the map shows out of the
+ * dungeon's depth. "No run" before the first snapshot.
+ */
 function RunPosition() {
   const depth = useSimStore((s) => s.snapshot?.floor.depth);
+  const total = useSimStore((s) => s.snapshot?.domains.floors.depth);
+  const deepest = useSimStore((s) => s.snapshot?.domains.floors.deepest);
   const turn = useSimStore((s) => s.snapshot?.turn);
+  if (depth === undefined || total === undefined || deepest === undefined || turn === undefined) {
+    return <p className={styles.position}>No run</p>;
+  }
   return (
-    <p className={styles.position}>
-      {depth === undefined || turn === undefined ? 'No run' : `Floor ${depth} · Turn ${TURN_FORMAT.format(turn)}`}
-    </p>
+    <Tooltip
+      placement="bottom"
+      content={
+        <>
+          <strong>
+            Floor {depth} of {total}
+          </strong>
+          <br />
+          The floor the map shows, out of the dungeon&rsquo;s {total} floors. Deepest reached: floor {deepest}.
+          <br />
+          Turn {TURN_FORMAT.format(turn)}: game time since the run began.
+        </>
+      }
+    >
+      <p tabIndex={0} className={styles.position}>
+        Floor {depth}/{total} · Turn {TURN_FORMAT.format(turn)}
+      </p>
+    </Tooltip>
   );
 }

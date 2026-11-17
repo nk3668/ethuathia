@@ -18,14 +18,12 @@ import type { ActorPart, NewEntity, RunState } from '../../src/sim';
 
 const RAT_ACTOR: ActorPart = { energy: 0, speed: 120, hp: 3, maxHp: 3, mp: 0, maxMp: 0, faction: 'monster' };
 
-/** A run on a small hand-built floor, plus an empty second floor `d2` below it. */
+/** A run on a small hand-built floor, plus a hand-built second floor `d2` below it. */
 function setup(): RunState {
   const state = createRun(
     { party: [{ name: 'A', classId: 'class.vanguard', raceId: 'race.human' }], floorText: ['#######', "#@.+'>#", '#######'] },
     1,
   );
-  state.dungeon.nodes.d2 = { id: 'd2', depth: 2, up: 'd1', down: [] };
-  state.dungeon.nodes.d1?.down.push('d2');
   addFloor(state, 'd2', parseFloorText(['#####', '#<..#', '#####']));
   return state;
 }
@@ -123,12 +121,11 @@ describe('entity helpers', () => {
     const state = setup();
     const plan = parseFloorText(['###', '#.#', '###']);
     expect(() => addFloor(state, 'd2', plan)).toThrow(/already been built/);
-    expect(() => addFloor(state, 'd3', plan)).toThrow(/not in the dungeon graph/);
+    expect(() => addFloor(state, 'd99', plan)).toThrow(/not in the dungeon graph/);
   });
 
   it('copies the plan’s terrain rather than sharing it', () => {
     const state = createRun({ party: [{ name: 'A', classId: 'class.vanguard', raceId: 'race.human' }] }, 1);
-    state.dungeon.nodes.d2 = { id: 'd2', depth: 2, up: 'd1', down: [] };
     const plan = parseFloorText(['###', '#<#', '###']);
     const floor = addFloor(state, 'd2', plan);
     expect(floor.terrain.cells).not.toBe(plan.terrain.cells);

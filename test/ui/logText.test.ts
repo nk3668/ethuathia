@@ -27,11 +27,11 @@ describe('log text', () => {
     expect(Object.keys(LOG_TEXT).sort()).toEqual([...types].sort());
   });
 
-  it('leaves out only moves and waits', () => {
+  it('leaves out only moves, waits and floor arrivals (the stairs line says it)', () => {
     const quiet = Object.entries(LOG_TEXT)
       .filter(([, entry]) => entry.quiet === true)
       .map(([type]) => type as SimEventType);
-    expect(quiet.sort()).toEqual(['moved', 'waited']);
+    expect(quiet.sort()).toEqual(['floorEntered', 'moved', 'waited']);
   });
 
   it('makes a missing formatter a compile error', () => {

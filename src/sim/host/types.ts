@@ -4,7 +4,7 @@
  */
 import type { Command } from '../commands';
 import type { SimEvent } from '../events';
-import type { Snapshot } from '../snapshot';
+import type { Snapshot, ViewOptions } from '../snapshot';
 import type { RunConfig } from '../state';
 
 /** Sim speeds: 0 is paused, `max` runs as fast as the machine allows. */
@@ -24,6 +24,12 @@ export interface SimHost {
   /** Queues a command. It is applied, in the order sent, at the start of the next step. */
   send(command: Command): void;
   setSpeed(speed: Speed): void;
+  /**
+   * Sets what snapshots show from now on (`ViewOptions`), e.g. `{ follow: selectedId }` so the
+   * map follows the selected adventurer's floor. Kept across `start`. A host with a run sends a
+   * fresh snapshot of the new view straight away.
+   */
+  setView(view: ViewOptions): void;
   /** Called with each new snapshot, after the events that led to it. */
   onSnapshot(listener: (snapshot: Snapshot) => void): Unsubscribe;
   /** Called with each batch of events, in the order they happened. Batches are never empty. */

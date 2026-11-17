@@ -3,7 +3,25 @@
  * data, posted with structured clone.
  */
 import type { Command } from '../commands';
+import type { ViewOptions } from '../snapshot';
 import type { RunConfig } from '../state';
+
+/** A clean `setView` request from untyped data, or why it is malformed. */
+function readView(raw: unknown): HostRequest | string {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return 'setView needs a view object';
+  const { floor, follow, ...rest } = raw as Record<string, unknown>;
+  if (Object.keys(rest).length > 0) return `Unknown view option "${Object.keys(rest)[0] as string}"`;
+  const view: ViewOptions = {};
+  if (floor !== undefined) {
+    if (typeof floor !== 'string') return 'The view floor must be a floor id';
+    view.floor = floor;
+  }
+  if (follow !== undefined) {
+    if (typeof follow !== 'number' || !Number.isSafeInteger(follow)) return 'The view follow must be an entity id';
+    view.follow = follow;
+  }
+  return { type: 'setView', view };
+}
 import { isSpeed } from './types';
 import type { HostUpdate, Speed } from './types';
 
@@ -11,7 +29,8 @@ import type { HostUpdate, Speed } from './types';
 export type HostRequest =
   | { type: 'start'; config: RunConfig; seed: number }
   | { type: 'command'; command: Command }
-  | { type: 'setSpeed'; speed: Speed };
+  | { type: 'setSpeed'; speed: Speed }
+  | { type: 'setView'; view: ViewOptions };
 
 /** From the worker to the UI thread. */
 export type HostMessage =
@@ -37,6 +56,8 @@ export function readHostRequest(data: unknown): HostRequest | string {
     case 'setSpeed':
       if (!isSpeed(message.speed)) return `Unknown speed ${String(message.speed)}`;
       return { type: 'setSpeed', speed: message.speed };
+    case 'setView':
+      return readView(message.view);
     default:
       return `Unknown message type "${String(message.type)}"`;
   }

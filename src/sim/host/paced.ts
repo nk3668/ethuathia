@@ -8,7 +8,9 @@
  * - Updates (a batch of events, then a snapshot) go out at most once per
  *   `SNAPSHOT_INTERVAL_MS`, however many steps ran, so about 30 a second at most.
  */
+import { clonePlain } from '../../core';
 import type { Command } from '../commands';
+import type { ViewOptions } from '../snapshot';
 import type { SimEvent } from '../events';
 import type { RunConfig } from '../state';
 import { SimSession } from './session';
@@ -49,6 +51,8 @@ export class PacedRunner {
   private stepsSinceAnchor = 0;
   /** True when the last step got nowhere (nobody can act), so `max` stops spinning. */
   private stalled = false;
+  /** What snapshots show, kept across `start`. */
+  private view: ViewOptions = {};
 
   constructor(
     private readonly onUpdate: (update: HostUpdate) => void,
@@ -61,7 +65,7 @@ export class PacedRunner {
 
   /** Starts a new run at the current speed and sends its first snapshot right away. */
   start(config: RunConfig, seed: number): void {
-    this.session = new SimSession(config, seed);
+    this.session = new SimSession(config, seed, this.view);
     this.events = [];
     this.stalled = false;
     this.resetAnchor();
@@ -73,6 +77,17 @@ export class PacedRunner {
     if (this.session === null) throw new Error('No run has been started');
     this.session.send(command);
     this.stalled = false;
+  }
+
+  /**
+   * Changes what snapshots show (`SimHost.setView`), and with a run going sends an update of the
+   * new view at once, with any unsent events before it.
+   */
+  setView(view: ViewOptions): void {
+    this.view = clonePlain(view);
+    if (this.session === null) return;
+    this.session.setView(this.view);
+    this.flush(this.session);
   }
 
   /** Changes speed. Pausing sends any unsent events and a final snapshot at once. */

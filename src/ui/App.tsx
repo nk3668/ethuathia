@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { createSaveStore } from '../platform';
 import type { SaveStore } from '../platform';
-import type { SimHost } from '../sim';
+import type { EntityId, SimHost } from '../sim';
 import { DEMO_RUN } from './demoRun';
 import { WorkerHost } from './host/workerHost';
 import { AppShell } from './shell/AppShell';
 import { watchAutoPause } from './shell/autoPause';
 import { bindSaveStore } from './stores/profileStore';
 import { bindHost, useSimStore } from './stores/simStore';
+import { useUiStore } from './stores/uiStore';
 
 export interface AppProps {
   /** Makes the sim host. Defaults to a Web Worker; tests pass an `InlineHost`. */
@@ -38,10 +39,17 @@ export function App({ createHost = createWorkerHost, seed, createSaveStore: make
     const unbind = bindHost(host);
     // Pauses on the highlight kinds ticked in Options.
     const unwatch = watchAutoPause();
+    // The map shows the selected adventurer's floor, so it follows them down the stairs.
+    const follow = (id: EntityId | null) => host.setView(id === null ? {} : { follow: id });
+    follow(useUiStore.getState().selected);
+    const offSelect = useUiStore.subscribe((now, before) => {
+      if (now.selected !== before.selected) follow(now.selected);
+    });
     host.start(DEMO_RUN, seed ?? Date.now() % 2 ** 31);
     // Runs at the speed the player last chose (1× at launch); the top bar's control changes it.
     host.setSpeed(useSimStore.getState().speed);
     return () => {
+      offSelect();
       unbind();
       unwatch();
       host.dispose();

@@ -49,6 +49,9 @@ export function serveSim(port: ServePort, now: Clock = () => performance.now()):
       case 'setSpeed':
         runner.setSpeed(request.speed);
         break;
+      case 'setView':
+        runner.setView(request.view);
+        break;
     }
   };
 

@@ -5,7 +5,8 @@
  */
 import type { Command } from '../commands';
 import type { SimEvent } from '../events';
-import type { Snapshot } from '../snapshot';
+import { clonePlain } from '../../core';
+import type { Snapshot, ViewOptions } from '../snapshot';
 import type { RunConfig } from '../state';
 import { SimSession } from './session';
 import { deliver, Listeners } from './types';
@@ -16,6 +17,7 @@ export class InlineHost implements SimHost {
   private readonly events = new Listeners<readonly SimEvent[]>();
   private readonly snapshots = new Listeners<Snapshot>();
   private currentSpeed: Speed = 1;
+  private view: ViewOptions = {};
 
   /**
    * The speed last set. An inline host has no clock, so it only records it for callers that
@@ -31,7 +33,15 @@ export class InlineHost implements SimHost {
   }
 
   start(config: RunConfig, seed: number): void {
-    this.session = new SimSession(config, seed);
+    this.session = new SimSession(config, seed, this.view);
+    this.snapshots.emit(this.session.snapshot());
+  }
+
+  /** Changes what snapshots show, and with a run going delivers a snapshot of it at once. */
+  setView(view: ViewOptions): void {
+    this.view = clonePlain(view);
+    if (this.session === null) return;
+    this.session.setView(this.view);
     this.snapshots.emit(this.session.snapshot());
   }
 

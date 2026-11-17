@@ -16,13 +16,18 @@ import type { DomainSnapshots } from './domain';
 import { domainSnapshots } from './domains';
 import type { EntityId, Faction, FeaturePart, FloorId, RunState } from './state';
 
-/** What a snapshot should show. */
+/**
+ * What a snapshot should show. With neither field set, the floor of the first living party
+ * member, or of the first party member if none is alive.
+ */
 export interface ViewOptions {
-  /**
-   * The floor to show. Defaults to the floor of the first living party member, or of the first
-   * party member if none is alive. The floor must have been built.
-   */
+  /** The floor to show. The floor must have been built. Wins over `follow`. */
   floor?: FloorId;
+  /**
+   * Show the floor this entity is on. The UI passes the selected adventurer, so the map follows
+   * them up and down the stairs. Ignored if there is no such entity.
+   */
+  follow?: EntityId;
 }
 
 /** A feature as the party remembers it. On tiles in view this is also how it is now. */
@@ -100,7 +105,8 @@ export interface Snapshot {
  * result is shared with `state`.
  */
 export function snapshot(state: RunState, view: ViewOptions = {}): Snapshot {
-  const floor = view.floor ?? shownFloor(state);
+  const followed = view.follow === undefined ? undefined : state.entities[view.follow]?.floor;
+  const floor = view.floor ?? followed ?? shownFloor(state);
   return {
     turn: state.turn,
     seed: state.seed,

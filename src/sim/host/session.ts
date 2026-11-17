@@ -16,9 +16,11 @@ import { step } from '../step';
 export class SimSession {
   private readonly state: RunState;
   private pending: Command[] = [];
+  private view: ViewOptions;
 
-  constructor(config: RunConfig, seed: number) {
+  constructor(config: RunConfig, seed: number, view: ViewOptions = {}) {
     this.state = createRun(config, seed);
+    this.view = clonePlain(view);
   }
 
   /** The game turn the run has reached. */
@@ -43,7 +45,13 @@ export class SimSession {
     return { events, progressed: events.length > 0 || this.state.turn !== turn };
   }
 
-  snapshot(view?: ViewOptions): Snapshot {
+  /** What later snapshots show by default, e.g. `{ follow: selectedId }`. A copy is kept. */
+  setView(view: ViewOptions): void {
+    this.view = clonePlain(view);
+  }
+
+  /** A snapshot of `view`, or of the view last set with `setView`. */
+  snapshot(view: ViewOptions = this.view): Snapshot {
     return snapshot(this.state, view);
   }
 

@@ -1,23 +1,20 @@
 /**
  * Starting a run: `createRun` builds the initial `RunState` from a config and a seed.
  */
-import { clonePlain, Grid, Rng, seedStreams } from '../core';
+import { clonePlain, Grid, seedStreams } from '../core';
 import type { Pos } from '../core';
-import { CLASSES, FLOOR_HALLS, FLOOR_TYPES, RACES } from '../content';
+import { CLASSES, RACES } from '../content';
 import { newAiPart } from './ai/types';
 import { initDomains } from './domains';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
-import { parseFloorText } from './floorText';
+import { buildDungeon, configDepth, DEFAULT_FLOOR_TYPE, planFloor } from './floors';
 import type { FloorPlan } from './floorText';
-import { generateFloor } from './gen';
 import { perceiveParty } from './perception';
 import { DEFS, RNG_STREAMS, STATE_VERSION, Terrain } from './state';
 import type { ActorPart, AdventurerConfig, FloorId, RunConfig, RunState } from './state';
 
-const FIRST_FLOOR: FloorId = 'd1';
-
 /** The floor type the first floor is generated from when the config has no `floorText`. */
-export const FIRST_FLOOR_TYPE = FLOOR_HALLS.id;
+export const FIRST_FLOOR_TYPE = DEFAULT_FLOOR_TYPE;
 
 /**
  * An adventurer's starting actor values from its class and race: the class's HP and MP plus the
@@ -35,8 +32,9 @@ export function adventurerActor(member: AdventurerConfig): ActorPart {
 }
 
 /**
- * A new run: RNG streams seeded from `seed`, a one-floor dungeon built from `config.floorText`
- * or else generated from `FIRST_FLOOR_TYPE` with the `dungeon` stream, and the party placed at
+ * A new run: RNG streams seeded from `seed`, a dungeon graph `config.depth` floors deep (default
+ * `DEFAULT_DEPTH`), its first floor built from `config.floorText` or else generated (`planFloor`;
+ * the other floors are built when first reached, `ensureFloor`), and the party placed at
  * the floor's `@` marks, or on its up stairs if it has none. Extra party members go on the
  * nearest free floor tiles, and the party's memory starts with what they can see. Each
  * adventurer's HP, MP and speed come from its class and race (`adventurerActor`), so an unknown
@@ -46,13 +44,15 @@ export function adventurerActor(member: AdventurerConfig): ActorPart {
 export function createRun(config: RunConfig, seed: number): RunState {
   if (config.party.length === 0) throw new Error('A run needs at least one adventurer');
   const actors = config.party.map(adventurerActor);
+  const dungeon = buildDungeon(configDepth(config));
+  const entry = dungeon.entry;
   const state: RunState = {
     version: STATE_VERSION,
     seed,
     rng: seedStreams(seed, RNG_STREAMS),
     turn: 0,
     config: clonePlain(config),
-    dungeon: { entry: FIRST_FLOOR, nodes: { [FIRST_FLOOR]: { id: FIRST_FLOOR, depth: 1, up: null, down: [] } } },
+    dungeon,
     floors: {},
     memory: {},
     entities: {},
@@ -61,16 +61,13 @@ export function createRun(config: RunConfig, seed: number): RunState {
     domains: clonePlain(initDomains(config)),
   };
 
-  const plan =
-    config.floorText !== undefined
-      ? parseFloorText(config.floorText)
-      : generateFloor(FLOOR_TYPES.get(FIRST_FLOOR_TYPE), new Rng(state.rng.dungeon));
-  addFloor(state, FIRST_FLOOR, plan);
-  const starts = startPositions(state, FIRST_FLOOR, plan, config.party.length);
+  const plan = planFloor(state, entry);
+  addFloor(state, entry, plan);
+  const starts = startPositions(state, entry, plan, config.party.length);
   config.party.forEach((member, i) => {
     const entity = addEntity(state, {
       def: DEFS.adventurer,
-      floor: FIRST_FLOOR,
+      floor: entry,
       pos: starts[i] as Pos,
       actor: actors[i] as ActorPart,
       adventurer: { name: member.name, classId: member.classId, raceId: member.raceId },

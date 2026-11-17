@@ -245,7 +245,28 @@ slice.
 `STATE_VERSION` (`src/sim/state.ts`) changes whenever the shape of `RunState` changes, entity
 parts and domain slices included. **A PR that changes the shape sets it to the version on main
 plus one when it rebases**, so two branches never ship different shapes under one number. If
-main moved past your version while your PR waited, rebase and bump again. ETH-055 made it 4.
+main moved past your version while your PR waited, rebase and bump again. ETH-055 made it 4,
+then 5 on main, and ETH-058 (the floors slice) 6.
+
+### Floors and arrival (ETH-058)
+
+What later items build on, all exported from `src/sim/floors/`:
+
+- **Floors:** `ensureFloor(state, floorId)` returns a floor, building it first if nobody has
+  been there. `planFloor` gives its plan without building. Floor ids are `floorIdAt(depth)`
+  (`d1` … `dN`); `floorNode`, `stairsTarget(state, floor, dir)`, `isBottomFloor`, `dungeonDepth`
+  and `stairsOn` read the graph and the stairs. Each floor's RNG is `floorRngState(seed,
+  floorId)`, never a shared stream, so floors don't depend on the order they are reached in.
+- **Config:** `depth` (default `DEFAULT_DEPTH`, 10), `floorTexts` (hand-built floors by depth)
+  and `floorTurnCap` (default `FLOOR_TURN_CAP`).
+- **Arrival hook:** the `stairs` action emits `tookStairs` then `floorEntered { actor, floor,
+  depth, firstVisit }`. React to arrivals (depth rewards, contracts, run end at the exit) with
+  a run tracker or trigger on `floorEntered`, not by editing the stairs action. The run's first
+  floor gets no `floorEntered`.
+- **State:** `state.domains.floors` holds `deepest` and `arrived` (the turn the party first
+  reached each floor).
+- **Party:** `gatheringAt(state, floor, pos)` says who is gathered at a place (chained within
+  `GATHER_RADIUS`) and who is missing; `partyOnFloor` lists the living members on a floor.
 
 ### Content kinds
 
@@ -512,7 +533,8 @@ As built in `src/sim/state.ts` (ETH-003):
 - **Hand-built floors** are written as text (`#` wall, `.` floor, `+`/`'` closed and open door,
   `<`/`>` stairs, `@` party start) and read by `parseFloorText`. `floorToText` prints a floor
   back for tests, and `planToText` prints a generated `FloorPlan`. `RunConfig.floorText`
-  supplies a hand-built first floor; without it `createRun` generates one (§3.6).
+  supplies a hand-built first floor and `floorTexts` hand-built floors by depth; the rest are
+  generated (§3.6).
 - **Party memory:** `RunState.memory` holds what the party has seen of each built floor, keyed
   like `floors` (§3.7). `STATE_VERSION` went to 2 when it was added, and to 3 when entities got
   the `ai` part (§4).
@@ -651,7 +673,9 @@ A `Snapshot` is a read-only view built for the UI: the current floor as the part
 run counters. The UI never sees `RunState`.
 
 As built (ETH-010), in `src/sim/snapshot.ts`: `snapshot(state, view?)` where `ViewOptions` is
-`{ floor? }` (default: the first living party member's floor). A `Snapshot` has `turn`, `seed`,
+`{ floor?, follow? }`: a floor id, or (ETH-058) an entity whose floor to show, which the UI sets
+to the selected adventurer through `SimHost.setView`; the default is the first living party
+member's floor. A `Snapshot` has `turn`, `seed`,
 `floor` and `party`. `floor` carries `terrain` (a `Uint8Array` copy of the party memory: 0 never
 seen, else 1 + the `Terrain` code), `visible` (the `partyVisible` mask), the remembered
 `features`, and `actors` standing on tiles in view only. `party` has one card per member (name,
@@ -694,8 +718,19 @@ As built in `src/sim/gen/` (ETH-006):
   draw, then runs them in order on an all-wall `FloorDraft` (a `FloorPlan` plus the `rooms`
   that later steps read) and returns the `FloorPlan` for `addFloor`. Errors name the floor
   type, the step's position and its id. `checkFloorType` does the binding alone, for validation.
-- **`createRun`** generates the first floor from `FIRST_FLOOR_TYPE` with
-  `new Rng(state.rng.dungeon)`; generation draws from nothing else.
+- **Floors are built lazily (ETH-058).** `createRun` builds the whole dungeon graph, a straight
+  line of `config.depth` nodes (default 10), but only the first floor. `ensureFloor` builds the
+  others when someone first takes the stairs to them. Each floor is generated from
+  `new Rng(floorRngState(seed, floorId))`, a state derived from the seed and the floor id alone,
+  so the order in which floors are first reached never changes one; generation draws from none
+  of the run's streams. Every generated floor is `DEFAULT_FLOOR_TYPE` (Hewn Halls) until floor
+  variety (M6), and the bottom floor's stairs down are left out.
+- **Stairs (ETH-058):** the `stairs` action (`{ id: 'stairs', dir }`) on matching stairs moves
+  the actor to the linked stairs of the floor above or below (the up stairs when going down),
+  or the nearest free tile if someone stands there. The first floor's up stairs lead out of the
+  dungeon and are refused until leaving exists (ETH-025, ETH-062). A floor keeps its layout,
+  features and party memory when left; only floors with a party member on them are scheduled
+  (§3.3), so the rest stay as they were left.
 - **The rooms-and-corridors steps:**
   - `gen.rooms`: tries random rectangles and carves each one that keeps `gap` wall tiles from
     the others, inside a one-tile wall border.
@@ -802,8 +837,22 @@ As built in `src/sim/ai/` (ETH-009):
   `{ set: 'own' | 'baseline', index }` and `detail` reads "Explore: heading for unexplored ground
   6 turns away", with the condition's detail in brackets when it has one. The same is kept as
   `ai.memory.intent` for the party card.
-- **Baseline rules**, in order: `cond.stuck → act.back_off`, `cond.always → act.explore`,
-  `cond.always → act.wait`.
+- **Baseline rules**, in order: `cond.stuck → act.back_off`,
+  `cond.floor_overstayed → act.descend { regroup: false }`, `cond.always → act.explore`,
+  `cond.always → act.descend`, `cond.always → act.gather`, `cond.bottom_floor → act.wait`,
+  `cond.always → act.wait`. The floors ones (ETH-058) are in `src/sim/floors/rules.ts`:
+  - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
+    default) a member on the stairs takes them only when every living member on that floor is
+    gathered (`gatheringAt`: within `GATHER_RADIUS`, 2, of the stairs or of a gathered member,
+    so a queue in a corridor counts), and a gathered member doesn't crowd stairs someone stands
+    on. Members on other floors are not waited for. It can't be done before the stairs down
+    are seen or on the bottom floor.
+  - `act.gather` (`idle`) waits at the stairs meanwhile: "waiting at the stairs down for Mira".
+  - `cond.floor_overstayed` holds once the party has been on the floor `floorTurnCap` game
+    turns (default `FLOOR_TURN_CAP`, 1000), the safety net: the baseline then heads down
+    without exploring further or waiting.
+  - `cond.bottom_floor` holds on the bottom floor, where the baseline waits until run end
+    (ETH-062) replaces it.
   - `act.explore` is frontier-based: the goals are tiles the actor could enter (on the party
     memory's path grid, closed doors at `OPEN_DOOR_COST`) with an unseen neighbor. Standing on one
     always reveals its neighbors, so each goal reached shrinks the frontier, and explored dead
@@ -825,7 +874,10 @@ As built in `src/sim/ai/` (ETH-009):
   `memory.dropped` and is skipped for `DROP_TURNS` (20) turns, a `stuck` event says why, and
   `cond.stuck` holds meanwhile, so the actor backs off and then waits until the goal comes back.
 - **Speed:** a lone adventurer explores a generated Hewn Halls floor in about 200 party turns
-  (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite.
+  (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite. A
+  ten-floor dungeon takes a lone adventurer about 2,400 turns and a party of four about 1,200.
+  `frontier` scans the floor with plain loops (no closures) since it runs at every exploring
+  decision.
 
 ---
 
@@ -1013,7 +1065,9 @@ As built (ETH-010):
   and the worker message protocol. Only the code that needs worker globals and timers is in
   `src/ui/host/`: `serveSim` (the worker side), `sim.worker.ts` (its entry) and `WorkerHost`.
   `meta` can therefore use `InlineHost` for time-away.
-- **Interface:** as sketched, plus `dispose()`. `onSnapshot` and `onEvents` return an
+- **Interface:** as sketched, plus `dispose()` and (ETH-058) `setView(view)`, which sets the
+  `ViewOptions` later snapshots use and, with a run going, sends one at once; it is kept across
+  `start`. `App` sets it to `{ follow: selected }` whenever the selection changes. `onSnapshot` and `onEvents` return an
   unsubscribe function. An update is delivered as the events since the last one (one batch,
   never empty) followed by the snapshot after them. `start` delivers the first snapshot at
   once. `send` queues a command for the next step. `onError` (on the interface since ETH-021)
@@ -1030,7 +1084,7 @@ As built (ETH-010):
   at any speed, and pausing flushes at once. A timed speed that falls more than a second
   behind (throttled timers) starts counting again rather than running a burst. A step that
   gets nowhere (nobody can act) stops the runner until the next message.
-- **Protocol:** `HostRequest` is `start`, `command` or `setSpeed`. `HostMessage` is
+- **Protocol:** `HostRequest` is `start`, `command`, `setSpeed` or `setView`. `HostMessage` is
   `update` (`{ events, snapshot }`) or `error`. The worker checks each request with
   `readHostRequest`. Commands and configs are checked again where they are used.
 - **Bundling:** `new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' })`
@@ -1207,12 +1261,14 @@ tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
   loads them and checks the rest of the run matches. Extend the command script as commands are
   added.
 - **Headless runs:** `npm run sim -- --seeds N [--from S] [--cap T] [--party P]`
-  (`tools/sim.ts`, logic in `tools/headless.ts`) runs the first floor of each seed through a
+  (`tools/sim.ts`, logic in `tools/headless.ts`) runs each seed's dungeon through a
   `SimSession` until the party settles (every living member on the baseline `act.wait` for
-  longer than a dropped goal lasts, `DROP_TURNS`), the cap in party turns (default 1000) is
-  hit, or nobody can act. It prints a row per seed (game turns taken, explored percentage,
-  stuck count, result, final state hash), a summary, and lists every seed that hit the cap,
-  stalled or triggered stuck detection. Comparing the hash column before and after a refactor
+  longer than a dropped goal lasts, `DROP_TURNS`): `done` on the bottom floor, `idle` above
+  it. It stops early at the cap in party turns (default 6000) or when nobody can act. It prints
+  a row per seed (game turns taken, depth reached of the dungeon's depth, explored percentage
+  of the last floor, stuck count, result, final state hash), a summary with depth and turns per
+  floor (`SeedResult.floors` has each floor's turns and explored share), and lists every seed
+  that hit the cap, settled above the bottom, stalled or triggered stuck detection. Comparing the hash column before and after a refactor
   shows whether behavior changed. `--json`, `--compare REF` and `--baseline FILE` save and compare
   reports (§11.4). `test/tools/headless.test.ts` runs it in the suite.
 - **AI behavior:** hand-built maps with a fixed seed, asserting on the actions taken and the
@@ -1285,9 +1341,10 @@ cards show every member, and the top bar and log show the run.
   code finds this checkout's `node_modules`), runs **that ref's** `tools/sim.ts` there with the
   same arguments and `--json`, then removes the worktree. Refs from before `--json` are read
   from their printed table. `--baseline FILE` compares with a saved report instead.
-- It prints a table of `METRICS` (floors, done, hit cap, stalled, stuck, turns mean/min/max,
-  explored) with before, after and delta, then how many seeds end in a different state hash.
-  M1 items add rows to `METRICS` (depth, death causes, currency per hour) as the report grows.
+- It prints a table of `METRICS` (runs, done, settled above bottom, hit cap, stalled, stuck,
+  turns mean/min/max, explored, depth mean/max, turns per floor) with before, after and delta,
+  then how many seeds end in a different state hash. Reports from before ETH-058 count as depth
+  1. M1 items add rows to `METRICS` (death causes, currency per hour) as the report grows.
 
 ### 11.5 PR gates
 

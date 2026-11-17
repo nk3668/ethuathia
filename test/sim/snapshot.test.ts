@@ -96,8 +96,10 @@ describe('snapshot', () => {
     const snaps: Snapshot[] = [];
     host.onSnapshot((s) => snaps.push(s));
     host.start(CONFIG, 1);
-    host.run(30);
+    // Long enough to explore both rooms, not to reach the stairs down and leave the floor.
+    host.run(7);
     const snap = snaps.at(-1) as Snapshot;
+    expect(snap.party[0]?.floor).toBe('d1');
 
     // The hero has opened the door and explored the east room, so the stairs down are known.
     expect(snap.floor.features).toContainEqual({ pos: { x: 5, y: 1 }, def: 'feature.door', feature: { kind: 'door', open: true } });

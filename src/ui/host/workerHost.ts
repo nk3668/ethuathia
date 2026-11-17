@@ -4,7 +4,7 @@
  * about 30 updates a second, each a batch of events and then a snapshot.
  */
 import { deliver, Listeners } from '../../sim';
-import type { Command, HostMessage, HostRequest, RunConfig, SimEvent, SimHost, Snapshot, Speed, Unsubscribe } from '../../sim';
+import type { Command, HostMessage, HostRequest, RunConfig, SimEvent, SimHost, Snapshot, Speed, Unsubscribe, ViewOptions } from '../../sim';
 
 /** The part of a `Worker` (or `MessagePort`) the host needs. */
 export interface WorkerPort {
@@ -47,6 +47,10 @@ export class WorkerHost implements SimHost {
 
   setSpeed(speed: Speed): void {
     this.post({ type: 'setSpeed', speed });
+  }
+
+  setView(view: ViewOptions): void {
+    this.post({ type: 'setView', view });
   }
 
   onSnapshot(listener: (snapshot: Snapshot) => void): Unsubscribe {

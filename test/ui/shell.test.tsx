@@ -148,7 +148,7 @@ describe('AppShell at desktop width', () => {
     render(<AppShell />);
     const bar = screen.getByRole('banner', { name: 'Top bar' });
     expect(within(bar).getByRole('list', { name: 'Banked currencies' }).textContent).toBe('♛Renown0☠Trophies0♨Favor0');
-    expect(bar.textContent).toContain('Floor 3 · Turn 4,812');
+    expect(bar.textContent).toContain('Floor 3/10 · Turn 4,812');
   });
 
   it('shows full party cards with HP, MP and intent', () => {
@@ -311,7 +311,7 @@ describe('App', () => {
     act(() => {
       started.run(10);
     });
-    expect(screen.getByRole('banner', { name: 'Top bar' }).textContent).toMatch(/Floor 1 · Turn [1-9]/);
+    expect(screen.getByRole('banner', { name: 'Top bar' }).textContent).toMatch(/Floor 1\/10 · Turn [1-9]/);
     expect(within(screen.getByRole('region', { name: 'Log' })).getAllByRole('listitem').length).toBeGreaterThan(0);
   });
 });

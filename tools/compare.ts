@@ -14,6 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { floorTurns } from './headless';
 import type { Outcome, SeedResult } from './headless';
 
 /** Bumped when the shape of `SimReport` changes. */
@@ -53,23 +54,24 @@ export function parseReport(text: string, source: string): SimReport {
   return report as SimReport;
 }
 
-const ROW = /^\s*(\d+)\s+(\d+)\s+(\d+(?:\.\d+)?)%\s+(-|\d+)\s+(done|cap|stalled)\s+(\S+)\s*$/;
+const ROW = /^\s*(\d+)\s+(\d+)\s+(?:(\d+)\/(\d+)\s+)?(\d+(?:\.\d+)?)%\s+(-|\d+)\s+(done|idle|cap|stalled)\s+(\S+)\s*$/;
 
 /**
  * Reads the per-seed rows of the printed report (`formatReport`), for refs made before `--json`.
- * Fields the table doesn't show (`steps`, the explored tile counts, the first stuck turn) are 0
- * or null.
+ * Fields the table doesn't show (`steps`, the explored tile counts, the first stuck turn, the
+ * per-floor results) are 0, null or left out; so is the depth column, missing before ETH-058.
  */
 export function parseReportText(text: string): SeedResult[] {
   return text.split(/\r?\n/).flatMap((line) => {
     const m = ROW.exec(line);
     if (m === null) return [];
-    const [, seed, turns, explored, stuck, outcome, hash] = m as unknown as string[];
+    const [, seed, turns, depth, bottom, explored, stuck, outcome, hash] = m as unknown as (string | undefined)[];
     return [
       {
         seed: Number(seed),
         outcome: outcome as Outcome,
         turns: Number(turns),
+        ...(depth === undefined ? {} : { depth: Number(depth), bottom: Number(bottom) }),
         steps: 0,
         explored: { seen: 0, total: 0, fraction: Number(explored) / 100 },
         stuck: { count: stuck === '-' ? 0 : Number(stuck), firstTurn: null },
@@ -94,10 +96,11 @@ const mean = (xs: number[]) => (xs.length === 0 ? null : xs.reduce((a, b) => a +
 const doneTurns = (rs: readonly SeedResult[]) => rs.filter((r) => r.outcome === 'done').map((r) => r.turns);
 const countOf = (o: Outcome) => (rs: readonly SeedResult[]) => rs.filter((r) => r.outcome === o).length;
 
-/** The rows of the comparison table. Later items add depth, deaths, currency per hour and so on. */
+/** The rows of the comparison table. Later items add deaths, currency per hour and so on. */
 export const METRICS: Metric[] = [
-  { name: 'floors', value: (rs) => rs.length, digits: 0 },
-  { name: 'done', value: countOf('done'), digits: 0 },
+  { name: 'runs', value: (rs) => rs.length, digits: 0 },
+  { name: 'done (bottom)', value: countOf('done'), digits: 0 },
+  { name: 'settled above bottom', value: countOf('idle'), digits: 0 },
   { name: 'hit turn cap', value: countOf('cap'), digits: 0 },
   { name: 'stalled', value: countOf('stalled'), digits: 0 },
   { name: 'runs with stuck', value: (rs) => rs.filter((r) => r.stuck.count > 0).length, digits: 0 },
@@ -106,6 +109,10 @@ export const METRICS: Metric[] = [
   { name: 'turns, min (done)', value: (rs) => (doneTurns(rs).length === 0 ? null : Math.min(...doneTurns(rs))), digits: 0 },
   { name: 'turns, max (done)', value: (rs) => (doneTurns(rs).length === 0 ? null : Math.max(...doneTurns(rs))), digits: 0 },
   { name: 'explored %, mean', value: (rs) => mean(rs.map((r) => r.explored.fraction * 100)), digits: 1 },
+  // Reports from before ETH-058 ran one floor, so their depth is 1.
+  { name: 'depth, mean', value: (rs) => mean(rs.map((r) => r.depth ?? 1)), digits: 2 },
+  { name: 'depth, max', value: (rs) => (rs.length === 0 ? null : Math.max(...rs.map((r) => r.depth ?? 1))), digits: 0 },
+  { name: 'turns per floor, mean', value: (rs) => mean(floorTurns(rs)), digits: 1 },
 ];
 
 function fmt(value: number | null, digits: number): string {

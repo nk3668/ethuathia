@@ -1,5 +1,5 @@
 /**
- * `npm run sim -- --seeds N`: runs N seeded floors headlessly and prints the report from
+ * `npm run sim -- --seeds N`: runs N seeded dungeons headlessly and prints the report from
  * `tools/headless.ts`. `--json FILE` also saves the report; `--compare REF` and `--baseline FILE`
  * print a before/after table (`tools/compare.ts`). Run with `tsx`, which loads the TypeScript
  * sources directly. Everything happens on this machine; nothing is fetched.
@@ -42,7 +42,7 @@ function main(argv: readonly string[]): number {
 
   const last = args.from + args.seeds - 1;
   console.log(
-    `Headless run: seeds ${args.from}-${last}, party of ${args.party}, cap ${args.cap} party turns per floor\n`,
+    `Headless run: seeds ${args.from}-${last}, party of ${args.party}, cap ${args.cap} party turns per run\n`,
   );
   const started = performance.now();
   const results = runSeeds(args.from, args.seeds, { cap: args.cap, party: headlessParty(args.party) });

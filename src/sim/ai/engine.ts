@@ -29,12 +29,19 @@ export const DROP_TURNS = 20;
 
 /**
  * The built-in rules every adventurer falls back on after its own (CLAUDE.md §5.3), in order:
- * back off after getting stuck, explore the frontier, and otherwise wait. Combat, fleeing and
- * leaving a finished floor join them in M1.
+ * back off after getting stuck; head down without waiting once the floor's turn cap is spent;
+ * explore the frontier; once nothing is left to explore, go down the stairs with the party,
+ * waiting at them until everyone on the floor has gathered; and otherwise wait (on the bottom
+ * floor too, until run end replaces that). Combat and fleeing join them in M1. The floors
+ * conditions and rule actions are in `src/sim/floors/rules.ts`.
  */
 export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.stuck' }, action: { id: 'act.back_off' }, enabled: true },
+  { condition: { id: 'cond.floor_overstayed' }, action: { id: 'act.descend', params: { regroup: false } }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.explore' }, enabled: true },
+  { condition: { id: 'cond.always' }, action: { id: 'act.descend' }, enabled: true },
+  { condition: { id: 'cond.always' }, action: { id: 'act.gather' }, enabled: true },
+  { condition: { id: 'cond.bottom_floor' }, action: { id: 'act.wait' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true },
 ];
 

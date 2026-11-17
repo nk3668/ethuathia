@@ -2,7 +2,6 @@
  * Getting around, for rule actions: the path grid an adventurer plans on, the exploration
  * frontier, and turning one step along a goal map into an action.
  */
-import { DIRS_8 } from '../../core';
 import type { Grid, Pos } from '../../core';
 import { actorAt, featureAt, getEntity, getFloor } from '../entities';
 import { memoryPathGrid, OPEN_DOOR_COST, stepToward } from '../goalMap';
@@ -50,14 +49,23 @@ export function frontier({ state, actor }: AiCtx, paths: PathGrid): Pos[] {
   const seen = getMemory(state, actor.floor).terrain.cells;
   const { width, height, cost } = paths;
   const tiles: Pos[] = [];
+  // Hot: runs over the whole floor at every exploring decision, so plain loops, no closures.
   for (let y = 0; y < height; y++) {
+    const y0 = y > 0 ? y - 1 : 0;
+    const y1 = y < height - 1 ? y + 1 : y;
     for (let x = 0; x < width; x++) {
       if (cost[y * width + x] === 0) continue;
-      const open = DIRS_8.some((d) => {
-        const nx = x + d.x;
-        const ny = y + d.y;
-        return nx >= 0 && ny >= 0 && nx < width && ny < height && seen[ny * width + nx] === 0;
-      });
+      const x0 = x > 0 ? x - 1 : 0;
+      const x1 = x < width - 1 ? x + 1 : x;
+      let open = false;
+      for (let ny = y0; ny <= y1 && !open; ny++) {
+        for (let nx = x0; nx <= x1; nx++) {
+          if (seen[ny * width + nx] === 0 && (nx !== x || ny !== y)) {
+            open = true;
+            break;
+          }
+        }
+      }
       if (open) tiles.push({ x, y });
     }
   }
