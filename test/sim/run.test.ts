@@ -6,6 +6,7 @@ import {
   DEFS,
   entitiesOnFloor,
   FIRST_FLOOR_TYPE,
+  floorRngState,
   floorToText,
   generateFloor,
   getEntity,
@@ -41,7 +42,11 @@ describe('createRun', () => {
     expect(state.seed).toBe(7);
     expect(state.turn).toBe(0);
     expect(Object.keys(state.floors)).toEqual(['d1']);
-    expect(state.dungeon).toEqual({ entry: 'd1', nodes: { d1: { id: 'd1', depth: 1, up: null, down: [] } } });
+    // A straight line of the default ten floors, of which only the first is built.
+    expect(state.dungeon.entry).toBe('d1');
+    expect(Object.keys(state.dungeon.nodes)).toEqual(['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9', 'd10']);
+    expect(state.dungeon.nodes.d1).toEqual({ id: 'd1', depth: 1, up: null, down: ['d2'] });
+    expect(state.dungeon.nodes.d10).toEqual({ id: 'd10', depth: 10, up: 'd9', down: [] });
 
     expect(state.party).toHaveLength(1);
     const hero = getEntity(state, state.party[0] as number);
@@ -76,19 +81,16 @@ describe('createRun', () => {
     expect(floorToText(state, 'd1')).toEqual(HALL);
   });
 
-  it('generates the first floor from the dungeon stream when there is no floor text', () => {
+  it('generates the first floor from its own seed-and-floor RNG when there is no floor text', () => {
     const state = createRun(ONE, 5);
-    const expected = generateFloor(FLOOR_TYPES.get(FIRST_FLOOR_TYPE), Rng.seeded(5, 'dungeon'));
+    const expected = generateFloor(FLOOR_TYPES.get(FIRST_FLOOR_TYPE), new Rng(floorRngState(5, 'd1')));
     const hero = getEntity(state, state.party[0] as number);
     const up = expected.features.find((f) => f.feature.kind === 'stairs' && f.feature.dir === 'up');
     expect(hero.pos).toEqual(up?.pos); // no @ marks, so the party starts on the up stairs
     expect(floorToText(state, 'd1')).toEqual(planToText({ ...expected, starts: [hero.pos] }));
 
-    // Generation drew from the dungeon stream and no other.
-    expect(state.rng.dungeon).not.toEqual(seedState(5, 'dungeon'));
-    for (const stream of RNG_STREAMS.filter((s) => s !== 'dungeon')) {
-      expect(state.rng[stream]).toEqual(seedState(5, stream));
-    }
+    // Generation drew from none of the run's streams, so building floors in any order changes nothing else.
+    for (const stream of RNG_STREAMS) expect(state.rng[stream]).toEqual(seedState(5, stream));
   });
 
   it('copies the config instead of keeping the caller’s objects', () => {

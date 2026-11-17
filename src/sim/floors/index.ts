@@ -1,38 +1,90 @@
 /**
- * The floors domain: dungeon depth, stairs between floors, lazily generated floors and descending.
- * Built by ETH-058 (multiple floors and descent).
+ * The floors domain (ETH-058): the dungeon's depth, stairs between floors, floors built the
+ * first time someone reaches them, and the baseline's descent (docs/ARCHITECTURE.md §3.6).
  *
- * Everything this domain adds lives in this folder (docs/ARCHITECTURE.md, Contracts): declare
- * its events, action requests, commands, state slice, snapshot slice, entity parts and config
- * fields below (or in files this index re-exports), and list its rule conditions, rule actions,
- * generation steps and run trackers in `FLOORS_DOMAIN`. The root files only compose what is exported
- * here. Never import `domains.ts` or `index.ts` from this folder.
+ * - `dungeon.ts`: the dungeon graph, `ensureFloor` (lazy, deterministic floor building) and the
+ *   stairs links.
+ * - `rules.ts`: the conditions and rule actions the baseline descends with.
+ * - Here: the events, the `stairs` action, the state and snapshot slices and the invariants.
+ *
+ * Other domains react to arrivals through the `floorEntered` event (in a run tracker or a
+ * trigger): depth rewards, contracts that complete on reaching a floor, run end at the exit.
+ * Never import `domains.ts` or `index.ts` from this folder.
  */
+import type { Pos } from '../../core';
 import type { ActionRecord } from '../actions';
 import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx } from '../domain';
-import type { RunConfig } from '../state';
+import { featureAt, moveEntity } from '../entities';
+import { registerInvariant } from '../invariants';
+import type { EntityId, FloorId, RunConfig } from '../state';
+import { arrivalStairs, arrivalTile, dungeonDepth, floorIdAt, floorNode, stairsOn, stairsTarget } from './dungeon';
+import type { StairsDir } from './dungeon';
+import { FLOORS_CONDITIONS, FLOORS_RULE_ACTIONS } from './rules';
 
-/** The events this domain emits (bodies, without `turn`). Each needs a formatter in `ui/shell/logText/floors.ts`. */
-export type FloorsEvent = never;
+export * from './dungeon';
+export * from './rules';
 
-/** The action requests this domain defines. Each needs an entry in `FLOORS_ACTIONS`. */
-export type FloorsRequest = never;
+/** The events this domain emits (bodies, without `turn`). Each has wording in `ui/shell/logText/floors.ts`. */
+export type FloorsEvent =
+  /**
+   * `actor` took the stairs going `dir` from floor `from` and arrived on floor `to` (at depth
+   * `depth`) at `pos`: on the linked stairs, or next to them if someone was standing there.
+   */
+  | { type: 'tookStairs'; actor: EntityId; dir: StairsDir; from: FloorId; to: FloorId; depth: number; pos: Pos }
+  /**
+   * `actor` arrived on `floor` (at `depth`). `firstVisit` is true when nobody had been there, so
+   * the floor was just built. The hook for anything that happens on arrival: depth rewards,
+   * contracts, the run ending at the exit. Not emitted for the floor a run starts on.
+   */
+  | { type: 'floorEntered'; actor: EntityId; floor: FloorId; depth: number; firstVisit: boolean };
 
-/** The commands this domain accepts. Each needs an entry in `FLOORS_COMMANDS`. */
+/** Take the stairs you are standing on, going `dir`. */
+export interface StairsRequest {
+  id: 'stairs';
+  dir: StairsDir;
+}
+
+/** The action requests this domain defines. */
+export type FloorsRequest = StairsRequest;
+
+/** The commands this domain accepts. */
 export type FloorsCommand = never;
 
 /** This domain's slice of the run state, at `state.domains.floors`. Plain data. */
-export interface FloorsState {}
+export interface FloorsState {
+  /** The deepest floor depth any party member has reached. */
+  deepest: number;
+  /**
+   * The game turn the party first arrived on each floor it has reached (the run's first floor at
+   * turn 0). The per-floor turn cap counts from here.
+   */
+  arrived: Record<FloorId, number>;
+}
 
 /** This domain's slice of the snapshot, at `snapshot.domains.floors`. Plain data. */
-export interface FloorsSnapshot {}
+export interface FloorsSnapshot {
+  /** How many floors the dungeon has: the N of "Floor x/N". */
+  depth: number;
+  /** The deepest floor the party has reached. */
+  deepest: number;
+}
 
-/** Optional parts this domain adds to `Entity`, e.g. `inventory?: InventoryPart`. */
+/** Optional parts this domain adds to `Entity`. None: stairs are core `feature` parts. */
 export interface FloorsParts {}
 
-/** Fields this domain adds to `RunConfig`. Make them optional, so older configs stay valid. */
-export interface FloorsConfig {}
+/** Fields this domain adds to `RunConfig`. */
+export interface FloorsConfig {
+  /** How many floors the dungeon has, 1 to `MAX_DEPTH`. Default `DEFAULT_DEPTH` (10). */
+  depth?: number;
+  /**
+   * Hand-built floors by depth (index 0 is floor 1), as text for `parseFloorText`. Floors with no
+   * entry are generated. `floorText`, if set, takes the place of the first entry.
+   */
+  floorTexts?: string[][];
+  /** Game turns the party may spend on a floor before the baseline moves on. Default `FLOOR_TURN_CAP`. */
+  floorTurnCap?: number;
+}
 
 /** This domain's row in `DomainTypes` (`src/sim/domain.ts`). */
 export interface FloorsTypes {
@@ -43,19 +95,106 @@ export interface FloorsTypes {
   snapshot: FloorsSnapshot;
 }
 
-export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {};
+const isDir = (value: unknown): value is StairsDir => value === 'up' || value === 'down';
+
+export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {
+  stairs: {
+    id: 'stairs',
+    name: 'Take the stairs',
+    description:
+      'Go up or down the stairs you are standing on, arriving on the linked stairs of the floor above or below. ' +
+      'A floor nobody has reached yet is discovered on arrival; floors already visited are as the party left them.',
+    tags: [],
+    cost: 100,
+    parse: (raw) => (isDir(raw.dir) ? { id: 'stairs', dir: raw.dir } : 'The direction must be "up" or "down"'),
+    validate: ({ state, actor }, { dir }) => {
+      const here = featureAt(state, actor.floor, actor.pos)?.feature;
+      if (here?.kind !== 'stairs' || here.dir !== dir) return `There are no stairs ${dir} here`;
+      if (stairsTarget(state, actor.floor, dir) === null) {
+        return dir === 'up' ? 'These stairs lead out of the dungeon, and leaving isn’t possible yet' : 'These stairs lead nowhere';
+      }
+      return null;
+    },
+    execute: ({ state, actor, emit }, { dir }) => {
+      const from = actor.floor;
+      const to = stairsTarget(state, from, dir);
+      if (to === null) return;
+      const firstVisit = state.floors[to] === undefined;
+      const pos = arrivalTile(state, to, arrivalStairs(state, to, dir));
+      if (pos === null) throw new Error(`Floor "${to}" has no free tile to arrive on`);
+      moveEntity(state, actor.id, to, pos);
+      const depth = floorNode(state, to).depth;
+      const slice = state.domains.floors;
+      if (slice.arrived[to] === undefined) slice.arrived[to] = state.turn;
+      slice.deepest = Math.max(slice.deepest, depth);
+      emit({ type: 'tookStairs', actor: actor.id, dir, from, to, depth, pos: { x: pos.x, y: pos.y } });
+      emit({ type: 'floorEntered', actor: actor.id, floor: to, depth, firstVisit });
+    },
+  },
+};
 
 export const FLOORS_COMMANDS: CommandRecord<FloorsCommand> = {};
 
-/** The state slice for a new run. */
+/** The state slice for a new run: the party starts on the first floor at turn 0. */
 export function initFloors(_config: RunConfig): FloorsState {
-  return {};
+  return { deepest: 1, arrived: { [floorIdAt(1)]: 0 } };
 }
 
 /** The snapshot slice. Shares nothing with the state. */
-export function floorsSnapshot(_ctx: SnapshotCtx): FloorsSnapshot {
-  return {};
+export function floorsSnapshot({ state }: SnapshotCtx): FloorsSnapshot {
+  return { depth: dungeonDepth(state), deepest: state.domains.floors.deepest };
 }
+
+/** The dungeon is a straight line `d1` … `dN` with matching links, `N` the config's depth. */
+registerInvariant('floors.graph', (state) => {
+  const problems: string[] = [];
+  const depth = dungeonDepth(state);
+  if (state.config.depth !== undefined && depth !== state.config.depth) {
+    problems.push(`the dungeon has ${depth} floors, the config asks for ${state.config.depth}`);
+  }
+  if (state.dungeon.entry !== floorIdAt(1)) problems.push(`the entry is "${state.dungeon.entry}", not "${floorIdAt(1)}"`);
+  for (let d = 1; d <= depth; d++) {
+    const id = floorIdAt(d);
+    const node = state.dungeon.nodes[id];
+    if (node === undefined) {
+      problems.push(`floor "${id}" is missing from the graph`);
+      continue;
+    }
+    const up = d === 1 ? null : floorIdAt(d - 1);
+    const down = d === depth ? [] : [floorIdAt(d + 1)];
+    if (node.depth !== d || node.up !== up || JSON.stringify(node.down) !== JSON.stringify(down)) {
+      problems.push(`floor "${id}" is linked as depth ${node.depth}, up ${String(node.up)}, down [${node.down.join(', ')}]`);
+    }
+  }
+  return problems;
+});
+
+/**
+ * The slice agrees with the floors: every reached floor is built and was reached no later than
+ * now, `deepest` is the deepest of them, every party member stands on a reached floor, and the
+ * bottom floor has no stairs down.
+ */
+registerInvariant('floors.state', (state) => {
+  const problems: string[] = [];
+  const { deepest, arrived } = state.domains.floors;
+  let max = 0;
+  for (const [id, turn] of Object.entries(arrived)) {
+    const floor = state.floors[id];
+    if (floor === undefined) problems.push(`floor "${id}" was reached but is not built`);
+    else max = Math.max(max, floor.depth);
+    if (!Number.isSafeInteger(turn) || turn < 0 || turn > state.turn) problems.push(`floor "${id}" was reached on turn ${turn}`);
+  }
+  if (deepest !== max) problems.push(`deepest is ${deepest}, but the deepest floor reached is ${max}`);
+  for (const id of state.party) {
+    const floor = state.entities[id]?.floor;
+    if (floor !== undefined && arrived[floor] === undefined) problems.push(`party member ${id} is on "${floor}", which was never reached`);
+  }
+  const bottom = floorIdAt(dungeonDepth(state));
+  if (state.floors[bottom] !== undefined && stairsOn(state, bottom, 'down') !== undefined) {
+    problems.push(`the bottom floor "${bottom}" has stairs down`);
+  }
+  return problems;
+});
 
 /** What this domain registers with the shared code, in this order. */
 export const FLOORS_DOMAIN: SimDomain<FloorsTypes> = {
@@ -63,4 +202,6 @@ export const FLOORS_DOMAIN: SimDomain<FloorsTypes> = {
   commands: FLOORS_COMMANDS,
   init: initFloors,
   snapshot: floorsSnapshot,
+  conditions: FLOORS_CONDITIONS,
+  ruleActions: FLOORS_RULE_ACTIONS,
 };

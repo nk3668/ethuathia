@@ -194,16 +194,16 @@ describe('speed control', () => {
   it('updates the floor and turn counters from each snapshot', () => {
     render(<AppShell />);
     const bar = screen.getByRole('banner', { name: 'Top bar' });
-    expect(bar.textContent).toContain('Floor 1 · Turn 0');
+    expect(bar.textContent).toContain('Floor 1/10 · Turn 0');
     act(() => {
       host.run(12);
     });
     const turn = useSimStore.getState().snapshot?.turn ?? 0;
     expect(turn).toBeGreaterThan(0);
-    expect(bar.textContent).toContain(`Floor 1 · Turn ${turn.toLocaleString('en-US')}`);
+    expect(bar.textContent).toContain(`Floor 1/10 · Turn ${turn.toLocaleString('en-US')}`);
     const next: Snapshot = { ...(useSimStore.getState().snapshot as Snapshot), turn: 12_345 };
     act(() => useSimStore.getState().receiveSnapshot({ ...next, floor: { ...next.floor, depth: 4 } }));
-    expect(bar.textContent).toContain('Floor 4 · Turn 12,345');
+    expect(bar.textContent).toContain('Floor 4/10 · Turn 12,345');
   });
 });
 

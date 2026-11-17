@@ -31,7 +31,42 @@ function isPlainTypedArray(value: object): value is PlainTypedArray {
  * or returns `null` if all of it is.
  */
 export function findNonPlain(value: unknown): string | null {
+  // The soak checks the whole run state after every step, so a quick pass with no paths comes
+  // first; the slower walk that builds the path runs only when something is wrong.
+  if (isPlain(value, new Set())) return null;
   return walk(value, '$', new Set());
+}
+
+/** `walk` without the paths: true if `value` is plain data. */
+function isPlain(value: unknown, seen: Set<object>): boolean {
+  switch (typeof value) {
+    case 'string':
+    case 'boolean':
+      return true;
+    case 'number':
+      return Number.isFinite(value);
+    case 'object':
+      break;
+    default:
+      return false;
+  }
+  if (value === null) return true;
+  if (seen.has(value)) return false;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      if (!(i in value) || !isPlain(value[i], seen)) return false;
+    }
+    return true;
+  }
+  const proto: unknown = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return ArrayBuffer.isView(value) && isPlainTypedArray(value);
+  if (Object.getOwnPropertySymbols(value).length > 0) return false;
+  for (const key of Object.keys(value)) {
+    const child: unknown = (value as Record<string, unknown>)[key];
+    if (child === undefined || !isPlain(child, seen)) return false;
+  }
+  return true;
 }
 
 /** Throws a `TypeError` naming the offending path if `value` is not plain data. */

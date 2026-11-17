@@ -1,16 +1,20 @@
 /**
- * Headless runs (docs/ARCHITECTURE.md §10): runs seeded floors with no UI through `SimSession`,
- * the same loop the hosts use, and reports how each went. The seed of the balance harness: in M1
- * it grows depth, death causes and currency per hour. `tools/sim.ts` is the command line for it
+ * Headless runs (docs/ARCHITECTURE.md §10): runs seeded dungeons with no UI through `SimSession`,
+ * the same loop the hosts use, and reports how each went: how deep the party got, the turns it
+ * spent on each floor, and whether it settled at the bottom. The seed of the balance harness: in
+ * M1 it grows death causes and currency per hour. `tools/sim.ts` is the command line for it
  * (`npm run sim -- --seeds N`); `test/tools/headless.test.ts` runs it in the test suite.
  */
 import { parseArgs } from 'node:util';
 import { CLASS_VANGUARD, RACE_HUMAN } from '../src/content';
-import { ACT_WAIT, DROP_TURNS, SimSession } from '../src/sim';
+import { ACT_WAIT, DROP_TURNS, floorIdAt, SimSession } from '../src/sim';
 import type { AdventurerConfig, Explored, RunConfig, Snapshot } from '../src/sim';
 
-/** Party turns a floor may take before the run is stopped. The slowest of seeds 1–100 takes about 280. */
-export const DEFAULT_TURN_CAP = 1000;
+/**
+ * Party turns a run may take before it is stopped. A lone adventurer takes about 200–300 party
+ * turns a floor, so a ten-floor dungeon fits with room to spare.
+ */
+export const DEFAULT_TURN_CAP = 6000;
 
 /** The most adventurers a party can have (CLAUDE.md §2). */
 export const MAX_PARTY = 4;
@@ -23,31 +27,53 @@ export function headlessParty(size: number): AdventurerConfig[] {
 }
 
 export interface HeadlessOptions {
-  /** Party turns before giving up on the floor. Default `DEFAULT_TURN_CAP`. */
+  /** Party turns before giving up on the run. Default `DEFAULT_TURN_CAP`. */
   cap?: number;
   /** Default: one adventurer. */
   party?: AdventurerConfig[];
+  /** Floors in the dungeon. Default: the run config's default (`DEFAULT_DEPTH`). */
+  depth?: number;
 }
 
 /**
- * How one seed's floor went.
- * - `done`: the party ran out of places to explore and settled.
+ * How one seed's run went.
+ * - `done`: the party reached the bottom floor, explored it and settled there.
+ * - `idle`: the party settled above the bottom floor, with nowhere left to go.
  * - `cap`: still going after `cap` party turns.
  * - `stalled`: a step got nowhere because nobody could act.
  */
-export type Outcome = 'done' | 'cap' | 'stalled';
+export type Outcome = 'done' | 'idle' | 'cap' | 'stalled';
+
+/** One floor the party reached. */
+export interface FloorResult {
+  depth: number;
+  /**
+   * Game turns from the party's first arrival until the first member arrived on the next floor,
+   * or until the run settled or stopped on the last floor reached.
+   */
+  turns: number;
+  /** How much of it the party saw, from 0 to 1. */
+  explored: number;
+}
 
 export interface SeedResult {
   seed: number;
   outcome: Outcome;
   /**
-   * Game turns (`RunState.turn`) taken: up to the turn the party settled when `done`, else up to
-   * where the run stopped.
+   * Game turns (`RunState.turn`) taken: up to the turn the party settled when `done` or `idle`,
+   * else up to where the run stopped.
    */
   turns: number;
   /** Party turns (steps) run, including the ones spent confirming the party had settled. */
   steps: number;
+  /** How much of the last floor reached the party saw. */
   explored: Explored;
+  /** The deepest floor reached. Missing from reports made before ETH-058 (one floor). */
+  depth?: number;
+  /** How many floors the dungeon has. */
+  bottom?: number;
+  /** Each floor reached, from the first. */
+  floors?: FloorResult[];
   /** How many times stuck detection dropped a goal, and the turn it first did. */
   stuck: { count: number; firstTurn: number | null };
   /** `stateHash` of where the run stopped, to tell whether a change altered behavior. */
@@ -56,20 +82,23 @@ export interface SeedResult {
 
 /**
  * Whether every living party member is on the baseline's `act.wait`, which it falls to when
- * there is nothing left to explore. It also waits while stuck detection has dropped its goal,
- * so `runSeed` only counts the party as settled once it has waited longer than a drop lasts.
+ * there is nothing left to explore and no way further down. It also waits while stuck detection
+ * has dropped its goal, so `runSeed` only counts the party as settled once it has waited longer
+ * than a drop lasts.
  */
 function idle(snap: Snapshot): boolean {
   const living = snap.party.filter((m) => m.alive);
   return living.length > 0 && living.every((m) => m.intent?.action === ACT_WAIT.id);
 }
 
-/** Runs one seed's first floor until the party settles, the cap is hit or the run stalls. */
+/** Runs one seed until the party settles, the cap is hit or the run stalls. */
 export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult {
   const cap = options.cap ?? DEFAULT_TURN_CAP;
-  const config: RunConfig = { party: options.party ?? headlessParty(1) };
+  const config: RunConfig = { party: options.party ?? headlessParty(1), ...(options.depth === undefined ? {} : { depth: options.depth }) };
   const session = new SimSession(config, seed);
   const stuck: SeedResult['stuck'] = { count: 0, firstTurn: null };
+  /** The game turn each depth was first reached on. */
+  const reached = new Map<number, number>([[1, 0]]);
   let outcome: Outcome = 'cap';
   let idleSince: number | null = null;
   let steps = 0;
@@ -78,6 +107,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
   while (steps < cap) {
     const { events, progressed } = session.step();
     for (const e of events) {
+      if (e.type === 'floorEntered' && !reached.has(e.depth)) reached.set(e.depth, e.turn);
       if (e.type !== 'stuck') continue;
       stuck.count++;
       stuck.firstTurn ??= e.turn;
@@ -95,17 +125,32 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     idleSince ??= snap.turn;
     // A dropped goal comes back after DROP_TURNS, so waiting longer than that means it is over.
     if (snap.turn - idleSince > DROP_TURNS) {
-      outcome = 'done';
+      outcome = snap.domains.floors.deepest === snap.domains.floors.depth ? 'done' : 'idle';
       break;
     }
   }
 
+  const settled = outcome === 'done' || outcome === 'idle';
+  const turns = settled && idleSince !== null ? idleSince : snap.turn;
+  const depths = [...reached.keys()].sort((a, b) => a - b);
+  const floors = depths.map((depth, i): FloorResult => {
+    const next = reached.get(depths[i + 1] ?? -1);
+    const start = reached.get(depth) ?? 0;
+    return {
+      depth,
+      turns: (next ?? turns) - start,
+      explored: session.snapshot({ floor: floorIdAt(depth) }).floor.explored.fraction,
+    };
+  });
   return {
     seed,
     outcome,
-    turns: outcome === 'done' && idleSince !== null ? idleSince : snap.turn,
+    turns,
     steps,
     explored: snap.floor.explored,
+    depth: snap.domains.floors.deepest,
+    bottom: snap.domains.floors.depth,
+    floors,
     stuck,
     hash: session.stateHash(),
   };
@@ -119,7 +164,9 @@ export function runSeeds(from: number, count: number, options: HeadlessOptions =
 /** Why a seed needs a look, or `null` if it went fine. */
 export function flagReason(result: SeedResult, cap = DEFAULT_TURN_CAP): string | null {
   const reasons: string[] = [];
-  if (result.outcome === 'cap') reasons.push(`hit the turn cap (${cap} party turns) at ${percent(result.explored)} explored`);
+  const where = `floor ${result.depth ?? 1} of ${result.bottom ?? 1}`;
+  if (result.outcome === 'cap') reasons.push(`hit the turn cap (${cap} party turns) on ${where} at ${percent(result.explored)} explored`);
+  if (result.outcome === 'idle') reasons.push(`settled on ${where} with no way further down`);
   if (result.outcome === 'stalled') reasons.push(`stalled on turn ${result.turns}: nobody could act`);
   const { count, firstTurn } = result.stuck;
   if (count > 0) reasons.push(`stuck detection fired ${count} time${count === 1 ? '' : 's'} (first on turn ${firstTurn})`);
@@ -130,12 +177,18 @@ function percent(e: Explored): string {
   return `${(e.fraction * 100).toFixed(1)}%`;
 }
 
+/** Game turns per floor over every floor of every result (one floor per result for old reports). */
+export function floorTurns(results: readonly SeedResult[]): number[] {
+  return results.flatMap((r) => r.floors?.map((f) => f.turns) ?? [r.turns]);
+}
+
 /** The report as text, for the console: one row per seed, a summary, then the flagged seeds. */
 export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_CAP): string {
-  const header = ['seed', 'turns', 'explored', 'stuck', 'result', 'state hash'];
+  const header = ['seed', 'turns', 'depth', 'explored', 'stuck', 'result', 'state hash'];
   const rows = results.map((r) => [
     String(r.seed),
     String(r.turns),
+    `${r.depth ?? 1}/${r.bottom ?? 1}`,
     percent(r.explored),
     r.stuck.count === 0 ? '-' : String(r.stuck.count),
     r.outcome,
@@ -144,22 +197,29 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
   const widths = header.map((h, i) => Math.max(h.length, ...rows.map((row) => (row[i] as string).length)));
   // Numbers line up on the right, words on the left.
   const line = (cells: string[]) =>
-    cells.map((c, i) => (i < 4 ? c.padStart(widths[i] as number) : c.padEnd(widths[i] as number))).join('  ').trimEnd();
+    cells.map((c, i) => (i < 5 ? c.padStart(widths[i] as number) : c.padEnd(widths[i] as number))).join('  ').trimEnd();
 
   const done = results.filter((r) => r.outcome === 'done');
   const turns = done.map((r) => r.turns);
   const count = (o: Outcome) => results.filter((r) => r.outcome === o).length;
   const summary = [
-    `${results.length} floor${results.length === 1 ? '' : 's'}: ${done.length} done`,
+    `${results.length} run${results.length === 1 ? '' : 's'}: ${done.length} reached the bottom`,
+    ...(count('idle') > 0 ? [`${count('idle')} settled above it`] : []),
     `${count('cap')} hit the turn cap`,
     ...(count('stalled') > 0 ? [`${count('stalled')} stalled`] : []),
     `${results.filter((r) => r.stuck.count > 0).length} triggered stuck detection`,
   ].join(', ');
+  const mean = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
   const turnLine =
     turns.length === 0
       ? ''
-      : `Turns to explore (done floors): mean ${Math.round(turns.reduce((a, b) => a + b, 0) / turns.length)}, ` +
-        `min ${Math.min(...turns)}, max ${Math.max(...turns)}.`;
+      : `Turns to the bottom (done runs): mean ${mean(turns)}, min ${Math.min(...turns)}, max ${Math.max(...turns)}.`;
+  const perFloor = floorTurns(results);
+  const depths = results.map((r) => r.depth ?? 1);
+  const depthLine =
+    `Depth reached: mean ${(depths.reduce((a, b) => a + b, 0) / Math.max(1, depths.length)).toFixed(1)}, ` +
+    `min ${Math.min(...depths)}, max ${Math.max(...depths)}. ` +
+    `Turns per floor: mean ${mean(perFloor)}, max ${Math.max(...perFloor)}.`;
 
   const flagged = results.flatMap((r) => {
     const reason = flagReason(r, cap);
@@ -172,6 +232,7 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     '',
     `${summary}.`,
     ...(turnLine === '' ? [] : [turnLine]),
+    ...(results.length === 0 ? [] : [depthLine]),
     flagged.length === 0 ? 'Flagged seeds: none.' : `Flagged seeds:\n${flagged.join('\n')}`,
   ].join('\n');
 }
@@ -179,7 +240,7 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
 export interface SimArgs {
   /** The first seed. */
   from: number;
-  /** How many seeds (one floor each) to run. */
+  /** How many seeds (one run each) to run. */
   seeds: number;
   cap: number;
   party: number;
@@ -195,13 +256,14 @@ export interface SimArgs {
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
                       [--json FILE] [--compare REF | --baseline FILE]
 
-Runs N seeded floors headlessly and reports, per seed, the turns taken, how much of the floor
-was explored and the final state hash. Seeds that hit the turn cap or trigger stuck detection
-are listed at the end.
+Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
+hit, and reports per seed the turns taken, the depth reached, how much of the last floor was
+explored and the final state hash, then the turns per floor. Seeds that hit the turn cap, settle
+above the bottom or trigger stuck detection are listed at the end.
 
   --seeds N        how many seeds to run (default 10)
   --from S         the first seed (default 1)
-  --cap T          party turns allowed per floor (default ${DEFAULT_TURN_CAP})
+  --cap T          party turns allowed per run (default ${DEFAULT_TURN_CAP})
   --party P        adventurers in the party, 1 to ${MAX_PARTY} (default 1)
   --json FILE      also write the report as JSON, to keep as a baseline
   --compare REF    run the same seeds on git ref REF (e.g. origin/main) and print a

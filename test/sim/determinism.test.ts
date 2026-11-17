@@ -11,6 +11,10 @@ const CONFIG: RunConfig = {
     { name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' },
     { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human' },
   ],
+  // A short floor turn cap sends the party down the stairs within the run, so floors are built
+  // mid-run and the party sometimes splits across them.
+  depth: 3,
+  floorTurnCap: 30,
 };
 
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -34,6 +38,8 @@ function commandsAt(state: RunState, i: number): Command[] {
       return [{ type: 'playerAction', actor: b, action: { id: 'move', dir: { x: 1, y: 0 } } }];
     case 12:
       return [{ type: 'retreat' } as unknown as Command];
+    case 20:
+      return [{ type: 'playerAction', actor: a, action: { id: 'stairs', dir: 'down' } }];
     case 41:
       return [
         { type: 'playerAction', actor: a, action: { id: 'move', dir: { x: 0, y: 1 } } },
@@ -81,6 +87,8 @@ describe('determinism', () => {
     const { events } = play(createRun(CONFIG, 1), 0, STEPS);
     const all = events.flat();
     expect(all.some((e) => e.type === 'commandRejected')).toBe(true);
+    // The run goes down the stairs, building a floor mid-run.
+    expect(all.some((e) => e.type === 'floorEntered' && e.firstVisit)).toBe(true);
     // A command changes the run: the same seed without them ends somewhere else.
     const quiet = createRun(CONFIG, 1);
     for (let i = 0; i < STEPS; i++) step(quiet, []);

@@ -31,8 +31,10 @@ const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' 
 /** Party turns a lone adventurer gets to explore a generated floor. The worst of 100 seeds takes about 280. */
 const EXPLORE_TURN_CAP = 600;
 
-function setup(floorText?: string[], seed = 1): { state: RunState; hero: ActorEntity } {
-  const state = createRun({ party: [HERO], ...(floorText === undefined ? {} : { floorText }) }, seed);
+/** A run with one adventurer. `depth` 1 makes the floor the bottom one, with no stairs down to take. */
+function setup(floorText?: string[], seed = 1, depth?: number): { state: RunState; hero: ActorEntity } {
+  const config = { party: [HERO], ...(floorText === undefined ? {} : { floorText }), ...(depth === undefined ? {} : { depth }) };
+  const state = createRun(config, seed);
   return { state, hero: getEntity(state, state.party[0] as EntityId) as ActorEntity };
 }
 
@@ -145,7 +147,7 @@ describe('decision engine', () => {
     hero.ai = newAiPart([rule('cond.test_never', 'act.test_step', { x: 1, y: 0 })]);
     // The room is all in view, so there is nothing to explore: the baseline waits.
     expect(fired(step(state, []))).toMatchObject([
-      { rule: { set: 'baseline', index: 2 }, action: 'act.wait', detail: 'Wait: nothing else to do' },
+      { rule: { set: 'baseline', index: 6 }, action: 'act.wait', detail: 'Wait: nothing else to do' },
     ]);
   });
 
@@ -178,14 +180,15 @@ describe('decision engine', () => {
     // The baseline is a plain rule list: an adventurer could be given the same rules as its own.
     const { state, hero } = setup(['#####', '#@..#', '#...#', '#####']);
     hero.ai = newAiPart(BASELINE_RULES.map((r) => structuredClone(r)));
-    expect(fired(step(state, []))[0]?.rule).toEqual({ set: 'own', index: 2 });
+    expect(fired(step(state, []))[0]?.rule).toEqual({ set: 'own', index: 6 });
   });
 });
 
 describe('baseline exploration', () => {
   it('explores every reachable tile of 100 generated floors and then stops, within the turn cap', () => {
     for (let seed = 1; seed <= 100; seed++) {
-      const { state, hero } = setup(undefined, seed);
+      // A one-floor dungeon, so the hero explores it all and then waits rather than going down.
+      const { state, hero } = setup(undefined, seed, 1);
       const start = { ...hero.pos };
       const { turns, events } = exploreUntilIdle(state);
       expect(turns, `seed ${seed} still exploring after ${EXPLORE_TURN_CAP} turns`).not.toBeNull();
@@ -300,7 +303,7 @@ describe('stuck detection', () => {
     expect(stuck).toEqual({
       type: 'stuck',
       actor: hero.id,
-      rule: { set: 'baseline', index: 1 },
+      rule: { set: 'baseline', index: 2 },
       action: 'act.explore',
       turns: STUCK_TURNS,
       detail:
