@@ -1,13 +1,16 @@
 /**
  * `uiStore` (docs/ARCHITECTURE.md §8): state that belongs to the screen rather than the run or the
  * profile: which adventurer is selected, which side tab is open, whether the side drawer is open,
- * the log's height and its filter. The log height and open tab are remembered between sessions
- * in `localStorage`; they are per-machine conveniences, not part of the save.
+ * the log's height and its filter, and the map's camera mode. The log height, open tab and camera
+ * mode are remembered between sessions in `localStorage`; they are per-machine conveniences, not
+ * part of the save.
  */
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { StateStorage } from 'zustand/middleware';
 import type { EntityId } from '../../sim';
+import { isCameraMode } from '../map/camera';
+import type { CameraMode } from '../map/camera';
 
 /** The side panel's tabs, in order. */
 export const SIDE_TABS = ['rules', 'town', 'codex', 'graveyard', 'stats', 'options'] as const;
@@ -36,14 +39,17 @@ export interface UiStoreState {
   drawerOpen: boolean;
   logHeight: number;
   logFilter: LogFilter;
+  /** Whether the map follows the selected adventurer or fits the whole floor. */
+  mapCamera: CameraMode;
   select(id: EntityId | null): void;
   openTab(tab: SideTab): void;
   setDrawerOpen(open: boolean): void;
   setLogHeight(height: number): void;
+  setMapCamera(mode: CameraMode): void;
 }
 
 /** The fields saved to `localStorage`. */
-type Remembered = Pick<UiStoreState, 'logHeight' | 'tab'>;
+type Remembered = Pick<UiStoreState, 'logHeight' | 'tab' | 'mapCamera'>;
 
 export const UI_STORAGE_KEY = 'ethuathia.ui';
 
@@ -78,10 +84,11 @@ const safeLocalStorage: StateStorage = {
 /** Takes only valid remembered values, so a hand-edited or old entry can't break the screen. */
 function readRemembered(saved: unknown): Partial<Remembered> {
   if (typeof saved !== 'object' || saved === null) return {};
-  const { logHeight, tab } = saved as Record<string, unknown>;
+  const { logHeight, tab, mapCamera } = saved as Record<string, unknown>;
   const out: Partial<Remembered> = {};
   if (typeof logHeight === 'number') out.logHeight = clampLogHeight(logHeight);
   if (isSideTab(tab)) out.tab = tab;
+  if (isCameraMode(mapCamera)) out.mapCamera = mapCamera;
   return out;
 }
 
@@ -93,16 +100,18 @@ export const useUiStore = create<UiStoreState>()(
       drawerOpen: false,
       logHeight: LOG_HEIGHT.default,
       logFilter: 'all',
+      mapCamera: 'follow',
       select: (selected) => set({ selected }),
       openTab: (tab) => set({ tab }),
       setDrawerOpen: (drawerOpen) => set({ drawerOpen }),
       setLogHeight: (height) => set({ logHeight: clampLogHeight(height) }),
+      setMapCamera: (mapCamera) => set({ mapCamera }),
     }),
     {
       name: UI_STORAGE_KEY,
       version: 1,
       storage: createJSONStorage(() => safeLocalStorage),
-      partialize: (state): Remembered => ({ logHeight: state.logHeight, tab: state.tab }),
+      partialize: (state): Remembered => ({ logHeight: state.logHeight, tab: state.tab, mapCamera: state.mapCamera }),
       merge: (saved, current) => ({ ...current, ...readRemembered(saved) }),
     },
   ),

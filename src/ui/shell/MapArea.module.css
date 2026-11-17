@@ -11,14 +11,6 @@
 .canvas {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-}
-
-.placeholder {
-  margin: 0;
-  color: var(--text-faint);
-  font-family: var(--font-mono);
 }
 
 .controls {

@@ -63,6 +63,9 @@ const fired = (turn: number, actor: EntityId, index: number, detail: string): Si
   detail,
 });
 
+// jsdom has no 2D canvas; the map then draws nothing (test/ui/mapCanvas.test.tsx covers it).
+HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
+
 beforeEach(() => {
   localStorage.clear();
   setNarrow(false);
@@ -129,9 +132,11 @@ describe('AppShell at desktop width', () => {
     expect(screen.getByRole('region', { name: 'Side panel' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Log' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Panels/ })).toBeNull();
-    // Slots the next items fill.
+    // The slot the next item fills.
     expect(container.querySelector('[data-slot="speed-controls"]')).toBeTruthy();
-    expect(container.querySelector('[data-slot="map-canvas"]')).toBeTruthy();
+    const map = within(screen.getByRole('region', { name: 'Dungeon map' }));
+    expect(map.getByRole('application', { name: /Dungeon map, floor 3/ })).toBeTruthy();
+    expect(map.getByRole('group', { name: 'Map camera' })).toBeTruthy();
   });
 
   it('shows currencies with names and run position in the top bar', () => {

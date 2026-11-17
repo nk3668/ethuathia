@@ -180,8 +180,8 @@ As built (ETH-012), in `src/ui/shell/`:
   Close button close it, focus starts on Close and returns to the top-bar button.
 - Party cards: the name is a toggle button (`aria-pressed`) that selects the adventurer. A dead
   member's card has a dashed border and reads "✝ Dead".
-- Slots left for later items: `data-slot="speed-controls"` in the top bar (ETH-014),
-  `map-canvas` and `map-controls` in the map area (ETH-013).
+- Slots left for later items: `data-slot="speed-controls"` in the top bar (ETH-014). The map
+  area's `map-canvas` and `map-controls` slots hold the map and its camera toggle (ETH-013, §4).
 
 ### 3.1 Top bar
 
@@ -261,6 +261,35 @@ what the map shows.
 Two modes, toggled at the map's corner: **follow** the selected adventurer at a fixed cell
 size, or **fit** the whole floor to the map area. The canvas is scaled for the display's pixel
 ratio so glyphs stay sharp.
+
+### 4.5 As built (ETH-013)
+
+- **Cells:** 0.6 as wide as they are high (JetBrains Mono's advance width), with the glyph at
+  90% of the cell height, centered. Follow mode uses 20 CSS px rows (12 px wide); fit mode uses
+  the largest whole size that shows the floor. Sizes are whole device pixels at any pixel ratio.
+- **Follow** scrolls only when the adventurer comes within a quarter of the view from an edge,
+  so the map doesn't shift on every step, and never past the floor's edges. With nobody
+  selected it follows the first living party member. There is no scroll animation, so there is
+  nothing to turn off under reduced motion.
+- **Remembered** glyphs keep 30% of their saturation and are drawn 40% of the way from
+  `--bg-app` to that color. The tooltip says "Remembered, not in view" or "In view", so fog never
+  rests on brightness alone.
+- **Glyph table:** the §4.1 colors live in `src/ui/map/glyphs.ts` until content definitions carry
+  them (ETH-015). Monsters without a family glyph yet use the first letter of their name in
+  `#e3706b`; anything unknown is a `?`.
+- **Party badges:** the slot number in bold at the cell's bottom-right, outlined in the
+  background color, in cells at least 14 device px high.
+- **Overlays:** the selection ring is a 1-device-px `--accent` square inside the cell; the hover
+  outline is the same in `--text`, dashed and inset when it shares the selected cell. The goal
+  line, possession frame and hit flash need data the snapshot doesn't carry yet (ETH-019).
+- **Tooltip:** what is on the tile (adventurers as "Mira (party 1)", then the feature, then the
+  terrain), then a muted fog line; unknown tiles say "Unexplored". It is styled like the kit
+  `Tooltip` and placed beside the tile.
+- **Input:** clicking an adventurer selects it. The map is focusable: arrow keys move an inspect
+  cursor (starting on the followed adventurer) that shows the same outline and tooltip, Enter
+  selects the adventurer under it and Escape clears it.
+- **Controls:** "Follow" and "Whole floor" toggle buttons (`aria-pressed`) at the bottom-right;
+  the choice is remembered on the machine.
 
 ---
 
