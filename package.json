@@ -17,6 +17,7 @@
     "bench": "vitest bench --run --reporter=verbose",
     "validate:content": "tsx tools/validate-content.ts",
     "sim": "tsx tools/sim.ts",
+    "soak": "tsx tools/run-soak.ts",
     "check": "npm run typecheck && npm run lint && npm test"
   },
   "dependencies": {

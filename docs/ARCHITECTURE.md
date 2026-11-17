@@ -915,7 +915,8 @@ tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
   hit, or nobody can act. It prints a row per seed (game turns taken, explored percentage,
   stuck count, result, final state hash), a summary, and lists every seed that hit the cap,
   stalled or triggered stuck detection. Comparing the hash column before and after a refactor
-  shows whether behavior changed. `test/tools/headless.test.ts` runs it in the suite.
+  shows whether behavior changed. `--json`, `--compare REF` and `--baseline FILE` save and compare
+  reports (§11.4). `test/tools/headless.test.ts` runs it in the suite.
 - **AI behavior:** hand-built maps with a fixed seed, asserting on the actions taken and the
   `ruleFired` trace.
 - **Content:** validation runs in `npm test`.
@@ -926,3 +927,73 @@ tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
   color logic are unit-tested without a canvas, and `MapRenderer` and `AsciiTheme` run against
   a recording fake context (`test/ui/map.test.ts`); how the map looks is checked by eye in the
   dev tab.
+
+---
+
+## 11. Invariants and gates
+
+The safety net every change runs through (ETH-056). It catches a broken game, not just a
+broken unit: a change that corrupts state, desyncs a save or crashes the UI fails `npm test`
+even when no test looks at the part it broke.
+
+### 11.1 Invariants (`src/sim/invariants.ts`)
+
+- `checkInvariants(state): string[]` runs every registered check and returns one line per
+  violation, prefixed with the check's name (`[core.positions] entity 4 at (99, 2) is outside
+  floor "d1"`). Empty means the state is sound. A check that throws is reported as a violation.
+- `registerInvariant(name, check)` adds a check, `(state: RunState) => string[]`, and returns a
+  function that removes it (for tests). Names are unique and namespaced by domain
+  (`core.*`, `combat.*`, `items.*`, `quests.*`, ...). A check must not change the state and
+  should be cheap: the soak runs it after every step.
+- **A domain registers its checks in its own module**, at import time, next to the state it
+  owns (e.g. `registerInvariant('combat.hpRange', ...)` in the combat module). Any item that
+  adds state adds the invariants for it in the same change.
+- Core checks: plain data (no NaN, `undefined`, class instances or shared references); turn,
+  `nextEntityId` and RNG streams valid; entity ids match their keys and were handed out; floors,
+  memory, the dungeon graph and every floor's entity list agree with each entity's `floor`;
+  positions inside their floor, actors not in walls and one per tile; party ids unique, live
+  adventurers; actor HP, MP and speed in range, and dead actors (HP 0 or below) hold no queued
+  action.
+
+### 11.2 Soak (`tools/soak.ts`)
+
+`soakSeed(seed, { cap })` plays one seeded run (party size 1 to 4 by seed, no commands) for
+`cap` party turns and fails it on: any invariant violation after any step; any throw; a save
+and load (`serialize`/`deserialize`) halfway whose copy, stepped alongside the original for
+`ROUND_TRIP_STEPS` (50), gives different events or state hashes (compared every `HASH_EVERY`
+steps and at the end of that window); or a **stuck storm**,
+more than `MAX_STUCK_PER_RUN` (5) `stuck` events in one run. A step where nobody can act ends
+the run as `stalled`, which is not a failure.
+
+- `test/sim/soak.test.ts` runs 30 seeds at `TEST_SOAK_CAP` (150) party turns in `npm test`,
+  about 2 seconds.
+- `npm run soak -- --seeds N [--from S] [--cap T]` (`tools/run-soak.ts`, default 100 seeds at
+  2000 turns) runs it bigger and exits with code 1 on any failure. Run it after a change to the
+  step loop, AI or state shape.
+
+### 11.3 App-boot smoke test (`test/ui/appBoot.test.tsx`)
+
+Renders `App` in jsdom with `createHost` returning an `InlineHost` (the seam `App` already has)
+and a counting fake 2D context, plays 300 party turns in batches of 10 inside `act`, and asserts
+that nothing called `console.error` (React warnings included), the map canvas drew, the party
+cards show every member, and the top bar and log show the run.
+
+### 11.4 Sim compare (`tools/compare.ts`)
+
+- `npm run sim -- --json FILE` also saves the report: `{ version, args, results }`, every
+  seed's `SeedResult`.
+- `npm run sim -- --seeds N --compare REF` checks git ref `REF` out into a temporary detached
+  worktree under `.sim-compare/` in this checkout (git-ignored; inside the checkout so the ref's
+  code finds this checkout's `node_modules`), runs **that ref's** `tools/sim.ts` there with the
+  same arguments and `--json`, then removes the worktree. Refs from before `--json` are read
+  from their printed table. `--baseline FILE` compares with a saved report instead.
+- It prints a table of `METRICS` (floors, done, hit cap, stalled, stuck, turns mean/min/max,
+  explored) with before, after and delta, then how many seeds end in a different state hash.
+  M1 items add rows to `METRICS` (depth, death causes, currency per hour) as the report grows.
+
+### 11.5 PR gates
+
+Listed for contributors in [`../backlog/README.md`](../backlog/README.md#gates): `npm run
+check` (typecheck, lint and every test, which includes the invariants, soak, determinism and
+app-boot tests), the sim compare table against `origin/main` in the PR body, and a look at the
+running app for UI changes.

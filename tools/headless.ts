@@ -183,20 +183,31 @@ export interface SimArgs {
   seeds: number;
   cap: number;
   party: number;
+  /** Write the report as JSON to this file (`--json`). */
+  json: string | null;
+  /** Compare with the report in this file (`--baseline`). */
+  baseline: string | null;
+  /** Compare with the same run on this git ref (`--compare`). */
+  compare: string | null;
   help: boolean;
 }
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
+                      [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded floors headlessly and reports, per seed, the turns taken, how much of the floor
 was explored and the final state hash. Seeds that hit the turn cap or trigger stuck detection
 are listed at the end.
 
-  --seeds N   how many seeds to run (default 10)
-  --from S    the first seed (default 1)
-  --cap T     party turns allowed per floor (default ${DEFAULT_TURN_CAP})
-  --party P   adventurers in the party, 1 to ${MAX_PARTY} (default 1)
-  --help      show this text`;
+  --seeds N        how many seeds to run (default 10)
+  --from S         the first seed (default 1)
+  --cap T          party turns allowed per floor (default ${DEFAULT_TURN_CAP})
+  --party P        adventurers in the party, 1 to ${MAX_PARTY} (default 1)
+  --json FILE      also write the report as JSON, to keep as a baseline
+  --compare REF    run the same seeds on git ref REF (e.g. origin/main) and print a
+                   before/after table of the report metrics
+  --baseline FILE  print the before/after table against a report saved with --json
+  --help           show this text`;
 
 /** Reads the command line. Throws an `Error` with a readable message on a bad argument. */
 export function parseSimArgs(argv: readonly string[]): SimArgs {
@@ -207,21 +218,31 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       from: { type: 'string' },
       cap: { type: 'string' },
       party: { type: 'string' },
+      json: { type: 'string' },
+      compare: { type: 'string' },
+      baseline: { type: 'string' },
       help: { type: 'boolean', short: 'h' },
     },
     strict: true,
     allowPositionals: false,
   });
+  if (values.compare !== undefined && values.baseline !== undefined) {
+    throw new Error('Use --compare or --baseline, not both');
+  }
   return {
     seeds: int('--seeds', values.seeds, 10, 1),
     from: int('--from', values.from, 1, 0),
     cap: int('--cap', values.cap, DEFAULT_TURN_CAP, 1),
     party: int('--party', values.party, 1, 1, MAX_PARTY),
+    json: values.json ?? null,
+    compare: values.compare ?? null,
+    baseline: values.baseline ?? null,
     help: values.help ?? false,
   };
 }
 
-function int(name: string, raw: string | undefined, fallback: number, min: number, max = Number.MAX_SAFE_INTEGER): number {
+/** Reads a whole-number option, or `fallback` when absent. Throws a readable `Error` when out of range. */
+export function int(name: string, raw: string | undefined, fallback: number, min: number, max = Number.MAX_SAFE_INTEGER): number {
   if (raw === undefined) return fallback;
   const n = Number(raw);
   if (!Number.isSafeInteger(n) || n < min || n > max) {
