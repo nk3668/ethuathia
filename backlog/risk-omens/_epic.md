@@ -23,6 +23,6 @@ The player can opt into harder runs for a visible reward multiplier, and is paid
 - `docs/ARCHITECTURE.md` §2.2, §6.4
 
 ## Items
-- [ ] [ETH-053 Decide the fate of the Ravenous Omen without food](ETH-053-ravenous-omen-without-food.md)
+- [ ] [ETH-053 Redefine the Ravenous Omen for food buffs (no hunger)](ETH-053-ravenous-omen-without-food.md)
 
 More items are added when M4 becomes the current milestone.

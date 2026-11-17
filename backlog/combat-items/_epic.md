@@ -29,5 +29,6 @@ Fights, gear and consumables that are all built from the same modifiers, effects
 - [ ] [ETH-044 Enchantment, blessed and cursed items, and identification](ETH-044-enchant-curse-identify.md)
 - [ ] [ETH-045 Light affixes and named artifacts](ETH-045-affixes-artifacts.md)
 - [ ] [ETH-050 Summons and pets](ETH-050-summons-pets.md)
+- [ ] [ETH-054 Food as consumables that grant short-term buffs](ETH-054-food-buffs.md)
 
 More items are added when M1 becomes the current milestone.

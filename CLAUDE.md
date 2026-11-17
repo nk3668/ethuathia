@@ -131,6 +131,7 @@ Roguathia's wandering was its biggest complaint, so the baseline must not wander
 - **Leave a floor** once exploration is complete or exploration value runs out, with a turn cap per floor as a safety net.
 - **Combat:** fight adjacent enemies, and flee at very low HP when an escape route exists.
 - **Inventory:** never pick up corpses or junk by default, auto-equip clear upgrades, and drop the lowest-value item when overloaded.
+- **Food:** there is no hunger meter and no starvation. Food is an optional consumable that grants a short-term buff when eaten.
 - **Stuck detection:** if position or explore percentage hasn't changed in N turns, change goals and log it.
 
 ### 5.4 Manual control
@@ -162,7 +163,7 @@ Elite monsters can appear on any floor, with a name prefix and 1–2 traits (e.g
 ### Omens (opt-in difficulty)
 Each Omen has ranks, and each rank adds to the reward multiplier. Examples:
 - *Gloom*: smaller field of view.
-- *Ravenous*: food drains faster. (There is no food system planned yet; ETH-053 decides what to do with this Omen.)
+- *Ravenous*: food buffs are weaker and shorter (exact effect set in ETH-053).
 - *Thriving Dark*: monsters regenerate.
 - *Dry Wells*: no fountains.
 - *Elite Spawns*: elite monsters appear more often.
@@ -275,7 +276,7 @@ The milestones are broken down into work items in the backlog (§11).
 
 1. **M0 – Skeleton:** scaffold the project; sim core with one floor, one adventurer, baseline exploration and canvas map; pause and speed controls.
 2. **M1 – A full run:** multiple floors, stairs, combat, items, death, run summary, auto-restart; the Recover-relic contract and the return trip; attributes, leveling, monster roles, equipment slots, enchantment and identification.
-3. **M2 – Meta layer:** currencies, Town with Guild Hall and Smithy, saves, Codex; more contract types, contract slots, the bounty board; proficiencies and aptitudes, class unlocks, uniques, monster families, elites and mini-bosses, affixes and artifacts; highlights feed, run history.
+3. **M2 – Meta layer:** currencies, Town with Guild Hall and Smithy, saves, Codex; more contract types, contract slots, the bounty board; proficiencies and aptitudes, class unlocks, uniques, monster families, elites and mini-bosses, affixes and artifacts, food buffs; highlights feed, run history.
 4. **M3 – Behavior rules:** rules editor, Library, presets, AI trace in the log; quest rule conditions, class abilities and class-aware AI roles.
 5. **M4 – Risk:** Omens, conducts, reward multiplier; bounty encounters, traps and searching.
 6. **M5 – Lineage:** roster, gravestones and grave interactions, heirlooms, retirement, Ossuary and Tavern; the Rescue contract.

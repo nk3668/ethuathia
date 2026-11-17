@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-054**
+**Next ID: ETH-055**
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
@@ -73,13 +73,14 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-052](bestiary/ETH-052-elites-mini-bosses.md) | Elite monsters and mini-bosses with better loot | bestiary | M2 | P2 | idea | M |
 | [ETH-045](combat-items/ETH-045-affixes-artifacts.md) | Light affixes and named artifacts | combat-items | M2 | P2 | idea | M |
 | [ETH-047](ui-shell/ETH-047-highlights-auto-pause.md) | Highlights feed and optional auto-pause | ui-shell | M2 | P2 | idea | M |
+| [ETH-054](combat-items/ETH-054-food-buffs.md) | Food as consumables that grant short-term buffs | combat-items | M2 | P2 | idea | M |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | idea | S |
 | [ETH-031](quests/ETH-031-quest-rule-conditions-ai.md) | Quest rule conditions and objective weighting in the AI | quests | M3 | P2 | idea | M |
 | [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M3 | P2 | idea | M |
 | [ETH-038](characters/ETH-038-class-aware-ai-roles.md) | Class-aware AI roles | characters | M3 | P2 | idea | M |
 | [ETH-030](quests/ETH-030-bounty-encounters.md) | Bounty encounters inside the dungeon | quests | M4 | P3 | idea | M |
 | [ETH-046](dungeon-gen/ETH-046-traps-searching.md) | Traps and searching | dungeon-gen | M4 | P3 | idea | M |
-| [ETH-053](risk-omens/ETH-053-ravenous-omen-without-food.md) | Decide the fate of the Ravenous Omen without food | risk-omens | M4 | P3 | idea | S |
+| [ETH-053](risk-omens/ETH-053-ravenous-omen-without-food.md) | Redefine the Ravenous Omen for food buffs (no hunger) | risk-omens | M4 | P3 | idea | S |
 | [ETH-051](lineage/ETH-051-gravestone-interactions.md) | Gravestone interactions: minor loot, a patron boon and an epitaph | lineage | M5 | P2 | idea | M |
 | [ETH-032](quests/ETH-032-rescue-contract.md) | Rescue contract | quests | M5 | P3 | idea | M |
 | [ETH-049](dungeon-gen/ETH-049-dungeon-merchants.md) | Dungeon merchants | dungeon-gen | M6 | P3 | idea | M |
