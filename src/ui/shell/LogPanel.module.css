@@ -1,0 +1,68 @@
+.log {
+  min-height: 0;
+}
+
+/* The panel body: fill the strip and let the list scroll. */
+.log > :last-child {
+  flex: 1;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.lines {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-log);
+  line-height: var(--line-height-log);
+}
+
+.lines:focus-visible {
+  outline-offset: calc(var(--focus-offset) * -1);
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 6ch 2ch minmax(0, 1fr);
+  color: var(--log-system);
+}
+
+.turn {
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.prefix {
+  text-align: center;
+}
+
+.text {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.line[data-category='combat'] .prefix {
+  color: var(--log-combat);
+}
+.line[data-category='loot'] .prefix {
+  color: var(--log-loot);
+}
+.line[data-category='discovery'] .prefix {
+  color: var(--log-discovery);
+}
+.line[data-category='ai'] .prefix {
+  color: var(--log-ai);
+}
+.line[data-category='system'] .prefix,
+.line[data-category='system'] .text {
+  color: var(--log-system);
+}

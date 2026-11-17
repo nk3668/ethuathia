@@ -1,0 +1,177 @@
+/**
+ * The scene: what each tile of the shown floor looks like this frame, worked out from a
+ * snapshot with no canvas involved. Each tile is one integer code (its glyph, fog state and
+ * overlays), so two frames can be compared tile by tile to redraw only what changed.
+ */
+import type { Pos } from '../../core';
+import { TERRAIN_IDS } from '../../sim';
+import type { EntityId, Snapshot } from '../../sim';
+import { contentName } from '../shell/text';
+import { actorGlyphId, featureGlyphId } from './glyphs';
+
+/** How much the party knows of a tile (§4.2). */
+export const Fog = { Unknown: 0, Remembered: 1, Visible: 2 } as const;
+export type Fog = (typeof Fog)[keyof typeof Fog];
+
+/** Overlays drawn over a tile's glyph (§4.3), as bit flags. */
+export const Overlay = { None: 0, Hover: 1, Selected: 2 } as const;
+
+const FOG_BITS = 2;
+const OVERLAY_BITS = 2;
+const GLYPH_SHIFT = FOG_BITS + OVERLAY_BITS;
+
+/** Packs a tile's look into one integer. Glyph 0 means nothing is drawn. */
+export function encodeCell(glyph: number, fog: Fog, overlay: number): number {
+  return (glyph << GLYPH_SHIFT) | (overlay << FOG_BITS) | fog;
+}
+
+export function cellGlyph(code: number): number {
+  return code >>> GLYPH_SHIFT;
+}
+
+export function cellFog(code: number): Fog {
+  return (code & 0b11) as Fog;
+}
+
+export function cellOverlay(code: number): number {
+  return (code >>> FOG_BITS) & 0b11;
+}
+
+/**
+ * Glyph ids interned as small integers, so scene codes stay numbers. Index 0 is reserved for
+ * "nothing". One table lives as long as its renderer, so codes compare across frames.
+ */
+export class GlyphTable {
+  private readonly ids: string[] = [''];
+  private readonly index = new Map<string, number>();
+
+  intern(id: string): number {
+    let i = this.index.get(id);
+    if (i === undefined) {
+      i = this.ids.length;
+      this.ids.push(id);
+      this.index.set(id, i);
+    }
+    return i;
+  }
+
+  /** The glyph id behind an index, or `''` for 0 or an index never handed out. */
+  id(index: number): string {
+    return this.ids[index] ?? '';
+  }
+}
+
+export interface Scene {
+  floor: string;
+  width: number;
+  height: number;
+  /** One code per tile, row by row (`y * width + x`). */
+  codes: Int32Array;
+}
+
+export interface SceneOptions {
+  /** The selected adventurer; its tile gets the selection ring. */
+  selected: EntityId | null;
+  /** The tile under the pointer or the keyboard cursor; it gets the hover outline. */
+  hover: Pos | null;
+}
+
+/** 1-based party slot of each party member, by entity id. */
+export function partySlots(snap: Snapshot): Map<EntityId, number> {
+  return new Map(snap.party.map((m, i) => [m.id, i + 1]));
+}
+
+/**
+ * Each tile's look: terrain, then a feature on top of it, then an actor on top of that. Actors
+ * are only in the snapshot on tiles in view, so monsters are never remembered. Party members
+ * are drawn over anything else on their tile, and dead ones are not drawn.
+ */
+export function buildScene(snap: Snapshot, options: SceneOptions, glyphs: GlyphTable): Scene {
+  const { width, height, terrain, visible } = snap.floor;
+  const size = width * height;
+  const glyph = new Int32Array(size);
+
+  for (let i = 0; i < size; i++) {
+    const t = terrain[i] as number;
+    if (t !== 0) glyph[i] = glyphs.intern(TERRAIN_IDS[t - 1] ?? `terrain.${t - 1}`);
+  }
+  for (const f of snap.floor.features) {
+    glyph[f.pos.y * width + f.pos.x] = glyphs.intern(featureGlyphId(f));
+  }
+
+  const slots = partySlots(snap);
+  const alive = new Set(snap.party.filter((m) => m.alive).map((m) => m.id));
+  // Others first, so a party member wins a shared tile.
+  const actors = [...snap.floor.actors].sort((a, b) => Number(slots.has(a.id)) - Number(slots.has(b.id)));
+  for (const a of actors) {
+    const slot = slots.get(a.id) ?? null;
+    if (slot !== null && !alive.has(a.id)) continue;
+    glyph[a.pos.y * width + a.pos.x] = glyphs.intern(actorGlyphId(a, slot));
+  }
+
+  const overlay = new Uint8Array(size);
+  const selected = options.selected === null ? undefined : snap.floor.actors.find((a) => a.id === options.selected);
+  const mark = (pos: Pos, flag: number) => {
+    const i = pos.y * width + pos.x;
+    overlay[i] = (overlay[i] as number) | flag;
+  };
+  if (selected && alive.has(selected.id)) mark(selected.pos, Overlay.Selected);
+  const { hover } = options;
+  if (hover && hover.x >= 0 && hover.y >= 0 && hover.x < width && hover.y < height) mark(hover, Overlay.Hover);
+
+  const codes = new Int32Array(size);
+  for (let i = 0; i < size; i++) {
+    const fog: Fog = terrain[i] === 0 ? Fog.Unknown : visible[i] === 1 ? Fog.Visible : Fog.Remembered;
+    codes[i] = encodeCell(fog === Fog.Unknown ? 0 : (glyph[i] as number), fog, overlay[i] as number);
+  }
+  return { floor: snap.floor.id, width, height, codes };
+}
+
+/**
+ * The tiles whose code differs between two scenes of the same floor, or `null` when everything
+ * must be drawn: there is no previous scene, or it was of another floor or size.
+ */
+export function changedTiles(prev: Scene | null, next: Scene): number[] | null {
+  if (!prev || prev.floor !== next.floor || prev.width !== next.width || prev.height !== next.height) return null;
+  const changed: number[] = [];
+  const a = prev.codes;
+  const b = next.codes;
+  for (let i = 0; i < b.length; i++) if (a[i] !== b[i]) changed.push(i);
+  return changed;
+}
+
+/** What the hover tooltip says about one tile (§4.3). */
+export interface TileInfo {
+  pos: Pos;
+  fog: 'unknown' | 'remembered' | 'visible';
+  /** What is there, top to bottom: actors, then the feature, then the terrain. */
+  things: string[];
+}
+
+/** Names what the party knows to be on a tile, or `null` if it is off the floor. */
+export function describeTile(snap: Snapshot, pos: Pos): TileInfo | null {
+  const { width, height, terrain, visible } = snap.floor;
+  if (pos.x < 0 || pos.y < 0 || pos.x >= width || pos.y >= height) return null;
+  const i = pos.y * width + pos.x;
+  const t = terrain[i] as number;
+  if (t === 0) return { pos, fog: 'unknown', things: ['Unexplored'] };
+
+  const things: string[] = [];
+  const members = new Map(snap.party.map((m, slot) => [m.id, { member: m, slot: slot + 1 }]));
+  for (const a of snap.floor.actors) {
+    if (a.pos.x !== pos.x || a.pos.y !== pos.y) continue;
+    const party = members.get(a.id);
+    if (party) {
+      if (party.member.alive) things.push(`${party.member.name} (party ${party.slot})`);
+    } else {
+      things.push(contentName(a.def));
+    }
+  }
+  const feature = snap.floor.features.find((f) => f.pos.x === pos.x && f.pos.y === pos.y);
+  if (feature) {
+    const f = feature.feature;
+    things.push(f.kind === 'door' ? `${contentName(feature.def)} (${f.open ? 'open' : 'closed'})` : contentName(feature.def));
+  }
+  things.push(contentName(TERRAIN_IDS[t - 1] ?? 'terrain.unknown'));
+  return { pos, fog: visible[i] === 1 ? 'visible' : 'remembered', things };
+}

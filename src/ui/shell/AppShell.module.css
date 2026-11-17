@@ -1,0 +1,87 @@
+/*
+ * The in-run grid (docs/VISUAL-DESIGN.md §3). The top bar sits above a grid with the party,
+ * map, tabs and log areas. `data-layout` is set from NARROW_QUERY in useMediaQuery.ts, so the
+ * breakpoint is defined in one place.
+ */
+
+.shell {
+  display: grid;
+  grid-template-rows: var(--topbar-height) minmax(0, 1fr);
+  grid-template-areas:
+    'topbar'
+    'main';
+  gap: var(--space-2);
+  height: 100vh;
+  height: 100dvh;
+  padding: var(--space-2);
+  overflow: hidden;
+}
+
+.topbar {
+  grid-area: topbar;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar > * {
+  flex: 1;
+}
+
+.main {
+  grid-area: main;
+  display: grid;
+  grid-template-columns: var(--party-width) minmax(0, 1fr) var(--side-width);
+  grid-template-rows: minmax(0, 1fr) min(var(--log-height), var(--log-max-height));
+  grid-template-areas:
+    'party map tabs'
+    'log log log';
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+.shell[data-layout='narrow'] .main {
+  grid-template-columns: var(--party-width-compact) minmax(0, 1fr);
+  grid-template-areas:
+    'party map'
+    'log log';
+}
+
+.party,
+.map,
+.tabs,
+.log {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.party > *,
+.map > *,
+.log > :last-child {
+  flex: 1;
+}
+
+.party {
+  grid-area: party;
+}
+
+.map {
+  grid-area: map;
+}
+
+.tabs {
+  grid-area: tabs;
+}
+
+.log {
+  grid-area: log;
+  position: relative;
+}
+
+.fill {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}

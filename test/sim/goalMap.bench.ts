@@ -18,7 +18,7 @@ import {
 } from '../../src/sim';
 import type { EntityId } from '../../src/sim';
 
-const HERO = { name: 'Brannoc', classId: 'class.test', raceId: 'race.test' };
+const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
 const W = 80;
 const H = 40;
 

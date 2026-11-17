@@ -122,9 +122,10 @@ export {
   TURNS_PER_SECOND,
 } from './host';
 export type { Clock, HostMessage, HostRequest, HostUpdate, SimHost, Speed, Unsubscribe } from './host';
-export { createRun, FIRST_FLOOR_TYPE } from './run';
-export { deserialize, serialize } from './serialize';
+export { adventurerActor, createRun, FIRST_FLOOR_TYPE } from './run';
+export { deserialize, serialize, stateHash } from './serialize';
 export { snapshot } from './snapshot';
+export { checkFloorParams, checkGame, validateGame } from './validate';
 export type { ActorView, FeatureView, FloorView, PartyMemberView, Snapshot, ViewOptions } from './snapshot';
 export { DEFS, RNG_STREAMS, STATE_VERSION, Terrain, TERRAIN_IDS } from './state';
 export type {

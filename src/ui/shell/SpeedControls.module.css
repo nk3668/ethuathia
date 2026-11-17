@@ -1,0 +1,44 @@
+/* A segmented control: the buttons share their borders and only the ends are rounded. */
+.group {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.segment {
+  position: relative;
+  padding: 0 var(--space-2);
+  border-radius: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.segment + .segment {
+  margin-left: calc(-1 * var(--border-width));
+}
+
+.segment:first-child {
+  border-start-start-radius: var(--radius-control);
+  border-end-start-radius: var(--radius-control);
+}
+
+.segment:last-child {
+  border-start-end-radius: var(--radius-control);
+  border-end-end-radius: var(--radius-control);
+}
+
+/* The hovered, pressed or focused segment draws its whole border over its neighbours'. */
+.segment:hover,
+.segment[aria-pressed='true'] {
+  z-index: 1;
+}
+
+.segment:focus-visible {
+  z-index: 2;
+}
+
+/* Two bars, drawn rather than a ⏸ character, which some systems show as a color emoji. */
+.pauseIcon {
+  display: block;
+  width: var(--space-3);
+  height: var(--space-3);
+  border-inline: var(--space-1) solid currentColor;
+}

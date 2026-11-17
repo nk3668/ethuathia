@@ -1,0 +1,30 @@
+/* Sits in the gap above the log strip, so it takes no room of its own. */
+.handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--space-2) * -1);
+  height: var(--space-2);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.grip {
+  width: calc(var(--space-5) * 2);
+  height: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  transition: background-color var(--duration-fast) ease-out;
+}
+
+.handle:hover .grip,
+.handle:focus-visible .grip {
+  background: var(--accent);
+}
+
+.handle:focus-visible {
+  outline-offset: 0;
+}

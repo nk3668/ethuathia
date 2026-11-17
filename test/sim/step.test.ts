@@ -15,7 +15,7 @@ import {
 import type { ActionRequest, ActorPart, Command, Decide, EntityId, RunConfig, RunState, SimEvent } from '../../src/sim';
 
 const ROOM = ['#######', '#@....#', '#<....#', '#######'];
-const hero = (name: string) => ({ name, classId: 'class.test', raceId: 'race.test' });
+const hero = (name: string) => ({ name, classId: 'class.vanguard', raceId: 'race.human' });
 const ONE: RunConfig = { party: [hero('Brannoc')], floorText: ROOM };
 
 const MONSTER: ActorPart = { energy: 0, speed: 100, hp: 5, maxHp: 5, mp: 0, maxMp: 0, faction: 'monster' };

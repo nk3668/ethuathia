@@ -7,6 +7,7 @@ import { clonePlain } from '../../core';
 import type { Command } from '../commands';
 import type { SimEvent } from '../events';
 import { createRun } from '../run';
+import { stateHash } from '../serialize';
 import { snapshot } from '../snapshot';
 import type { Snapshot, ViewOptions } from '../snapshot';
 import type { RunConfig, RunState } from '../state';
@@ -44,5 +45,13 @@ export class SimSession {
 
   snapshot(view?: ViewOptions): Snapshot {
     return snapshot(this.state, view);
+  }
+
+  /**
+   * A fingerprint of the run state (`stateHash`), so headless callers such as the run report can
+   * tell whether two runs ended up the same without reaching into the state.
+   */
+  stateHash(): string {
+    return stateHash(this.state);
   }
 }

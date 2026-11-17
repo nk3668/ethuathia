@@ -5,7 +5,7 @@
  * run-length encoding from core, and read back into typed arrays. Any grid anywhere in the state
  * is handled this way, so new grids need no serializer changes.
  */
-import { assertPlainData, Grid, isGridBuffer, isRngState } from '../core';
+import { assertPlainData, Grid, hashText, isGridBuffer, isRngState } from '../core';
 import type { GridData } from '../core';
 import { RNG_STREAMS, STATE_VERSION } from './state';
 import type { RunState } from './state';
@@ -57,4 +57,13 @@ export function deserialize(text: string): RunState {
     if (!isRngState(rng?.[stream])) throw new TypeError(`Run state has a bad "${stream}" RNG state`);
   }
   return state as RunState;
+}
+
+/**
+ * A short fingerprint of the whole state: the hash of `serialize(state)`. Two states with the same
+ * hash are, for all practical purposes, the same run at the same moment, so determinism tests and
+ * the headless run report compare these rather than whole saves (docs/ARCHITECTURE.md §10).
+ */
+export function stateHash(state: RunState): string {
+  return hashText(serialize(state));
 }

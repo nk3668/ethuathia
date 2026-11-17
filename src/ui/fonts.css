@@ -1,0 +1,14 @@
+/*
+ * Bundled fonts (docs/VISUAL-DESIGN.md §2.4). Both families come from npm (@fontsource) and
+ * Vite copies their files into the build, so nothing loads from the network. Each weight file
+ * covers every subset with `unicode-range`, so the browser only reads the subsets a page uses.
+ *
+ * Inter and JetBrains Mono are under the SIL Open Font License 1.1. The build writes both
+ * license texts to dist/licenses/ (see vite.config.ts).
+ */
+
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/700.css';

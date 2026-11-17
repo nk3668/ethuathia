@@ -29,7 +29,7 @@ const SE = { x: 1, y: 1 };
 const SW = { x: -1, y: 1 };
 
 function setup(floorText = MAP): { state: RunState; hero: ActorEntity } {
-  const state = createRun({ party: [{ name: 'Brannoc', classId: 'class.test', raceId: 'race.test' }], floorText }, 1);
+  const state = createRun({ party: [{ name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' }], floorText }, 1);
   return { state, hero: getEntity(state, state.party[0] as EntityId) as ActorEntity };
 }
 

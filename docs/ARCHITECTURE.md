@@ -50,14 +50,21 @@ harness and in time-away catch-up.
   Shared strictness options live in `tsconfig.base.json`.
 - **TypeScript is pinned to 6.0.x.** `typescript-eslint` does not support TypeScript 7 yet;
   move up when it does.
-- **Tests** live in `test/`, mirroring `src/`, and run in Node. Component tests add a DOM
-  environment when the kit needs one.
+- **Tests** live in `test/`, mirroring `src/`, and run in Node. Component tests opt into a DOM
+  with a `// @vitest-environment jsdom` comment at the top of the file and use Testing Library
+  (`@testing-library/react`, `@testing-library/user-event`).
 - **Offline enforcement:** production builds get a `Content-Security-Policy` meta tag
   (`default-src 'self'`, set in `vite.config.ts`) so the browser or webview refuses any request
   to another origin. It is left off the dev server, whose hot reload needs inline scripts.
   Tauri's IPC will need its own `connect-src` entry when packaging is added (§8.4).
+- **Fonts** come from `@fontsource` npm packages, so Vite bundles the files. A build plugin
+  in `vite.config.ts` copies their OFL license texts to `dist/licenses/`.
 - **Commands:** `npm run dev`, `build`, `preview`, `typecheck`, `lint`, `test`, and `check`
-  (type-check, lint and test in one go).
+  (type-check, lint and test in one go). `npm run sim -- --seeds N` runs headless floors (§10).
+- **Command-line tools** in `tools/` run with `tsx` (a dev dependency), which loads the
+  TypeScript sources as they are. Node's own type stripping can't, because the sources use
+  extensionless imports. A tool with no arguments may instead run as a Vitest file, as
+  `validate:content` does.
 
 ---
 
@@ -385,7 +392,9 @@ As built (ETH-010), in `src/sim/snapshot.ts`: `snapshot(state, view?)` where `Vi
 `floor` and `party`. `floor` carries `terrain` (a `Uint8Array` copy of the party memory: 0 never
 seen, else 1 + the `Terrain` code), `visible` (the `partyVisible` mask), the remembered
 `features`, and `actors` standing on tiles in view only. `party` has one card per member (name,
-class, race, position, HP/MP, `alive`, and `intent` from the AI memory). Terrain is sent as codes;
+class, race, position, HP/MP, `alive`, and `intent` from the AI memory). `floor.explored` is the
+floor's `explored` count (seen and total floor tiles, §3.7), added for the headless run report
+(ETH-016) and ready for an "explored" counter in the UI. Terrain is sent as codes;
 the renderer maps them through `TERRAIN_IDS`. Everything is a fresh copy and plain data, so a
 snapshot shares no object with the state (a test walks both to check) and posts to the UI
 thread as it is.
@@ -562,6 +571,43 @@ As built in `src/sim/ai/` (ETH-009):
   (`"{actor} hits {target} for {n}"`), keyed by event type or content id.
 - `tools/validate-content` runs the same validation as game start-up, and is part of `npm test`.
 
+As built (ETH-015):
+
+- **Layout:** one file per type for now (`terrain.ts`, `features.ts`, `classes.ts`, `races.ts`,
+  `floors.ts`); a type moves into its own folder when it grows. Each file holds the def
+  interface, its `Registry`, a `ContentKind` (`{ registry, schema, refs? }`), a `define*` helper
+  that registers a def with type checking, and the defs themselves. `CONTENT_KINDS` in
+  `registries.ts` lists every kind.
+- **Schemas are Zod 4** (`zod`, bundled), built from shared pieces in `schema.ts`: `defShape(prefix)`
+  (an id in the kind's namespace, a non-empty name and description, lowercase tags),
+  `glyphSchema` (one character, a lowercase `#rrggbb` color, optional `bold`) and number
+  helpers. Objects are strict, so a misspelt field fails. Defs are checked against the schema,
+  never rebuilt from it, and Zod runs `jitless` because the built app's CSP forbids eval.
+- **`checkKinds(kinds, targets)`** returns every problem as a line naming the def and field:
+  `class "class.frail": hp: must be above 0`, or `class #2 (no id)` when the def has no usable
+  id. Then, for defs whose shape is valid, it checks each id from `refs(def)` against the kind's
+  registry by `kind` name, among the content kinds and `targets` (code registries such as the
+  sim's `GEN_STEPS`): `floor type "floor.x": steps[1].step refers to unknown generation step
+  "gen.mazes"`. A ref to a kind with no registry given is a problem too. `checkContent` and
+  `validateContent` run it over `CONTENT_KINDS`; the latter throws a `ContentError` with every
+  problem in `problems` and the message.
+- **Start-up:** the sim's `checkGame` / `validateGame` (`src/sim/validate.ts`) add what only the
+  sim can check: floor types' steps against `GEN_STEPS` and their params with `checkFloorType`,
+  `TERRAIN_IDS` and the feature ids in `DEFS` (which are now taken from the content defs), and
+  the baseline rules' condition and rule action ids. `main.tsx` calls `validateGame()` before
+  rendering. `tools/validate-content.ts` reports the same problems plus a count per kind; its
+  test is the command, run by `npm test` and alone by `npm run validate:content`.
+- **Lookups:** `findDef(id)` finds a def of any kind (the UI's `contentName` uses it, falling back
+  to the id for things without defs yet); `findGlyph(glyphId)` gives the map look for a terrain or
+  feature id, or a feature id plus a state (`feature.door.open`) from the feature's `states`,
+  falling back to its plain `glyph`.
+- **First defs:** terrain `wall` and `floor`; features `door` (states `closed` and `open`),
+  `stairs_up` and `stairs_down`; class `class.vanguard`; race `race.human`; floor type
+  `floor.halls`. A class sets starting max `hp` and `mp`; a race adds `hpBonus` and `mpBonus` and
+  sets `speed`. `createRun` builds each adventurer's actor part from them (`adventurerActor`)
+  and throws, naming the adventurer, on an unknown class or race. These become modifiers (§2.2)
+  when stats exist. `actor.adventurer` is not a def: an adventurer's look comes from its slot.
+
 ---
 
 ## 6. Meta (`src/meta/`)
@@ -677,6 +723,8 @@ As built (ETH-010):
   reports a bad message or a thrown sim error and pauses.
 - **InlineHost:** `run(steps)` runs that many steps now and delivers one batch and one
   snapshot. `setSpeed` is only recorded.
+- **Headless tools** step a `SimSession` directly: `step()` returns each step's events, and
+  `stateHash()` fingerprints the run without exposing `RunState` (§10).
 - **Pacing (`PacedRunner`):** timer-free and driven by an injected clock, so it is tested
   with a fake one. 1× is `TURNS_PER_SECOND` (5, a provisional default) party turns a second;
   2×, 4× and 8× multiply it. `max` steps for `MAX_SLICE_MS` (12 ms) per pump, then yields so
@@ -701,6 +749,25 @@ As built (ETH-010):
   - `profileStore`: the profile, with actions that call the pure meta functions and then save.
   - `uiStore`: selection, open tab, modals, log filters.
 - Components subscribe to narrow slices so a new snapshot re-renders only what changed.
+
+As built (ETH-012), the stores are in `ui/stores/`:
+
+- `simStore`: `snapshot` and `events`, a ring buffer of the last `EVENT_BUFFER_SIZE` (500)
+  events, each with a sequence number for list keys. `bindHost(host)` feeds a `SimHost`'s
+  snapshots and events into it and returns an unsubscribe. `App` creates the host (a
+  `WorkerHost`; tests pass an `InlineHost`), binds it and starts a demo run until the Prepare
+  screen exists. Since ETH-014 it also holds `speed` (0 is paused) and `resumeSpeed` (the last
+  running speed); `setSpeed` records a speed and sends it to the host `bindHost` connected, and
+  `togglePause` switches between 0 and `resumeSpeed`. `App` sends the store's speed (1× at
+  launch) after `start`, and records a pause when `WorkerHost.onError` fires (the worker pauses
+  itself). The speed is not saved between sessions.
+- `profileStore`: only the currencies for now, all zero. M2 replaces it with the meta `Profile`.
+- `uiStore`: `selected`, `tab`, `drawerOpen`, `logHeight`, `logFilter` and `mapCamera`
+  (ETH-013). Zustand's `persist` keeps `logHeight`, `tab` and `mapCamera` in `localStorage`
+  (key `ethuathia.ui`), through a wrapper that
+  never throws and a merge that drops invalid values.
+- Selectors return primitives or use `useShallow`, e.g. a party card picks its member's fields
+  as primitives, so cards re-render only when what they show changes.
 - **Styling:** CSS Modules and design tokens as CSS custom properties (see `VISUAL-DESIGN.md`).
 
 ### 8.1 Kit (`ui/kit/`)
@@ -713,6 +780,12 @@ carry game-wide behavior:
   contributing modifiers in its tooltip.
 - **`Explain`:** wraps any mention of a content id and shows its Codex entry on hover.
 - **`NodeGraph`:** draws an upgrade tree as SVG from each node's `tier` and `column`.
+
+`Panel`, `Card`, `Button`, `Tabs`, `Tooltip` and `Bar` exist (ETH-011) and are exported from
+`ui/kit/index.ts`; the others arrive with the features that first need them. Kit stylesheets
+use tokens only, which `test/ui/tokens.test.ts` enforces. In dev mode, `?kit` on the dev server
+URL opens `ui/dev/KitGallery`, which shows every component and state; production builds drop
+it.
 
 ### 8.2 Map renderer (`ui/map/`)
 
@@ -732,10 +805,59 @@ Glyphs are pre-rendered to an offscreen atlas and copied with `drawImage`. Draw 
 features, items, actors, fog and memory dimming, overlays (selection ring, goal line, hover).
 A tileset later is a second `GlyphTheme`.
 
+As built (ETH-013), in `ui/map/`. Only `MapCanvas` and `MapControls` use React; everything
+else is plain TypeScript, and all but `MapRenderer` and `AsciiTheme` run without a canvas:
+
+- **Scene** (`scene.ts`): `buildScene(snapshot, { selected, hover }, glyphs)` packs each tile
+  into one integer: an interned glyph id (`GlyphTable`), the fog state (unknown, remembered,
+  visible) and overlay bits (hover, selected). Layers resolve topmost-wins: terrain, then a
+  feature, then an actor, with party members over anything else and dead ones not drawn.
+  `changedTiles` diffs two scenes; `describeTile` gives the hover tooltip's text.
+- **Camera** (`camera.ts`): all in whole device pixels, so glyphs stay on the pixel grid.
+  `fitView` picks the largest whole cell size that shows the floor and centers it.
+  `followView` uses `FOLLOW_CELL_HEIGHT` (20 CSS px) cells and keeps its scroll until the
+  target comes within `FOLLOW_MARGIN` (25%) of an edge, never scrolling past the floor's edges
+  and centering a floor smaller than the view. `followTarget` is the selected adventurer if
+  alive on the shown floor, else the first living one.
+- **`GlyphTheme`**: `aspect` (cell width over height), `setCellSize(w, h)` in device pixels,
+  `invalidate()` and `drawCell(ctx, x, y, glyphId, state)`. The cell size is the renderer's
+  choice (it changes with the camera mode and pixel ratio), so it is set on the theme rather
+  than fixed by it. A cell's drawing covers the whole cell, background included.
+- **`AsciiTheme`** draws `glyphStyle(id)` (`glyphs.ts`) into a `GlyphAtlas` (`atlas.ts`): one
+  slot per glyph and fog state, painted the first time it is needed, in a canvas that doubles
+  when full and is dropped when the cell size changes or the font loads.
+- **`MapRenderer`**: `resize(deviceW, deviceH, dpr)`, `draw(snapshot, { mode, selected, hover })`,
+  `tileAt` and `tileRect` (CSS pixels) for hit-testing, and `invalidate()`. When the view
+  (cell size and scroll) is unchanged it redraws only the tiles whose code changed; otherwise it
+  redraws every tile in view. The selection ring and hover outline are drawn inside the cell,
+  so a tile never draws over its neighbors and the diff stays exact.
+- **`MapCanvas`** subscribes to `simStore` outside React's render and draws at most once per
+  animation frame, so a fast sim never re-renders it. It sizes the backing store from a
+  `ResizeObserver` (`device-pixel-content-box` where supported) plus a `resolution` media
+  query for pixel-ratio changes, and reads its colors and font from the design tokens.
+- The camera mode lives in `uiStore` (`mapCamera`) and is remembered like the log height.
+
 ### 8.3 Input
 
 A keymap table maps keys to either a UI action (pause, speed, cycle adventurer) or a sim
 command (movement while possessed). Rebinding later means editing the table.
+
+As built (ETH-014), in `ui/input/`:
+
+- **`keymap.ts`:** `KEYMAP`, a list of `{ code, label, action }`. `code` is
+  `KeyboardEvent.code` (the physical key, so the digits work on any layout), `label` is how the
+  key is shown and goes into `aria-keyshortcuts`. Actions are `togglePause` and
+  `setSpeed(speed)`: `Space` pauses or resumes, `1`–`5` (number row, not numpad) pick 1×, 2×,
+  4×, 8× and max. `keysFor(action)` gives the labels for tooltips. `bindingFor(event)` returns
+  the binding a key press triggers, or nothing when a modifier (Ctrl, Alt, Meta) is held, the
+  event is composing or already `defaultPrevented`, focus is in a text field, textarea, select
+  or editable content, or the key is Space on a checkbox, radio or switch.
+- **`useKeymap()`:** listens on `window` while the in-run screen (`AppShell`) is mounted. Focused
+  widgets handle keys first (the map's arrows, Enter and Escape, the tabs' and log edge's
+  arrows), so a key they mark with `preventDefault` never reaches the keymap. A key the keymap
+  takes has its default prevented on keydown and on the matching keyup, so Space on a focused
+  button pauses without also pressing it (Enter still does) and never scrolls. Held keys act
+  once. Speed actions go through `simStore`, never to the sim directly.
 
 ### 8.4 Desktop packaging
 
@@ -766,9 +888,28 @@ tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
 - **Determinism:** the same seed and commands give the same state hash, run twice.
 - **Save round-trip:** serialize mid-run, deserialize, continue; the result matches an
   uninterrupted run.
+- As built (ETH-016): `stateHash(state)` in `src/sim/serialize.ts` is `hashText` (core, a
+  53-bit non-cryptographic hash, pinned by a test) of `serialize(state)`.
+  `test/sim/determinism.test.ts` runs 20 seeds twice with a two-member party and a fixed
+  command script (player actions, one that fails, one rejected) and compares hashes every 20
+  steps and every event; it then saves four seeds before the first step, mid-run and late,
+  loads them and checks the rest of the run matches. Extend the command script as commands are
+  added.
+- **Headless runs:** `npm run sim -- --seeds N [--from S] [--cap T] [--party P]`
+  (`tools/sim.ts`, logic in `tools/headless.ts`) runs the first floor of each seed through a
+  `SimSession` until the party settles (every living member on the baseline `act.wait` for
+  longer than a dropped goal lasts, `DROP_TURNS`), the cap in party turns (default 1000) is
+  hit, or nobody can act. It prints a row per seed (game turns taken, explored percentage,
+  stuck count, result, final state hash), a summary, and lists every seed that hit the cap,
+  stalled or triggered stuck detection. Comparing the hash column before and after a refactor
+  shows whether behavior changed. `test/tools/headless.test.ts` runs it in the suite.
 - **AI behavior:** hand-built maps with a fixed seed, asserting on the actions taken and the
   `ruleFired` trace.
 - **Content:** validation runs in `npm test`.
 - **Balance:** `tools/balance` runs N seeded headless runs and reports depth, death causes and
-  currency per hour. Run it before and after any balance change.
-- **UI:** component tests for the kit; the map renderer is checked by eye in the dev tab.
+  currency per hour. Run it before and after any balance change. It grows out of the headless
+  run script above in M1, once there are floors to descend, combat and currency.
+- **UI:** component tests for the kit and shell. The map renderer's scene, camera, atlas and
+  color logic are unit-tested without a canvas, and `MapRenderer` and `AsciiTheme` run against
+  a recording fake context (`test/ui/map.test.ts`); how the map looks is checked by eye in the
+  dev tab.

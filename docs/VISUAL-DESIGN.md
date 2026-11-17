@@ -7,8 +7,9 @@ requirements) and the technical design is in [`ARCHITECTURE.md`](ARCHITECTURE.md
 dense, set in a sans-serif. Monospace is used only where alignment matters: the dungeon map
 and the log. Panels stay quiet so the colored map is the most vivid thing on screen.
 
-Hex values below are starting points. ETH-011 checks each text and background pair for at
-least 4.5:1 contrast and adjusts where needed.
+The hex values below are the ones in `src/ui/tokens.css`. `test/ui/tokens.test.ts` checks
+that the two agree and that every text color has at least 4.5:1 contrast on the surfaces it is
+used on (§2.6).
 
 ---
 
@@ -39,10 +40,10 @@ Defined once as CSS custom properties in `src/ui/tokens.css`. Components never u
 | `--bg-raised` | `#1c232c` | Cards, inputs, tree nodes |
 | `--bg-hover` | `#242d38` | Hover and pressed states |
 | `--border` | `#2a333f` | Panel and card borders |
-| `--border-strong` | `#3a4656` | Focus outlines, dividers that need weight |
+| `--border-strong` | `#3a4656` | Hover borders, tooltip borders, dividers that need weight |
 | `--text` | `#e3e8ee` | Primary text |
 | `--text-muted` | `#97a3b3` | Labels, secondary text |
-| `--text-faint` | `#64707f` | Disabled text, placeholders |
+| `--text-faint` | `#7e8a99` | Disabled text, placeholders |
 | `--accent` | `#e8a33d` | Selection, primary buttons, possession |
 | `--on-accent` | `#1a1204` | Text on accent fills |
 
@@ -50,44 +51,86 @@ Defined once as CSS custom properties in `src/ui/tokens.css`. Components never u
 
 | Token | Value | Use | Also shown as |
 |---|---|---|---|
-| `--hp` | `#d9534f` | Health | "HP" label, heart icon |
-| `--mp` | `#4f8fd9` | Mana | "MP" label, drop icon |
+| `--hp` | `#e0726f` | Health | "HP" label, heart icon |
+| `--mp` | `#5a96db` | Mana | "MP" label, drop icon |
 | `--xp` | `#6fbf73` | Experience | "XP" label |
 | `--renown` | `#e6c35c` | Renown | laurel icon |
 | `--trophies` | `#d8d2c4` | Trophies | skull icon |
 | `--favor` | `#a886e0` | Favor | flame icon |
 | `--good` | `#6fbf73` | Positive change | `+` sign, up arrow |
 | `--warn` | `#e0a84a` | Caution | triangle icon |
-| `--danger` | `#e0625c` | Harm, death | cross icon |
+| `--danger` | `#e3706b` | Harm, death | cross icon |
 
 ### 2.3 Log categories
 
-| Category | Color | Prefix |
-|---|---|---|
-| Combat | `#e0625c` | `⚔` |
-| Loot | `#e6c35c` | `◆` |
-| Discovery | `#5cc2c7` | `✦` |
-| AI | `#a886e0` | `➤` |
-| System | `--text-muted` | `·` |
+| Token | Color | Category | Prefix |
+|---|---|---|---|
+| `--log-combat` | `#e3706b` (same as `--danger`) | Combat | `⚔` |
+| `--log-loot` | `#e6c35c` (same as `--renown`) | Loot | `◆` |
+| `--log-discovery` | `#5cc2c7` | Discovery | `✦` |
+| `--log-ai` | `#a886e0` (same as `--favor`) | AI | `➤` |
+| `--log-system` | `--text-muted` | System | `·` |
 
 ### 2.4 Type
 
-| Role | Font | Size / line | Notes |
-|---|---|---|---|
-| UI text | Inter | 13 / 18 | Bundled from npm (`@fontsource`), open license |
-| Small labels | Inter | 11 / 14 | Uppercase, +4% letter spacing, `--text-muted` |
-| Headings | Inter 600 | 15 / 20 | Panel titles |
-| Numbers | Inter, tabular figures | as context | Columns of numbers line up |
-| Map and log | JetBrains Mono | map: fitted; log: 12 / 17 | Bundled, open license |
+| Role | Font | Size / line | Tokens | Notes |
+|---|---|---|---|---|
+| UI text | Inter 400 | 13 / 18 | `--font-ui`, `--font-size-body`, `--line-height-body` | |
+| Small labels | Inter | 11 / 14 | `--font-size-label`, `--line-height-label`, `--letter-spacing-label` | Uppercase, +4% letter spacing, `--text-muted` |
+| Headings | Inter 600 | 15 / 20 | `--font-size-heading`, `--line-height-heading`, `--font-weight-heading` | Panel titles |
+| Buttons, tabs | Inter 500 | 13 / 18 | `--font-weight-medium` | |
+| Numbers | Inter, tabular figures | as context | `font-variant-numeric: tabular-nums` | Columns of numbers line up |
+| Map and log | JetBrains Mono 400, 700 | map: fitted; log: 12 / 17 | `--font-mono`, `--font-size-log`, `--line-height-log` | 700 for bold glyphs such as stairs |
 
-No fonts load from the network; both families ship in the app bundle.
+No fonts load from the network; both families ship in the app bundle. They come from the
+`@fontsource/inter` and `@fontsource/jetbrains-mono` npm packages (imported in
+`src/ui/fonts.css`), which Vite copies into the build. Both are under the SIL Open Font
+License 1.1, and the build writes the two license texts to `dist/licenses/`.
 
 ### 2.5 Shape and spacing
 
-- Spacing scale on a 4px grid: 4, 8, 12, 16, 24.
-- Radius: 8px for cards and panels, 6px for buttons and chips, 999px for pills.
-- Borders: 1px `--border`. No drop shadows except on tooltips and modals.
-- Focus: 2px `--accent` outline with 2px offset, on every interactive element.
+- Spacing scale on a 4px grid: 4, 8, 12, 16, 24 (`--space-1` to `--space-5`).
+- Radius: 8px for cards and panels (`--radius-card`), 6px for buttons and chips
+  (`--radius-control`), 999px for pills (`--radius-pill`).
+- Borders: 1px (`--border-width`) `--border`. No drop shadows except on tooltips and modals
+  (`--shadow-overlay`).
+- Focus: 2px `--accent` outline with 2px offset (`--focus-width`, `--focus-offset`), on every
+  interactive element. Set once in `base.css` with `:focus-visible`.
+- Component sizes: `--control-height` 28px (buttons, tabs), `--bar-height` 6px,
+  `--tooltip-max-width` 280px.
+- Layout sizes (§3): `--topbar-height` 44px, `--party-width` 260px (`--party-width-compact`
+  200px at narrow widths), `--side-width` 360px, `--drawer-width` 360px and `--log-max-height`
+  60vh. The log's own height is not a token: the shell sets it from `uiStore` as an inline
+  custom property.
+- Motion: `--duration-fast` 120ms for fades and bar changes. It is 0 under
+  `prefers-reduced-motion`, where `base.css` also turns off every transition and animation.
+
+### 2.6 Contrast
+
+Every text color has at least 4.5:1 contrast on each surface it is used on: `--text`,
+`--text-muted`, `--accent`, the meaning colors and the log colors on all four `--bg-*`
+surfaces; `--text-faint` on `--bg-app`, `--bg-panel` and `--bg-raised` (disabled controls never
+show the hover fill); and `--on-accent` on `--accent`.
+
+ETH-011 raised four starting values to meet this: `--text-faint` (`#64707f` → `#7e8a99`),
+`--hp` (`#d9534f` → `#e0726f`), `--mp` (`#4f8fd9` → `#5a96db`) and `--danger` with the combat
+log color (`#e0625c` → `#e3706b`). Each kept its hue and only gained lightness.
+
+### 2.7 Kit
+
+The first kit components (`src/ui/kit/`, see `ARCHITECTURE.md` §8.1) and how each shows its
+state without relying on color:
+
+| Component | States | Second signal |
+|---|---|---|
+| `Button` | primary, secondary, ghost, disabled, pressed (toggle) | pressed: accent fill and `aria-pressed`; disabled: faint text, `not-allowed` cursor |
+| `Tabs` | selected, disabled | selected: accent underline, heavier text, `aria-selected` |
+| `Card` | default, selected | selected border is twice as thick |
+| `Panel` | with or without a title and actions | |
+| `Tooltip` | opens on hover (250ms delay) and on focus; Escape closes it | linked with `aria-describedby` |
+| `Bar` | any value from empty to full | visible label ("HP") and `value / max` text; `role="meter"` |
+
+In dev mode, `?kit` on the dev server URL opens a gallery of every component and state.
 
 ---
 
@@ -100,7 +143,7 @@ No fonts load from the network; both families ship in the app bundle.
 │ PARTY        │                                               │ Rules  Town  Codex │
 │ ╭──────────╮ │       ##########          #########           │ Graveyard  Stats ⚙ │
 │ │1 Mira    │ │       #........#          #.......#           │ ────────────────── │
-│ │  Valkyrie│ │       #..@.....+##########+...g...#           │ ╭────────────────╮ │
+│ │  Vanguard│ │       #..@.....+##########+...g...#           │ ╭────────────────╮ │
 │ │HP ▓▓▓▓░ 41│ │       #........#          #.......#           │ │⠿ HP < 30%      │ │
 │ │MP ▓▓░░░ 12│ │       ####+#####          #####.###           │ │  → quaff heal  │ │
 │ │➤ exploring│ │          #.#                  #.#             │ │  ● 14      [on]│ │
@@ -123,18 +166,42 @@ No fonts load from the network; both families ship in the app bundle.
 - **Tablet width (under about 1000px):** the tab panel becomes a slide-over drawer opened from
   a button in the top bar, and party cards shrink to one line each (number, name, HP bar).
 
+As built (ETH-012), in `src/ui/shell/`:
+
+- `AppShell` is a two-row grid (top bar, then `main`), and `main` is the grid with the `party`,
+  `map`, `tabs` and `log` areas. The narrow breakpoint is `NARROW_QUERY` (`max-width: 999px`) in
+  `useMediaQuery.ts`; the shell sets `data-layout="wide" | "narrow"` from it and the stylesheets
+  follow that attribute, so the breakpoint is defined once.
+- The log strip's top edge is a `role="separator"` handle: drag it, or use the arrow keys
+  (Shift for bigger steps), Page Up / Page Down and Home / End. The height runs from 80px to
+  600px (never more than 60% of the window) and is remembered in `localStorage` along with the
+  open tab. These are per-machine conveniences, not part of the save.
+- The drawer is a modal dialog: everything behind it is `inert`, Escape, the backdrop and its
+  Close button close it, focus starts on Close and returns to the top-bar button.
+- Party cards: the name is a toggle button (`aria-pressed`) that selects the adventurer. A dead
+  member's card has a dashed border and reads "✝ Dead".
+- The map area's `map-canvas` and `map-controls` slots hold the map and its camera toggle
+  (ETH-013, §4). The top bar's speed control filled its slot in ETH-014 (§3.1).
+
 ### 3.1 Top bar
 
 Currencies on the left, each an icon and a `NumberText` whose tooltip shows this run's earnings
 and the Omen multiplier. Run position in the centre. Pause and speed on the right as a
 segmented control; the active speed is filled with `--accent` and also marked `aria-pressed`.
 
+As built (ETH-014): `SpeedControls`, a `group` named "Sim speed" of kit `Button`s with shared
+borders and rounded ends: Pause (two drawn bars rather than a ⏸ character, which some systems
+render as a color emoji, plus a screen-reader label), `1×`, `2×`, `4×`, `8×` and `Max`. While
+paused only Pause is pressed; pressing it again resumes at the last speed. Each button's
+tooltip says what it does (turns a second at each speed) and its key from the keymap, which is
+also in `aria-keyshortcuts`.
+
 ### 3.2 Party card
 
 ```
 ╭───────────────────────────╮
 │ 1  Mira            Lv 6   │   number badge in the member's map hue
-│    Dwarf Valkyrie         │   muted; each word is an Explain link
+│    Human Vanguard         │   muted; each word is an Explain link
 │ HP ▓▓▓▓▓▓▓░░░   41 / 58   │
 │ MP ▓▓▓░░░░░░░   12 / 40   │
 │ [poisoned 4] [blessed]    │   status badges, turns remaining
@@ -149,6 +216,12 @@ header reading "Possessed", so the state is clear without relying on the border 
 
 Monospace, newest at the bottom, prefix icon and color by category. Entity and item names in a
 line are `Explain` links. AI lines always end with the rule and the reason in parentheses.
+
+Until M1 adds filters and links, the log (ETH-012) is plain text: a turn column, the category
+prefix and a sentence. It leaves out moves and waits, which the map shows, and shows an AI
+decision only when an adventurer's goal changes (a different rule or rule action from its
+previous `ruleFired`), since the engine traces every decision. It follows new lines while
+scrolled to the bottom and stays put when the player scrolls up.
 
 ---
 
@@ -195,6 +268,36 @@ what the map shows.
 Two modes, toggled at the map's corner: **follow** the selected adventurer at a fixed cell
 size, or **fit** the whole floor to the map area. The canvas is scaled for the display's pixel
 ratio so glyphs stay sharp.
+
+### 4.5 As built (ETH-013)
+
+- **Cells:** 0.6 as wide as they are high (JetBrains Mono's advance width), with the glyph at
+  90% of the cell height, centered. Follow mode uses 20 CSS px rows (12 px wide); fit mode uses
+  the largest whole size that shows the floor. Sizes are whole device pixels at any pixel ratio.
+- **Follow** scrolls only when the adventurer comes within a quarter of the view from an edge,
+  so the map doesn't shift on every step, and never past the floor's edges. With nobody
+  selected it follows the first living party member. There is no scroll animation, so there is
+  nothing to turn off under reduced motion.
+- **Remembered** glyphs keep 30% of their saturation and are drawn 40% of the way from
+  `--bg-app` to that color. The tooltip says "Remembered, not in view" or "In view", so fog never
+  rests on brightness alone.
+- **Glyph table:** terrain and features take their glyph and color from their content
+  definitions (ETH-015, `findGlyph`); a test checks them against the §4.1 table. Party members
+  use their slot hue. Monsters without a family glyph yet use the first letter of their name in
+  `#e3706b`; anything unknown is a `?`.
+- **Party badges:** the slot number in bold at the cell's bottom-right, outlined in the
+  background color, in cells at least 14 device px high.
+- **Overlays:** the selection ring is a 1-device-px `--accent` square inside the cell; the hover
+  outline is the same in `--text`, dashed and inset when it shares the selected cell. The goal
+  line, possession frame and hit flash need data the snapshot doesn't carry yet (ETH-019).
+- **Tooltip:** what is on the tile (adventurers as "Mira (party 1)", then the feature, then the
+  terrain), then a muted fog line; unknown tiles say "Unexplored". It is styled like the kit
+  `Tooltip` and placed beside the tile.
+- **Input:** clicking an adventurer selects it. The map is focusable: arrow keys move an inspect
+  cursor (starting on the followed adventurer) that shows the same outline and tooltip, Enter
+  selects the adventurer under it and Escape clears it.
+- **Controls:** "Follow" and "Whole floor" toggle buttons (`aria-pressed`) at the bottom-right;
+  the choice is remembered on the machine.
 
 ---
 

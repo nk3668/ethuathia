@@ -3,7 +3,7 @@
  */
 import { clonePlain, Grid, Rng, seedStreams } from '../core';
 import type { Pos } from '../core';
-import { FLOOR_HALLS, FLOOR_TYPES } from '../content';
+import { CLASSES, FLOOR_HALLS, FLOOR_TYPES, RACES } from '../content';
 import { newAiPart } from './ai/types';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { parseFloorText } from './floorText';
@@ -11,33 +11,39 @@ import type { FloorPlan } from './floorText';
 import { generateFloor } from './gen';
 import { perceiveParty } from './perception';
 import { DEFS, RNG_STREAMS, STATE_VERSION, Terrain } from './state';
-import type { ActorPart, FloorId, RunConfig, RunState } from './state';
+import type { ActorPart, AdventurerConfig, FloorId, RunConfig, RunState } from './state';
 
 const FIRST_FLOOR: FloorId = 'd1';
 
 /** The floor type the first floor is generated from when the config has no `floorText`. */
 export const FIRST_FLOOR_TYPE = FLOOR_HALLS.id;
 
-/** Starting actor values for an adventurer, until classes and races supply them (ETH-015). */
-const ADVENTURER_ACTOR: ActorPart = {
-  energy: 0,
-  speed: 100,
-  hp: 20,
-  maxHp: 20,
-  mp: 5,
-  maxMp: 5,
-  faction: 'party',
-};
+/**
+ * An adventurer's starting actor values from its class and race: the class's HP and MP plus the
+ * race's bonuses, at full, and the race's speed. Throws, naming the adventurer, on an unknown
+ * class or race id.
+ */
+export function adventurerActor(member: AdventurerConfig): ActorPart {
+  if (!CLASSES.has(member.classId)) throw new Error(`Adventurer "${member.name}" has unknown class id "${member.classId}"`);
+  if (!RACES.has(member.raceId)) throw new Error(`Adventurer "${member.name}" has unknown race id "${member.raceId}"`);
+  const cls = CLASSES.get(member.classId);
+  const race = RACES.get(member.raceId);
+  const maxHp = cls.hp + race.hpBonus;
+  const maxMp = cls.mp + race.mpBonus;
+  return { energy: 0, speed: race.speed, hp: maxHp, maxHp, mp: maxMp, maxMp, faction: 'party' };
+}
 
 /**
  * A new run: RNG streams seeded from `seed`, a one-floor dungeon built from `config.floorText`
  * or else generated from `FIRST_FLOOR_TYPE` with the `dungeon` stream, and the party placed at
  * the floor's `@` marks, or on its up stairs if it has none. Extra party members go on the
- * nearest free floor tiles, and the party's memory starts with what they can see. `config` is
- * copied, not kept.
+ * nearest free floor tiles, and the party's memory starts with what they can see. Each
+ * adventurer's HP, MP and speed come from its class and race (`adventurerActor`), so an unknown
+ * class or race id throws. `config` is copied, not kept.
  */
 export function createRun(config: RunConfig, seed: number): RunState {
   if (config.party.length === 0) throw new Error('A run needs at least one adventurer');
+  const actors = config.party.map(adventurerActor);
   const state: RunState = {
     version: STATE_VERSION,
     seed,
@@ -63,7 +69,7 @@ export function createRun(config: RunConfig, seed: number): RunState {
       def: DEFS.adventurer,
       floor: FIRST_FLOOR,
       pos: starts[i] as Pos,
-      actor: ADVENTURER_ACTOR,
+      actor: actors[i] as ActorPart,
       adventurer: { name: member.name, classId: member.classId, raceId: member.raceId },
       ai: newAiPart(),
     });

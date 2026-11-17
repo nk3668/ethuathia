@@ -1,0 +1,58 @@
+.empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.tabs {
+  min-height: 0;
+  flex: 1;
+}
+
+/* Drawer (narrow layout) */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-app);
+  opacity: 0.7;
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(var(--drawer-width), 100%);
+  padding: var(--space-2);
+  background: var(--bg-app);
+  border-left: var(--border-width) solid var(--border-strong);
+  box-shadow: var(--shadow-overlay);
+  animation: slide-in var(--duration-fast) ease-out;
+}
+
+.drawerHeader {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawerPanel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(var(--space-5));
+    opacity: 0;
+  }
+}

@@ -15,7 +15,7 @@ import {
 } from '../../src/sim';
 import type { RunConfig } from '../../src/sim';
 
-const ONE: RunConfig = { party: [{ name: 'Brannoc', classId: 'class.test', raceId: 'race.test' }] };
+const ONE: RunConfig = { party: [{ name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' }] };
 
 /** A hand-built floor (the first floor before generation existed). */
 const HALL: readonly string[] = [
@@ -48,7 +48,7 @@ describe('createRun', () => {
     expect(hero.def).toBe(DEFS.adventurer);
     expect(hero.floor).toBe('d1');
     expect(hero.pos).toEqual({ x: 4, y: 2 }); // the @ in HALL
-    expect(hero.adventurer).toEqual({ name: 'Brannoc', classId: 'class.test', raceId: 'race.test' });
+    expect(hero.adventurer).toEqual({ name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' });
     expect(hero.actor).toMatchObject({ faction: 'party', energy: 0, speed: 100 });
   });
 
@@ -92,7 +92,7 @@ describe('createRun', () => {
   });
 
   it('copies the config instead of keeping the caller’s objects', () => {
-    const config: RunConfig = { party: [{ name: 'A', classId: 'c', raceId: 'r' }] };
+    const config: RunConfig = { party: [{ name: 'A', classId: 'class.vanguard', raceId: 'race.human' }] };
     const state = createRun(config, 1);
     expect(state.config).toEqual(config);
     expect(state.config.party).not.toBe(config.party);
@@ -106,7 +106,7 @@ describe('createRun', () => {
   });
 
   it('puts extra party members on the nearest free floor tiles', () => {
-    const four = { party: [1, 2, 3, 4].map((n) => ({ name: `A${n}`, classId: 'c', raceId: 'r' })) };
+    const four = { party: [1, 2, 3, 4].map((n) => ({ name: `A${n}`, classId: 'class.vanguard', raceId: 'race.human' })) };
     const state = createRun({ ...four, floorText: ['#######', '#@.>..#', '#.#####', '#######'] }, 1);
     expect(state.party.map((id) => getEntity(state, id).pos)).toEqual([
       { x: 1, y: 1 },

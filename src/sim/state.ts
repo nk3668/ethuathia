@@ -6,6 +6,7 @@
  * Content (classes, monsters, features) is referenced by id only, never copied in.
  */
 import type { GridBuffer, Pos, RngState } from '../core';
+import { FEATURE_DOOR, FEATURE_STAIRS_DOWN, FEATURE_STAIRS_UP, TERRAIN_FLOOR, TERRAIN_WALL } from '../content';
 import type { ActionRequest } from './actions';
 import type { AiPart } from './ai/types';
 
@@ -37,14 +38,17 @@ export const Terrain = { Wall: 0, Floor: 1 } as const;
 export type Terrain = (typeof Terrain)[keyof typeof Terrain];
 
 /** The content id for each terrain code, indexed by code. Glyphs, names and tooltips live there. */
-export const TERRAIN_IDS: readonly string[] = ['terrain.wall', 'terrain.floor'];
+export const TERRAIN_IDS: readonly string[] = [TERRAIN_WALL.id, TERRAIN_FLOOR.id];
 
-/** Content ids of the entities M0 creates. Their definitions arrive with ETH-015. */
+/**
+ * Content ids of the entities M0 creates. The features are content defs. `actor.adventurer` is
+ * not: an adventurer's name, look and stats come from its party slot, class and race.
+ */
 export const DEFS = {
   adventurer: 'actor.adventurer',
-  door: 'feature.door',
-  stairsUp: 'feature.stairs_up',
-  stairsDown: 'feature.stairs_down',
+  door: FEATURE_DOOR.id,
+  stairsUp: FEATURE_STAIRS_UP.id,
+  stairsDown: FEATURE_STAIRS_DOWN.id,
 } as const;
 
 // ---------------------------------------------------------------------------------------------
