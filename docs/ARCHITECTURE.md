@@ -63,8 +63,8 @@ harness and in time-away catch-up.
   (type-check, lint and test in one go). `npm run sim -- --seeds N` runs headless floors (§10).
 - **Command-line tools** in `tools/` run with `tsx` (a dev dependency), which loads the
   TypeScript sources as they are. Node's own type stripping can't, because the sources use
-  extensionless imports. A tool with no arguments may instead run as a Vitest file, as
-  `validate:content` does.
+  extensionless imports. `npm run validate:content` is one too (ETH-022): it prints its report
+  and exits 1 on problems, and its test runs the same checks in `npm test`.
 
 ---
 
@@ -598,8 +598,9 @@ As built (ETH-015):
   sim can check: floor types' steps against `GEN_STEPS` and their params with `checkFloorType`,
   `TERRAIN_IDS` and the feature ids in `DEFS` (which are now taken from the content defs), and
   the baseline rules' condition and rule action ids. `main.tsx` calls `validateGame()` before
-  rendering. `tools/validate-content.ts` reports the same problems plus a count per kind; its
-  test is the command, run by `npm test` and alone by `npm run validate:content`.
+  rendering. `tools/validate-content.ts` reports the same problems plus a count per kind. It runs
+  with `tsx` as `npm run validate:content` (exit code 1 on problems), and its test runs the
+  same `checkGame` in `npm test`.
 - **Lookups:** `findDef(id)` finds a def of any kind (the UI's `contentName` uses it, falling back
   to the id for things without defs yet); `findGlyph(glyphId)` gives the map look for a terrain or
   feature id, or a feature id plus a state (`feature.door.open`) from the feature's `states`,

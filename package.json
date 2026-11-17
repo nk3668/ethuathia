@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "bench": "vitest bench --run --reporter=verbose",
-    "validate:content": "vitest run test/tools/validate-content.test.ts",
+    "validate:content": "tsx tools/validate-content.ts",
     "sim": "tsx tools/sim.ts",
     "check": "npm run typecheck && npm run lint && npm test"
   },
