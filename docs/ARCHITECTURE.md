@@ -60,7 +60,11 @@ harness and in time-away catch-up.
 - **Fonts** come from `@fontsource` npm packages, so Vite bundles the files. A build plugin
   in `vite.config.ts` copies their OFL license texts to `dist/licenses/`.
 - **Commands:** `npm run dev`, `build`, `preview`, `typecheck`, `lint`, `test`, and `check`
-  (type-check, lint and test in one go).
+  (type-check, lint and test in one go). `npm run sim -- --seeds N` runs headless floors (§10).
+- **Command-line tools** in `tools/` run with `tsx` (a dev dependency), which loads the
+  TypeScript sources as they are. Node's own type stripping can't, because the sources use
+  extensionless imports. A tool with no arguments may instead run as a Vitest file, as
+  `validate:content` does.
 
 ---
 
@@ -388,7 +392,9 @@ As built (ETH-010), in `src/sim/snapshot.ts`: `snapshot(state, view?)` where `Vi
 `floor` and `party`. `floor` carries `terrain` (a `Uint8Array` copy of the party memory: 0 never
 seen, else 1 + the `Terrain` code), `visible` (the `partyVisible` mask), the remembered
 `features`, and `actors` standing on tiles in view only. `party` has one card per member (name,
-class, race, position, HP/MP, `alive`, and `intent` from the AI memory). Terrain is sent as codes;
+class, race, position, HP/MP, `alive`, and `intent` from the AI memory). `floor.explored` is the
+floor's `explored` count (seen and total floor tiles, §3.7), added for the headless run report
+(ETH-016) and ready for an "explored" counter in the UI. Terrain is sent as codes;
 the renderer maps them through `TERRAIN_IDS`. Everything is a fresh copy and plain data, so a
 snapshot shares no object with the state (a test walks both to check) and posts to the UI
 thread as it is.
@@ -717,6 +723,8 @@ As built (ETH-010):
   reports a bad message or a thrown sim error and pauses.
 - **InlineHost:** `run(steps)` runs that many steps now and delivers one batch and one
   snapshot. `setSpeed` is only recorded.
+- **Headless tools** step a `SimSession` directly: `step()` returns each step's events, and
+  `stateHash()` fingerprints the run without exposing `RunState` (§10).
 - **Pacing (`PacedRunner`):** timer-free and driven by an injected clock, so it is tested
   with a fake one. 1× is `TURNS_PER_SECOND` (5, a provisional default) party turns a second;
   2×, 4× and 8× multiply it. `max` steps for `MAX_SLICE_MS` (12 ms) per pump, then yields so
@@ -880,11 +888,27 @@ tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
 - **Determinism:** the same seed and commands give the same state hash, run twice.
 - **Save round-trip:** serialize mid-run, deserialize, continue; the result matches an
   uninterrupted run.
+- As built (ETH-016): `stateHash(state)` in `src/sim/serialize.ts` is `hashText` (core, a
+  53-bit non-cryptographic hash, pinned by a test) of `serialize(state)`.
+  `test/sim/determinism.test.ts` runs 20 seeds twice with a two-member party and a fixed
+  command script (player actions, one that fails, one rejected) and compares hashes every 20
+  steps and every event; it then saves four seeds before the first step, mid-run and late,
+  loads them and checks the rest of the run matches. Extend the command script as commands are
+  added.
+- **Headless runs:** `npm run sim -- --seeds N [--from S] [--cap T] [--party P]`
+  (`tools/sim.ts`, logic in `tools/headless.ts`) runs the first floor of each seed through a
+  `SimSession` until the party settles (every living member on the baseline `act.wait` for
+  longer than a dropped goal lasts, `DROP_TURNS`), the cap in party turns (default 1000) is
+  hit, or nobody can act. It prints a row per seed (game turns taken, explored percentage,
+  stuck count, result, final state hash), a summary, and lists every seed that hit the cap,
+  stalled or triggered stuck detection. Comparing the hash column before and after a refactor
+  shows whether behavior changed. `test/tools/headless.test.ts` runs it in the suite.
 - **AI behavior:** hand-built maps with a fixed seed, asserting on the actions taken and the
   `ruleFired` trace.
 - **Content:** validation runs in `npm test`.
 - **Balance:** `tools/balance` runs N seeded headless runs and reports depth, death causes and
-  currency per hour. Run it before and after any balance change.
+  currency per hour. Run it before and after any balance change. It grows out of the headless
+  run script above in M1, once there are floors to descend, combat and currency.
 - **UI:** component tests for the kit and shell. The map renderer's scene, camera, atlas and
   color logic are unit-tested without a canvas, and `MapRenderer` and `AsciiTheme` run against
   a recording fake context (`test/ui/map.test.ts`); how the map looks is checked by eye in the

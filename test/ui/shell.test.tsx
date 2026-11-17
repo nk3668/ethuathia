@@ -49,6 +49,7 @@ const SNAPSHOT: Snapshot = {
     visible: new Uint8Array(1),
     features: [],
     actors: [],
+    explored: { seen: 1, total: 1, fraction: 1 },
   },
   party: [member(1, 'Mira', 12), member(2, 'Oren', 0)],
 };

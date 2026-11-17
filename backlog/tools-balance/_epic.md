@@ -23,4 +23,5 @@ Confidence that the sim is deterministic and that balance changes are measured, 
 - `docs/ARCHITECTURE.md` §10
 
 ## Items
-- [ ] [ETH-016 Determinism test and headless run script](ETH-016-determinism-headless-run.md)
+- [x] [ETH-016 Determinism test and headless run script](ETH-016-determinism-headless-run.md)
+- [ ] [ETH-022 Run content validation as a tsx command](ETH-022-validate-content-cli.md)
