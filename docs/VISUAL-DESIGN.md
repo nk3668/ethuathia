@@ -207,6 +207,13 @@ paused only Pause is pressed; pressing it again resumes at the last speed. Each 
 tooltip says what it does (turns a second at each speed) and its key from the keymap, which is
 also in `aria-keyshortcuts`.
 
+Sim errors (ETH-021): when the host stops the run on an error, Pause shows pressed and every
+speed button is marked `aria-disabled` (kit `Button` styles it like `disabled`, but a pressed
+toggle keeps its fill). `aria-disabled` rather than `disabled` keeps the tooltips reachable;
+they say "The run stopped on an error and can’t be resumed." A `SimErrorBanner` (`role="alert"`)
+lies across the top of the map: a `--danger` border, a cross icon, a heading, a plain-language
+sentence and the error text in mono.
+
 ### 3.2 Party card
 
 ```

@@ -103,6 +103,21 @@ describe('WorkerHost', () => {
     logged.mockRestore();
   });
 
+  it('pauses the run when it reports an error', async () => {
+    const { host, errors, latest } = connect();
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    host.start(PARTY, SEED);
+    host.setSpeed('max');
+    await vi.waitFor(() => expect(latest()?.turn).toBeGreaterThan(50));
+    (host as unknown as { worker: WorkerPort }).worker.postMessage({ type: 'nonsense' } as never);
+    await vi.waitFor(() => expect(errors).toHaveLength(1));
+    await sleep(50);
+    const stopped = latest()?.turn;
+    await sleep(100);
+    expect(latest()?.turn).toBe(stopped);
+    logged.mockRestore();
+  });
+
   it('refuses commands before a run and anything after dispose', () => {
     const { host } = connect();
     expect(() => host.send(BUMP)).toThrow('No run has been started');

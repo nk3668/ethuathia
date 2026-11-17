@@ -723,8 +723,9 @@ As built (ETH-010):
 - **Interface:** as sketched, plus `dispose()`. `onSnapshot` and `onEvents` return an
   unsubscribe function. An update is delivered as the events since the last one (one batch,
   never empty) followed by the snapshot after them. `start` delivers the first snapshot at
-  once. `send` queues a command for the next step. `WorkerHost` adds `onError`: the worker
-  reports a bad message or a thrown sim error and pauses.
+  once. `send` queues a command for the next step. `onError` (on the interface since ETH-021)
+  gets a message when the host stops the run on an error: the worker pauses on a bad message or
+  a thrown sim error, then reports it. `InlineHost` never calls it; its errors throw to the caller.
 - **InlineHost:** `run(steps)` runs that many steps now and delivers one batch and one
   snapshot. `setSpeed` is only recorded.
 - **Headless tools** step a `SimSession` directly: `step()` returns each step's events, and
@@ -763,8 +764,9 @@ As built (ETH-012), the stores are in `ui/stores/`:
   screen exists. Since ETH-014 it also holds `speed` (0 is paused) and `resumeSpeed` (the last
   running speed); `setSpeed` records a speed and sends it to the host `bindHost` connected, and
   `togglePause` switches between 0 and `resumeSpeed`. `App` sends the store's speed (1× at
-  launch) after `start`, and records a pause when `WorkerHost.onError` fires (the worker pauses
-  itself). The speed is not saved between sessions.
+  launch) after `start`. The speed is not saved between sessions. Since ETH-021 `bindHost`
+  also feeds `onError` into `hostFailed`, which sets `error` and speed 0; while `error` is set
+  `setSpeed` refuses anything but 0 (the run can't be resumed), and `reset` clears it.
 - `profileStore`: only the currencies for now, all zero. M2 replaces it with the meta `Profile`.
 - `uiStore`: `selected`, `tab`, `drawerOpen`, `logHeight`, `logFilter` and `mapCamera`
   (ETH-013). Zustand's `persist` keeps `logHeight`, `tab` and `mapCamera` in `localStorage`

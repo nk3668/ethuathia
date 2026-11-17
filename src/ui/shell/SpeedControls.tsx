@@ -20,16 +20,23 @@ function speedHint(speed: RunningSpeed): string {
   return `${turns} party turns a second`;
 }
 
+/** Why the speed buttons do nothing after a host error, for their tooltips. */
+export const STOPPED_HINT = 'The run stopped on an error and can’t be resumed.';
+
 /**
  * Pause and speed, as a segmented control in the top bar (docs/VISUAL-DESIGN.md §3.1). The
  * active button is filled with the accent and marked `aria-pressed`. Pressing Pause while paused
  * resumes at the last speed. Each button's key comes from the keymap.
+ *
+ * After a host error the run stays paused: every button is marked `aria-disabled` (not
+ * `disabled`, so its tooltip still opens on hover and focus) and its tooltip says why.
  */
 export function SpeedControls() {
   const speed = useSimStore((s) => s.speed);
   const resumeSpeed = useSimStore((s) => s.resumeSpeed);
   const setSpeed = useSimStore((s) => s.setSpeed);
   const togglePause = useSimStore((s) => s.togglePause);
+  const stopped = useSimStore((s) => s.error !== null);
   const paused = speed === 0;
   const pauseKeys = keyHint({ type: 'togglePause' });
 
@@ -41,8 +48,12 @@ export function SpeedControls() {
           <>
             <strong>{paused ? 'Paused' : 'Pause'}</strong>
             <br />
-            {paused ? `Press again to resume at ${speedLabel(resumeSpeed)}.` : 'Stop the run until you resume it.'}
-            {pauseKeys.hint && (
+            {stopped
+              ? STOPPED_HINT
+              : paused
+                ? `Press again to resume at ${speedLabel(resumeSpeed)}.`
+                : 'Stop the run until you resume it.'}
+            {pauseKeys.hint && !stopped && (
               <>
                 <br />
                 {pauseKeys.hint}
@@ -54,6 +65,7 @@ export function SpeedControls() {
         <Button
           className={styles.segment}
           pressed={paused}
+          aria-disabled={stopped || undefined}
           onClick={togglePause}
           aria-keyshortcuts={pauseKeys.keys || undefined}
         >
@@ -71,8 +83,8 @@ export function SpeedControls() {
               <>
                 <strong>{speedLabel(step)}</strong>
                 <br />
-                {speedHint(step)}
-                {keys.hint && (
+                {stopped ? STOPPED_HINT : speedHint(step)}
+                {keys.hint && !stopped && (
                   <>
                     <br />
                     {keys.hint}
@@ -84,6 +96,7 @@ export function SpeedControls() {
             <Button
               className={styles.segment}
               pressed={speed === step}
+              aria-disabled={stopped || undefined}
               onClick={() => setSpeed(step)}
               aria-keyshortcuts={keys.keys || undefined}
             >

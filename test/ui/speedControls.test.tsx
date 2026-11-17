@@ -115,16 +115,32 @@ describe('simStore speed', () => {
     unbind = () => undefined;
   });
 
-  it('toggles pause back to the last running speed, and records a pause the host made itself', () => {
+  it('toggles pause back to the last running speed', () => {
     const store = useSimStore.getState();
     store.setSpeed('max');
     store.togglePause();
     expect(host.speed).toBe(0);
     store.togglePause();
     expect(host.speed).toBe('max');
-    store.hostPaused();
+  });
+
+  it('records a host error as a pause it will not resume from, until reset', () => {
+    const store = useSimStore.getState();
+    store.setSpeed(4);
+    store.hostFailed('boom');
+    expect(useSimStore.getState()).toMatchObject({ speed: 0, resumeSpeed: 4, error: 'boom' });
+    // The host paused itself; the store sends nothing.
+    expect(host.speed).toBe(4);
+    store.togglePause();
+    store.setSpeed(2);
     expect(useSimStore.getState().speed).toBe(0);
-    expect(host.speed).toBe('max');
+    expect(host.speed).toBe(4);
+    store.setSpeed(0);
+    expect(host.speed).toBe(0);
+    store.reset();
+    expect(useSimStore.getState().error).toBeNull();
+    store.setSpeed(2);
+    expect(host.speed).toBe(2);
   });
 });
 

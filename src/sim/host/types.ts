@@ -28,6 +28,12 @@ export interface SimHost {
   onSnapshot(listener: (snapshot: Snapshot) => void): Unsubscribe;
   /** Called with each batch of events, in the order they happened. Batches are never empty. */
   onEvents(listener: (events: readonly SimEvent[]) => void): Unsubscribe;
+  /**
+   * Called with a plain-language message when the host stops the run on an error (a bad request
+   * or a thrown sim error). The host has paused the run by then. A host that reports errors by
+   * throwing to the caller (`InlineHost`) never calls it.
+   */
+  onError(listener: (message: string) => void): Unsubscribe;
   /** Stops the host for good and drops every listener. */
   dispose(): void;
 }

@@ -70,6 +70,14 @@ export class InlineHost implements SimHost {
     return this.events.add(listener);
   }
 
+  /**
+   * Never called: an inline host has no worker to fail. A sim error throws from `start`, `send`
+   * or `run` straight to the caller instead.
+   */
+  onError(_listener: (message: string) => void): Unsubscribe {
+    return () => undefined;
+  }
+
   dispose(): void {
     this.session = null;
     this.events.clear();

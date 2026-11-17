@@ -57,7 +57,7 @@ export class WorkerHost implements SimHost {
     return this.events.add(listener);
   }
 
-  /** Called when the worker reports an error. The worker pauses the run when it does. */
+  /** Called when the worker reports an error. The worker pauses the run before it does. */
   onError(listener: (message: string) => void): Unsubscribe {
     return this.errors.add(listener);
   }
