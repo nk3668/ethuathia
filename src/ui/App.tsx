@@ -18,17 +18,21 @@ function createWorkerHost(): SimHost {
 
 /**
  * The app: starts a sim host, feeds it into `simStore` and shows the in-run shell. The UI only
- * reads snapshots and events from the store and talks to the run through the host.
+ * reads snapshots and events from the store and talks to the run through the host (the speed
+ * control sends through `simStore.setSpeed`, which `bindHost` connects to this host).
  */
 export function App({ createHost = createWorkerHost, seed }: AppProps) {
   useEffect(() => {
     const host = createHost();
     useSimStore.getState().reset();
     const unbind = bindHost(host);
+    // The worker pauses itself after an error; the speed control should then show paused.
+    const offError = host instanceof WorkerHost ? host.onError(() => useSimStore.getState().hostPaused()) : undefined;
     host.start(DEMO_RUN, seed ?? Date.now() % 2 ** 31);
-    // Runs at 1× until ETH-014 adds the pause and speed controls.
-    host.setSpeed(1);
+    // Runs at the speed the player last chose (1× at launch); the top bar's control changes it.
+    host.setSpeed(useSimStore.getState().speed);
     return () => {
+      offError?.();
       unbind();
       host.dispose();
     };

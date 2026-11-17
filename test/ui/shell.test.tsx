@@ -132,8 +132,7 @@ describe('AppShell at desktop width', () => {
     expect(screen.getByRole('region', { name: 'Side panel' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Log' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Panels/ })).toBeNull();
-    // The slot the next item fills.
-    expect(container.querySelector('[data-slot="speed-controls"]')).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Sim speed' })).toBeTruthy();
     const map = within(screen.getByRole('region', { name: 'Dungeon map' }));
     expect(map.getByRole('application', { name: /Dungeon map, floor 3/ })).toBeTruthy();
     expect(map.getByRole('group', { name: 'Map camera' })).toBeTruthy();
