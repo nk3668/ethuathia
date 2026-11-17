@@ -24,5 +24,5 @@ Confidence that the sim is deterministic and that balance changes are measured, 
 
 ## Items
 - [x] [ETH-016 Determinism test and headless run script](ETH-016-determinism-headless-run.md)
-- [ ] [ETH-022 Run content validation as a tsx command](ETH-022-validate-content-cli.md)
+- [x] [ETH-022 Run content validation as a tsx command](ETH-022-validate-content-cli.md)
 - [ ] [ETH-056 Safety net: state invariants, soak test, app-boot smoke test and sim compare](ETH-056-invariants-soak-compare.md)
