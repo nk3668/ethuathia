@@ -201,7 +201,8 @@ describe('baseline exploration', () => {
       for (let i = 0; i < 5; i++) expect(fired(step(state, [])).map((e) => e.action)).toEqual(['act.wait']);
       expect(hero.pos).toEqual(at);
     }
-  });
+    // Takes about 4 s alone; parallel agents and CI load push it past the 5 s default.
+  }, 30_000);
 
   it('never enters an explored dead end', () => {
     // Digits mark three bent dead ends off a long corridor. Their far ends can't be seen from the
