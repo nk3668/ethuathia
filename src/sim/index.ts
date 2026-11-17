@@ -107,8 +107,25 @@ export {
   sightRadius,
 } from './perception';
 export type { Explored } from './perception';
+export {
+  deliver,
+  InlineHost,
+  isSpeed,
+  Listeners,
+  MAX_SLICE_MS,
+  MAX_STEPS_PER_PUMP,
+  PacedRunner,
+  readHostRequest,
+  SimSession,
+  SNAPSHOT_INTERVAL_MS,
+  SPEEDS,
+  TURNS_PER_SECOND,
+} from './host';
+export type { Clock, HostMessage, HostRequest, HostUpdate, SimHost, Speed, Unsubscribe } from './host';
 export { createRun, FIRST_FLOOR_TYPE } from './run';
 export { deserialize, serialize } from './serialize';
+export { snapshot } from './snapshot';
+export type { ActorView, FeatureView, FloorView, PartyMemberView, Snapshot, ViewOptions } from './snapshot';
 export { DEFS, RNG_STREAMS, STATE_VERSION, Terrain, TERRAIN_IDS } from './state';
 export type {
   ActorEntity,

@@ -380,6 +380,16 @@ A `Snapshot` is a read-only view built for the UI: the current floor as the part
 (glyph ids, visibility, memory), party summaries with computed stats and current intent, and
 run counters. The UI never sees `RunState`.
 
+As built (ETH-010), in `src/sim/snapshot.ts`: `snapshot(state, view?)` where `ViewOptions` is
+`{ floor? }` (default: the first living party member's floor). A `Snapshot` has `turn`, `seed`,
+`floor` and `party`. `floor` carries `terrain` (a `Uint8Array` copy of the party memory: 0 never
+seen, else 1 + the `Terrain` code), `visible` (the `partyVisible` mask), the remembered
+`features`, and `actors` standing on tiles in view only. `party` has one card per member (name,
+class, race, position, HP/MP, `alive`, and `intent` from the AI memory). Terrain is sent as codes;
+the renderer maps them through `TERRAIN_IDS`. Everything is a fresh copy and plain data, so a
+snapshot shares no object with the state (a test walks both to check) and posts to the UI
+thread as it is.
+
 ### 3.6 Dungeon generation
 
 ```ts
@@ -651,6 +661,36 @@ interface SimHost {
   at most about 30 snapshots per second however fast the sim is running, and batches events.
 - **InlineHost:** runs the sim synchronously with no timers, for tests, the balance harness
   and time-away catch-up.
+
+As built (ETH-010):
+
+- **Where it lives:** the pure parts are in `src/sim/host/`: the `SimHost` interface, `Speed`
+  (`0 | 1 | 2 | 4 | 8 | 'max'`, 0 is paused), `SimSession` (a run plus its queued commands,
+  which both hosts step through, so they produce the same events), `InlineHost`, `PacedRunner`
+  and the worker message protocol. Only the code that needs worker globals and timers is in
+  `src/ui/host/`: `serveSim` (the worker side), `sim.worker.ts` (its entry) and `WorkerHost`.
+  `meta` can therefore use `InlineHost` for time-away.
+- **Interface:** as sketched, plus `dispose()`. `onSnapshot` and `onEvents` return an
+  unsubscribe function. An update is delivered as the events since the last one (one batch,
+  never empty) followed by the snapshot after them. `start` delivers the first snapshot at
+  once. `send` queues a command for the next step. `WorkerHost` adds `onError`: the worker
+  reports a bad message or a thrown sim error and pauses.
+- **InlineHost:** `run(steps)` runs that many steps now and delivers one batch and one
+  snapshot. `setSpeed` is only recorded.
+- **Pacing (`PacedRunner`):** timer-free and driven by an injected clock, so it is tested
+  with a fake one. 1× is `TURNS_PER_SECOND` (5, a provisional default) party turns a second;
+  2×, 4× and 8× multiply it. `max` steps for `MAX_SLICE_MS` (12 ms) per pump, then yields so
+  messages get through. Updates go out at most once per `SNAPSHOT_INTERVAL_MS` (1000/30 ms)
+  at any speed, and pausing flushes at once. A timed speed that falls more than a second
+  behind (throttled timers) starts counting again rather than running a burst. A step that
+  gets nowhere (nobody can act) stops the runner until the next message.
+- **Protocol:** `HostRequest` is `start`, `command` or `setSpeed`. `HostMessage` is
+  `update` (`{ events, snapshot }`) or `error`. The worker checks each request with
+  `readHostRequest`. Commands and configs are checked again where they are used.
+- **Bundling:** `new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' })`
+  with `worker.format: 'es'` in `vite.config.ts`. The CSP already allows `worker-src 'self'`.
+  Tests run `serveSim` and `WorkerHost` over a `MessageChannel`, which structured-clones like a
+  real worker; Node has no Web Workers.
 
 ---
 
