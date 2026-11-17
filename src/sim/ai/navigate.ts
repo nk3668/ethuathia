@@ -8,6 +8,7 @@ import { actorAt, featureAt, getEntity, getFloor } from '../entities';
 import { memoryPathGrid, OPEN_DOOR_COST, stepToward } from '../goalMap';
 import type { PathGrid } from '../goalMap';
 import { getMemory } from '../perception';
+import { RULE_ACTIONS } from '../registries';
 import type { Entity } from '../state';
 import type { AiCtx, Resolved } from './types';
 
@@ -65,8 +66,9 @@ export function frontier({ state, actor }: AiCtx, paths: PathGrid): Pos[] {
 
 /**
  * The action that takes the actor one step down `map`: a move, opening the closed door in the
- * way, or waiting for whoever stands on the next tile to move. `null` if there is no step (the
- * actor is at a goal or can't reach one).
+ * way, swapping places with a willing party member on the next tile (`willingToSwap`), or
+ * waiting for whoever stands there to move. `null` if there is no step (the actor is at a goal or
+ * can't reach one).
  */
 export function followMap(ctx: AiCtx, paths: PathGrid, map: Grid, detail: string): Resolved | null {
   const { state, actor } = ctx;
@@ -75,11 +77,34 @@ export function followMap(ctx: AiCtx, paths: PathGrid, map: Grid, detail: string
   const to = { x: actor.pos.x + dir.x, y: actor.pos.y + dir.y };
   const other = actorAt(state, actor.floor, to);
   if (other !== undefined) {
-    return { request: { id: 'wait' }, detail: `${detail}; waiting for ${nameOf(other)} to get out of the way` };
+    if (willingToSwap(ctx, other)) {
+      return { request: { id: 'swap', dir }, detail: `${detail}; squeezing past ${nameOf(other)}` };
+    }
+    return {
+      request: { id: 'wait' },
+      detail: `${detail}; waiting for ${nameOf(other)} to get out of the way`,
+      waitingFor: other.id,
+    };
   }
   const door = featureAt(state, actor.floor, to)?.feature;
   if (door?.kind === 'door' && !door.open) return { request: { id: 'openDoor', dir }, detail: `${detail}; opening a door` };
   return { request: { id: 'move', dir }, detail };
+}
+
+/**
+ * Whether `other`, standing where the actor wants to step, will trade places with it. Both must
+ * be in the party, and `other` must be AI-driven and either waiting on the actor (its last
+ * decision was blocked by the actor, so each wants the other's tile) or with nowhere to be (no
+ * decision yet, or an idle one such as waiting). A member heading somewhere else is left alone,
+ * so the actor waits behind it instead of pushing it back the way it came. Deterministic: it
+ * depends only on the run state.
+ */
+export function willingToSwap({ actor }: AiCtx, other: Entity): boolean {
+  if (actor.actor.faction !== 'party' || other.actor?.faction !== 'party' || other.ai === undefined) return false;
+  const memory = other.ai.memory;
+  if (memory.waitingFor === actor.id) return true;
+  const intent = memory.intent;
+  return intent === null || (RULE_ACTIONS.has(intent.action) && RULE_ACTIONS.get(intent.action).idle);
 }
 
 /** A short name for an entity in a reason. */

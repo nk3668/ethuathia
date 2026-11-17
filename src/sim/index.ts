@@ -58,6 +58,7 @@ export {
   newAiPart,
   noParams,
   OCCUPIED_COST,
+  willingToSwap,
   CORE_RULE_ACTIONS,
   ruleDecide,
   STUCK_TURNS,

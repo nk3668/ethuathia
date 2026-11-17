@@ -1,5 +1,5 @@
 /**
- * The core domain's actions: wait, move and open door, plus the movement rules that goal maps
+ * The core domain's actions: wait, move, open door and swap places, plus the movement rules that goal maps
  * share (docs/ARCHITECTURE.md §2.3). Feature domains declare their actions in their own
  * `src/sim/<domain>/` files; `domains.ts` joins every record into `ACTIONS`.
  *
@@ -33,8 +33,17 @@ export interface OpenDoorRequest {
   dir: Pos;
 }
 
+/**
+ * Trade places with the party member one step away in `dir`: the actor steps onto their tile and
+ * they step onto the actor's. Only party members swap; monsters and neutral creatures never do.
+ */
+export interface SwapRequest {
+  id: 'swap';
+  dir: Pos;
+}
+
 /** The core domain's action requests. */
-export type CoreRequest = WaitRequest | MoveRequest | OpenDoorRequest;
+export type CoreRequest = WaitRequest | MoveRequest | OpenDoorRequest | SwapRequest;
 
 // ---------------------------------------------------------------------------------------------
 // Definitions
@@ -99,6 +108,38 @@ export const CORE_ACTIONS: ActionRecord<CoreRequest> = {
       if (door?.feature?.kind !== 'door') return;
       door.feature.open = true;
       emit({ type: 'doorOpened', actor: actor.id, door: door.id, pos });
+    },
+  },
+
+  swap: {
+    id: 'swap',
+    name: 'Swap places',
+    description:
+      'Trade places with a party member on a neighboring tile, so two adventurers can get past each other ' +
+      'in a narrow passage. Only party members swap: monsters and other creatures never do. The same walls, ' +
+      'doors and doorway rules as a move apply to both of them. Only the one who asks spends the turn.',
+    tags: [],
+    cost: 100,
+    parse: (raw) => (isStep(raw.dir) ? { id: 'swap', dir: { x: raw.dir.x, y: raw.dir.y } } : BAD_DIR),
+    validate: ({ state, actor }, { dir }) => {
+      const blocked = stepBlocker(state, actor.floor, actor.pos, dir);
+      if (blocked !== null) return blocked;
+      const to = add(actor.pos, dir);
+      const other = actorAt(state, actor.floor, to);
+      if (other === undefined) return 'There is nobody there to swap places with';
+      if (actor.actor.faction !== 'party' || other.actor?.faction !== 'party') {
+        return `${describe(other)} is not in the party`;
+      }
+      return stepBlocker(state, actor.floor, to, { x: -dir.x, y: -dir.y });
+    },
+    execute: ({ state, actor, emit }, { dir }) => {
+      const from = actor.pos;
+      const to = add(from, dir);
+      const other = actorAt(state, actor.floor, to);
+      if (other === undefined) return;
+      moveEntity(state, other.id, actor.floor, from);
+      moveEntity(state, actor.id, actor.floor, to);
+      emit({ type: 'swapped', actor: actor.id, other: other.id, from: { ...from }, to: { ...to } });
     },
   },
 };

@@ -18,6 +18,7 @@ export function ruleLabel(rule: RuleRef): string {
 export const CORE_LOG_TEXT: LogTextRecord<CoreEvent> = {
   moved: { category: 'system', quiet: true, text: (e, nameOf) => `${nameOf(e.actor)} moves.` },
   waited: { category: 'system', quiet: true, text: (e, nameOf) => `${nameOf(e.actor)} waits.` },
+  swapped: { category: 'system', text: (e, nameOf) => `${nameOf(e.actor)} squeezes past ${nameOf(e.other)}.` },
   doorOpened: { category: 'discovery', text: (e, nameOf) => `${nameOf(e.actor)} opens a door.` },
   actionFailed: { category: 'system', text: (e, nameOf) => `${nameOf(e.actor)} can't ${e.action} (${e.reason})` },
   ruleFired: { category: 'ai', text: (e, nameOf) => `${nameOf(e.actor)}: ${e.detail} (${ruleLabel(e.rule)})` },

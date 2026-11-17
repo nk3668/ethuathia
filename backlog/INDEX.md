@@ -62,7 +62,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-040](bestiary/ETH-040-monster-roles.md) | Monster roles and role behaviors | bestiary | M1 | P1 | idea | M |
 | [ETH-043](combat-items/ETH-043-equipment-slots-base-items.md) | Equipment slots and base item types | combat-items | M1 | P1 | idea | M |
 | [ETH-019](map-renderer/ETH-019-map-overlays-goal-possession-flash.md) | Map overlays: goal line, possession frame and hit flash | map-renderer | M1 | P2 | idea | S |
-| [ETH-017](adventurer-ai/ETH-017-party-yield-in-corridors.md) | Party members yield or swap places in narrow passages | adventurer-ai | M1 | P2 | idea | S |
+| [ETH-017](adventurer-ai/ETH-017-party-yield-in-corridors.md) | Party members yield or swap places in narrow passages | adventurer-ai | M1 | P2 | done | S |
 | [ETH-020](ui-shell/ETH-020-cycle-adventurers-key.md) | Key to cycle the selected adventurer | ui-shell | M1 | P2 | done | S |
 | [ETH-021](ui-shell/ETH-021-show-sim-errors.md) | Tell the player when the sim stops on an error | ui-shell | M1 | P2 | done | S |
 | [ETH-044](combat-items/ETH-044-enchant-curse-identify.md) | Enchantment, blessed and cursed items, and identification | combat-items | M1 | P2 | idea | M |

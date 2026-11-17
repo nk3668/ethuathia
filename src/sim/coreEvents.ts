@@ -13,6 +13,11 @@ export type CoreEvent =
   | { type: 'waited'; actor: EntityId }
   /** An actor stepped from one tile to a neighboring one on the same floor. */
   | { type: 'moved'; actor: EntityId; from: Pos; to: Pos }
+  /**
+   * Two party members traded places: `actor` stepped from `from` to `to`, and `other`, who stood
+   * on `to`, stepped back onto `from`.
+   */
+  | { type: 'swapped'; actor: EntityId; other: EntityId; from: Pos; to: Pos }
   /** An actor opened the door entity `door`, which stands at `pos`. */
   | { type: 'doorOpened'; actor: EntityId; door: EntityId; pos: Pos }
   /**
