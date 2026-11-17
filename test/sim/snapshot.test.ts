@@ -54,6 +54,8 @@ describe('snapshot', () => {
     expect(at(snap, 'terrain', 7, 2)).toBe(0);
     expect(at(snap, 'visible', 2, 2)).toBe(1);
     expect(at(snap, 'visible', 7, 2)).toBe(0);
+    // The west room's 12 floor tiles and the door, of 25 floor tiles in all.
+    expect(snap.floor.explored).toEqual({ seen: 13, total: 25, fraction: 13 / 25 });
 
     expect(snap.floor.features).toEqual([
       { pos: { x: 5, y: 1 }, def: 'feature.door', feature: { kind: 'door', open: false } },
@@ -101,6 +103,7 @@ describe('snapshot', () => {
     expect(snap.floor.features).toContainEqual({ pos: { x: 5, y: 1 }, def: 'feature.door', feature: { kind: 'door', open: true } });
     expect(snap.floor.features).toContainEqual({ pos: { x: 8, y: 3 }, def: 'feature.stairs_down', feature: { kind: 'stairs', dir: 'down' } });
     expect(snap.floor.terrain.every((code) => code !== 0)).toBe(true);
+    expect(snap.floor.explored.fraction).toBe(1);
     // From the east room, parts of the west room are remembered but out of view.
     expect(snap.party[0]?.pos.x).toBeGreaterThan(5);
     const outOfView = snap.floor.terrain.filter((code, i) => code === 1 + Terrain.Floor && snap.floor.visible[i] === 0);

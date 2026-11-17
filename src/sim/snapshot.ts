@@ -9,7 +9,8 @@
 import { clonePlain } from '../core';
 import type { Pos } from '../core';
 import { getFloor } from './entities';
-import { getMemory, partyVisible } from './perception';
+import { explored, getMemory, partyVisible } from './perception';
+import type { Explored } from './perception';
 import type { Intent } from './ai/types';
 import type { EntityId, Faction, FeaturePart, FloorId, RunState } from './state';
 
@@ -56,6 +57,8 @@ export interface FloorView {
   features: FeatureView[];
   /** Actors on tiles in view, in id order. Monsters out of view are not listed. */
   actors: ActorView[];
+  /** How much of the floor's floor tiles the party has seen (see `explored`). */
+  explored: Explored;
 }
 
 /** A party member's card. */
@@ -136,6 +139,7 @@ function floorView(state: RunState, floorId: FloorId): FloorView {
     visible,
     features,
     actors,
+    explored: explored(state, floorId),
   };
 }
 

@@ -4,6 +4,7 @@
  */
 export { formatNumber } from './format';
 export { DIRS_4, DIRS_8, Grid, isGridBuffer } from './grid';
+export { hashText } from './hash';
 export type { GridBuffer, GridCells, GridData, GridKind, Pos } from './grid';
 export { assertPlainData, clonePlain, findNonPlain } from './plain';
 export { Registry } from './registry';

@@ -219,14 +219,14 @@ A desktop app (§9) with a dark theme. The dungeon uses colored monospace ASCII 
 - **Stack:** Vite, Vitest and **React** (with Zustand stores and CSS Modules). The map renders to `<canvas>`.
 - **Design docs:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) is the technical design (layers, shared building blocks, sim API, AI engine). [`docs/VISUAL-DESIGN.md`](docs/VISUAL-DESIGN.md) is the look: tokens, fonts, map glyphs and screen mock-ups. Read the relevant one before starting an item, and update it in the same change when a decision in it changes.
 - **Distribution:** packaged as a desktop app with **Tauri** (default; Electron is the fallback if Tauri causes trouble), so it installs and runs with no browser or network. During development, run it with `npm run dev` in a local browser tab.
-- **Commands:** `npm run dev` (dev server), `npm run build`, `npm test`, `npm run lint`, `npm run typecheck`, and `npm run check` (type-check, lint and test together). Run `npm run check` before calling an item done.
+- **Commands:** `npm run dev` (dev server), `npm run build`, `npm test`, `npm run lint`, `npm run typecheck`, `npm run check` (type-check, lint and test together), and `npm run sim -- --seeds N` (headless seeded runs with a report). Run `npm run check` before calling an item done.
 - **Offline only:** no `fetch` to remote hosts, no CDN links, no analytics. Bundle every dependency and font. If a feature seems to need the network, stop and ask the user.
 - **Separate the simulation from the UI:**
   - `src/sim/` is pure TypeScript with **no DOM access**, is deterministic with a seeded RNG, and is serializable. That lets it run in a Web Worker, run headless for offline catch-up, and run in tests.
   - The UI reads snapshots and events from the sim and sends commands back. It never mutates sim state directly.
 - **Content is data:** classes, races, monsters, items, Omens, deities and upgrade nodes are typed definitions in `src/content/`, validated at load time.
 - **Saves:** local only, written to a save file in the app data folder through Tauri (IndexedDB when running in a dev browser tab). Saves are versioned with migrations, with export/import to a file or string and a hard reset. Autosave regularly and on close.
-- **Balance harness:** a script that runs N seeded headless runs and reports depth, death causes and currency per hour. Use it to check any balance change.
+- **Balance harness:** a script that runs N seeded headless runs and reports depth, death causes and currency per hour. Use it to check any balance change. It starts as `npm run sim` (M0: turns and explored share per floor).
 
 ### Proposed layout
 ```

@@ -123,7 +123,7 @@ export {
 } from './host';
 export type { Clock, HostMessage, HostRequest, HostUpdate, SimHost, Speed, Unsubscribe } from './host';
 export { adventurerActor, createRun, FIRST_FLOOR_TYPE } from './run';
-export { deserialize, serialize } from './serialize';
+export { deserialize, serialize, stateHash } from './serialize';
 export { snapshot } from './snapshot';
 export { checkFloorParams, checkGame, validateGame } from './validate';
 export type { ActorView, FeatureView, FloorView, PartyMemberView, Snapshot, ViewOptions } from './snapshot';
