@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-024**
+**Next ID: ETH-054**
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
@@ -10,10 +10,10 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 |---|---|---|---|
 | [project-setup](project-setup/_epic.md) | Project setup and tooling | active | M0 |
 | [sim-core](sim-core/_epic.md) | Simulation core | active | M0, M1 |
-| [dungeon-gen](dungeon-gen/_epic.md) | Dungeon generation | active | M0, M1, M5, M6 |
+| [dungeon-gen](dungeon-gen/_epic.md) | Dungeon generation | active | M0, M1, M4, M5, M6 |
 | [adventurer-ai](adventurer-ai/_epic.md) | Decision engine and baseline AI | active | M0, M1 |
 | [behavior-rules](behavior-rules/_epic.md) | Behavior rules | active | M3 |
-| [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1 |
+| [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M2, later |
 | [content](content/_epic.md) | Content definitions | active | M0, M1, M2, M3, M4, M5, M6 |
 | [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M3, M5 |
 | [saves-platform](saves-platform/_epic.md) | Saves, desktop packaging and time-away | active | M2, M6 |
@@ -24,6 +24,9 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [map-renderer](map-renderer/_epic.md) | Map renderer | active | M0, M1 |
 | [codex-tooltips](codex-tooltips/_epic.md) | Codex and tooltips | active | M2 |
 | [tools-balance](tools-balance/_epic.md) | Test and balance tooling | active | M0, M1 |
+| [quests](quests/_epic.md) | Quests: contracts and bounties | active | M1, M2, M3, M4, M5 |
+| [characters](characters/_epic.md) | Characters: attributes, classes and races | active | M1, M2, M3 |
+| [bestiary](bestiary/_epic.md) | Bestiary: monsters, uniques and elites | active | M1, M2 |
 
 ## Items
 
@@ -45,10 +48,40 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-014](ui-shell/ETH-014-pause-speed-controls.md) | Pause, speed controls and keyboard shortcuts | ui-shell | M0 | P1 | done | S |
 | [ETH-015](content/ETH-015-content-registry-first-defs.md) | Content registry with validation and first definitions | content | M0 | P1 | done | S |
 | [ETH-016](tools-balance/ETH-016-determinism-headless-run.md) | Determinism test and headless run script | tools-balance | M0 | P1 | done | S |
+| [ETH-024](quests/ETH-024-contracts-recover-relic.md) | Contract model and the Recover-relic contract; victory needs every contract plus the exit | quests | M1 | P1 | idea | M |
+| [ETH-025](quests/ETH-025-return-trip.md) | Return trip: walk back up through explored floors, with light respawns | quests | M1 | P1 | idea | M |
+| [ETH-033](characters/ETH-033-attributes-derived-stats.md) | Four attributes and the stats derived from them | characters | M1 | P1 | idea | M |
+| [ETH-034](characters/ETH-034-xp-leveling-class-growth.md) | XP, leveling and per-class attribute growth | characters | M1 | P1 | idea | M |
+| [ETH-040](bestiary/ETH-040-monster-roles.md) | Monster roles and role behaviors | bestiary | M1 | P1 | idea | M |
+| [ETH-043](combat-items/ETH-043-equipment-slots-base-items.md) | Equipment slots and base item types | combat-items | M1 | P1 | idea | M |
 | [ETH-019](map-renderer/ETH-019-map-overlays-goal-possession-flash.md) | Map overlays: goal line, possession frame and hit flash | map-renderer | M1 | P2 | idea | S |
 | [ETH-017](adventurer-ai/ETH-017-party-yield-in-corridors.md) | Party members yield or swap places in narrow passages | adventurer-ai | M1 | P2 | idea | S |
 | [ETH-020](ui-shell/ETH-020-cycle-adventurers-key.md) | Key to cycle the selected adventurer | ui-shell | M1 | P2 | idea | S |
 | [ETH-021](ui-shell/ETH-021-show-sim-errors.md) | Tell the player when the sim stops on an error | ui-shell | M1 | P2 | idea | S |
+| [ETH-044](combat-items/ETH-044-enchant-curse-identify.md) | Enchantment, blessed and cursed items, and identification | combat-items | M1 | P2 | idea | M |
 | [ETH-022](tools-balance/ETH-022-validate-content-cli.md) | Run content validation as a tsx command | tools-balance | M1 | P3 | idea | S |
+| [ETH-039](characters/ETH-039-survey-roguelike-ideas.md) | Survey ideas from DCSS and NetHack with clean-room notes | characters | M1 | P3 | idea | S |
 | [ETH-023](town-meta/ETH-023-at-risk-run-currency.md) | Track run earnings as at-risk currency and lose 25% on a wipe | town-meta | M2 | P1 | idea | M |
+| [ETH-026](quests/ETH-026-slay-named-foe-contract.md) | Slay-named-foe contract | quests | M2 | P2 | idea | M |
+| [ETH-027](quests/ETH-027-gather-delve-contracts.md) | Gather and Delve contracts | quests | M2 | P2 | idea | M |
+| [ETH-028](quests/ETH-028-contract-slots-upgrade.md) | Contract slots as a Guild Hall upgrade | quests | M2 | P2 | idea | S |
+| [ETH-029](quests/ETH-029-bounty-board.md) | Bounty board on the Prepare screen; bounty rewards are at risk | quests | M2 | P2 | idea | M |
+| [ETH-035](characters/ETH-035-proficiencies-aptitudes.md) | Class equipment proficiencies and race aptitudes | characters | M2 | P2 | idea | M |
+| [ETH-036](characters/ETH-036-milestone-unlocks-guild-hall.md) | Milestone-gated class and race unlocks bought at the Guild Hall | characters | M2 | P2 | idea | M |
+| [ETH-041](bestiary/ETH-041-named-uniques.md) | Named uniques and bosses | bestiary | M2 | P2 | idea | M |
+| [ETH-042](bestiary/ETH-042-monster-families-floor-themes.md) | Monster families and floor themes | bestiary | M2 | P2 | idea | M |
+| [ETH-052](bestiary/ETH-052-elites-mini-bosses.md) | Elite monsters and mini-bosses with better loot | bestiary | M2 | P2 | idea | M |
+| [ETH-045](combat-items/ETH-045-affixes-artifacts.md) | Light affixes and named artifacts | combat-items | M2 | P2 | idea | M |
+| [ETH-047](ui-shell/ETH-047-highlights-auto-pause.md) | Highlights feed and optional auto-pause | ui-shell | M2 | P2 | idea | M |
+| [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | idea | S |
+| [ETH-031](quests/ETH-031-quest-rule-conditions-ai.md) | Quest rule conditions and objective weighting in the AI | quests | M3 | P2 | idea | M |
+| [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M3 | P2 | idea | M |
+| [ETH-038](characters/ETH-038-class-aware-ai-roles.md) | Class-aware AI roles | characters | M3 | P2 | idea | M |
+| [ETH-030](quests/ETH-030-bounty-encounters.md) | Bounty encounters inside the dungeon | quests | M4 | P3 | idea | M |
+| [ETH-046](dungeon-gen/ETH-046-traps-searching.md) | Traps and searching | dungeon-gen | M4 | P3 | idea | M |
+| [ETH-053](risk-omens/ETH-053-ravenous-omen-without-food.md) | Decide the fate of the Ravenous Omen without food | risk-omens | M4 | P3 | idea | S |
+| [ETH-051](lineage/ETH-051-gravestone-interactions.md) | Gravestone interactions: minor loot, a patron boon and an epitaph | lineage | M5 | P2 | idea | M |
+| [ETH-032](quests/ETH-032-rescue-contract.md) | Rescue contract | quests | M5 | P3 | idea | M |
+| [ETH-049](dungeon-gen/ETH-049-dungeon-merchants.md) | Dungeon merchants | dungeon-gen | M6 | P3 | idea | M |
 | [ETH-018](ui-shell/ETH-018-trim-font-bundle.md) | Ship only the font files the app needs | ui-shell | later | P3 | idea | S |
+| [ETH-050](combat-items/ETH-050-summons-pets.md) | Summons and pets | combat-items | later | P3 | idea | M |
