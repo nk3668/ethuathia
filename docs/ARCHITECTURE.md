@@ -14,6 +14,203 @@ item that builds each piece.
 
 ---
 
+## Contracts
+
+The rules every feature item follows, so that many items can be built in parallel without
+editing the same files (ETH-055). Read this section before starting an item; the numbered
+sections below explain each system in depth. The gates every PR passes are in
+[§11 Invariants and gates](#11-invariants-and-gates).
+
+### Domain modules
+
+Sim feature code lives in a **domain**, a folder under `src/sim/`:
+
+| Domain | Folder | Owns | Built by |
+|---|---|---|---|
+| core | `src/sim/core*.ts`, `state.ts`, `ai/`, `gen/` | turns, movement, doors, perception, the AI engine, the AI trace | M0 |
+| stats | `src/sim/stats/` | stat ids, `getStat`, bundles on actors, statuses, attributes, XP | ETH-057, ETH-033, ETH-034 |
+| floors | `src/sim/floors/` | dungeon depth, stairs, lazily built floors, descending | ETH-058 |
+| combat | `src/sim/combat/` | monsters as actors, attacks, damage, death | ETH-060, ETH-040 |
+| items | `src/sim/items/` | items, inventory, equipment, enchantment, identification | ETH-061, ETH-043, ETH-044 |
+| quests | `src/sim/quests/` | contracts, bounties, the return trip | ETH-024, ETH-025 |
+| run | `src/sim/run/` | run end, run trackers, at-risk rewards | ETH-062 |
+
+The core domain has no folder: its definitions are `coreEvents.ts`, `coreActions.ts`,
+`coreCommands.ts`, the top-level fields of `RunState`, the core conditions and rule actions in
+`ai/` and the room steps in `gen/`. A new domain is rare; it is one row in `DomainTypes`
+(`domain.ts`), one in `DOMAINS` (`domains.ts`), one `extends` entry each on `Entity` and
+`RunConfig` (`state.ts`), and one log-text file.
+
+**What a domain's `index.ts` exports** (the six folders start with this template, all empty):
+
+```ts
+import { registerInvariant } from '../invariants';
+
+export type CombatEvent = { type: 'attacked'; actor: EntityId; target: EntityId; damage: number } | …;
+export type CombatRequest = { id: 'attack'; dir: Pos } | …;          // action requests
+export type CombatCommand = never;                                   // UI commands, if any
+export interface CombatState { … }      // slice at state.domains.combat (plain data)
+export interface CombatSnapshot { … }   // slice at snapshot.domains.combat (plain data)
+export interface CombatParts { monster?: MonsterPart }   // optional Entity parts
+export interface CombatConfig { … }     // optional RunConfig fields
+export interface CombatTypes { event: CombatEvent; request: CombatRequest; command: CombatCommand;
+                               state: CombatState; snapshot: CombatSnapshot }
+
+export const COMBAT_ACTIONS: ActionRecord<CombatRequest> = { attack: { … } };  // exhaustive
+export const COMBAT_COMMANDS: CommandRecord<CombatCommand> = {};
+export function initCombat(config: RunConfig): CombatState { … }
+export function combatSnapshot(ctx: SnapshotCtx): CombatSnapshot { … }
+
+registerInvariant('combat.hpRange', (state) => …);   // §11.1: namespaced, at import time
+
+export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
+  actions: COMBAT_ACTIONS, commands: COMBAT_COMMANDS, init: initCombat, snapshot: combatSnapshot,
+  conditions: [COND_ENEMY_ADJACENT],   // → CONDITIONS
+  ruleActions: [ACT_ATTACK_NEAREST],   // → RULE_ACTIONS
+  genSteps: [GEN_POPULATE],            // → GEN_STEPS
+  trackers: [KILLS_TRACKER],           // → RUN_TRACKERS (RunTracker<S>, below)
+};
+```
+
+Split it into more files as it grows (`combat/actions.ts`, `combat/rules.ts`, …) and re-export
+from `index.ts`. `src/sim/index.ts` re-exports every domain with `export *`, so new exports
+need no edit there.
+
+**The root files only compose**, one line per domain, and feature items don't edit them:
+
+| Root | Composes |
+|---|---|
+| `domain.ts` | `DomainTypes`, the table of every domain's `<Domain>Types`; `SimDomain`, `SnapshotCtx`, `RunTracker` |
+| `events.ts` | `SimEventBody = CoreEvent \| DomainTypes[DomainKey]['event']` |
+| `actions.ts` | `ActionRequest` the same way; `ActionDef`, `ActionRecord` and the pipeline (`parseRequest`, `validateAction`, `performAction`) |
+| `commands.ts` | `Command` the same way; `CommandDef`, `CommandRecord` and `applyCommand` |
+| `state.ts` | `RunState.domains` (`DomainStates`); `Entity extends <Domain>Parts…`; `RunConfig extends <Domain>Config…` |
+| `snapshot.ts` | `Snapshot.domains` (`DomainSnapshots`) |
+| `domains.ts` | the hub: `DOMAINS` in domain order; `ACTIONS` and `COMMANDS`; fills `CONDITIONS`, `RULE_ACTIONS`, `GEN_STEPS`; `RUN_TRACKERS`; `initDomains`, `domainSnapshots` |
+| `registries.ts` | the empty code registries the hub fills |
+
+Rules:
+
+- **State:** a domain's run-wide state goes in its slice (`state.domains.items`), never in a new
+  top-level `RunState` field. Per-entity state goes in an optional part declared in its
+  `<Domain>Parts`; two domains declaring the same part name fail to compile. Slices and parts
+  are plain data (§3.1), and each slice gets invariants (§11.1).
+- **Config:** new `RunConfig` fields go in `<Domain>Config` and are optional, so tests and older
+  configs need no change. `init` builds the slice from the config and returns fresh data.
+- **Snapshot:** a domain's snapshot builder returns fresh plain data sharing nothing with the
+  state. Per-member data (statuses, inventory) goes in its slice keyed by entity id, not in
+  `PartyMemberView`. UI tests that hand-build a `Snapshot` take `domains` from
+  `fixtureDomains()` (`test/ui/fixtures.ts`), so they survive new snapshot fields.
+- **Exhaustive at compile time:** `ActionRecord<R>` and `CommandRecord<C>` need exactly one
+  definition per request id or command type, and `LogTextRecord<E>` one formatter per event
+  type. Since every root union is built from the domain unions and each domain record is
+  exhaustive over its own, `ACTIONS`, `COMMANDS` and the log's `LOG_TEXT` are exhaustive too.
+- **Ids are global:** action ids, command types and event types must not repeat across domains
+  (the hub throws on a duplicate action, command or tracker). Registry ids are namespaced:
+  `cond.*`, `act.*`, `gen.*`; invariants `<domain>.*`; trackers e.g. `track.kills`.
+- **Load order (determinism and import cycles):** `src/sim/index.ts` loads `domains.ts` first.
+  The hub is the only module whose load-time code reads the domains, so registration order is
+  the fixed order of `DOMAINS` (core lists first), never the order modules happened to load.
+  A domain module must therefore **never import `domains.ts` or `index.ts`**, and never read
+  `ACTIONS`, `COMMANDS` or a registry at load time (looking things up inside a function is fine:
+  `RULE_ACTIONS.get(id)` from `registries.ts`). It may import values from leaf modules: `core`,
+  `content`, `state`, `entities`, `perception`, `goalMap`, `fov`, `floorText`, `coreActions`
+  (`isStep`, `stepBlocker`), `registries`, `invariants`, `ai/types`, `ai/navigate`, `gen/*`, and
+  the pipeline functions in `actions.ts` and `commands.ts`. Outside the sim, import only from
+  `src/sim/index.ts`.
+
+### Where new things go
+
+| To add… | Put it in |
+|---|---|
+| An event | the domain's `<Domain>Event` union, plus its wording in `ui/shell/logText/<domain>.ts` |
+| An action | the domain's `<Domain>Request` union and `<DOMAIN>_ACTIONS` record |
+| A command | the domain's `<Domain>Command` union and `<DOMAIN>_COMMANDS` record |
+| Run-wide state | the domain's `<Domain>State` and `init<Domain>`, plus invariants; bump `STATE_VERSION` |
+| An entity part | the domain's `<Domain>Parts`, plus invariants; bump `STATE_VERSION` |
+| A run setting | the domain's `<Domain>Config` (optional field) |
+| UI data | the domain's `<Domain>Snapshot` and its builder |
+| A rule condition / rule action | `defineCondition` / `defineRuleAction` in the domain, listed in its `conditions` / `ruleActions` (§4) |
+| A generation step | `defineGenStep` in the domain, listed in `genSteps`; a floor type names it in content (§3.6) |
+| A run tracker | a `RunTracker<S>` listed in the domain's `trackers` |
+| An invariant | `registerInvariant('<domain>.name', …)` in the domain module (§11.1) |
+| Content data | the kind's file in `src/content/` (§5) |
+
+### Log text
+
+`ui/shell/text.ts` holds `LOG_TEXT`, a `LogTextRecord<SimEvent>` joined from one file per
+domain, `ui/shell/logText/<domain>.ts` (core included). Each entry is
+`{ category, quiet?, text(event, nameOf) }`: `category` is the log filter, `quiet` leaves the
+event out of the log (moves and waits), and `text` is the sentence. An event type without an
+entry fails to compile. Every new mechanic needs log text (CLAUDE.md §9), and this is where it
+goes.
+
+### Rule conditions, rule actions, generation steps and trackers
+
+Each is a list on the domain's `SimDomain` (see the template). The hub registers the core lists
+and then each domain's in domain order, into `CONDITIONS`, `RULE_ACTIONS` and `GEN_STEPS` (in
+`registries.ts`) and `RUN_TRACKERS`, so no shared list is edited and the order is fixed. Build
+conditions and rule actions with `defineCondition` / `defineRuleAction` from `ai/types.ts`, and
+generation steps with `defineGenStep` from `gen/types.ts`.
+
+A run tracker is the interface from §2.4 and §6.4:
+
+```ts
+interface RunTracker<S> { id: string; init(): S; reduce(state: S, event: SimEvent): S }
+```
+
+`reduce` is pure (no randomness, no change to `state` in place). ETH-062 builds the framework
+that runs every tracker over each step's events and keeps their states in the run domain's slice.
+
+### Stats
+
+`StatId` is fixed in `src/sim/stats/statIds.ts`: `hp`, `mp` (the maxima; current HP and MP
+stay on the actor part), `accuracy`, `evasion`, `damage`, `armor`, `speed`, `sight`, `carry`.
+`STAT_IDS` lists them and `isStatId` checks one.
+
+- **ETH-057 builds `getStat(state, actor, stat)`** on these ids: base value plus modifiers, with
+  each contributing modifier's source for the tooltip (§2.2). Existing reads of HP, MP, speed
+  and sight move to it.
+- **Attributes (ETH-033) are not stats.** They are inputs that derive these ids (a strength
+  bonus becomes a `damage` modifier).
+- Content names stats by id string; `checkGame` checks refs of kind `stat` against `STAT_REFS`.
+  A new stat is one entry in `STAT_IDS`.
+
+### Rewards
+
+The reward flow, end to end. The sim never touches banked currency.
+
+```
+sim events ──► RunTrackers ──► state.domains.run.rewards.atRisk ──► RunResult ──► meta applyRunResult
+(step)         (reduce)        (currency id → amount, this run)     (run end)     (banks it; a wipe loses 25%,
+                                                                                    then the Omen multiplier)
+```
+
+- Trackers turn events (kills, depth reached, conducts kept) into at-risk amounts. Nothing else
+  writes `rewards.atRisk`.
+- At run end the run domain puts the at-risk totals in the `RunResult` (ETH-062).
+- `applyRunResult` in meta (§6.4) applies the wipe loss and the Omen multiplier and adds the
+  result to the profile's banked currency. Currency ids are settled with the currencies in M2:
+  `renown`, `trophies` and favor per deity.
+
+### State version
+
+`STATE_VERSION` (`src/sim/state.ts`) changes whenever the shape of `RunState` changes, entity
+parts and domain slices included. **A PR that changes the shape sets it to the version on main
+plus one when it rebases**, so two branches never ship different shapes under one number. If
+main moved past your version while your PR waited, rebase and bump again. ETH-055 made it 4.
+
+### Content kinds
+
+Besides terrain, features, classes, races and floor types, these kinds exist as placeholders
+with a registry, a minimal schema (the `Def` fields only), a `KIND` in `CONTENT_KINDS` and a
+`define*` helper, but no defs: `monster` (`src/content/monsters.ts`), `item` (`items.ts`),
+`contract` (`contracts.ts`), `bounty` (`bounties.ts`), `omen` (`omens.ts`) and `deity`
+(`deities.ts`). The owning item extends the def type and the schema together and adds the
+defs. `src/content/index.ts` re-exports them with `export *`.
+
+---
+
 ## 1. Layers
 
 ```
@@ -143,16 +340,18 @@ As built in `src/sim/actions.ts` (ETH-005):
 
 - **Requests are a typed union** keyed by `id` (`wait`, `move`, `openDoor`). Move and open door
   take a one-tile step `dir` (`{ x, y }`, each -1, 0 or 1, as in `DIRS_8`).
-- **Definitions live in one `ACTIONS` record, not a `Registry`.** Actions are code, not data,
-  and the record's type makes the set exhaustive: a request type without a def, or a def
-  without a request type, fails to compile. Each `ActionDef` has `name` and `description` (Codex
+- **Definitions live in exhaustive records, not a `Registry`.** Actions are code, not data.
+  Since ETH-055 each domain has an `ActionRecord<R>` over its own request union (the core
+  actions are `CORE_ACTIONS` in `coreActions.ts`) and the hub joins them into `ACTIONS`
+  (Contracts): a request type without a def, or a def without a request type, fails to
+  compile. `ActionDef<R>` is generic over the request type. Each `ActionDef` has `name` and `description` (Codex
   and tooltip text), an energy `cost`, and three functions: `parse` builds a clean request from
   untyped data, `validate` returns a reason or `null` and changes nothing, and `execute`.
 - **Entry points:** `parseRequest` (for anything crossing into the sim, such as a
   `playerAction` command), `validateAction` (for the AI to check an action before choosing it)
   and `performAction` (for the scheduler, which charges the returned cost). An invalid request
   emits `actionFailed` with the reason and becomes a wait.
-- **Movement rules** live in `stepBlocker(state, floor, from, dir)`, which ignores creatures so
+- **Movement rules** live in `stepBlocker(state, floor, from, dir)` (`coreActions.ts`), which ignores creatures so
   goal maps can share it: the target must be in bounds and not a wall, a closed door blocks, and
   a doorway (a tile with a door, open or closed) can only be entered or left orthogonally. Move
   adds that another actor's tile is blocked. Diagonal steps are otherwise allowed, including
@@ -171,7 +370,8 @@ type SimEvent =
 
 Events are the sim's only output besides snapshots. Consumers:
 
-- **Log:** one text template per event type, stored in content.
+- **Log:** one formatter per event type, in `ui/shell/logText/<domain>.ts` (Contracts, "Log
+  text").
 - **AI trace:** `ruleFired` drives the party card intent line and the rules editor counters.
 - **Rewards and conducts:** reducers over the stream (§6).
 - **Codex:** first sighting of an id marks it discovered.
@@ -264,9 +464,13 @@ As built in `src/sim/state.ts` (ETH-003):
 - **Party memory:** `RunState.memory` holds what the party has seen of each built floor, keyed
   like `floors` (§3.7). `STATE_VERSION` went to 2 when it was added, and to 3 when entities got
   the `ai` part (§4).
+- **Domain slices (ETH-055):** `RunState.domains` holds one slice per domain
+  (`state.domains.quests`), built by `initDomains(config)` in `createRun` (`createRun.ts`,
+  formerly `run.ts`, renamed because `src/sim/run/` is now the run domain). `STATE_VERSION`
+  went to 4. See Contracts for where state goes and the version-bump rule.
 - **Planned: quest state.** Contracts and bounties (CLAUDE.md §6, Quests) will add quest
-  state to `RunState`: the selected contracts and accepted bounties with per-quest progress,
-  stored as ids and plain data. The shape is decided in ETH-024 and documented here then.
+  state in the quests domain's slice: the selected contracts and accepted bounties with
+  per-quest progress, stored as ids and plain data. The shape is decided in ETH-024.
 
 ### 3.2 Entities
 
@@ -385,6 +589,10 @@ they can arrive from a worker or a file, each is checked at run time, and a bad 
 `type`, missing actor, unknown action) produces a `commandRejected` event and changes nothing; it
 never throws. The only command so far is `playerAction`, which stores the request in the actor's
 `queued` field to run in place of its next decision. The others are added with their features.
+Since ETH-055 each command is a `CommandDef` (`{ type, apply(state, raw) }`, which returns a
+reason or `null` and checks everything before changing anything) in its domain's exhaustive
+`CommandRecord`; `playerAction` is in `CORE_COMMANDS` (`coreCommands.ts`), and the hub joins
+them into `COMMANDS`. A snapshot also has `domains`, one slice per domain (Contracts).
 
 A `Snapshot` is a read-only view built for the UI: the current floor as the party knows it
 (glyph ids, visibility, memory), party summaries with computed stats and current intent, and
@@ -424,7 +632,8 @@ As built in `src/sim/gen/` (ETH-006):
 
 - **Floor types are content** (`src/content/floors.ts`, registry `FLOOR_TYPES`): a size and a
   list of `{ step, params? }`. The first is `floor.halls` (Hewn Halls, 64×32). The steps are
-  code, in the sim's `GEN_STEPS` registry, so content names them by id only.
+  code, in the sim's `GEN_STEPS` registry (`registries.ts`, filled by the hub from `ROOM_STEPS`
+  and each domain's `genSteps`), so content names them by id only.
 - **A step is a `GenStepDef`** made with `defineGenStep({ id, …, parse, run })`. `parse` checks
   the untyped params (usually with `readParams`, which fills in defaults and rejects unknown
   keys and out-of-range numbers), and `bind(params)` returns the step ready to run, so `run`
@@ -530,7 +739,9 @@ As built in `src/sim/ai/` (ETH-009):
 - **Registries live in the sim, not content:** `CONDITIONS` and `RULE_ACTIONS` are `Registry`s
   of code (they read run state), built with `defineCondition` / `defineRuleAction`, which parse
   the rule's `params` before `evaluate`, `resolve` or `describe` see them (`noParams` for none).
-  Ids are `cond.*` and `act.*`. `paramSchema` arrives with the rules editor (M3).
+  Ids are `cond.*` and `act.*`. `paramSchema` arrives with the rules editor (M3). Since ETH-055
+  the registries live in `registries.ts` and the hub fills them: the core lists
+  (`CORE_CONDITIONS`, `CORE_RULE_ACTIONS`) first, then each domain's (Contracts).
 - **Walking the rules:** the actor's own rules, then `BASELINE_RULES`. A rule is taken if it is
   enabled, isn't a dropped goal, names a registered condition and rule action with good params,
   its condition holds, and its action resolves to a request that passes `validateAction`.
@@ -580,7 +791,8 @@ As built (ETH-015):
   `floors.ts`); a type moves into its own folder when it grows. Each file holds the def
   interface, its `Registry`, a `ContentKind` (`{ registry, schema, refs? }`), a `define*` helper
   that registers a def with type checking, and the defs themselves. `CONTENT_KINDS` in
-  `registries.ts` lists every kind.
+  `registries.ts` lists every kind. Monster, item, contract, bounty, omen and deity are
+  placeholder kinds with no defs yet (Contracts, "Content kinds").
 - **Schemas are Zod 4** (`zod`, bundled), built from shared pieces in `schema.ts`: `defShape(prefix)`
   (an id in the kind's namespace, a non-empty name and description, lowercase tags),
   `glyphSchema` (one character, a lowercase `#rrggbb` color, optional `bold`) and number
@@ -886,7 +1098,7 @@ tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
 | Monster, item, class, race | One content def |
 | Omen, blessing, trait, status effect | One content def (a bundle) |
 | A new kind of effect | One case in the effect interpreter |
-| Rule condition or rule action | One registry entry, and a Library node to unlock it |
+| Rule condition or rule action | One entry in its domain's `conditions` / `ruleActions` list, and a Library node to unlock it |
 | Town upgrade | One node def |
 | Town building | Node defs with a new `tree` id, and a panel title |
 | Floor type | A step list; a new `GenStep` only if the shape is new |

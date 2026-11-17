@@ -48,7 +48,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-014](ui-shell/ETH-014-pause-speed-controls.md) | Pause, speed controls and keyboard shortcuts | ui-shell | M0 | P1 | done | S |
 | [ETH-015](content/ETH-015-content-registry-first-defs.md) | Content registry with validation and first definitions | content | M0 | P1 | done | S |
 | [ETH-016](tools-balance/ETH-016-determinism-headless-run.md) | Determinism test and headless run script | tools-balance | M0 | P1 | done | S |
-| [ETH-055](sim-core/ETH-055-extension-seams.md) | Extension seams so feature work lands in per-domain files | sim-core | M1 | P0 | ready | M |
+| [ETH-055](sim-core/ETH-055-extension-seams.md) | Extension seams so feature work lands in per-domain files | sim-core | M1 | P0 | done | M |
 | [ETH-056](tools-balance/ETH-056-invariants-soak-compare.md) | Safety net: state invariants, soak test, app-boot smoke test and sim compare | tools-balance | M1 | P0 | done | M |
 | [ETH-057](combat-items/ETH-057-bundles-stats-statuses.md) | Bundles (modifiers, effects, triggers), stats with sources and timed statuses | combat-items | M1 | P0 | ready | M |
 | [ETH-058](sim-core/ETH-058-multi-floor-descent.md) | Multiple floors: stairs, lazily generated floors and a baseline descend rule | sim-core | M1 | P0 | ready | M |

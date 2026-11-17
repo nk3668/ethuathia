@@ -7,6 +7,7 @@ import { bindingFor, KEYMAP, keysFor } from '../../src/ui/input/keymap';
 import { AppShell } from '../../src/ui/shell/AppShell';
 import { useSimStore } from '../../src/ui/stores/simStore';
 import { cycleSelection, LOG_HEIGHT, useUiStore } from '../../src/ui/stores/uiStore';
+import { fixtureDomains } from './fixtures';
 
 // jsdom has no 2D canvas; the map then draws nothing.
 HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
@@ -42,6 +43,7 @@ function snapshotWith(party: Snapshot['party']): Snapshot {
       explored: { seen: 1, total: 1, fraction: 1 },
     },
     party,
+    domains: fixtureDomains(),
   };
 }
 

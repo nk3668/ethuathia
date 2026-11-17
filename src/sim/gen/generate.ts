@@ -2,17 +2,13 @@
  * The floor generation pipeline (docs/ARCHITECTURE.md §3.6): a floor type is an ordered list of
  * step ids with parameters, and `generateFloor` runs them in order on an all-wall floor.
  */
-import { Grid, Registry } from '../../core';
+import { Grid } from '../../core';
 import type { Rng } from '../../core';
 import type { FloorTypeDef } from '../../content';
 import type { FloorPlan } from '../floorText';
+import { GEN_STEPS } from '../registries';
 import { Terrain } from '../state';
-import { ROOM_STEPS } from './steps';
-import type { BoundGenStep, FloorDraft, GenStepDef } from './types';
-
-/** Every generation step, by id (`gen.rooms`, `gen.corridors`, …). */
-export const GEN_STEPS = new Registry<GenStepDef>('generation step');
-for (const step of ROOM_STEPS) GEN_STEPS.register(step);
+import type { BoundGenStep, FloorDraft } from './types';
 
 /** The smallest floor side: room for a wall border round one floor tile. */
 const MIN_SIDE = 3;

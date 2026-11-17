@@ -3,11 +3,17 @@
  * tooltips and the map.
  */
 import type { Def } from '../core';
+import { BOUNTY_KIND } from './bounties';
 import { CLASS_KIND } from './classes';
+import { CONTRACT_KIND } from './contracts';
+import { DEITY_KIND } from './deities';
 import { FEATURE_KIND, FEATURES } from './features';
 import { FLOOR_TYPE_KIND } from './floors';
+import { ITEM_KIND } from './items';
 import { checkKinds, ContentError } from './kind';
 import type { ContentKind, RefTarget } from './kind';
+import { MONSTER_KIND } from './monsters';
+import { OMEN_KIND } from './omens';
 import { RACE_KIND } from './races';
 import type { Glyph } from './schema';
 import { TERRAIN, TERRAIN_KIND } from './terrain';
@@ -19,6 +25,12 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
   CLASS_KIND,
   RACE_KIND,
   FLOOR_TYPE_KIND,
+  MONSTER_KIND,
+  ITEM_KIND,
+  CONTRACT_KIND,
+  BOUNTY_KIND,
+  OMEN_KIND,
+  DEITY_KIND,
 ];
 
 /**

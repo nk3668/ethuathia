@@ -15,10 +15,9 @@ import { validateAction } from '../actions';
 import type { ActionRequest } from '../actions';
 import type { Emit } from '../events';
 import { explored } from '../perception';
+import { CONDITIONS, RULE_ACTIONS } from '../registries';
 import type { Decide } from '../step';
 import type { RunState } from '../state';
-import { CONDITIONS } from './conditions';
-import { RULE_ACTIONS } from './ruleActions';
 import type { AiActor, AiCtx, AiMemory, Rule, RuleRef } from './types';
 
 /** Decisions in a row without progress after which the current goal is dropped. */

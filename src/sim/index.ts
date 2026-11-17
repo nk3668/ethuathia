@@ -1,19 +1,45 @@
 /**
  * sim: the deterministic simulation. No DOM access.
  * May import: core, content. See docs/ARCHITECTURE.md §1.
+ *
+ * The composition hub, `domains.ts`, must stay the first module loaded: it reads every domain
+ * once they have all finished loading (docs/ARCHITECTURE.md, Contracts). Keep this line first.
  */
-export { ACTIONS, isActionId, isStep, parseRequest, performAction, stepBlocker, validateAction } from './actions';
+export {
+  ACTIONS,
+  COMMANDS,
+  CONDITIONS,
+  DOMAIN_KEYS,
+  DOMAINS,
+  domainSnapshots,
+  GEN_STEPS,
+  initDomains,
+  RULE_ACTIONS,
+  RUN_TRACKERS,
+} from './domains';
 export type {
-  ActionCtx,
-  ActionDef,
-  ActionId,
-  ActionRequest,
-  ActorCtx,
-  MoveRequest,
-  OpenDoorRequest,
-  RequestOf,
-  WaitRequest,
-} from './actions';
+  DomainKey,
+  DomainShape,
+  DomainSnapshots,
+  DomainStates,
+  DomainTypes,
+  RunTracker,
+  SimDomain,
+  SnapshotCtx,
+} from './domain';
+export { isActionId, parseRequest, performAction, validateAction } from './actions';
+export type { ActionCtx, ActionDef, ActionId, ActionRecord, ActionRequest, ActorCtx, BaseRequest, RequestOf } from './actions';
+export { CORE_ACTIONS, isStep, stepBlocker } from './coreActions';
+export type { CoreRequest, MoveRequest, OpenDoorRequest, WaitRequest } from './coreActions';
+export { CORE_COMMANDS } from './coreCommands';
+export type { CoreCommand, PlayerActionCommand } from './coreCommands';
+export type { CoreEvent } from './coreEvents';
+export * from './stats';
+export * from './floors';
+export * from './combat';
+export * from './items';
+export * from './quests';
+export * from './run';
 export {
   ACT_BACK_OFF,
   ACT_EXPLORE,
@@ -23,7 +49,7 @@ export {
   chooseRule,
   COND_ALWAYS,
   COND_STUCK,
-  CONDITIONS,
+  CORE_CONDITIONS,
   defineCondition,
   defineRuleAction,
   DROP_TURNS,
@@ -32,7 +58,7 @@ export {
   newAiPart,
   noParams,
   OCCUPIED_COST,
-  RULE_ACTIONS,
+  CORE_RULE_ACTIONS,
   ruleDecide,
   STUCK_TURNS,
 } from './ai';
@@ -55,8 +81,8 @@ export type {
   RuleRef,
 } from './ai';
 export { applyCommand } from './commands';
-export type { Command, CommandType, PlayerActionCommand } from './commands';
-export type { Emit, SimEvent, SimEventBody, SimEventType } from './events';
+export type { BaseCommand, Command, CommandDef, CommandRecord, CommandType } from './commands';
+export type { Emit, EventOf, SimEvent, SimEventBody, SimEventType } from './events';
 export { ENERGY_THRESHOLD, step, waitDecide } from './step';
 export type { Decide, DecideCtx, StepOptions } from './step';
 export {
@@ -75,7 +101,7 @@ export {
 export type { NewEntity } from './entities';
 export { floorToText, parseFloorText, planToText } from './floorText';
 export type { FloorPlan } from './floorText';
-export { checkFloorType, defineGenStep, GEN_STEPS, generateFloor, readParams, rectTiles } from './gen';
+export { checkFloorType, defineGenStep, generateFloor, readParams, rectTiles, ROOM_STEPS } from './gen';
 export type { BoundGenStep, FloorDraft, GenStepDef, NumberParam, Rect } from './gen';
 export {
   buildFleeMap,
@@ -122,7 +148,7 @@ export {
   TURNS_PER_SECOND,
 } from './host';
 export type { Clock, HostMessage, HostRequest, HostUpdate, SimHost, Speed, Unsubscribe } from './host';
-export { adventurerActor, createRun, FIRST_FLOOR_TYPE } from './run';
+export { adventurerActor, createRun, FIRST_FLOOR_TYPE } from './createRun';
 export { deserialize, serialize, stateHash } from './serialize';
 export { snapshot } from './snapshot';
 export { checkFloorParams, checkGame, validateGame } from './validate';

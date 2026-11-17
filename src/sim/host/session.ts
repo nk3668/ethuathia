@@ -6,7 +6,7 @@
 import { clonePlain } from '../../core';
 import type { Command } from '../commands';
 import type { SimEvent } from '../events';
-import { createRun } from '../run';
+import { createRun } from '../createRun';
 import { stateHash } from '../serialize';
 import { snapshot } from '../snapshot';
 import type { Snapshot, ViewOptions } from '../snapshot';

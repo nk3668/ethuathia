@@ -5,28 +5,45 @@
  * Commands may cross a worker boundary or come from a save, so each one is checked at run time.
  * A bad command is rejected with a `commandRejected` event and changes nothing; it never throws.
  *
- * More commands arrive with the features that need them: `setRules` and `setDoctrine` with
+ * This file holds the shapes and the pipeline. The definitions live with their domain: the core
+ * commands in `coreCommands.ts`, the rest in `src/sim/<domain>/`, joined into `COMMANDS` by
+ * `domains.ts`. More arrive with the features that need them: `setRules` and `setDoctrine` with
  * behavior rules (M3), `possess` and `release` with possession, and `retreat` with run endings.
  */
-import { parseRequest } from './actions';
-import type { ActionRequest } from './actions';
+import type { CoreCommand } from './coreCommands';
+import type { DomainKey, DomainTypes } from './domain';
+import { COMMANDS } from './domains';
 import type { Emit } from './events';
-import type { EntityId, RunState } from './state';
+import type { RunState } from './state';
 
-/**
- * Overrides `actor`'s next decision with `action`. Possession will send one of these per key
- * press; the AI resumes after it.
- */
-export interface PlayerActionCommand {
-  type: 'playerAction';
-  actor: EntityId;
-  action: ActionRequest;
+/** What every command has: the `type` that picks its definition. */
+export interface BaseCommand {
+  type: string;
 }
 
-/** Everything the UI can ask of a run. A union keyed by `type`. */
-export type Command = PlayerActionCommand;
+/** Everything the UI can ask of a run: the core commands plus every domain's. Keyed by `type`. */
+export type Command = CoreCommand | DomainTypes[DomainKey]['command'];
 
 export type CommandType = Command['type'];
+
+/** One command's definition, for command type `C`. */
+export interface CommandDef<C extends BaseCommand> {
+  readonly type: C['type'];
+  /**
+   * Applies the command and returns `null`, or returns why it can't be applied. `raw` is
+   * untyped (it may come from a worker or a file), so check every field. Every check must come
+   * before the first change, so a rejected command changes nothing.
+   */
+  apply(state: RunState, raw: Readonly<Record<string, unknown>>): string | null;
+}
+
+/**
+ * The definitions for a command union `C`, keyed by type. Exhaustive like `ActionRecord`; each
+ * domain exports one for its own commands (`CommandRecord<never>` is `{}`).
+ */
+export type CommandRecord<C extends BaseCommand> = { readonly [K in C['type']]: CommandDef<Extract<C, { type: K }>> };
+
+export { COMMANDS };
 
 /** Applies one command, or emits `commandRejected` with the reason and changes nothing. */
 export function applyCommand(state: RunState, command: Command, emit: Emit): void {
@@ -36,25 +53,11 @@ export function applyCommand(state: RunState, command: Command, emit: Emit): voi
   if (reason !== null) emit({ type: 'commandRejected', command: type, reason });
 }
 
-/**
- * Applies `raw` and returns `null`, or returns why it can't be applied. Every check comes before
- * the first change, so a rejected command changes nothing.
- */
+/** Applies `raw` and returns `null`, or returns why it can't be applied. */
 function run(state: RunState, raw: Readonly<Record<string, unknown>>): string | null {
-  switch (raw.type) {
-    case 'playerAction': {
-      const entity = typeof raw.actor === 'number' ? state.entities[raw.actor] : undefined;
-      if (entity === undefined) return `No entity ${String(raw.actor)}`;
-      if (entity.actor === undefined) return `Entity ${entity.id} cannot act`;
-      // Parsed into a fresh object, so nothing the caller holds ends up in the state.
-      const request = parseRequest(raw.action);
-      if (typeof request === 'string') return request;
-      entity.actor.queued = request;
-      return null;
-    }
-    default:
-      return `Unknown command type "${String(raw.type)}"`;
-  }
+  const type = raw.type;
+  if (typeof type !== 'string' || !Object.hasOwn(COMMANDS, type)) return `Unknown command type "${String(type)}"`;
+  return COMMANDS[type as CommandType].apply(state, raw);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
