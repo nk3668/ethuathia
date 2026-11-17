@@ -1,9 +1,13 @@
 /**
  * `npm run sim -- --seeds N`: runs N seeded floors headlessly and prints the report from
- * `tools/headless.ts`. Run with `tsx`, which loads the TypeScript sources directly. Everything
- * happens on this machine; nothing is fetched.
+ * `tools/headless.ts`. `--json FILE` also saves the report; `--compare REF` and `--baseline FILE`
+ * print a before/after table (`tools/compare.ts`). Run with `tsx`, which loads the TypeScript
+ * sources directly. Everything happens on this machine; nothing is fetched.
  */
+import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
+import { formatComparison, makeReport, parseReport, runRef } from './compare';
+import type { SimReport } from './compare';
 import { formatReport, headlessParty, parseSimArgs, runSeeds, USAGE } from './headless';
 import type { SimArgs } from './headless';
 
@@ -20,6 +24,22 @@ function main(argv: readonly string[]): number {
     return 0;
   }
 
+  let before: SimReport | null = null;
+  let label = 'before';
+  try {
+    if (args.baseline !== null) {
+      before = parseReport(readFileSync(args.baseline, 'utf8'), args.baseline);
+      label = 'baseline';
+    } else if (args.compare !== null) {
+      console.log(`Running the same seeds on ${args.compare} for the baseline...`);
+      before = runRef(args.compare, args);
+      label = args.compare;
+    }
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
+
   const last = args.from + args.seeds - 1;
   console.log(
     `Headless run: seeds ${args.from}-${last}, party of ${args.party}, cap ${args.cap} party turns per floor\n`,
@@ -29,6 +49,16 @@ function main(argv: readonly string[]): number {
   const seconds = (performance.now() - started) / 1000;
   console.log(formatReport(results, args.cap));
   console.log(`\nRan in ${seconds.toFixed(2)} s.`);
+
+  const report = makeReport(args, results);
+  if (args.json !== null) {
+    writeFileSync(args.json, `${JSON.stringify(report, null, 2)}\n`);
+    console.log(`Report written to ${args.json}.`);
+  }
+  if (before !== null) {
+    console.log(`\nComparison (${label} -> this checkout):\n`);
+    console.log(formatComparison(before, report, { before: label, after: 'this' }));
+  }
   return 0;
 }
 

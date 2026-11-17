@@ -48,7 +48,7 @@ const layerConfigs = Object.entries(LAYERS).map(([layer, { allowed, typesOnly = 
 });
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'src-tauri/target', '.claude'] },
+  { ignores: ['dist', 'coverage', 'src-tauri/target', '.claude', '.sim-compare'] },
 
   js.configs.recommended,
   tseslint.configs.strict,

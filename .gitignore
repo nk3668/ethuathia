@@ -19,3 +19,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Temporary worktrees made by `npm run sim -- --compare`
+.sim-compare/

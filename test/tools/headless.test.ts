@@ -79,14 +79,28 @@ describe('tools/headless', () => {
   });
 
   it('reads the command line', () => {
-    expect(parseSimArgs([])).toEqual({ seeds: 10, from: 1, cap: DEFAULT_TURN_CAP, party: 1, help: false });
+    expect(parseSimArgs([])).toEqual({
+      seeds: 10,
+      from: 1,
+      cap: DEFAULT_TURN_CAP,
+      party: 1,
+      json: null,
+      compare: null,
+      baseline: null,
+      help: false,
+    });
     expect(parseSimArgs(['--seeds', '25', '--from', '100', '--cap', '400', '--party', '3'])).toEqual({
       seeds: 25,
       from: 100,
       cap: 400,
       party: 3,
+      json: null,
+      compare: null,
+      baseline: null,
       help: false,
     });
+    expect(parseSimArgs(['--json', 'out.json', '--compare', 'origin/main'])).toMatchObject({ json: 'out.json', compare: 'origin/main' });
+    expect(() => parseSimArgs(['--compare', 'main', '--baseline', 'b.json'])).toThrow('not both');
     expect(parseSimArgs(['--help']).help).toBe(true);
     expect(() => parseSimArgs(['--seeds', '0'])).toThrow('--seeds must be a whole number from 1 up, got "0"');
     expect(() => parseSimArgs(['--party', '5'])).toThrow('--party must be a whole number from 1 to 4, got "5"');

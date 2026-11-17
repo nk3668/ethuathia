@@ -73,5 +73,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['test/**/*.test.{ts,tsx}'],
+    // Seed sweeps (the soak, 100-floor exploration) take a few seconds alone and can pass 5 s
+    // when the whole suite runs in parallel on a busy machine.
+    testTimeout: 20_000,
   },
 });

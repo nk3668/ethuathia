@@ -147,3 +147,4 @@ export type {
   RunConfig,
   RunState,
 } from './state';
+export * from './invariants';

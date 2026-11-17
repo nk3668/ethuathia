@@ -67,3 +67,25 @@ backlog/
 2. Copy `_templates/item.md` to `<epic-slug>/ETH-###-slug.md`, or to the root if it has no epic.
 3. Fill in the frontmatter and the body sections.
 4. Add a row to `INDEX.md`. If the item belongs to an epic, add it to that epic's `_epic.md`.
+
+## Gates
+
+Every PR must pass these before it is opened. They catch a broken game, not just a broken unit
+(details in [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) §11).
+
+1. **`npm run check`**: typecheck, lint and every test. The tests include:
+   - **invariants and soak** (`test/sim/soak.test.ts`): 30 seeded runs with every state
+     invariant checked after every step, a mid-run save and load that must carry on identically,
+     and no throws or stuck storms. If your item adds state, register invariants for it with
+     `registerInvariant` in its domain module;
+   - **determinism** (`test/sim/determinism.test.ts`): extend its command script when you add
+     commands;
+   - **app boot** (`test/ui/appBoot.test.tsx`): the whole app plays 300 turns with no
+     `console.error`.
+2. **Sim compare:** run `npm run sim -- --seeds 50 --compare origin/main` and paste the table in
+   the PR body with a line on which changes were intended. A pure refactor should show
+   "no behavior change".
+3. **Bigger soak** after changes to the step loop, AI or state shape:
+   `npm run soak -- --seeds 200 --cap 2000` (about 5 minutes).
+4. **UI changes:** run `npm run dev`, look at the change in the browser and check the console has
+   no errors.
