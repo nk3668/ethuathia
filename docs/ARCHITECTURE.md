@@ -264,6 +264,9 @@ As built in `src/sim/state.ts` (ETH-003):
 - **Party memory:** `RunState.memory` holds what the party has seen of each built floor, keyed
   like `floors` (§3.7). `STATE_VERSION` went to 2 when it was added, and to 3 when entities got
   the `ai` part (§4).
+- **Planned: quest state.** Contracts and bounties (CLAUDE.md §6, Quests) will add quest
+  state to `RunState`: the selected contracts and accepted bounties with per-quest progress,
+  stored as ids and plain data. The shape is decided in ETH-024 and documented here then.
 
 ### 3.2 Entities
 

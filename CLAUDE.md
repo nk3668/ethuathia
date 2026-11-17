@@ -57,9 +57,11 @@ Roguathia's gaps, and our answers to them:
 4. **Patron deity:** optional. It grants a blessing and imposes a taboo (§6).
 5. **Omens:** toggle difficulty modifiers. The total Omen level is shown as a reward multiplier.
 6. **Dungeon:** pick a dungeon variant once more than one is unlocked (depth, floor size, theme).
+7. **Contracts:** pick a main quest for each contract slot (one slot to start; the Guild Hall adds more). See §6.
+8. **Bounties:** accept side quests from the bounty board (§6).
 
 ### Ending a run
-- **Victory:** recover the run's objective (the relic at the bottom, survive N turns, and so on) and get out or ascend.
+- **Victory:** complete **every** selected contract (§6), then walk back up and out of the dungeon. Each contract pays its own reward.
 - **Retreat:** a rule or a manual command sends the party back up. The party keeps everything earned this run, and every survivor returns to the roster.
 - **Wipe:** the whole party dies. Each death leaves a gravestone (§7), and **25% (default)** of the currency earned this run is lost (§3).
 - **Run summary screen:** cause of death, conducts kept, currency breakdown with the Omen multiplier, heirlooms dropped, and an epitaph.
@@ -117,7 +119,7 @@ The town is a set of buildings. Each building has its own upgrade tree, and buil
 
 ### 5.2 Behavior rules (the main progression system)
 - A rule is **Condition → Action**, optionally scoped to a target (self, ally, enemy, item, tile).
-- Example conditions: `HP < X%`, `enemy adjacent`, `enemy stronger than me`, `ally HP < X%`, `inventory full`, `floor explored ≥ X%`, `has unidentified potion`, `standing on altar`, `poisoned`, `outnumbered`.
+- Example conditions: `HP < X%`, `enemy adjacent`, `enemy stronger than me`, `ally HP < X%`, `inventory full`, `floor explored ≥ X%`, `has unidentified potion`, `standing on altar`, `poisoned`, `outnumbered`, `contract complete`, `bounty target seen`, `carrying relic`.
 - Example actions: `quaff best healing`, `retreat toward stairs up`, `attack weakest / strongest / nearest`, `use ranged`, `cast <spell>`, `drop lowest-value item`, `equip best`, `pray`, `head to stairs down`, `regroup with party`, `retreat run`.
 - The player starts with a few slots and a small vocabulary; the Library unlocks more of both.
 - Ship **presets** ("Cautious", "Greedy", "Speedrunner") so a new player gets reasonable behavior before learning the editor.
@@ -147,13 +149,23 @@ unrelated to the offline-only constraint.
 
 ## 6. Run modifiers and goals
 
+### Quests
+- **Contracts** are main quests, picked on the Prepare screen. Types: *Recover the relic* (bottom floor), *Slay a named foe* (a unique on a set floor), *Gather* (N magical items spread over the floors), *Delve* (reach depth N), and later *Rescue* (a lost adventurer or a fallen one's heirloom, §7).
+- The player starts with one contract slot; the Guild Hall adds more. **Victory needs every selected contract complete, and the party then has to walk back out.** Each contract pays its own reward, so taking more is a risk the player chooses, like an Omen.
+- **The return trip:** floors already explored are crossed quickly along known paths, but some monsters respawn, so retreat rules still matter.
+- **Bounties** are side quests ("kill 3 trolls", "drink from a fountain"). They come from a bounty board on the Prepare screen and from encounters in the dungeon. A bounty never ends the run and never sends the party home. Its reward joins the run's at-risk total, so a wipe loses 25% of it like any other earnings (§3).
+- The baseline AI weighs contract targets heavily and bounty targets lightly; rules can change that (§5.2).
+
+### Elites and mini-bosses
+Elite monsters can appear on any floor, with a name prefix and 1–2 traits (e.g. *Venomous*, *Swift*). A mini-boss appears every **3 floors (default)**, often guarding the stairs down. Both drop magic items from a better loot table (more affixes, higher rolls, more enchantment, a chance of an artifact).
+
 ### Omens (opt-in difficulty)
 Each Omen has ranks, and each rank adds to the reward multiplier. Examples:
 - *Gloom*: smaller field of view.
-- *Ravenous*: food drains faster.
+- *Ravenous*: food drains faster. (There is no food system planned yet; ETH-053 decides what to do with this Omen.)
 - *Thriving Dark*: monsters regenerate.
 - *Dry Wells*: no fountains.
-- *Elite Spawns*: more powerful monsters.
+- *Elite Spawns*: elite monsters appear more often.
 - *Cursed Hoard*: more cursed items.
 - *Short Leash*: turn limit per floor.
 
@@ -178,7 +190,7 @@ Floor types include caves, mines, flooded floors, fortresses, swamps, lava field
 ## 7. Lineage
 
 - **Roster:** named adventurers with level, history (runs, deepest floor, kills) and traits. Survivors come back with XP.
-- **Gravestones:** a fallen adventurer leaves a grave on the floor where they died, holding one **heirloom** (their best item). Later runs can find it. Some graves raise a **ghost**, either hostile or an ally if the Ossuary is upgraded.
+- **Gravestones:** a fallen adventurer leaves a grave on the floor where they died, holding one **heirloom** (their best item). Later runs can find it. Some graves raise a **ghost**, either hostile or an ally if the Ossuary is upgraded. The party can **pay respects** at a grave: read the epitaph, take minor loot from that adventurer's last run, and receive a short boon from the fallen adventurer's patron deity.
 - **Retirement:** veterans can retire to a Tavern job for a permanent passive bonus (smith → better starting gear, cartographer → map knowledge, and so on).
 - **Descendants:** new recruits can be kin of a fallen adventurer and inherit one trait.
 - **Graveyard tab:** a memorial list with epitaphs. It is cosmetic, but it gives the game personality.
@@ -262,12 +274,12 @@ Imports only point downward in this list: `core` imports nothing, `ui` may impor
 The milestones are broken down into work items in the backlog (§11).
 
 1. **M0 – Skeleton:** scaffold the project; sim core with one floor, one adventurer, baseline exploration and canvas map; pause and speed controls.
-2. **M1 – A full run:** multiple floors, stairs, combat, items, death, run summary, auto-restart.
-3. **M2 – Meta layer:** currencies, Town with Guild Hall and Smithy, saves, Codex.
-4. **M3 – Behavior rules:** rules editor, Library, presets, AI trace in the log.
-5. **M4 – Risk:** Omens, conducts, reward multiplier.
-6. **M5 – Lineage:** roster, gravestones, heirlooms, retirement, Ossuary and Tavern.
-7. **M6 – Depth:** deities, altars, floor types, route forks, offline progress.
+2. **M1 – A full run:** multiple floors, stairs, combat, items, death, run summary, auto-restart; the Recover-relic contract and the return trip; attributes, leveling, monster roles, equipment slots, enchantment and identification.
+3. **M2 – Meta layer:** currencies, Town with Guild Hall and Smithy, saves, Codex; more contract types, contract slots, the bounty board; proficiencies and aptitudes, class unlocks, uniques, monster families, elites and mini-bosses, affixes and artifacts; highlights feed, run history.
+4. **M3 – Behavior rules:** rules editor, Library, presets, AI trace in the log; quest rule conditions, class abilities and class-aware AI roles.
+5. **M4 – Risk:** Omens, conducts, reward multiplier; bounty encounters, traps and searching.
+6. **M5 – Lineage:** roster, gravestones and grave interactions, heirlooms, retirement, Ossuary and Tavern; the Rescue contract.
+7. **M6 – Depth:** deities, altars, floor types, route forks, offline progress, dungeon merchants.
 8. **Later:** tileset, more content, achievements, cosmetics, balance passes.
 
 ---
