@@ -83,9 +83,14 @@ Defined once as CSS custom properties in `src/ui/tokens.css`. Components never u
 | Map and log | JetBrains Mono 400, 700 | map: fitted; log: 12 / 17 | `--font-mono`, `--font-size-log`, `--line-height-log` | 700 for bold glyphs such as stairs |
 
 No fonts load from the network; both families ship in the app bundle. They come from the
-`@fontsource/inter` and `@fontsource/jetbrains-mono` npm packages (imported in
-`src/ui/fonts.css`), which Vite copies into the build. Both are under the SIL Open Font
-License 1.1, and the build writes the two license texts to `dist/licenses/`.
+`@fontsource/inter` and `@fontsource/jetbrains-mono` npm packages. `src/ui/fonts.css` has its
+own `@font-face` rules that point at the packages' `.woff2` files for the **Latin** and **Latin
+Extended** subsets only (Latin Extended covers accented names), and Vite copies just those 10
+files into the build (about 240 kB). No `.woff` fallbacks ship, since the webview reads
+`.woff2`. Characters outside those subsets (Greek, Cyrillic, symbols such as `⚔`) fall back
+to the next font in the stack. Add a subset there if content starts using another script.
+Both families are under the SIL Open Font License 1.1, and the build writes the two license
+texts to `dist/licenses/`.
 
 ### 2.5 Shape and spacing
 
