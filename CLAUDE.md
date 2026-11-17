@@ -131,7 +131,7 @@ Roguathia's wandering was its biggest complaint, so the baseline must not wander
 - **Leave a floor** once exploration is complete or exploration value runs out, with a turn cap per floor as a safety net.
 - **Combat:** fight adjacent enemies, and flee at very low HP when an escape route exists.
 - **Inventory:** never pick up corpses or junk by default, auto-equip clear upgrades, and drop the lowest-value item when overloaded.
-- **Food:** there is no hunger meter and no starvation. Food is an optional consumable that grants a short-term buff when eaten.
+- **Food:** there is no hunger meter and no starvation. Food is an optional consumable that grants a short-term buff when eaten. Buffs of different effect types stack; eating food with an effect type that's already active refreshes that buff instead of stacking it.
 - **Stuck detection:** if position or explore percentage hasn't changed in N turns, change goals and log it.
 
 ### 5.4 Manual control
