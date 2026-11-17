@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Registry } from '../../src/core';
 import { checkKinds, FLOOR_TYPE_KIND } from '../../src/content';
 import type { FloorTypeDef } from '../../src/content';
-import { adventurerActor, checkFloorParams, checkGame, createRun, GEN_STEPS, validateGame } from '../../src/sim';
+import { adventurerActor, checkFloorParams, checkGame, createRun, GEN_STEPS, getEntity, statValue, validateGame } from '../../src/sim';
 
 const floor = (steps: FloorTypeDef['steps']): FloorTypeDef => ({
   id: 'floor.broken',
@@ -43,19 +43,17 @@ describe('adventurers from class and race', () => {
     // Vanguard: 18 HP, 3 MP. Human: +2 HP, +2 MP, speed 100.
     expect(adventurerActor({ name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' })).toEqual({
       energy: 0,
-      speed: 100,
       hp: 20,
-      maxHp: 20,
       mp: 5,
-      maxMp: 5,
       faction: 'party',
     });
   });
 
   it('are created by createRun with those values', () => {
     const state = createRun({ party: [{ name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }] }, 1);
-    const hero = state.entities[state.party[0] as number];
-    expect(hero?.actor).toMatchObject({ hp: 20, maxHp: 20, mp: 5, maxMp: 5, speed: 100 });
+    const hero = getEntity(state, state.party[0] as number);
+    expect(hero.actor).toMatchObject({ hp: 20, mp: 5 });
+    expect([statValue(state, hero, 'hp'), statValue(state, hero, 'mp'), statValue(state, hero, 'speed')]).toEqual([20, 5, 100]);
   });
 
   it('fail on an unknown class or race, naming the adventurer', () => {

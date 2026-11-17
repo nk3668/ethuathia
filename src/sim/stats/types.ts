@@ -1,0 +1,119 @@
+/**
+ * The stats domain's types (docs/ARCHITECTURE.md §2.2 and Contracts, "Stats"). Types only, so
+ * the root `registries.ts` and `domain.ts` can import them without a cycle.
+ */
+import type { Def } from '../../core';
+import type { Bundle } from '../../content';
+import type { Emit } from '../events';
+import type { Entity, EntityId, RunState } from '../state';
+import type { StatId } from './statIds';
+
+/** A bundle attached to an actor, by content id. Saves store ids only (§2.1). */
+export interface AttachedBundle {
+  /** The id of a def with a `bundle` field: a `bundle.*` def, or any other kind that carries one. */
+  bundle: string;
+  /**
+   * The content id credited in tooltips and used to detach it again (`detachBundles`), e.g. the
+   * item or Omen that granted it. Left out, the bundle's own id is the source.
+   */
+  source?: string;
+}
+
+/** A timed status on an actor (`src/sim/stats/statuses.ts`). */
+export interface ActiveStatus {
+  /** Status def id, e.g. `status.poisoned`. */
+  status: string;
+  /** The holder's turns left. Always above 0: at 0 the status expires. */
+  remaining: number;
+  /** Scales the status's modifiers and trigger amounts. 1 is the def as written. */
+  potency: number;
+}
+
+/**
+ * The stats part of an entity: base values, attached bundles and timed statuses. The final
+ * value of a stat comes only from `getStat` / `statValue`.
+ */
+export interface StatsPart {
+  /** Per-entity base values. A stat with no entry starts at `STAT_INFO[stat].base`. */
+  base: Partial<Record<StatId, number>>;
+  /** Bundles attached to this entity, in the order they were attached. */
+  bundles: AttachedBundle[];
+  /** Timed statuses, in the order they were applied. */
+  statuses: ActiveStatus[];
+}
+
+/** Where a stat part came from, for the tooltip: a content id and its display label. */
+export interface StatSource {
+  id: string;
+  label: string;
+}
+
+/** One contribution to a stat. `add` parts are summed, then multiplied by every `mul` part. */
+export interface StatPart {
+  op: 'add' | 'mul';
+  value: number;
+  source: StatSource;
+}
+
+/** A stat's final value and every contribution to it, in order: what a stat tooltip shows. */
+export interface StatResult {
+  stat: StatId;
+  value: number;
+  parts: StatPart[];
+}
+
+/**
+ * Receives a stat contribution. `label` may be left out: `getStat` then looks up the content
+ * name for `sourceId`. `statValue` ignores sources entirely, so providers stay cheap.
+ */
+export type StatSink = (op: 'add' | 'mul', value: number, sourceId: string, label?: string) => void;
+
+/**
+ * Derives part of a stat before bundles apply: the entity's base values, its class and race,
+ * and later attributes (ETH-033) and level (ETH-034). Listed in a domain's `statProviders`;
+ * they run core first, then in domain order, then list order.
+ */
+export interface StatProvider {
+  /** Unique, e.g. `stats.base`, `stats.class_race`, `stats.attributes`. */
+  readonly id: string;
+  /** Calls `sink` once per contribution to `stat` on `entity`. Must not change anything. */
+  contribute(state: RunState, entity: Entity, stat: StatId, sink: StatSink): void;
+}
+
+/** Receives one bundle active on an entity. */
+export type BundleVisitor = (bundle: Bundle, sourceId: string, potency: number) => void;
+
+/**
+ * Lists the bundles active on an entity: attached bundles and statuses (the stats domain), and
+ * later equipped gear (ETH-043) or run-wide Omens (ETH-067). Each bundle's modifiers feed
+ * `getStat` and its triggers fire on `fireTrigger`. Listed in a domain's `bundleSources`.
+ */
+export interface BundleSource {
+  /** Unique, e.g. `stats.attached`, `stats.statuses`, `items.equipped`. */
+  readonly id: string;
+  /** Calls `visit` once per active bundle on `entity`, in a fixed order. Must not change anything. */
+  visit(state: RunState, entity: Entity, visit: BundleVisitor): void;
+}
+
+/**
+ * A trigger kind: a moment a bundle's triggers can react to (`Trigger.on` in content). The
+ * domain that owns the moment lists it in its `triggers` and calls `fireTrigger` there.
+ */
+export interface TriggerKindDef extends Def {
+  /** `trigger.*`, e.g. `trigger.turn_start`. */
+  readonly id: string;
+}
+
+/** What `fireTrigger` and the effect interpreter run in. */
+export interface EffectCtx {
+  readonly state: RunState;
+  readonly emit: Emit;
+  /** Who holds the bundle: the target of effects with `to: 'self'` (the default). */
+  readonly self: EntityId;
+  /** The other party to the event (an attacker, a target), for effects with `to: 'other'`. */
+  readonly other?: EntityId;
+  /** The content id the effect comes from, carried into events for the log. */
+  readonly source: string;
+  /** Scales `heal` and `damage` amounts. 1 is the def as written. */
+  readonly potency: number;
+}

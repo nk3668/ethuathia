@@ -1,4 +1,5 @@
 import { useShallow } from 'zustand/react/shallow';
+import { STATUSES } from '../../content';
 import type { EntityId } from '../../sim';
 import { keyHint } from '../input/keymap';
 import { runKeyAction } from '../input/useKeymap';
@@ -117,6 +118,51 @@ function useMember(id: EntityId) {
   );
 }
 
+/**
+ * A member's timed statuses as badges with turns remaining (docs/VISUAL-DESIGN.md §3.2). The
+ * selector returns one string, so the badges only re-render when a status or its turns change.
+ */
+function StatusBadges({ id }: { id: EntityId }) {
+  const key = useSimStore((s) =>
+    (s.snapshot?.domains.stats.members[id]?.statuses ?? []).map((st) => `${st.status} ${st.remaining} ${st.potency}`).join('|'),
+  );
+  if (key === '') return null;
+  return (
+    <ul className={styles.statuses} aria-label="Statuses">
+      {key.split('|').map((entry, i) => {
+        const [statusId = '', remaining = '0', potency = '1'] = entry.split(' ');
+        const def = STATUSES.has(statusId) ? STATUSES.get(statusId) : undefined;
+        const name = def?.name ?? contentName(statusId);
+        const turns = Number(remaining);
+        return (
+          <li key={`${statusId}-${i}`}>
+            <Tooltip
+              content={
+                <>
+                  <strong>{name}</strong>
+                  {potency !== '1' && <> ×{potency}</>}
+                  {def?.harmful ? ' (harmful)' : ' (helpful)'}
+                  <br />
+                  {def?.description}
+                  <br />
+                  {turns} turn{turns === 1 ? '' : 's'} left.
+                </>
+              }
+            >
+              <span className={styles.status} data-harmful={def?.harmful || undefined} tabIndex={0}>
+                <span aria-hidden="true" style={def ? { color: def.glyph.color } : undefined}>
+                  {def?.glyph.ch ?? '•'}
+                </span>{' '}
+                {name} <span className={styles.statusTurns}>{turns}</span>
+              </span>
+            </Tooltip>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function PartyCard({ id, slot, compact }: PartyCardProps) {
   const member = useMember(id);
   const selected = useUiStore((s) => s.selected === id);
@@ -165,6 +211,7 @@ function PartyCard({ id, slot, compact }: PartyCardProps) {
       {member.maxMp > 0 && (
         <Bar label="MP" tone="mp" value={member.mp} max={member.maxMp} ariaLabel={`${member.name}'s MP`} />
       )}
+      {member.alive && <StatusBadges id={id} />}
       {member.alive ? (
         <p className={styles.intent}>
           <span aria-hidden="true">➤ </span>

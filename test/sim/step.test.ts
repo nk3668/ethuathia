@@ -6,6 +6,7 @@ import {
   deserialize,
   getEntity,
   moveEntity,
+  newStatsPart,
   parseFloorText,
   removeEntity,
   serialize,
@@ -18,16 +19,17 @@ const ROOM = ['#######', '#@....#', '#<....#', '#######'];
 const hero = (name: string) => ({ name, classId: 'class.vanguard', raceId: 'race.human' });
 const ONE: RunConfig = { party: [hero('Brannoc')], floorText: ROOM };
 
-const MONSTER: ActorPart = { energy: 0, speed: 100, hp: 5, maxHp: 5, mp: 0, maxMp: 0, faction: 'monster' };
+const MONSTER: ActorPart = { energy: 0, hp: 5, mp: 0, faction: 'monster' };
 
 function addMonster(state: RunState, speed: number, pos = { x: 5, y: 2 }): EntityId {
-  return addEntity(state, { def: 'monster.test', floor: 'd1', pos, actor: { ...MONSTER, speed } }).id;
+  return addEntity(state, { def: 'monster.test', floor: 'd1', pos, actor: { ...MONSTER }, stats: newStatsPart({ hp: 5, speed }) }).id;
 }
 
 function setSpeed(state: RunState, id: EntityId, speed: number): void {
-  const actor = getEntity(state, id).actor;
-  if (actor === undefined) throw new Error('not an actor');
-  actor.speed = speed;
+  // Party members get 100 speed from their race (race.human); the base makes up the difference.
+  const stats = getEntity(state, id).stats;
+  if (stats === undefined) throw new Error('no stats part');
+  stats.base.speed = speed - 100;
 }
 
 /** The ids of the actors that took a turn, in order. */

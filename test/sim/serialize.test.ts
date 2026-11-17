@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Grid, Rng } from '../../src/core';
-import { addEntity, createRun, deserialize, moveEntity, serialize, STATE_VERSION, Terrain } from '../../src/sim';
+import { addEntity, createRun, deserialize, moveEntity, newStatsPart, serialize, STATE_VERSION, Terrain } from '../../src/sim';
 import type { RunState } from '../../src/sim';
 
 /** A run that has been changed in a few ways after creation, so the round trip covers more. */
@@ -14,7 +14,8 @@ function playedRun(): RunState {
     def: 'monster.test_rat',
     floor: 'd1',
     pos: { x: 3, y: 3 },
-    actor: { energy: 40, speed: 120, hp: 2, maxHp: 3, mp: 0, maxMp: 0, faction: 'monster' },
+    actor: { energy: 40, hp: 2, mp: 0, faction: 'monster' },
+    stats: newStatsPart({ hp: 3, speed: 120 }),
   });
   moveEntity(state, state.party[1] as number, 'd1', { x: 6, y: 3 });
   return state;

@@ -16,6 +16,7 @@ import {
   getMemory,
   isStep,
   newAiPart,
+  newStatsPart,
   noParams,
   OPEN_DOOR_COST,
   RULE_ACTIONS,
@@ -157,7 +158,8 @@ describe('decision engine', () => {
       def: 'monster.test',
       floor: 'd1',
       pos: { x: 3, y: 2 },
-      actor: { energy: 0, speed: 100, hp: 5, maxHp: 5, mp: 0, maxMp: 0, faction: 'monster' },
+      actor: { energy: 0, hp: 5, mp: 0, faction: 'monster' },
+      stats: newStatsPart({ hp: 5, speed: 100 }),
     });
     step(state, []);
     const events = step(state, []);
@@ -287,7 +289,8 @@ describe('stuck detection', () => {
       def: 'monster.test',
       floor: 'd1',
       pos: { x: 5, y: 1 },
-      actor: { energy: 0, speed: 0, hp: 5, maxHp: 5, mp: 0, maxMp: 0, faction: 'neutral' },
+      actor: { energy: 0, hp: 5, mp: 0, faction: 'neutral' },
+      stats: newStatsPart({ hp: 5, speed: 0 }),
     }).id;
     return { state, hero, blocker };
   }

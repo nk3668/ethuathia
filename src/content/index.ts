@@ -26,3 +26,5 @@ export * from './deities';
 export * from './doctrines';
 export * from './upgrades';
 export * from './town';
+export * from './bundles';
+export * from './statuses';

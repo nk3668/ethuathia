@@ -13,6 +13,7 @@ import {
   planToText,
   RNG_STREAMS,
   STATE_VERSION,
+  statValue,
 } from '../../src/sim';
 import type { RunConfig } from '../../src/sim';
 
@@ -54,7 +55,8 @@ describe('createRun', () => {
     expect(hero.floor).toBe('d1');
     expect(hero.pos).toEqual({ x: 4, y: 2 }); // the @ in HALL
     expect(hero.adventurer).toEqual({ name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' });
-    expect(hero.actor).toMatchObject({ faction: 'party', energy: 0, speed: 100 });
+    expect(hero.actor).toMatchObject({ faction: 'party', energy: 0 });
+    expect(statValue(state, hero, 'speed')).toBe(100);
   });
 
   it('holds only plain data: no class instances, Map, Set or functions', () => {

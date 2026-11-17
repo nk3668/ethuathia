@@ -16,7 +16,7 @@ import {
 } from '../../src/sim';
 import type { ActorPart, NewEntity, RunState } from '../../src/sim';
 
-const RAT_ACTOR: ActorPart = { energy: 0, speed: 120, hp: 3, maxHp: 3, mp: 0, maxMp: 0, faction: 'monster' };
+const RAT_ACTOR: ActorPart = { energy: 0, hp: 3, mp: 0, faction: 'monster' };
 
 /** A run on a small hand-built floor, plus a hand-built second floor `d2` below it. */
 function setup(): RunState {

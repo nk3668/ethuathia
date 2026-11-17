@@ -91,6 +91,37 @@
   color: var(--danger);
 }
 
+/* Status badges: name and turns remaining. Harmful ones get a dashed danger outline, so the
+   difference never rests on color alone (the tooltip also says so in words). */
+.statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status {
+  display: inline-block;
+  padding: 0 var(--space-1);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-label);
+  white-space: nowrap;
+}
+
+.status[data-harmful] {
+  border-style: dashed;
+  border-color: var(--danger);
+}
+
+.statusTurns {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
 /* Compact: one line per member. */
 .compact {
   display: grid;

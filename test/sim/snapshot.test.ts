@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findNonPlain } from '../../src/core';
-import { addEntity, createRun, getEntity, InlineHost, snapshot, step, Terrain } from '../../src/sim';
+import { addEntity, createRun, getEntity, InlineHost, newStatsPart, snapshot, step, Terrain } from '../../src/sim';
 import type { ActorPart, EntityId, RunConfig, RunState, Snapshot } from '../../src/sim';
 
 const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
@@ -16,10 +16,10 @@ const TWO_ROOMS = [
 const CONFIG: RunConfig = { party: [HERO], floorText: TWO_ROOMS };
 
 /** A monster that never acts (speed 0), so it stays where the test puts it. */
-const STATUE: ActorPart = { energy: 0, speed: 0, hp: 5, maxHp: 5, mp: 0, maxMp: 0, faction: 'monster' };
+const STATUE: ActorPart = { energy: 0, hp: 5, mp: 0, faction: 'monster' };
 
 function addStatue(state: RunState, x: number, y: number): EntityId {
-  return addEntity(state, { def: 'monster.test', floor: 'd1', pos: { x, y }, actor: { ...STATUE } }).id;
+  return addEntity(state, { def: 'monster.test', floor: 'd1', pos: { x, y }, actor: { ...STATUE }, stats: newStatsPart({ hp: 5 }) }).id;
 }
 
 /** The tile at (x, y) of a snapshot layer. */

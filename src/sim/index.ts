@@ -13,10 +13,15 @@ export {
   DOMAIN_KEYS,
   DOMAINS,
   domainSnapshots,
+  BUNDLE_SOURCES,
   GEN_STEPS,
   initDomains,
   RULE_ACTIONS,
   RUN_TRACKERS,
+  runTurnEnd,
+  runTurnStart,
+  STAT_PROVIDERS,
+  TRIGGERS,
 } from './domains';
 export type {
   DomainKey,
@@ -27,6 +32,7 @@ export type {
   RunTracker,
   SimDomain,
   SnapshotCtx,
+  TurnCtx,
 } from './domain';
 export { isActionId, parseRequest, performAction, validateAction } from './actions';
 export type { ActionCtx, ActionDef, ActionId, ActionRecord, ActionRequest, ActorCtx, BaseRequest, RequestOf } from './actions';
@@ -123,7 +129,6 @@ export type { Passability, PathGrid } from './goalMap';
 export { computeFov } from './fov';
 export type { FovInput } from './fov';
 export {
-  BASE_SIGHT_RADIUS,
   canSee,
   explored,
   fieldOfView,
