@@ -227,7 +227,7 @@ A desktop app (§9) with a dark theme. The dungeon uses colored monospace ASCII 
 - **Town:** one panel per building, with its upgrade tree drawn as a node graph.
 - **Codex:** every class, race, monster, item and Omen, filled in as it is discovered.
 - **Run summary** modal and **While you were away** modal.
-- **Keyboard:** `Space` pause, `1–5` speed, `P` possess or release, `Tab` cycle adventurers, WASD/numpad while possessed.
+- **Keyboard:** `Space` pause, `1–5` speed, `P` possess or release, `[` / `]` cycle adventurers (not `Tab`, which moves focus), WASD/numpad while possessed.
 - Every number and icon has a tooltip. Respect `prefers-reduced-motion`, and never use color alone to convey meaning.
 
 ---

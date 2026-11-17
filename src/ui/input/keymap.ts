@@ -6,11 +6,18 @@
  * Keys are matched by `KeyboardEvent.code`, the physical key, so the digits sit in the same
  * place on every layout (AZERTY needs Shift for them otherwise). The number row is used, not the
  * numpad, which is kept for movement while possessing an adventurer.
+ *
+ * `Tab` is deliberately not bound: it moves keyboard focus, and taking it would strand keyboard
+ * users (docs/VISUAL-DESIGN.md §7). `]` and `[` cycle the selected adventurer instead.
  */
 import type { RunningSpeed } from '../stores/simStore';
 
 /** What a key does. Sim commands (movement while possessed) join this union later. */
-export type KeyAction = { type: 'togglePause' } | { type: 'setSpeed'; speed: RunningSpeed };
+export type KeyAction =
+  | { type: 'togglePause' }
+  | { type: 'setSpeed'; speed: RunningSpeed }
+  /** Select the next (`1`) or previous (`-1`) living party member, wrapping around. */
+  | { type: 'cycleSelection'; step: 1 | -1 };
 
 export interface KeyBinding {
   /** `KeyboardEvent.code` of the key. */
@@ -27,15 +34,33 @@ export const KEYMAP: readonly KeyBinding[] = [
   { code: 'Digit3', label: '3', action: { type: 'setSpeed', speed: 4 } },
   { code: 'Digit4', label: '4', action: { type: 'setSpeed', speed: 8 } },
   { code: 'Digit5', label: '5', action: { type: 'setSpeed', speed: 'max' } },
+  { code: 'BracketRight', label: ']', action: { type: 'cycleSelection', step: 1 } },
+  { code: 'BracketLeft', label: '[', action: { type: 'cycleSelection', step: -1 } },
 ];
 
 function sameAction(a: KeyAction, b: KeyAction): boolean {
-  return a.type === b.type && (a.type !== 'setSpeed' || (b.type === 'setSpeed' && a.speed === b.speed));
+  switch (a.type) {
+    case 'togglePause':
+      return b.type === 'togglePause';
+    case 'setSpeed':
+      return b.type === 'setSpeed' && a.speed === b.speed;
+    case 'cycleSelection':
+      return b.type === 'cycleSelection' && a.step === b.step;
+  }
 }
 
 /** The labels of the keys bound to `action`, e.g. `['Space']`. */
 export function keysFor(action: KeyAction, keymap: readonly KeyBinding[] = KEYMAP): string[] {
   return keymap.filter((binding) => sameAction(binding.action, action)).map((binding) => binding.label);
+}
+
+/**
+ * The keys for `action`, ready for a control: `keys` goes into `aria-keyshortcuts` (empty when
+ * nothing is bound) and `hint` into its tooltip, e.g. "Key: Space" (empty when nothing is bound).
+ */
+export function keyHint(action: KeyAction, keymap: readonly KeyBinding[] = KEYMAP): { keys: string; hint: string } {
+  const keys = keysFor(action, keymap);
+  return { keys: keys.join(' '), hint: keys.length === 0 ? '' : `Key: ${keys.join(' or ')}` };
 }
 
 /** The subset of `KeyboardEvent` the keymap looks at. */

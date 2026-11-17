@@ -185,6 +185,12 @@ As built (ETH-012), in `src/ui/shell/`:
   Close button close it, focus starts on Close and returns to the top-bar button.
 - Party cards: the name is a toggle button (`aria-pressed`) that selects the adventurer. A dead
   member's card has a dashed border and reads "✝ Dead".
+- The Party heading has a `group` named "Cycle adventurers" with two small ghost buttons, `‹`
+  (Previous adventurer) and `›` (Next adventurer), shown once the party has members (ETH-020).
+  They select the previous or next living member, wrapping and skipping the dead, so the
+  selected card and the map's follow camera move with them. Their keys, `[` and `]`, come from
+  the keymap and are in their tooltips and `aria-keyshortcuts`. `Tab` is not used for this: it
+  stays the key that moves focus (§7).
 - The map area's `map-canvas` and `map-controls` slots hold the map and its camera toggle
   (ETH-013, §4). The top bar's speed control filled its slot in ETH-014 (§3.1).
 
