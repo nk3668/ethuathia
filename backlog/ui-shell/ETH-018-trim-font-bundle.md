@@ -2,14 +2,14 @@
 id: ETH-018
 title: "Ship only the font files the app needs"
 type: chore
-status: idea
+status: done
 priority: P3
 milestone: later
 epic: ui-shell
 size: S
 depends_on: [ETH-011]
 created: 2026-11-16
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 ## Summary
@@ -19,11 +19,14 @@ Drop the `.woff` fallbacks and unused subsets from the bundled fonts so the buil
 ETH-011 imports the `@fontsource` weight files, which reference a `.woff2` and a `.woff` for every subset (Cyrillic, Greek, Vietnamese and so on). The build currently emits about 0.9 MB of font files; the Tauri webview reads `.woff2`, so the `.woff` half (about 540 kB) is never loaded. See `docs/VISUAL-DESIGN.md` §2.4.
 
 ## Acceptance criteria
-- [ ] The build emits only `.woff2` font files, for the subsets the UI and content use
-- [ ] Text in every subset kept still renders in Inter and JetBrains Mono, with no network request
+- [x] The build emits only `.woff2` font files, for the subsets the UI and content use
+- [x] Text in every subset kept still renders in Inter and JetBrains Mono, with no network request
 
 ## Notes
 Options: write our own `@font-face` rules pointing at `@fontsource/*/files/*.woff2` with the same `unicode-range` values, or filter the emitted assets in a Vite plugin. Keep `latin-ext` so names with accents render.
 
 ## Log
 - 2026-11-16: Created while doing ETH-011.
+- 2026-11-17: Started.
+- 2026-11-17: (default) Kept only the `latin` and `latin-ext` subsets — alternatives: also keep Greek/Cyrillic/Vietnamese for future localization or player-typed names.
+- 2026-11-17: Done. `src/ui/fonts.css` now has its own `@font-face` rules (woff2 only, unicode-range copied from @fontsource 5.3.0) instead of importing the weight CSS. Font files in `dist/assets` went from 60 files / 858 kB (plus 6 data URIs inlined in the CSS) to 10 files / 238 kB; `dist/assets` total 1,453 kB → 807 kB. `test/ui/fonts.test.ts` guards the file list. Checked in the dev server: all faces load from localhost, no remote requests.

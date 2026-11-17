@@ -100,5 +100,5 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-032](quests/ETH-032-rescue-contract.md) | Rescue contract | quests | M5 | P3 | idea | M |
 | [ETH-070](deities/ETH-070-deity-core.md) | Patron deities with a blessing, a taboo and Favor | deities | M6 | P2 | idea | M |
 | [ETH-049](dungeon-gen/ETH-049-dungeon-merchants.md) | Dungeon merchants | dungeon-gen | M6 | P3 | idea | M |
-| [ETH-018](ui-shell/ETH-018-trim-font-bundle.md) | Ship only the font files the app needs | ui-shell | later | P3 | idea | S |
+| [ETH-018](ui-shell/ETH-018-trim-font-bundle.md) | Ship only the font files the app needs | ui-shell | later | P3 | done | S |
 | [ETH-050](combat-items/ETH-050-summons-pets.md) | Summons and pets | combat-items | later | P3 | idea | M |
