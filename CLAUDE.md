@@ -45,7 +45,8 @@ Roguathia's gaps, and our answers to them:
    └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- Runs auto-restart after a short respawn timer. The player can turn this off to review the summary first.
+- **Waiting for the player is the default.** When a run ends, the game shows the run summary and waits. The player can spend currencies in town, then press **Descend** on the Prepare screen to start the next run.
+- **Auto-restart** is a player toggle (off by default) in Options and on the run summary. When it is on, the next run starts after a short timer with the previous run's Prepare settings. Turning it off again takes effect at the end of the current run.
 - Town upgrades can be bought at any time; most take effect at the **next run**.
 - **Behavior rules can be edited during a run.** This is the main way to interact mid-run.
 
@@ -136,6 +137,7 @@ unrelated to the offline-only constraint.
 - On load, simulate the time away headlessly at max speed, capped at **8h (default)**, which Tavern upgrades raise.
 - If full simulation is too slow, fall back to a statistical estimate from the player's recent run averages, and say so in the summary.
 - Show a "While you were away" summary.
+- If auto-restart (§2) is off, the time-away simulation finishes only the current run and then stops, the same way the game does while open.
 
 ---
 
