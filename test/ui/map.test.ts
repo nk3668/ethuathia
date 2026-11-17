@@ -219,6 +219,15 @@ describe('scene', () => {
     expect(cellOverlay(scene.codes[0] as number)).toBe(Overlay.None);
   });
 
+  it('marks a map focus (a clicked highlight), alone or with the selection', () => {
+    const snap = snapshot(run());
+    const [mira] = snap.party;
+    const scene = buildScene(snap, { selected: mira?.id ?? null, hover: null, focus: { x: 1, y: 1 } }, new GlyphTable());
+    expect(cellOverlay(scene.codes[1 * scene.width + 1] as number)).toBe(Overlay.Selected | Overlay.Focus);
+    const away = buildScene(snap, { selected: null, hover: null, focus: { x: 3, y: 2 } }, new GlyphTable());
+    expect(cellOverlay(away.codes[2 * away.width + 3] as number)).toBe(Overlay.Focus);
+  });
+
   it('lists the tiles that changed between frames', () => {
     const state = run();
     const glyphs = new GlyphTable();

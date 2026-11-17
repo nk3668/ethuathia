@@ -158,5 +158,7 @@ function checkProgress({ state, actor }: AiCtx, emit: Emit): void {
     action: intent.action,
     turns: STUCK_TURNS,
     detail: `No progress in ${STUCK_TURNS} turns (${intent.detail}). Giving up on ${goal} for ${DROP_TURNS} turns.`,
+    floor: actor.floor,
+    pos: { x: actor.pos.x, y: actor.pos.y },
   });
 }

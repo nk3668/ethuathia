@@ -41,6 +41,11 @@ export interface MapView {
   selected: EntityId | null;
   /** The tile under the pointer or the keyboard cursor. */
   hover: Pos | null;
+  /**
+   * A tile to show instead of following an adventurer, on the shown floor (a clicked highlight).
+   * Follow mode centers on it; both modes mark it with a dashed ring.
+   */
+  focus?: Pos | null;
 }
 
 /** What one `draw` call did, for tests and frame timing. */
@@ -104,7 +109,7 @@ export class MapRenderer {
     const floor = snap.floor;
 
     const next = this.nextView(snap, view);
-    const scene = buildScene(snap, { selected: view.selected, hover: view.hover }, this.glyphs);
+    const scene = buildScene(snap, { selected: view.selected, hover: view.hover, focus: view.focus ?? null }, this.glyphs);
     const changed = this.dirty || !sameView(this.view, next) ? null : changedTiles(this.scene, scene);
     if (!sameView(this.view, next)) this.theme.setCellSize(next.cellW, next.cellH);
     this.view = next;
@@ -157,6 +162,8 @@ export class MapRenderer {
     const floor = snap.floor;
     if (view.mode === 'fit') return fitView(floor, this.viewport, this.theme.aspect);
     const cellH = Math.max(1, Math.round(FOLLOW_CELL_HEIGHT * this.dpr));
+    // Centered on the focus tile, as far as the floor's edges allow.
+    if (view.focus) return followView(floor, this.viewport, cellH, this.theme.aspect, view.focus, null);
     const target = followTarget(snap, view.selected);
     // A different floor starts the camera afresh, centered on the target.
     const prev = this.scene?.floor === floor.id ? this.view : null;
@@ -189,6 +196,14 @@ export class MapRenderer {
       ctx.setLineDash([]);
       ctx.strokeStyle = this.palette.selection;
       ctx.strokeRect(px + inset, py + inset, view.cellW - line, view.cellH - line);
+    }
+    if (overlay & Overlay.Focus) {
+      // Dashed accent ring, a little inside the selection ring, so it never reads as a selection.
+      const extra = overlay & Overlay.Selected ? line * 2 : 0;
+      ctx.setLineDash([line * 3, line * 2]);
+      ctx.strokeStyle = this.palette.selection;
+      ctx.strokeRect(px + inset + extra, py + inset + extra, view.cellW - line - 2 * extra, view.cellH - line - 2 * extra);
+      ctx.setLineDash([]);
     }
     if (overlay & Overlay.Hover) {
       // Dashed when it shares the cell with the selection ring, so both stay visible.

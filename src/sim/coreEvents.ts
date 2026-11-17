@@ -5,7 +5,7 @@
  */
 import type { Pos } from '../core';
 import type { RuleRef } from './ai/types';
-import type { EntityId } from './state';
+import type { EntityId, FloorId } from './state';
 
 /** What each core event carries. `emit` adds the `turn`. */
 export type CoreEvent =
@@ -29,7 +29,17 @@ export type CoreEvent =
   /**
    * Stuck detection: `actor` neither moved nor saw anything new for `turns` decisions while
    * following `rule` (rule action `action`), so that goal is dropped for a while. `detail` says so.
+   * `floor` and `pos` are where it got stuck (a highlight's place, ARCHITECTURE Contracts).
    */
-  | { type: 'stuck'; actor: EntityId; rule: RuleRef; action: string; turns: number; detail: string }
+  | {
+      type: 'stuck';
+      actor: EntityId;
+      rule: RuleRef;
+      action: string;
+      turns: number;
+      detail: string;
+      floor: FloorId;
+      pos: Pos;
+    }
   /** A command was ignored. `command` is its `type`, or `"?"` if it had none. Nothing changed. */
   | { type: 'commandRejected'; command: string; reason: string };

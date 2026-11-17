@@ -146,6 +146,24 @@ event out of the log (moves and waits), and `text` is the sentence. An event typ
 entry fails to compile. Every new mechanic needs log text (CLAUDE.md §9), and this is where it
 goes.
 
+**Highlights (ETH-047).** A notable moment (a boss engaged, near death, an heirloom found, a
+contract complete, a level-up) is tagged on its log-text entry, not in a central list:
+
+1. Declare the kind once in the domain's log-text file:
+   `export const HIGHLIGHT_BOSS = defineHighlight({ id: 'bossEngaged', label: 'A boss is engaged', description: '…' })`.
+   `id` is unique across domains (it is saved in the player's auto-pause choices, so never
+   rename one); `label` and `description` are the Options text.
+2. Name it on each event entry that is that moment: `{ category: 'combat', highlight: HIGHLIGHT_BOSS, text }`.
+   Add `highlightWhen(event)` when only some events of the type count (damage that leaves an
+   adventurer under 25% HP).
+3. The event must say where it happened: it carries `floor: FloorId` and `pos: Pos`. `highlight`
+   is a type error on an event without them. Clicking the line centers the map there.
+
+`HIGHLIGHT_KINDS` (`ui/shell/text.ts`) is collected from `LOG_TEXT`, so the log's Highlights
+filter and the Options auto-pause list pick up a new kind with no other edit. Auto-pause choices
+are all off by default and live in `uiStore.autoPause` for now (they move to the profile's
+settings once the profile has a settings slice).
+
 ### Rule conditions, rule actions, generation steps and trackers
 
 Each is a list on the domain's `SimDomain` (see the template). The hub registers the core lists
