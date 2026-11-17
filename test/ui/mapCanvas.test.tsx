@@ -16,8 +16,8 @@ const ROOMS = [
   '############',
 ];
 const PARTY = [
-  { name: 'Mira', classId: 'class.valkyrie', raceId: 'race.dwarf' },
-  { name: 'Oren', classId: 'class.scout', raceId: 'race.human' },
+  { name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' },
+  { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human' },
 ];
 const WIDTH = 600;
 const HEIGHT = 400;

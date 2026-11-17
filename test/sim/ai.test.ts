@@ -26,7 +26,7 @@ import {
 } from '../../src/sim';
 import type { ActorEntity, EntityId, Rule, RunState, SimEvent } from '../../src/sim';
 
-const HERO = { name: 'Brannoc', classId: 'class.test', raceId: 'race.test' };
+const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
 
 /** Party turns a lone adventurer gets to explore a generated floor. The worst of 100 seeds takes about 280. */
 const EXPLORE_TURN_CAP = 600;

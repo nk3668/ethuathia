@@ -565,6 +565,43 @@ As built in `src/sim/ai/` (ETH-009):
   (`"{actor} hits {target} for {n}"`), keyed by event type or content id.
 - `tools/validate-content` runs the same validation as game start-up, and is part of `npm test`.
 
+As built (ETH-015):
+
+- **Layout:** one file per type for now (`terrain.ts`, `features.ts`, `classes.ts`, `races.ts`,
+  `floors.ts`); a type moves into its own folder when it grows. Each file holds the def
+  interface, its `Registry`, a `ContentKind` (`{ registry, schema, refs? }`), a `define*` helper
+  that registers a def with type checking, and the defs themselves. `CONTENT_KINDS` in
+  `registries.ts` lists every kind.
+- **Schemas are Zod 4** (`zod`, bundled), built from shared pieces in `schema.ts`: `defShape(prefix)`
+  (an id in the kind's namespace, a non-empty name and description, lowercase tags),
+  `glyphSchema` (one character, a lowercase `#rrggbb` color, optional `bold`) and number
+  helpers. Objects are strict, so a misspelt field fails. Defs are checked against the schema,
+  never rebuilt from it, and Zod runs `jitless` because the built app's CSP forbids eval.
+- **`checkKinds(kinds, targets)`** returns every problem as a line naming the def and field:
+  `class "class.frail": hp: must be above 0`, or `class #2 (no id)` when the def has no usable
+  id. Then, for defs whose shape is valid, it checks each id from `refs(def)` against the kind's
+  registry by `kind` name, among the content kinds and `targets` (code registries such as the
+  sim's `GEN_STEPS`): `floor type "floor.x": steps[1].step refers to unknown generation step
+  "gen.mazes"`. A ref to a kind with no registry given is a problem too. `checkContent` and
+  `validateContent` run it over `CONTENT_KINDS`; the latter throws a `ContentError` with every
+  problem in `problems` and the message.
+- **Start-up:** the sim's `checkGame` / `validateGame` (`src/sim/validate.ts`) add what only the
+  sim can check: floor types' steps against `GEN_STEPS` and their params with `checkFloorType`,
+  `TERRAIN_IDS` and the feature ids in `DEFS` (which are now taken from the content defs), and
+  the baseline rules' condition and rule action ids. `main.tsx` calls `validateGame()` before
+  rendering. `tools/validate-content.ts` reports the same problems plus a count per kind; its
+  test is the command, run by `npm test` and alone by `npm run validate:content`.
+- **Lookups:** `findDef(id)` finds a def of any kind (the UI's `contentName` uses it, falling back
+  to the id for things without defs yet); `findGlyph(glyphId)` gives the map look for a terrain or
+  feature id, or a feature id plus a state (`feature.door.open`) from the feature's `states`,
+  falling back to its plain `glyph`.
+- **First defs:** terrain `wall` and `floor`; features `door` (states `closed` and `open`),
+  `stairs_up` and `stairs_down`; class `class.vanguard`; race `race.human`; floor type
+  `floor.halls`. A class sets starting max `hp` and `mp`; a race adds `hpBonus` and `mpBonus` and
+  sets `speed`. `createRun` builds each adventurer's actor part from them (`adventurerActor`)
+  and throws, naming the adventurer, on an unknown class or race. These become modifiers (§2.2)
+  when stats exist. `actor.adventurer` is not a def: an adventurer's look comes from its slot.
+
 ---
 
 ## 6. Meta (`src/meta/`)

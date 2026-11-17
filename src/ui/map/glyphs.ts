@@ -3,10 +3,10 @@
  * drawn with.
  *
  * A glyph id names one look: a content id such as `terrain.wall`, a content id with a state
- * (`feature.door.open`), or `party.N` for the adventurer in party slot N. The design doc puts
- * each entry's glyph and color on its content definition; until the content registry has those
- * definitions (ETH-015), they are kept in the table here.
+ * (`feature.door.open`), or `party.N` for the adventurer in party slot N. Terrain and features
+ * take their look from their content definitions (`findGlyph`); party members from their slot.
  */
+import { findGlyph } from '../../content';
 import type { ActorView, FeatureView } from '../../sim';
 
 export interface GlyphStyle {
@@ -26,27 +26,15 @@ export const PARTY_HUES: readonly string[] = ['#f2c14e', '#5cc2c7', '#e07fb0', '
 /** Monsters until their definitions carry a glyph and color (M1). */
 export const MONSTER_COLOR = '#e3706b';
 
-/** Anything the table doesn't know yet. */
+/** Anything without a look of its own. */
 export const UNKNOWN_GLYPH: GlyphStyle = { ch: '?', color: '#e3e8ee' };
-
-const DOOR_COLOR = '#c08a4a';
-
-/** Glyphs by id, as in the design doc's table. */
-export const GLYPHS: Readonly<Record<string, GlyphStyle>> = {
-  'terrain.wall': { ch: '#', color: '#b9c2ce' },
-  'terrain.floor': { ch: '.', color: '#6f7a89' },
-  'feature.door.closed': { ch: '+', color: DOOR_COLOR },
-  'feature.door.open': { ch: "'", color: DOOR_COLOR },
-  'feature.stairs_up': { ch: '<', color: '#ffffff', bold: true },
-  'feature.stairs_down': { ch: '>', color: '#ffffff', bold: true },
-};
 
 /** The glyph id of the adventurer in party slot `slot` (1-based). */
 export function partyGlyphId(slot: number): string {
   return `party.${slot}`;
 }
 
-/** The glyph id a remembered or visible feature is drawn with. */
+/** The glyph id a remembered or visible feature is drawn with: its def id and its state. */
 export function featureGlyphId(feature: FeatureView): string {
   if (feature.feature.kind === 'door') return `${feature.def}.${feature.feature.open ? 'open' : 'closed'}`;
   return feature.def;
@@ -60,10 +48,10 @@ export function actorGlyphId(actor: ActorView, partySlot: number | null): string
   return partySlot === null ? actor.def : partyGlyphId(partySlot);
 }
 
-/** How a glyph id is drawn. Never fails: ids the table doesn't know get a fallback look. */
+/** How a glyph id is drawn. Never fails: ids with no look of their own get a fallback. */
 export function glyphStyle(id: string): GlyphStyle {
-  const known = GLYPHS[id];
-  if (known) return known;
+  const glyph = findGlyph(id);
+  if (glyph) return glyph.bold ? { ch: glyph.ch, color: glyph.color, bold: true } : { ch: glyph.ch, color: glyph.color };
   const party = /^party\.(\d+)$/.exec(id);
   if (party) {
     const slot = Number(party[1]);

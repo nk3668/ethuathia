@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { FEATURES, TERRAIN } from '../../src/content';
 import { addEntity, createRun, moveEntity, perceiveParty, snapshot } from '../../src/sim';
 import type { ActorPart, RunState, Snapshot } from '../../src/sim';
 import {
@@ -17,7 +18,6 @@ import {
   followTarget,
   followView,
   GlyphAtlas,
-  GLYPHS,
   glyphStyle,
   GlyphTable,
   MapRenderer,
@@ -47,8 +47,8 @@ const ROOMS = [
 ];
 
 const PARTY = [
-  { name: 'Mira', classId: 'class.valkyrie', raceId: 'race.dwarf' },
-  { name: 'Oren', classId: 'class.scout', raceId: 'race.human' },
+  { name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' },
+  { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human' },
 ];
 
 const STATUE: ActorPart = { energy: 0, speed: 0, hp: 5, maxHp: 5, mp: 0, maxMp: 0, faction: 'monster' };
@@ -105,9 +105,16 @@ const PALETTE = { background: BG, selection: '#e8a33d', hover: '#e3e8ee' };
 // ---------------------------------------------------------------------------------------------
 
 describe('glyphs', () => {
-  it('match the table in docs/VISUAL-DESIGN.md §4.1', () => {
+  it('come from the content defs, which match the table in docs/VISUAL-DESIGN.md §4.1', () => {
     const section = DOC.slice(DOC.indexOf('### 4.1 Glyphs'), DOC.indexOf('### 4.2'));
-    for (const style of Object.values(GLYPHS)) expect(section.toLowerCase()).toContain(style.color);
+    const looks = [
+      ...TERRAIN.all().map((d) => d.glyph),
+      ...FEATURES.all().flatMap((d) => [d.glyph, ...Object.values(d.states ?? {})]),
+    ];
+    for (const glyph of looks) {
+      expect(section).toContain(`\`${glyph.ch}\``);
+      expect(section.toLowerCase()).toContain(glyph.color);
+    }
     for (const hue of PARTY_HUES) expect(section.toLowerCase()).toContain(hue);
     expect(glyphStyle('terrain.wall')).toMatchObject({ ch: '#', color: '#b9c2ce' });
     expect(glyphStyle('terrain.floor')).toMatchObject({ ch: '.', color: '#6f7a89' });

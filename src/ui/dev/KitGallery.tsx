@@ -127,7 +127,7 @@ function PanelAndCardSamples() {
       <Panel title="Panel with actions" actions={<Button variant="ghost">Collapse</Button>}>
         <Card>
           <strong>Mira</strong>
-          <span className={styles.muted}>Dwarf Valkyrie · default card</span>
+          <span className={styles.muted}>Human Vanguard · default card</span>
         </Card>
         <Card selected>
           <strong>Oren</strong>

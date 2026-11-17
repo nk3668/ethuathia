@@ -6,7 +6,7 @@ import type { ServePort } from '../../src/ui/host/serve';
 import { WorkerHost } from '../../src/ui/host/workerHost';
 import type { WorkerPort } from '../../src/ui/host/workerHost';
 
-const hero = (name: string) => ({ name, classId: 'class.test', raceId: 'race.test' });
+const hero = (name: string) => ({ name, classId: 'class.vanguard', raceId: 'race.human' });
 const PARTY: RunConfig = { party: [hero('Brannoc'), hero('Ysolde')] };
 const SEED = 5;
 const BUMP: Command = { type: 'playerAction', actor: 1, action: { id: 'wait' } };

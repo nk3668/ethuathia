@@ -25,7 +25,7 @@ import {
 } from '../../src/sim';
 import type { ActorEntity, Entity, EntityId, RunState } from '../../src/sim';
 
-const HERO = { name: 'Brannoc', classId: 'class.test', raceId: 'race.test' };
+const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
 
 function setup(floorText: string[], party = [HERO]): { state: RunState; hero: ActorEntity } {
   const state = createRun({ party, floorText }, 1);

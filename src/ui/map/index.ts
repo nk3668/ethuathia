@@ -18,7 +18,7 @@ export {
 } from './camera';
 export type { CameraMode, View, Viewport } from './camera';
 export { parseHex, rememberedColor, toHex } from './color';
-export { actorGlyphId, featureGlyphId, GLYPHS, glyphStyle, PARTY_HUES, partyGlyphId } from './glyphs';
+export { actorGlyphId, featureGlyphId, glyphStyle, PARTY_HUES, partyGlyphId } from './glyphs';
 export type { GlyphStyle } from './glyphs';
 export { MapCanvas } from './MapCanvas';
 export { MapControls } from './MapControls';
