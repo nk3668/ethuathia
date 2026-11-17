@@ -8,6 +8,7 @@ src-tauri/target/
 
 # Local settings and editor files
 .claude/settings.local.json
+.claude/worktrees/
 .vscode/
 .idea/
 *.local
