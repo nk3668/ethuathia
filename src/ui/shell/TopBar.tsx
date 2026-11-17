@@ -1,5 +1,9 @@
-import type { Ref } from 'react';
+import type { ReactNode, Ref } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { DEITIES } from '../../content';
 import { formatNumber } from '../../core';
+import { CURRENCY_INFO } from '../../meta';
+import type { CurrencyId } from '../../meta';
 import { Button, Tooltip } from '../kit';
 import { totalFavor, useProfileStore } from '../stores/profileStore';
 import { useSimStore } from '../stores/simStore';
@@ -44,46 +48,53 @@ export function TopBar({ narrow, drawerOpen, drawerId, onToggleDrawer, drawerBut
   );
 }
 
+const BANKED_NOTE = 'Banked: kept safe in town, never at risk.';
+
+/** The profile's banked currencies (meta `Profile.currencies`). */
 function Currencies() {
-  const renown = useProfileStore((s) => s.currencies.renown);
-  const trophies = useProfileStore((s) => s.currencies.trophies);
-  const favor = useProfileStore((s) => totalFavor(s.currencies.favor));
+  const renown = useProfileStore((s) => s.profile.currencies.renown);
+  const trophies = useProfileStore((s) => s.profile.currencies.trophies);
+  const favor = useProfileStore(useShallow((s) => s.profile.currencies.favor));
   return (
-    <ul className={styles.currencies} aria-label="Currencies">
-      <Currency
-        icon="♛"
-        name="Renown"
-        tone={styles.renown}
-        value={renown}
-        about="Earned by depth reached and turns survived. Spent in the Guild Hall and the Library."
-      />
-      <Currency
-        icon="☠"
-        name="Trophies"
-        tone={styles.trophies}
-        value={trophies}
-        about="Earned by kills, weighted by how dangerous the monster was. Spent in the Smithy."
-      />
+    <ul className={styles.currencies} aria-label="Banked currencies">
+      <Currency icon="♛" id="renown" tone={styles.renown} value={renown} />
+      <Currency icon="☠" id="trophies" tone={styles.trophies} value={trophies} />
       <Currency
         icon="♨"
-        name="Favor"
+        id="favor"
         tone={styles.favor}
-        value={favor}
-        about="Earned by victories, kept conducts and honoring your patron. Spent in the Temple."
+        value={totalFavor(favor)}
+        detail={<FavorBreakdown favor={favor} />}
       />
+    </ul>
+  );
+}
+
+/** Favor per deity, for the Favor tooltip. Shows the id for a deity with no content def yet. */
+function FavorBreakdown({ favor }: { favor: Readonly<Record<string, number>> }) {
+  const deities = Object.entries(favor).filter(([, n]) => n > 0);
+  if (deities.length === 0) return <>No deity has granted you Favor yet.</>;
+  return (
+    <ul className={styles.breakdown}>
+      {deities.map(([deity, n]) => (
+        <li key={deity}>
+          {DEITIES.has(deity) ? DEITIES.get(deity).name : deity}: {TURN_FORMAT.format(n)}
+        </li>
+      ))}
     </ul>
   );
 }
 
 interface CurrencyProps {
   icon: string;
-  name: string;
+  id: CurrencyId;
   tone: string | undefined;
   value: number;
-  about: string;
+  detail?: ReactNode;
 }
 
-function Currency({ icon, name, tone, value, about }: CurrencyProps) {
+function Currency({ icon, id, tone, value, detail }: CurrencyProps) {
+  const { name, about } = CURRENCY_INFO[id];
   return (
     <li>
       <Tooltip
@@ -95,6 +106,14 @@ function Currency({ icon, name, tone, value, about }: CurrencyProps) {
             </strong>
             <br />
             {about}
+            <br />
+            {BANKED_NOTE}
+            {detail !== undefined && (
+              <>
+                <br />
+                {detail}
+              </>
+            )}
           </>
         }
       >

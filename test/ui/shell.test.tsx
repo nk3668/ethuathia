@@ -147,7 +147,7 @@ describe('AppShell at desktop width', () => {
     useSimStore.getState().receiveSnapshot(SNAPSHOT);
     render(<AppShell />);
     const bar = screen.getByRole('banner', { name: 'Top bar' });
-    expect(within(bar).getByRole('list', { name: 'Currencies' }).textContent).toBe('♛Renown0☠Trophies0♨Favor0');
+    expect(within(bar).getByRole('list', { name: 'Banked currencies' }).textContent).toBe('♛Renown0☠Trophies0♨Favor0');
     expect(bar.textContent).toContain('Floor 3 · Turn 4,812');
   });
 

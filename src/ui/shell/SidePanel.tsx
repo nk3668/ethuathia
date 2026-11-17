@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { Button, Panel, Tabs } from '../kit';
 import type { TabItem } from '../kit';
 import { isSideTab, SIDE_TABS, useUiStore } from '../stores/uiStore';
 import type { SideTab } from '../stores/uiStore';
+import { SaveOptions } from './SaveOptions';
 import styles from './SidePanel.module.css';
 
 /** Each tab's label and, until its feature lands, a line saying when it will. */
@@ -16,10 +17,15 @@ const TAB_INFO: Readonly<Record<SideTab, { label: string; empty: string }>> = {
   options: { label: 'Options', empty: 'No options yet.' },
 };
 
+/** Tabs whose feature has landed: one line per tab. The rest show their `empty` line. */
+const TAB_CONTENT: Partial<Record<SideTab, ReactNode>> = {
+  options: <SaveOptions />,
+};
+
 const ITEMS: TabItem[] = SIDE_TABS.map((id) => ({
   id,
   label: TAB_INFO[id].label,
-  content: <p className={styles.empty}>{TAB_INFO[id].empty}</p>,
+  content: TAB_CONTENT[id] ?? <p className={styles.empty}>{TAB_INFO[id].empty}</p>,
 }));
 
 /** The tabbed side panel: Rules, Town, Codex, Graveyard, Stats and Options. */
