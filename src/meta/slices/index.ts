@@ -7,8 +7,10 @@
  */
 import { currenciesSlice } from './currencies';
 import { historySlice } from './history';
+import { upgradesSlice } from './upgrades';
 
 export const PROFILE_SLICES = {
   currencies: currenciesSlice,
   history: historySlice,
+  upgrades: upgradesSlice,
 } as const;

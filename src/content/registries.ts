@@ -17,6 +17,8 @@ import { OMEN_KIND } from './omens';
 import { RACE_KIND } from './races';
 import type { Glyph } from './schema';
 import { TERRAIN, TERRAIN_KIND } from './terrain';
+import './town';
+import { BUILDING_KIND, UPGRADE_KIND } from './upgrades';
 
 /** Every content kind, in the order they are validated. A new kind is added here. */
 export const CONTENT_KINDS: readonly ContentKind[] = [
@@ -31,6 +33,8 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
   BOUNTY_KIND,
   OMEN_KIND,
   DEITY_KIND,
+  BUILDING_KIND,
+  UPGRADE_KIND,
 ];
 
 /**

@@ -380,6 +380,17 @@ Rules for  [ Mira ▾ ]      Preset [ Cautious ▾ ]  [Save as…]        3 / 5 
 
 - Hovering a node shows cost, effect, prerequisites and, for pick-one tiers, the respec fee.
 
+As built (ETH-063, `src/ui/town/`): the Town side tab has the banked Renown and Trophies at the
+top right and one kit `Tabs` entry per building. A tree is a grid with a tier label column
+(I, II, …), rows of fixed height and SVG lines from each prerequisite to the nodes that need it:
+dashed `--border-strong` until the prerequisite is owned, then solid `--good`. Neighbouring
+nodes of a pick-one group have an italic "or" between them. Node names wrap to two lines (the
+tooltip has the full text), each node's status is also in screen-reader text, and the cost line
+marks unaffordable parts in `--danger`. Clicking a node selects it (doubled accent border) and
+opens a detail card below the graph with the description, the same facts as the tooltip, the
+reason it can't be bought, **Buy for …** and, in a pick-one tier, **Respec** with what it gives
+up, refunds and keeps as the fee.
+
 ### 5.3 Codex
 
 A two-pane view: category list and search on the left, entry on the right. An entry shows the

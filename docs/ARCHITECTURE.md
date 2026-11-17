@@ -277,6 +277,10 @@ with a registry, a minimal schema (the `Def` fields only), a `KIND` in `CONTENT_
 (`deities.ts`). The owning item extends the def type and the schema together and adds the
 defs. `src/content/index.ts` re-exports them with `export *`.
 
+`building` and `upgrade` (`src/content/upgrades.ts`, ETH-063) are full kinds; each building's
+defs live in `src/content/town/<building>.ts` (§6.2). A kind may add `check(defs)` for rules
+that span several defs (`checkKinds` runs it after the ref checks).
+
 ---
 
 ## 1. Layers
@@ -959,8 +963,8 @@ makes them easy to test and safe to autosave after.
 
 As built (ETH-059), `src/meta/profile.ts` composes the profile from slices (Contracts, "Profile
 slices"). The slices so far are `currencies` (banked Renown, Trophies and Favor per deity id,
-`{ renown, trophies, favor: Record<deity id, number> }`) and `history` (lifetime totals and the
-last `HISTORY_LIMIT` (20) runs as `RunRecord`s). `checkProfile(profile)` returns one line per
+`{ renown, trophies, favor: Record<deity id, number> }`), `history` (lifetime totals and the
+last `HISTORY_LIMIT` (20) runs as `RunRecord`s) and `upgrades` (owned upgrade node ids, §6.2). `checkProfile(profile)` returns one line per
 problem. Currency names and tooltip text are `CURRENCY_INFO` in `src/meta/currencies.ts`.
 
 ### 6.2 Upgrade engine
@@ -983,6 +987,36 @@ type Grant =
 
 One engine and one tree view serve every building. `isUnlocked(profile, id)` and
 `capacity(profile, what)` are derived from owned nodes, so nothing else tracks unlock state.
+
+As built (ETH-063):
+
+- **Content** (`src/content/upgrades.ts`): two kinds. `building` (`building.guild_hall`, plain
+  `Def`) and `upgrade` (`UpgradeNodeDef`: `building`, `tier` from 1, `column` from 0, `cost` keyed
+  by currency id `renown` / `trophies` / `favor:deity.<id>`, `requires`, optional
+  `exclusiveGroup`, `grants`). Grants are `{ kind: 'bundle', scope: 'party' | 'run', bundle }`,
+  `{ kind: 'unlock', id }` and `{ kind: 'capacity', key, amount }`. `bundle` is a placeholder
+  `GrantBundle` (`{ modifiers: { stat, op, value }[] }`, TODO ETH-057: swap in the shared
+  `Bundle`). Capacity keys and their tooltip names are `CAPACITY_INFO` (`partySize`,
+  `rosterSize`, `contractSlots`, `ruleSlots`); a new capacity is one entry there.
+- **Validation:** refs (building, prerequisites, Favor deities, stats against `STAT_REFS`, unlock
+  ids against the registry named by their prefix; `checkGame` also passes `CONDITIONS` and
+  `RULE_ACTIONS` for Library unlocks), plus `ContentKind.check`, a new optional hook for rules
+  spanning several defs: a prerequisite must be in the same building on an earlier tier (which
+  rules out cycles), a pick-one group has 2+ nodes on one tier of one building, and no two
+  nodes share a cell.
+- **A new building** is a file in `src/content/town/` (its `defineBuilding` and
+  `defineUpgrade`s) and one line in `town/index.ts`, plus, only if the generic tree isn't
+  enough, a component and one line in `BUILDING_PANELS` (`src/ui/town/panels.ts`).
+- **State:** the `upgrades` profile slice, `{ owned: string[] }` in purchase order. Ids no
+  longer in content are kept and ignored.
+- **Engine** (`src/meta/upgrades.ts`, pure): `canPurchase(profile, id)` (`{ ok }` or a
+  `status` of `owned` / `excluded` / `locked` / `expensive` / `unknown` with a `reason` for the
+  tooltip), `nodeStatus`, `purchase` (throws a `RangeError` with the reason),
+  `respecPlan(profile, group)` and `respec`: the chosen node and every owned node that needs it
+  are given up and refunded in full, less a fee of `RESPEC_FEE_RATE` (50%) of the chosen
+  node's cost. `profileGrants(profile)` returns `{ source, grant }[]` for `buildRunConfig`
+  (ETH-064); `capacity(profile, key, base)` and `isUnlocked(profile, id)` derive from it.
+  `describeGrant` words a grant for tooltips and the Codex.
 
 ### 6.3 From profile to run
 

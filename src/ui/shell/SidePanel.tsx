@@ -4,6 +4,7 @@ import { Button, Panel, Tabs } from '../kit';
 import type { TabItem } from '../kit';
 import { isSideTab, SIDE_TABS, useUiStore } from '../stores/uiStore';
 import type { SideTab } from '../stores/uiStore';
+import { TownPanel } from '../town/TownPanel';
 import { OptionsPanel } from './OptionsPanel';
 import { SaveOptions } from './SaveOptions';
 import styles from './SidePanel.module.css';
@@ -20,6 +21,7 @@ const TAB_INFO: Readonly<Record<SideTab, { label: string; empty: string }>> = {
 
 /** Tabs whose feature has landed: one line per tab. The rest show their `empty` line. */
 const TAB_CONTENT: Partial<Record<SideTab, ReactNode>> = {
+  town: <TownPanel />,
   options: (
     <>
       <OptionsPanel />

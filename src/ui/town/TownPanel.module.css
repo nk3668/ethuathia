@@ -1,0 +1,22 @@
+.town {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.purse {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-medium);
+}
+
+.renown {
+  color: var(--renown);
+}
+
+.trophies {
+  color: var(--trophies);
+}

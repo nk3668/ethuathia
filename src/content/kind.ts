@@ -29,6 +29,11 @@ export interface ContentKind<T extends Def = Def> {
   readonly schema: z.ZodType<T>;
   /** The ids `def` mentions. Only called on defs whose shape is valid. */
   refs?(def: T): readonly ContentRef[];
+  /**
+   * Rules that span several defs of this kind (e.g. no prerequisite cycles), as problem lines.
+   * Called once with every def whose shape is valid, after the refs are checked.
+   */
+  check?(defs: readonly T[]): readonly string[];
 }
 
 /** Thrown by `validateContent` and the sim's `validateGame`, listing every problem found. */
@@ -95,6 +100,12 @@ export function checkKinds(kinds: readonly ContentKind[], targets: readonly RefT
         problems.push(`${label}: ${ref.path} refers to unknown ${ref.kind} "${ref.id}"`);
       }
     }
+  }
+
+  for (const kind of kinds) {
+    if (!kind.check) continue;
+    const defs = valid.filter(([k]) => k === kind).map(([, def]) => def);
+    problems.push(...kind.check(defs));
   }
   return problems;
 }

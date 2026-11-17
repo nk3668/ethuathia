@@ -23,3 +23,5 @@ export * from './contracts';
 export * from './bounties';
 export * from './omens';
 export * from './deities';
+export * from './upgrades';
+export * from './town';
