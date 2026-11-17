@@ -25,3 +25,4 @@ Every number, glyph and name in the game explains itself on hover, and the Codex
 
 ## Items
 - None yet. Items are added when M2 becomes the current milestone.
+- [ ] [ETH-065 Codex tab, discovery tracking and Explain tooltips from content](ETH-065-codex-framework.md)

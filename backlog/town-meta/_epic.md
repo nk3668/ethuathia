@@ -29,5 +29,7 @@ Between runs the player spends three currencies on branching upgrade trees that 
 
 ## Items
 - [ ] [ETH-023](ETH-023-at-risk-run-currency.md) Track run earnings as at-risk currency and lose 25% on a wipe
+- [ ] [ETH-048 Run history list](ETH-048-run-history.md)
 
 More items are added when M2 becomes the current milestone.
+- [ ] [ETH-063 Upgrade engine and the Town screen with a Guild Hall](ETH-063-upgrade-engine-town.md)

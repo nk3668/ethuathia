@@ -7,7 +7,7 @@ priority: P1
 milestone: M2
 epic: town-meta
 size: M
-depends_on: []
+depends_on: [ETH-059, ETH-060, ETH-062]
 created: 2026-11-17
 updated: 2026-11-17
 ---
@@ -40,3 +40,4 @@ part of the haul. It only puts this run's earnings at stake, never past progress
 
 ## Log
 - 2026-11-17: Created from a design discussion. The player chose a 25% wipe loss on run earnings only.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

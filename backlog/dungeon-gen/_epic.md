@@ -2,7 +2,7 @@
 epic: dungeon-gen
 title: Dungeon generation
 status: active
-milestones: [M0, M1, M5, M6]
+milestones: [M0, M1, M4, M5, M6]
 ---
 
 ## Goal
@@ -24,3 +24,5 @@ Varied, always-connected floors built from reusable generation steps, linked int
 
 ## Items
 - [x] [ETH-006 Dungeon gen pipeline: rooms-and-corridors floor](ETH-006-dungeon-gen-pipeline.md)
+- [ ] [ETH-046 Traps and searching](ETH-046-traps-searching.md)
+- [ ] [ETH-049 Dungeon merchants](ETH-049-dungeon-merchants.md)

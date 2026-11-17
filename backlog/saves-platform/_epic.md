@@ -26,3 +26,4 @@ Progress is saved locally and safely, the game installs as a desktop app, and ti
 
 ## Items
 - None yet. Items are added when M2 becomes the current milestone.
+- [ ] [ETH-059 Profile, banked currencies and versioned local saves](ETH-059-profile-saves.md)

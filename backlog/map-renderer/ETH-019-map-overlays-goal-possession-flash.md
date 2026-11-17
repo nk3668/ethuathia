@@ -7,9 +7,9 @@ priority: P2
 milestone: M1
 epic: map-renderer
 size: S
-depends_on: [ETH-013]
+depends_on: [ETH-013, ETH-066]
 created: 2026-11-16
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 ## Summary
@@ -35,3 +35,4 @@ flash is running.
 
 ## Log
 - 2026-11-16: Created while building ETH-013.
+- 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.

@@ -2,7 +2,7 @@
 epic: combat-items
 title: Combat, items and statuses
 status: active
-milestones: [M1]
+milestones: [M1, M2, later]
 ---
 
 ## Goal
@@ -25,4 +25,13 @@ Fights, gear and consumables that are all built from the same modifiers, effects
 - `docs/ARCHITECTURE.md` §2.2, §2.3
 
 ## Items
-- None yet. Items are added when M1 becomes the current milestone.
+- [ ] [ETH-043 Equipment slots and base item types](ETH-043-equipment-slots-base-items.md)
+- [ ] [ETH-044 Enchantment, blessed and cursed items, and identification](ETH-044-enchant-curse-identify.md)
+- [ ] [ETH-045 Light affixes and named artifacts](ETH-045-affixes-artifacts.md)
+- [ ] [ETH-050 Summons and pets](ETH-050-summons-pets.md)
+- [ ] [ETH-054 Food as consumables that grant short-term buffs](ETH-054-food-buffs.md)
+
+More items are added when M1 becomes the current milestone.
+- [ ] [ETH-057 Bundles (modifiers, effects, triggers), stats with sources and timed statuses](ETH-057-bundles-stats-statuses.md)
+- [ ] [ETH-060 Monsters, melee combat and death](ETH-060-monsters-melee-combat.md)
+- [ ] [ETH-061 Items on the floor, inventory, pickup and drop, and in-run gold](ETH-061-items-inventory-core.md)
