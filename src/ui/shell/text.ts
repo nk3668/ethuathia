@@ -2,13 +2,16 @@
  * Plain-text wording for the shell: content names, rule references and log lines. M1 replaces
  * the log wording with category filters and `Explain` links (docs/VISUAL-DESIGN.md §3.3).
  */
+import { findDef } from '../../content';
 import type { EntityId, RuleRef, SimEvent } from '../../sim';
 
 /**
- * A readable name for a content id until the content registry provides real ones (ETH-015):
- * the part after the last dot, capitalized. `class.vanguard` → `Vanguard`.
+ * The name of a content id: its def's `name`, or for an id with no def (monsters until M1) the
+ * part after the last dot, capitalized. `monster.cave_rat` → `Cave rat`.
  */
 export function contentName(id: string): string {
+  const def = findDef(id);
+  if (def !== undefined) return def.name;
   const last = id.slice(id.lastIndexOf('.') + 1).replace(/[-_]/g, ' ');
   return last.charAt(0).toUpperCase() + last.slice(1);
 }

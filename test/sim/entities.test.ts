@@ -21,7 +21,7 @@ const RAT_ACTOR: ActorPart = { energy: 0, speed: 120, hp: 3, maxHp: 3, mp: 0, ma
 /** A run on a small hand-built floor, plus an empty second floor `d2` below it. */
 function setup(): RunState {
   const state = createRun(
-    { party: [{ name: 'A', classId: 'c', raceId: 'r' }], floorText: ['#######', "#@.+'>#", '#######'] },
+    { party: [{ name: 'A', classId: 'class.vanguard', raceId: 'race.human' }], floorText: ['#######', "#@.+'>#", '#######'] },
     1,
   );
   state.dungeon.nodes.d2 = { id: 'd2', depth: 2, up: 'd1', down: [] };
@@ -127,7 +127,7 @@ describe('entity helpers', () => {
   });
 
   it('copies the plan’s terrain rather than sharing it', () => {
-    const state = createRun({ party: [{ name: 'A', classId: 'c', raceId: 'r' }] }, 1);
+    const state = createRun({ party: [{ name: 'A', classId: 'class.vanguard', raceId: 'race.human' }] }, 1);
     state.dungeon.nodes.d2 = { id: 'd2', depth: 2, up: 'd1', down: [] };
     const plan = parseFloorText(['###', '#<#', '###']);
     const floor = addFloor(state, 'd2', plan);

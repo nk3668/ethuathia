@@ -3,7 +3,7 @@ import { findNonPlain } from '../../src/core';
 import { addEntity, createRun, getEntity, InlineHost, snapshot, step, Terrain } from '../../src/sim';
 import type { ActorPart, EntityId, RunConfig, RunState, Snapshot } from '../../src/sim';
 
-const HERO = { name: 'Brannoc', classId: 'class.test', raceId: 'race.test' };
+const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
 
 // Two rooms joined by a closed door. The party starts in the west room and can't see past it.
 const TWO_ROOMS = [
@@ -73,8 +73,8 @@ describe('snapshot', () => {
       {
         id: hero,
         name: 'Brannoc',
-        classId: 'class.test',
-        raceId: 'race.test',
+        classId: 'class.vanguard',
+        raceId: 'race.human',
         floor: 'd1',
         pos: { x: 1, y: 1 },
         alive: true,

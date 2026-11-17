@@ -7,7 +7,7 @@ import { bindHost, EVENT_BUFFER_SIZE, useSimStore } from '../../src/ui/stores/si
 import { clampLogHeight, LOG_HEIGHT, UI_STORAGE_KEY, useUiStore } from '../../src/ui/stores/uiStore';
 
 const waited = (turn: number): SimEvent => ({ type: 'waited', actor: 1, turn });
-const hero = (name: string) => ({ name, classId: 'class.test', raceId: 'race.test' });
+const hero = (name: string) => ({ name, classId: 'class.vanguard', raceId: 'race.human' });
 
 beforeEach(() => {
   localStorage.clear();

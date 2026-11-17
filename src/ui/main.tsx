@@ -1,10 +1,15 @@
 import { StrictMode } from 'react';
 import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { validateGame } from '../sim';
 import { App } from './App';
 import './fonts.css';
 import './tokens.css';
 import './base.css';
+
+// Content is checked once at start-up (docs/ARCHITECTURE.md §5): a bad definition stops the game
+// here with a list of every problem, rather than failing somewhere in the middle of a run.
+validateGame();
 
 const root = document.getElementById('root');
 if (!root) throw new Error('index.html is missing the #root element');

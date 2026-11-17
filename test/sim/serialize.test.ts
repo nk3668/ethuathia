@@ -5,7 +5,7 @@ import type { RunState } from '../../src/sim';
 
 /** A run that has been changed in a few ways after creation, so the round trip covers more. */
 function playedRun(): RunState {
-  const state = createRun({ party: [{ name: 'A', classId: 'c', raceId: 'r' }, { name: 'B', classId: 'c', raceId: 'r' }] }, 99);
+  const state = createRun({ party: [{ name: 'A', classId: 'class.vanguard', raceId: 'race.human' }, { name: 'B', classId: 'class.vanguard', raceId: 'race.human' }] }, 99);
   new Rng(state.rng.combat).int(1, 20);
   new Rng(state.rng.ai).float();
   state.turn = 17;
@@ -37,7 +37,7 @@ describe('serialize and deserialize', () => {
   });
 
   it('writes grids run-length encoded, not as typed array objects', () => {
-    const json = JSON.parse(serialize(createRun({ party: [{ name: 'A', classId: 'c', raceId: 'r' }] }, 1))) as {
+    const json = JSON.parse(serialize(createRun({ party: [{ name: 'A', classId: 'class.vanguard', raceId: 'race.human' }] }, 1))) as {
       floors: { d1: { terrain: unknown } };
     };
     expect(json.floors.d1.terrain).toMatchObject({ $grid: { width: 64, height: 32, kind: 'u8' } }); // the generated first floor

@@ -12,7 +12,7 @@ import {
 } from '../../src/sim';
 import type { Command, EntityId, HostUpdate, RunConfig, SimEvent, Snapshot, Speed } from '../../src/sim';
 
-const hero = (name: string) => ({ name, classId: 'class.test', raceId: 'race.test' });
+const hero = (name: string) => ({ name, classId: 'class.vanguard', raceId: 'race.human' });
 /** Two adventurers on a generated floor, so there is plenty going on. */
 const PARTY: RunConfig = { party: [hero('Brannoc'), hero('Ysolde')] };
 const SEED = 3;

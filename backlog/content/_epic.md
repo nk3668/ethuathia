@@ -24,4 +24,4 @@ Classes, races, monsters, items and the rest exist as validated data that the si
 - `docs/ARCHITECTURE.md` §2.1, §5
 
 ## Items
-- [ ] [ETH-015 Content registry with validation and first definitions](ETH-015-content-registry-first-defs.md)
+- [x] [ETH-015 Content registry with validation and first definitions](ETH-015-content-registry-first-defs.md)

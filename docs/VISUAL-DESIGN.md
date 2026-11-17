@@ -143,7 +143,7 @@ In dev mode, `?kit` on the dev server URL opens a gallery of every component and
 │ PARTY        │                                               │ Rules  Town  Codex │
 │ ╭──────────╮ │       ##########          #########           │ Graveyard  Stats ⚙ │
 │ │1 Mira    │ │       #........#          #.......#           │ ────────────────── │
-│ │  Valkyrie│ │       #..@.....+##########+...g...#           │ ╭────────────────╮ │
+│ │  Vanguard│ │       #..@.....+##########+...g...#           │ ╭────────────────╮ │
 │ │HP ▓▓▓▓░ 41│ │       #........#          #.......#           │ │⠿ HP < 30%      │ │
 │ │MP ▓▓░░░ 12│ │       ####+#####          #####.###           │ │  → quaff heal  │ │
 │ │➤ exploring│ │          #.#                  #.#             │ │  ● 14      [on]│ │
@@ -201,7 +201,7 @@ also in `aria-keyshortcuts`.
 ```
 ╭───────────────────────────╮
 │ 1  Mira            Lv 6   │   number badge in the member's map hue
-│    Dwarf Valkyrie         │   muted; each word is an Explain link
+│    Human Vanguard         │   muted; each word is an Explain link
 │ HP ▓▓▓▓▓▓▓░░░   41 / 58   │
 │ MP ▓▓▓░░░░░░░   12 / 40   │
 │ [poisoned 4] [blessed]    │   status badges, turns remaining
@@ -281,8 +281,9 @@ ratio so glyphs stay sharp.
 - **Remembered** glyphs keep 30% of their saturation and are drawn 40% of the way from
   `--bg-app` to that color. The tooltip says "Remembered, not in view" or "In view", so fog never
   rests on brightness alone.
-- **Glyph table:** the §4.1 colors live in `src/ui/map/glyphs.ts` until content definitions carry
-  them (ETH-015). Monsters without a family glyph yet use the first letter of their name in
+- **Glyph table:** terrain and features take their glyph and color from their content
+  definitions (ETH-015, `findGlyph`); a test checks them against the §4.1 table. Party members
+  use their slot hue. Monsters without a family glyph yet use the first letter of their name in
   `#e3706b`; anything unknown is a `?`.
 - **Party badges:** the slot number in bold at the cell's bottom-right, outlined in the
   background color, in cells at least 14 device px high.

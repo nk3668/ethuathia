@@ -25,8 +25,8 @@ function setNarrow(narrow: boolean) {
 const member = (id: EntityId, name: string, hp: number): Snapshot['party'][number] => ({
   id,
   name,
-  classId: 'class.valkyrie',
-  raceId: 'race.dwarf',
+  classId: 'class.vanguard',
+  raceId: 'race.human',
   floor: 'f1',
   pos: { x: 1, y: 1 },
   alive: hp > 0,
@@ -81,8 +81,10 @@ afterEach(() => {
 describe('log text', () => {
   const names = (id: EntityId) => (id === 1 ? 'Mira' : `#${id}`);
 
-  it('names content ids and rules', () => {
-    expect(contentName('class.valkyrie')).toBe('Valkyrie');
+  it('names content ids from their defs, unknown ones from the id, and rules', () => {
+    expect(contentName('class.vanguard')).toBe('Vanguard');
+    expect(contentName('feature.stairs_up')).toBe('Stairs up');
+    expect(contentName('class.ironclad')).toBe('Ironclad');
     expect(contentName('race.wood_elf')).toBe('Wood elf');
     expect(ruleLabel({ set: 'own', index: 0 })).toBe('rule #1');
     expect(ruleLabel({ set: 'baseline', index: 2 })).toBe('baseline #3');
@@ -152,7 +154,7 @@ describe('AppShell at desktop width', () => {
     const party = screen.getByRole('region', { name: 'Party' });
     expect(within(party).getByRole('meter', { name: "Mira's HP" }).getAttribute('aria-valuenow')).toBe('12');
     expect(within(party).getByRole('meter', { name: "Mira's MP" })).toBeTruthy();
-    expect(party.textContent).toContain('Dwarf Valkyrie');
+    expect(party.textContent).toContain('Human Vanguard');
     expect(party.textContent).toContain('Explore: heading for unexplored ground · baseline #3');
     expect(party.textContent).toContain('✝ Dead');
   });
@@ -255,7 +257,7 @@ describe('AppShell under 1000px wide', () => {
     expect(hp.textContent).not.toContain('/');
     expect(within(party).queryByRole('meter', { name: "Mira's MP" })).toBeNull();
     expect(party.textContent).not.toContain('Explore');
-    expect(party.textContent).not.toContain('Dwarf');
+    expect(party.textContent).not.toContain('Human');
   });
 
   it('moves the tab panel into a drawer opened from the top bar', async () => {
