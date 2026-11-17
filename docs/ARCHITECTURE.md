@@ -855,6 +855,13 @@ As built (ETH-014), in `ui/input/`:
   the binding a key press triggers, or nothing when a modifier (Ctrl, Alt, Meta) is held, the
   event is composing or already `defaultPrevented`, focus is in a text field, textarea, select
   or editable content, or the key is Space on a checkbox, radio or switch.
+  `keyHint(action)` gives a control its `aria-keyshortcuts` value and tooltip line.
+- **Cycling the selection (ETH-020):** `]` and `[` (`BracketRight` / `BracketLeft`) are
+  `cycleSelection(step: 1 | -1)`. It changes only `uiStore.selected`, using the pure
+  `cycleSelection(party, selected, step)` in `uiStore.ts`: the next or previous living member in
+  party order, wrapping, skipping the dead; with no selection it starts at the first (or last)
+  living member, and with nobody alive it changes nothing. `Tab` is never bound, so focus
+  navigation keeps working. Possession (`P`) joins the same table later.
 - **`useKeymap()`:** listens on `window` while the in-run screen (`AppShell`) is mounted. Focused
   widgets handle keys first (the map's arrows, Enter and Escape, the tabs' and log edge's
   arrows), so a key they mark with `preventDefault` never reaches the keymap. A key the keymap

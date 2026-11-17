@@ -48,6 +48,28 @@ export interface UiStoreState {
   setMapCamera(mode: CameraMode): void;
 }
 
+/**
+ * The adventurer to select when cycling by `step` (1 next, -1 previous) through `party`, in party
+ * order: the nearest living member after (or before) `selected`, wrapping around and skipping the
+ * dead. With nothing selected, or a selection no longer in the party, next picks the first living
+ * member and previous the last. With nobody alive the selection is left as it is.
+ */
+export function cycleSelection(
+  party: readonly { id: EntityId; alive: boolean }[],
+  selected: EntityId | null,
+  step: 1 | -1,
+): EntityId | null {
+  const n = party.length;
+  const at = party.findIndex((m) => m.id === selected);
+  // Without a selection, start just outside the list so the first step lands on an end.
+  const from = at === -1 ? (step === 1 ? -1 : n) : at;
+  for (let k = 1; k <= n; k++) {
+    const member = party[(((from + k * step) % n) + n) % n];
+    if (member?.alive) return member.id;
+  }
+  return selected;
+}
+
 /** The fields saved to `localStorage`. */
 type Remembered = Pick<UiStoreState, 'logHeight' | 'tab' | 'mapCamera'>;
 

@@ -1,7 +1,6 @@
 import { TURNS_PER_SECOND } from '../../sim';
 import type { Speed } from '../../sim';
-import { keysFor } from '../input/keymap';
-import type { KeyAction } from '../input/keymap';
+import { keyHint } from '../input/keymap';
 import { Button, Tooltip } from '../kit';
 import type { RunningSpeed } from '../stores/simStore';
 import { useSimStore } from '../stores/simStore';
@@ -19,12 +18,6 @@ function speedHint(speed: RunningSpeed): string {
   if (speed === 'max') return 'As fast as this machine allows';
   const turns = TURNS_PER_SECOND * speed;
   return `${turns} party turns a second`;
-}
-
-/** The key hint for a tooltip, e.g. "Key: Space". Empty when no key is bound. */
-function keyHint(action: KeyAction): { keys: string; hint: string } {
-  const keys = keysFor(action);
-  return { keys: keys.join(' '), hint: keys.length === 0 ? '' : `Key: ${keys.join(' or ')}` };
 }
 
 /**

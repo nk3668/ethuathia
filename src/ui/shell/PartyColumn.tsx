@@ -1,6 +1,8 @@
 import { useShallow } from 'zustand/react/shallow';
 import type { EntityId } from '../../sim';
-import { Bar, Card, Panel } from '../kit';
+import { keyHint } from '../input/keymap';
+import { runKeyAction } from '../input/useKeymap';
+import { Bar, Button, Card, Panel, Tooltip } from '../kit';
 import { useSimStore } from '../stores/simStore';
 import { useUiStore } from '../stores/uiStore';
 import styles from './PartyColumn.module.css';
@@ -18,7 +20,18 @@ export interface PartyColumnProps {
 export function PartyColumn({ compact }: PartyColumnProps) {
   const ids = useSimStore(useShallow((s) => s.snapshot?.party.map((m) => m.id) ?? []));
   return (
-    <Panel title="Party" className={styles.column}>
+    <Panel
+      title="Party"
+      className={styles.column}
+      actions={
+        ids.length > 0 ? (
+          <div role="group" aria-label="Cycle adventurers" className={styles.cycle}>
+            <CycleButton step={-1} />
+            <CycleButton step={1} />
+          </div>
+        ) : undefined
+      }
+    >
       {ids.length === 0 ? (
         <p className={styles.empty}>No adventurers yet.</p>
       ) : (
@@ -31,6 +44,48 @@ export function PartyColumn({ compact }: PartyColumnProps) {
         </ol>
       )}
     </Panel>
+  );
+}
+
+const CYCLE_TEXT = {
+  [-1]: { glyph: '‹', label: 'Previous adventurer' },
+  [1]: { glyph: '›', label: 'Next adventurer' },
+} as const;
+
+/**
+ * Selects the previous or next living adventurer, the same as its key in the keymap (`[` / `]`).
+ * The map's follow camera and the selected card move with the selection.
+ */
+function CycleButton({ step }: { step: 1 | -1 }) {
+  const { glyph, label } = CYCLE_TEXT[step];
+  const keys = keyHint({ type: 'cycleSelection', step });
+  return (
+    <Tooltip
+      placement="bottom"
+      content={
+        <>
+          <strong>{label}</strong>
+          <br />
+          Select and follow the {step === 1 ? 'next' : 'previous'} living adventurer.
+          {keys.hint && (
+            <>
+              <br />
+              {keys.hint}
+            </>
+          )}
+        </>
+      }
+    >
+      <Button
+        variant="ghost"
+        className={styles.cycleButton}
+        onClick={() => runKeyAction({ type: 'cycleSelection', step })}
+        aria-keyshortcuts={keys.keys || undefined}
+      >
+        <span aria-hidden="true">{glyph}</span>
+        <span className="sr-only">{label}</span>
+      </Button>
+    </Tooltip>
   );
 }
 

@@ -1,9 +1,13 @@
 import { useEffect } from 'react';
 import { useSimStore } from '../stores/simStore';
+import { cycleSelection, useUiStore } from '../stores/uiStore';
 import { bindingFor, KEYMAP } from './keymap';
 import type { KeyAction, KeyBinding } from './keymap';
 
-/** Carries out a keymap action. The speed actions go to the sim through `simStore`. */
+/**
+ * Carries out a keymap action. The speed actions go to the sim through `simStore`; cycling the
+ * selection changes `uiStore` only.
+ */
 export function runKeyAction(action: KeyAction): void {
   const sim = useSimStore.getState();
   switch (action.type) {
@@ -13,6 +17,12 @@ export function runKeyAction(action: KeyAction): void {
     case 'setSpeed':
       sim.setSpeed(action.speed);
       break;
+    case 'cycleSelection': {
+      // The map's follow camera and the party cards both read `selected`, so they move with it.
+      const ui = useUiStore.getState();
+      ui.select(cycleSelection(sim.snapshot?.party ?? [], ui.selected, action.step));
+      break;
+    }
   }
 }
 
