@@ -94,7 +94,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M3 | P2 | idea | M |
 | [ETH-038](characters/ETH-038-class-aware-ai-roles.md) | Class-aware AI roles | characters | M3 | P2 | idea | M |
 | [ETH-067](risk-omens/ETH-067-omens-conducts-core.md) | Omens with ranks, the reward multiplier and conduct tracking | risk-omens | M4 | P2 | idea | M |
-| [ETH-072](dungeon-gen/ETH-072-fountains.md) | Fountains with a documented effect table and a drink action | dungeon-gen | M4 | P2 | ready | M |
+| [ETH-072](dungeon-gen/ETH-072-fountains.md) | Fountains with a documented effect table and a drink action | dungeon-gen | M4 | P2 | done | M |
 | [ETH-030](quests/ETH-030-bounty-encounters.md) | Bounty encounters inside the dungeon | quests | M4 | P3 | idea | M |
 | [ETH-046](dungeon-gen/ETH-046-traps-searching.md) | Traps and searching | dungeon-gen | M4 | P3 | idea | M |
 | [ETH-053](risk-omens/ETH-053-ravenous-omen-without-food.md) | Redefine the Ravenous Omen for food buffs (no hunger) | risk-omens | M4 | P3 | idea | S |

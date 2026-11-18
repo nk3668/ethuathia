@@ -63,3 +63,19 @@ export const FEATURE_STAIRS_DOWN = defineFeature({
   tags: ['stairs'],
   glyph: { ch: '>', color: '#ffffff', bold: true },
 });
+
+const FOUNTAIN_FLOWING: Glyph = { ch: '{', color: '#4f8fd9' };
+
+/** A fountain (ETH-072): drink from it while standing on it, for a draught from `DRAUGHTS`. */
+export const FEATURE_FOUNTAIN = defineFeature({
+  id: 'feature.fountain',
+  name: 'Fountain',
+  description:
+    'A stone basin fed by a spring deep in the rock. Anyone standing on it can drink, and each drink is a draught ' +
+    'of chance: most often it mends wounds, sometimes it sharpens the eyes or turns the stomach, and sometimes it ' +
+    'is only water. A fountain holds a few draughts before it runs dry. Adventurers drink when hurt and carrying ' +
+    'no healing potion.',
+  tags: ['fountain'],
+  glyph: FOUNTAIN_FLOWING,
+  states: { flowing: FOUNTAIN_FLOWING, dry: { ch: '{', color: '#5b6573' } },
+});

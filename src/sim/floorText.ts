@@ -12,13 +12,15 @@
  * | `'` | open door on a floor tile |
  * | `<` | stairs up on a floor tile |
  * | `>` | stairs down on a floor tile |
+ * | `{` | fountain on a floor tile, holding `TEXT_FOUNTAIN_DRAUGHTS` (a printed fountain may hold others, or none) |
  * | `@` | party start position on a floor tile (only when parsing) |
  *
  * Every row must be the same width.
  */
-import { Grid } from '../core';
+import { clonePlain, Grid } from '../core';
 import type { Pos } from '../core';
 import { getEntity, getFloor } from './entities';
+import { DRAUGHT_MENDING } from '../content';
 import { DEFS, Terrain } from './state';
 import type { FeaturePart, FloorId, RunState } from './state';
 
@@ -32,11 +34,18 @@ export interface FloorPlan {
   starts: Pos[];
 }
 
+/**
+ * What a fountain written as `{` holds: three draughts of mending water, so hand-built test maps
+ * get a predictable fountain. Tests that need other water set the feature's `draughts` themselves.
+ */
+export const TEXT_FOUNTAIN_DRAUGHTS: readonly string[] = [DRAUGHT_MENDING.id, DRAUGHT_MENDING.id, DRAUGHT_MENDING.id];
+
 const FEATURE_CHARS: Record<string, { def: string; feature: FeaturePart }> = {
   '+': { def: DEFS.door, feature: { kind: 'door', open: false } },
   "'": { def: DEFS.door, feature: { kind: 'door', open: true } },
   '<': { def: DEFS.stairsUp, feature: { kind: 'stairs', dir: 'up' } },
   '>': { def: DEFS.stairsDown, feature: { kind: 'stairs', dir: 'down' } },
+  '{': { def: DEFS.fountain, feature: { kind: 'fountain', draughts: [...TEXT_FOUNTAIN_DRAUGHTS] } },
 };
 
 /** Parses a floor from text rows. Throws on ragged rows or an unknown character. */
@@ -60,7 +69,7 @@ export function parseFloorText(rows: readonly string[]): FloorPlan {
       terrain.set(x, y, Terrain.Floor);
       if (ch === '@') plan.starts.push({ x, y });
       if (feature !== undefined) {
-        plan.features.push({ def: feature.def, pos: { x, y }, feature: { ...feature.feature } });
+        plan.features.push({ def: feature.def, pos: { x, y }, feature: clonePlain(feature.feature) });
       }
     }
   });
@@ -68,7 +77,14 @@ export function parseFloorText(rows: readonly string[]): FloorPlan {
 }
 
 function featureChar(f: FeaturePart): string {
-  return f.kind === 'door' ? (f.open ? "'" : '+') : f.dir === 'up' ? '<' : '>';
+  switch (f.kind) {
+    case 'door':
+      return f.open ? "'" : '+';
+    case 'stairs':
+      return f.dir === 'up' ? '<' : '>';
+    case 'fountain':
+      return '{';
+  }
 }
 
 /** Terrain as text, then each mark drawn over it in order (later marks win). */

@@ -284,7 +284,7 @@ marker.
 | Stairs | `<` up, `>` down | `#ffffff`, bold |
 | Altar | `_` | Patron's color, or grey when unaligned |
 | Grave | `†` | `#a886e0` |
-| Fountain | `{` | `#4f8fd9` |
+| Fountain | `{` | `#4f8fd9`; `#5b6573` once it has run dry |
 | Item | by category (`!` potion, `?` scroll, `)` weapon, `[` armor, `$` coin) | By category |
 
 The glyph and color for each content entry live on its definition, so the Codex shows exactly

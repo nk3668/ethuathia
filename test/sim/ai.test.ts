@@ -148,7 +148,7 @@ describe('decision engine', () => {
     hero.ai = newAiPart([rule('cond.test_never', 'act.test_step', { x: 1, y: 0 })]);
     // The room is all in view, so there is nothing to explore: the baseline waits.
     expect(fired(step(state, []))).toMatchObject([
-      { rule: { set: 'baseline', index: 8 }, action: 'act.wait', detail: 'Wait: nothing else to do' },
+      { rule: { set: 'baseline', index: 9 }, action: 'act.wait', detail: 'Wait: nothing else to do' },
     ]);
   });
 
@@ -182,7 +182,7 @@ describe('decision engine', () => {
     // The baseline is a plain rule list: an adventurer could be given the same rules as its own.
     const { state, hero } = setup(['#####', '#@..#', '#...#', '#####']);
     hero.ai = newAiPart(BASELINE_RULES.map((r) => structuredClone(r)));
-    expect(fired(step(state, []))[0]?.rule).toEqual({ set: 'own', index: 8 });
+    expect(fired(step(state, []))[0]?.rule).toEqual({ set: 'own', index: 9 });
   });
 });
 
@@ -308,7 +308,7 @@ describe('stuck detection', () => {
     expect(stuck).toEqual({
       type: 'stuck',
       actor: hero.id,
-      rule: { set: 'baseline', index: 4 },
+      rule: { set: 'baseline', index: 5 },
       action: 'act.explore',
       turns: STUCK_TURNS,
       detail:
