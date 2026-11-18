@@ -7,9 +7,10 @@
  * `domains.ts`, `index.ts`), so any domain may import its helpers (`isStep`, `stepBlocker`).
  */
 import { Grid } from '../core';
+import { MONSTERS } from '../content';
 import type { Pos } from '../core';
 import type { ActionRecord } from './actions';
-import { actorAt, featureAt, getFloor, inFloorBounds, moveEntity } from './entities';
+import { actorAt, blockerAt, featureAt, getFloor, inFloorBounds, moveEntity } from './entities';
 import { Terrain } from './state';
 import type { Entity, FloorId, RunState } from './state';
 
@@ -68,15 +69,15 @@ export const CORE_ACTIONS: ActionRecord<CoreRequest> = {
     id: 'move',
     name: 'Move',
     description:
-      'Step to a neighboring tile, diagonals included. Walls, closed doors and other creatures block the way, ' +
-      'and doorways can only be entered or left straight on.',
+      'Step to a neighboring tile, diagonals included. Walls, closed doors and other creatures block the way ' +
+      '(only small folk and swarms can crowd onto a tile together), and doorways can only be entered or left straight on.',
     tags: [],
     cost: 100,
     parse: (raw) => (isStep(raw.dir) ? { id: 'move', dir: { x: raw.dir.x, y: raw.dir.y } } : BAD_DIR),
     validate: ({ state, actor }, { dir }) => {
       const blocked = stepBlocker(state, actor.floor, actor.pos, dir);
       if (blocked !== null) return blocked;
-      const other = actorAt(state, actor.floor, add(actor.pos, dir));
+      const other = blockerAt(state, actor, actor.floor, add(actor.pos, dir));
       return other === undefined ? null : `${describe(other)} is in the way`;
     },
     execute: ({ state, actor, emit }, { dir }) => {
@@ -187,5 +188,6 @@ function add(p: Pos, d: Pos): Pos {
 
 /** A short name for an entity in a reason string. */
 function describe(entity: Entity): string {
-  return entity.adventurer?.name ?? `Entity ${entity.id}`;
+  if (entity.adventurer !== undefined) return entity.adventurer.name;
+  return MONSTERS.has(entity.def) ? `A ${MONSTERS.get(entity.def).name.toLowerCase()}` : `Entity ${entity.id}`;
 }

@@ -52,7 +52,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-056](tools-balance/ETH-056-invariants-soak-compare.md) | Safety net: state invariants, soak test, app-boot smoke test and sim compare | tools-balance | M1 | P0 | done | M |
 | [ETH-057](combat-items/ETH-057-bundles-stats-statuses.md) | Bundles (modifiers, effects, triggers), stats with sources and timed statuses | combat-items | M1 | P0 | done | M |
 | [ETH-058](sim-core/ETH-058-multi-floor-descent.md) | Multiple floors: stairs, lazily generated floors and a baseline descend rule | sim-core | M1 | P0 | done | M |
-| [ETH-060](combat-items/ETH-060-monsters-melee-combat.md) | Monsters, melee combat and death | combat-items | M1 | P0 | ready | M |
+| [ETH-060](combat-items/ETH-060-monsters-melee-combat.md) | Monsters, melee combat and death | combat-items | M1 | P0 | done | M |
 | [ETH-061](combat-items/ETH-061-items-inventory-core.md) | Items on the floor, inventory, pickup and drop, and in-run gold | combat-items | M1 | P0 | done | M |
 | [ETH-062](sim-core/ETH-062-run-end-summary.md) | Run end (victory, retreat, wipe), run trackers, run summary and auto-restart | sim-core | M1 | P0 | done | M |
 | [ETH-024](quests/ETH-024-contracts-recover-relic.md) | Contract model and the Recover-relic contract; victory needs every contract plus the exit | quests | M1 | P1 | idea | M |

@@ -89,6 +89,14 @@ export interface SeedResult {
   gold?: number;
   /** How many times stuck detection dropped a goal, and the turn it first did. */
   stuck: { count: number; firstTurn: number | null };
+  /** Monsters killed. Missing from reports made before ETH-060. */
+  kills?: number;
+  /** Party members who died. Missing from reports made before ETH-060. */
+  deaths?: number;
+  /** What killed them: the killer's def (`other` for a status or anything else) → deaths. */
+  deathCauses?: Record<string, number>;
+  /** Draughts drunk from fountains (ETH-072). */
+  drinks?: number;
   /** `stateHash` of where the run stopped, to tell whether a change altered behavior. */
   hash: string;
 }
@@ -120,6 +128,13 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
   let items = 0;
   let snap = session.snapshot();
 
+  let kills = 0;
+  let deaths = 0;
+  let drinks = 0;
+  const deathCauses: Record<string, number> = {};
+  /** Who killed each party member struck down, until their `fell` event. */
+  const slain = new Map<number, string>();
+
   while (steps < cap) {
     const { events, progressed } = session.step();
     for (const e of events) {
@@ -127,6 +142,16 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
       if (e.type === 'turnedBack') turnedBack ??= e.turn;
       if (e.type === 'runEnded') end = { outcome: e.outcome, turn: e.turn };
       if (e.type === 'pickedUp') items++;
+      if (e.type === 'killed') {
+        if (e.byParty) kills++;
+        else slain.set(e.victim, e.killerDef);
+      }
+      if (e.type === 'drankFountain') drinks++;
+      if (e.type === 'fell') {
+        deaths++;
+        const cause = slain.get(e.actor) ?? 'other';
+        deathCauses[cause] = (deathCauses[cause] ?? 0) + 1;
+      }
       if (e.type !== 'stuck') continue;
       stuck.count++;
       stuck.firstTurn ??= e.turn;
@@ -177,6 +202,10 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     items,
     gold: snap.domains.items.gold,
     stuck,
+    kills,
+    deaths,
+    deathCauses,
+    drinks,
     hash: session.stateHash(),
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
     atRisk: { ...snap.domains.run.atRisk },
@@ -258,6 +287,18 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     `Items picked up per run: mean ${(picked.reduce((a, b) => a + b, 0) / Math.max(1, picked.length)).toFixed(1)}, ` +
     `max ${Math.max(0, ...picked)}. Gold per run: mean ${(gold.reduce((a, b) => a + b, 0) / Math.max(1, gold.length)).toFixed(1)}, max ${Math.max(0, ...gold)}.`;
 
+  const kills = results.map((r) => r.kills ?? 0);
+  const deaths = results.reduce((n, r) => n + (r.deaths ?? 0), 0);
+  const causes = new Map<string, number>();
+  for (const r of results) for (const [cause, n] of Object.entries(r.deathCauses ?? {})) causes.set(cause, (causes.get(cause) ?? 0) + n);
+  const causeText = [...causes.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([cause, n]) => `${cause} ${n}`)
+    .join(', ');
+  const combatLine =
+    `Kills per run: mean ${(kills.reduce((a, b) => a + b, 0) / Math.max(1, kills.length)).toFixed(1)}. ` +
+    `Deaths: ${deaths}${deaths === 0 ? '' : ` (${causeText})`}.`;
+
   const flagged = results.flatMap((r) => {
     const reason = flagReason(r, cap);
     return reason === null ? [] : [`  seed ${r.seed}: ${reason}`];
@@ -270,7 +311,7 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     `${summary}.`,
     ...(endLine === '' ? [] : [endLine]),
     ...(turnLine === '' ? [] : [turnLine]),
-    ...(results.length === 0 ? [] : [depthLine, lootLine]),
+    ...(results.length === 0 ? [] : [depthLine, lootLine, combatLine]),
     flagged.length === 0 ? 'Flagged seeds: none.' : `Flagged seeds:\n${flagged.join('\n')}`,
   ].join('\n');
 }

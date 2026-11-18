@@ -3,7 +3,8 @@
  * frontier, and turning one step along a goal map into an action.
  */
 import type { Grid, Pos } from '../../core';
-import { actorAt, featureAt, getEntity, getFloor } from '../entities';
+import { MONSTERS } from '../../content';
+import { blockerAt, featureAt, getEntity, getFloor } from '../entities';
 import { memoryPathGrid, OPEN_DOOR_COST, stepToward } from '../goalMap';
 import type { PathGrid } from '../goalMap';
 import { getMemory } from '../perception';
@@ -83,7 +84,7 @@ export function followMap(ctx: AiCtx, paths: PathGrid, map: Grid, detail: string
   const dir = stepToward(paths, map, actor.pos);
   if (dir === null) return null;
   const to = { x: actor.pos.x + dir.x, y: actor.pos.y + dir.y };
-  const other = actorAt(state, actor.floor, to);
+  const other = blockerAt(state, actor, actor.floor, to);
   if (other !== undefined) {
     if (willingToSwap(ctx, other)) {
       return { request: { id: 'swap', dir }, detail: `${detail}; squeezing past ${nameOf(other)}` };
@@ -115,7 +116,8 @@ export function willingToSwap({ actor }: AiCtx, other: Entity): boolean {
   return intent === null || (RULE_ACTIONS.has(intent.action) && RULE_ACTIONS.get(intent.action).idle);
 }
 
-/** A short name for an entity in a reason. */
+/** A short name for an entity in a reason: an adventurer's name, a monster's kind, else its id. */
 export function nameOf(entity: Entity): string {
-  return entity.adventurer?.name ?? `entity ${entity.id}`;
+  if (entity.adventurer !== undefined) return entity.adventurer.name;
+  return MONSTERS.has(entity.def) ? `the ${MONSTERS.get(entity.def).name.toLowerCase()}` : `entity ${entity.id}`;
 }

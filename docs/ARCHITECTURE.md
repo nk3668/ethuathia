@@ -244,6 +244,34 @@ All in `src/sim/run/`:
   exit, the whole party); `act.gather { dir: 'up' }` waits. `act.descend` and the down
   `act.gather` refuse while heading out.
 
+### Combat (ETH-060)
+
+`src/sim/combat/`: monsters, the `attack` action, damage and death.
+
+- **Monsters** are content (`MONSTERS`, `src/content/monsters.ts`): glyph, `stats` (hp, damage,
+  accuracy, evasion, armor, speed), a rule set, a depth range, a spawn weight, a `threat` value
+  (Trophies per kill) and optional `sharesTile` (small folk and swarms may crowd one tile with
+  others that share). `spawnMonster(state, def, floor, pos)` makes one: a monster-faction actor
+  with stats, an `ai` part holding the def's rules and a `monster` part. Monsters run the same
+  decision engine as adventurers, on their own rules only (no baseline); combat registers
+  `cond.enemy_adjacent`, `cond.enemy_visible`, `cond.hp_below`, `act.attack_adjacent`,
+  `act.approach_enemy`, `act.flee` and `act.wander`.
+- **Spawning:** the `gen.monsters` step (after `gen.fountains`, so no monster stands on a feature)
+  puts `spawns` in the floor plan from the dungeon stream, away from the stairs; building the
+  floor makes them. `RunConfig.monsters: false` leaves them out (tests of other systems).
+- **Attack:** hit chance 70% + 5% per point of accuracy over evasion (5%–95%); a hit does
+  1–`BASE_BLOW` plus the `damage` stat, less armor, at least 1. One draw each from the combat
+  stream. Events `attacked` / `missed`; `trigger.struck` and `trigger.hit` fire after the blow.
+- **Death:** a monster at 0 HP gets `died` (with its cause: the killer's def, or its latest
+  harmful status) and leaves the run. A party member at 0 HP stays in the state at 0 HP, off the
+  schedule and taking up no tile (`isStanding`); the run domain reports it (`fell`) and ends the
+  run as a wipe when nobody is left. A blow that kills emits `killed { killer, victim, byParty,
+  threat }`, which `track.kills` turns into Trophies. `isPartyWiped(state)` agrees with the run
+  domain's wipe check.
+- **Recovery:** an adventurer with no enemy next to them gets 1 HP back every
+  `RECOVERY_INTERVAL` turns (`recovered`, quiet in the log).
+- **Snapshot:** `ActorView` carries `name`, `hp` and `maxHp` for each visible actor.
+
 ### Codex discoveries
 
 The Codex (ETH-065) fills in from sim events. `src/sim/run/codex.ts` defines it:
@@ -335,8 +363,8 @@ The API every later item uses (ETH-057, §2.2):
   `to: 'other'` (default `self`). Effects on a missing or dead target do nothing. **A new kind** is
   one member of `Effect` and one option in `effectSchema` (`content/bundles.ts`) and one case in
   `runEffect` (`sim/stats/effects.ts`). The `damage` effect only lowers HP (never below 0, clears
-  a queued action at 0) and emits `damaged`; **death is ETH-060's**: combat should handle an actor
-  at 0 HP after a `damaged` event, or route this case through its damage pipeline.
+  a queued action at 0) and emits `damaged`. Combat's turn hooks settle a monster left at 0 HP
+  (`died`, blaming the status); a party member at 0 HP is the run domain's `fell`.
 - **Triggers:** content writes `{ on: 'trigger.some_kind', effects }`. A trigger kind is a
   `TriggerKindDef` (`{ id: 'trigger.*', name, description, tags }`) listed in the firing domain's
   `triggers`, which the hub registers in `TRIGGERS` (validation checks `on` against it). **To fire

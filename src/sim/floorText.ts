@@ -22,6 +22,7 @@ import type { Pos } from '../core';
 import { getEntity, getFloor } from './entities';
 import { DRAUGHT_MENDING } from '../content';
 import type { ItemInstance } from './items/instance';
+import type { NewEntity } from './entities';
 import { DEFS, Terrain } from './state';
 import type { FeaturePart, FloorId, RunState } from './state';
 
@@ -33,6 +34,12 @@ export interface FloorPlan {
   features: { def: string; pos: Pos; feature: FeaturePart }[];
   /** Positions marked `@`, in row order. */
   starts: Pos[];
+  /**
+   * Creatures to create when the floor is built (`addFloor`), after its features: whole entities
+   * but for the floor they go on. Generation steps such as `gen.monsters` fill it; hand-built
+   * floors leave it out.
+   */
+  spawns?: Omit<NewEntity, 'floor'>[];
   /** Items lying on the floor, created by `addFloor` in order (ETH-061). Text never has any. */
   items?: PlannedItem[];
 }

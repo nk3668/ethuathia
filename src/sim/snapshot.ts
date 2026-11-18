@@ -16,6 +16,7 @@ import type { DomainSnapshots } from './domain';
 import { domainSnapshots } from './domains';
 import type { EntityId, Faction, FeaturePart, FloorId, RunState } from './state';
 import { statValue } from './stats/getStat';
+import { actorName } from './combat/death';
 
 /**
  * What a snapshot should show. With neither field set, the floor of the first living party
@@ -46,6 +47,10 @@ export interface ActorView {
   def: string;
   pos: Pos;
   faction: Faction;
+  /** An adventurer's name, or a monster's kind (its def's name). */
+  name: string;
+  hp: number;
+  maxHp: number;
 }
 
 /** The shown floor, fog applied. */
@@ -143,7 +148,15 @@ function floorView(state: RunState, floorId: FloorId): FloorView {
   for (const id of [...floor.entities].sort((a, b) => a - b)) {
     const e = state.entities[id];
     if (e?.actor === undefined || visible[e.pos.y * width + e.pos.x] !== 1) continue;
-    actors.push({ id: e.id, def: e.def, pos: { x: e.pos.x, y: e.pos.y }, faction: e.actor.faction });
+    actors.push({
+      id: e.id,
+      def: e.def,
+      pos: { x: e.pos.x, y: e.pos.y },
+      faction: e.actor.faction,
+      name: actorName(e),
+      hp: e.actor.hp,
+      maxHp: statValue(state, e, 'hp'),
+    });
   }
 
   return {

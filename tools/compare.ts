@@ -131,6 +131,10 @@ export const METRICS: Metric[] = [
   // Reports from before ETH-061 had no items, so these read '-'.
   { name: 'items picked up, mean', value: (rs) => mean(present(rs.map((r) => r.items))), digits: 1 },
   { name: 'gold, mean', value: (rs) => mean(present(rs.map((r) => r.gold))), digits: 1 },
+  // Combat (ETH-060). Reports from before it had no monsters, so these read 0.
+  { name: 'kills, mean', value: (rs) => mean(rs.map((r) => r.kills ?? 0)), digits: 1 },
+  { name: 'deaths, total', value: (rs) => rs.reduce((n, r) => n + (r.deaths ?? 0), 0), digits: 0 },
+  { name: 'fountain drinks, mean', value: (rs) => mean(rs.map((r) => r.drinks ?? 0)), digits: 1 },
 ];
 
 function fmt(value: number | null, digits: number): string {

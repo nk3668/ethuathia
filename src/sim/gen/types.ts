@@ -30,6 +30,8 @@ export interface FloorDraft extends FloorPlan {
   loot: Rng;
   /** Items to place on the floor, in order (`gen.loot`). */
   items: PlannedItem[];
+  /** Creatures to create with the floor (`FloorPlan.spawns`). */
+  spawns: NonNullable<FloorPlan['spawns']>;
 }
 
 /** A step bound to checked parameters, ready to run. */

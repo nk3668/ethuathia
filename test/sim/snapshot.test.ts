@@ -63,8 +63,8 @@ describe('snapshot', () => {
     ]);
     const hero = state.party[0] as EntityId;
     expect(snap.floor.actors).toEqual([
-      { id: hero, def: 'actor.adventurer', pos: { x: 1, y: 1 }, faction: 'party' },
-      { id: seen, def: 'monster.test', pos: { x: 3, y: 2 }, faction: 'monster' },
+      { id: hero, def: 'actor.adventurer', pos: { x: 1, y: 1 }, faction: 'party', name: 'Brannoc', hp: 20, maxHp: 20 },
+      { id: seen, def: 'monster.test', pos: { x: 3, y: 2 }, faction: 'monster', name: 'monster.test', hp: 5, maxHp: 5 },
     ]);
   });
 

@@ -9,9 +9,9 @@
  * state it owns.
  */
 import { findNonPlain, Grid, isRngState } from '../core';
-import { inFloorBounds } from './entities';
+import { inFloorBounds, mayShareTile } from './entities';
 import { RNG_STREAMS, Terrain } from './state';
-import type { RunState } from './state';
+import type { Entity, RunState } from './state';
 import { statValue } from './stats/getStat';
 
 /**
@@ -135,10 +135,13 @@ registerInvariant('core.floorIndex', (state) => {
   return problems;
 });
 
-/** Positions are whole tiles inside their floor; actors stand on floor terrain, one per tile. */
+/**
+ * Positions are whole tiles inside their floor; actors stand on floor terrain, one per tile,
+ * except creatures that share tiles (`sharesTile`), which may stand together with each other.
+ */
 registerInvariant('core.positions', (state) => {
   const problems: string[] = [];
-  const occupied = new Map<string, number>();
+  const occupied = new Map<string, Entity>();
   for (const entity of Object.values(state.entities)) {
     const floor = state.floors[entity.floor];
     if (floor === undefined) continue; // core.floorIndex reports it.
@@ -151,10 +154,14 @@ registerInvariant('core.positions', (state) => {
     if (Grid.wrap(floor.terrain).get(x, y) === Terrain.Wall) {
       problems.push(`actor ${entity.id} at (${x}, ${y}) on "${floor.id}" is inside a wall`);
     }
+    // A fallen adventurer lies on its tile without taking it up (`isStanding`).
+    if (entity.actor.hp <= 0) continue;
     const tile = `${floor.id}:${x},${y}`;
     const other = occupied.get(tile);
-    if (other !== undefined) problems.push(`actors ${other} and ${entity.id} share (${x}, ${y}) on "${floor.id}"`);
-    occupied.set(tile, entity.id);
+    if (other !== undefined && !mayShareTile(other, entity)) {
+      problems.push(`actors ${other.id} and ${entity.id} share (${x}, ${y}) on "${floor.id}"`);
+    }
+    occupied.set(tile, entity);
   }
   return problems;
 });

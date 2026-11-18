@@ -101,14 +101,14 @@ export function trophiesForKill(difficulty: number): number {
 }
 
 /**
- * `track.kills`: monsters killed and the Trophies they are worth. A placeholder until combat
- * (ETH-060) adds a kill event: its `reduce` then adds a case for it, crediting
- * `trophiesForKill(difficulty)` per monster the party kills.
+ * `track.kills`: monsters the party killed and the Trophies they are worth, from the combat
+ * domain's `killed` events: `trophiesForKill(threat)` per kill by a party member.
  */
 export const KILLS_TRACKER: RunTracker<{ kills: number; trophies: number }> = {
   id: 'track.kills',
   init: () => ({ kills: 0, trophies: 0 }),
-  reduce: (s) => s,
+  reduce: (s, e) =>
+    e.type === 'killed' && e.byParty && e.threat > 0 ? { kills: s.kills + 1, trophies: s.trophies + trophiesForKill(e.threat) } : s,
   rewards: (s) => ({ [TROPHIES]: s.trophies }),
 };
 
