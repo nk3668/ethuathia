@@ -245,9 +245,11 @@ export function describeGrant(grant: UpgradeGrant): string {
       return `Unlocks ${findDef(grant.id)?.name ?? grant.id}`;
     case 'bundle': {
       const who = grant.scope === 'party' ? 'each adventurer' : 'the run';
-      const parts = grant.bundle.modifiers.map((m) =>
+      const parts = (grant.bundle.modifiers ?? []).map((m) =>
         m.op === 'add' ? `${m.value > 0 ? '+' : ''}${m.value} ${statName(m.stat)}` : `×${m.value} ${statName(m.stat)}`,
       );
+      const triggers = grant.bundle.triggers?.length ?? 0;
+      if (triggers > 0) parts.push(`${triggers} triggered effect${triggers === 1 ? '' : 's'}`);
       return `${parts.join(', ')} for ${who}`;
     }
   }

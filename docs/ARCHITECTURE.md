@@ -1130,9 +1130,9 @@ As built (ETH-063):
   `Def`) and `upgrade` (`UpgradeNodeDef`: `building`, `tier` from 1, `column` from 0, `cost` keyed
   by currency id `renown` / `trophies` / `favor:deity.<id>`, `requires`, optional
   `exclusiveGroup`, `grants`). Grants are `{ kind: 'bundle', scope: 'party' | 'run', bundle }`,
-  `{ kind: 'unlock', id }` and `{ kind: 'capacity', key, amount }`. `bundle` is a placeholder
-  `GrantBundle` (`{ modifiers: { stat, op, value }[] }`, TODO ETH-057: swap in the shared
-  `Bundle`). Capacity keys and their tooltip names are `CAPACITY_INFO` (`partySize`,
+  `{ kind: 'unlock', id }` and `{ kind: 'capacity', key, amount }`. `bundle` is the shared
+  `Bundle` (§2.2, `bundleSchema` plus a check that it has a modifier or trigger; its refs come
+  from `bundleRefs`). Capacity keys and their tooltip names are `CAPACITY_INFO` (`partySize`,
   `rosterSize`, `contractSlots`, `ruleSlots`); a new capacity is one entry there.
 - **Doctrine choices** (e.g. "Prioritize clearing floors" vs "Prioritize the stairs") are
   `unlock` grants of `doctrine.*` ids in a pick-one group, with no separate grant kind. The

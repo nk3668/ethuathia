@@ -16,6 +16,8 @@
 import { z } from 'zod';
 import { Registry } from '../core';
 import type { Def } from '../core';
+import { bundleRefs, bundleSchema } from './bundles';
+import type { Bundle } from './bundles';
 import type { ContentKind, ContentRef } from './kind';
 import { defShape, idSchema, positiveInt } from './schema';
 
@@ -59,27 +61,13 @@ export function isCapacityKey(value: unknown): value is CapacityKey {
 
 // --- Grants ----------------------------------------------------------------------------------
 
-/**
- * One stat change in a granted bundle.
- * TODO(ETH-057): replace `GrantBundle` with the shared `Bundle` (docs/ARCHITECTURE.md §2.2) once
- * stats and bundles land; this placeholder keeps its `modifiers` shape so grants carry over.
- */
-export interface GrantModifier {
-  /** A stat id (`hp`, `accuracy`, …), checked against the sim's `STAT_REFS`. */
-  readonly stat: string;
-  readonly op: 'add' | 'mul';
-  readonly value: number;
-}
-
-/** Placeholder for the shared `Bundle` (see `GrantModifier`). */
-export interface GrantBundle {
-  readonly modifiers: readonly GrantModifier[];
-}
-
 /** What owning an upgrade node gives every later run. */
 export type UpgradeGrant =
-  /** Stat changes for each adventurer (`party`) or for the run as a whole (`run`). */
-  | { readonly kind: 'bundle'; readonly scope: 'party' | 'run'; readonly bundle: GrantBundle }
+  /**
+   * A bundle (docs/ARCHITECTURE.md §2.2: stat modifiers, effects, triggers) for each adventurer
+   * (`party`) or for the run as a whole (`run`).
+   */
+  | { readonly kind: 'bundle'; readonly scope: 'party' | 'run'; readonly bundle: Bundle }
   /** Makes a content def available: a class, race, rule condition, floor type, Omen… */
   | { readonly kind: 'unlock'; readonly id: string }
   /** Raises a named limit by `amount`. */
@@ -114,17 +102,17 @@ const groupSchema = z
   .string()
   .regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/, 'must be lowercase words joined by "." (e.g. "guild_hall.tier2")');
 
-const modifierSchema = z.strictObject({
-  stat: z.string().min(1),
-  op: z.enum(['add', 'mul']),
-  value: z.number().finite().refine((n) => n !== 0, 'must not be 0'),
-});
+/** A granted bundle must do something: at least one modifier or trigger. */
+const grantBundleSchema = bundleSchema.refine(
+  (b) => (b.modifiers?.length ?? 0) + (b.triggers?.length ?? 0) > 0,
+  'must change at least one stat or have a trigger',
+);
 
 const grantSchema = z.discriminatedUnion('kind', [
   z.strictObject({
     kind: z.literal('bundle'),
     scope: z.enum(['party', 'run']),
-    bundle: z.strictObject({ modifiers: z.array(modifierSchema).min(1, 'must change at least one stat') }),
+    bundle: grantBundleSchema,
   }),
   z.strictObject({
     kind: z.literal('unlock'),
@@ -173,11 +161,7 @@ function upgradeRefs(def: UpgradeNodeDef): ContentRef[] {
   }
   def.grants.forEach((grant, i) => {
     if (grant.kind === 'unlock') refs.push({ path: `grants[${i}].id`, kind: unlockKind(grant.id), id: grant.id });
-    if (grant.kind === 'bundle') {
-      grant.bundle.modifiers.forEach((m, j) =>
-        refs.push({ path: `grants[${i}].bundle.modifiers[${j}].stat`, kind: 'stat', id: m.stat }),
-      );
-    }
+    if (grant.kind === 'bundle') refs.push(...bundleRefs(`grants[${i}].bundle`, grant.bundle));
   });
   return refs;
 }

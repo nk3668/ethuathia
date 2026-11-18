@@ -110,6 +110,19 @@ describe('upgrade node content', () => {
     ]);
   });
 
+  it('grants the shared Bundle: triggers are checked, and an empty bundle is refused', () => {
+    const problems = check([
+      node('t', { grants: [{ kind: 'bundle', scope: 'party', bundle: { triggers: [{ on: 'trigger.nope', effects: [{ kind: 'heal', amount: 1 }] }] } }] }),
+      node('e', { column: 1, grants: [{ kind: 'bundle', scope: 'party', bundle: {} }] }),
+    ]);
+    expect(problems).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^upgrade "upgrade\.e": grants\[0\]\.bundle: must change at least one stat or have a trigger/),
+        expect.stringMatching(/^upgrade "upgrade\.t": grants\[0\]\.bundle\.triggers\[0\]\.on refers to .*trigger/),
+      ]),
+    );
+  });
+
   it('expresses a doctrine choice as a pick-one pair of doctrine unlocks', () => {
     const doctrines = withDefs(DOCTRINE_KIND, [
       { id: 'doctrine.clear_floors', name: 'Clear floors', description: 'Explore every floor fully.', tags: [] },
