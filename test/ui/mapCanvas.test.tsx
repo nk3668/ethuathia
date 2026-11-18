@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FEATURE_DOOR } from '../../src/content';
 import { createRun, moveEntity, snapshot } from '../../src/sim';
 import type { RunState } from '../../src/sim';
@@ -135,5 +135,84 @@ describe('MapCanvas', () => {
     moveEntity(state, state.party[0] as number, 'd1', { x: 3, y: 2 });
     act(() => useSimStore.getState().receiveSnapshot(snapshot(state)));
     expect(screen.getByRole('tooltip').textContent).toBe('FloorIn view');
+  });
+});
+
+describe('MapCanvas auto-pause marker', () => {
+  /** Animation frames queued by the map, run by `frames`. */
+  let queued = new Map<number, FrameRequestCallback>();
+  let nextId = 1;
+  let now = 0;
+
+  beforeEach(() => {
+    queued = new Map();
+    now = 0;
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      queued.set(nextId, cb);
+      return nextId++;
+    });
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => queued.delete(id));
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete (window as Partial<Window>).matchMedia;
+    useUiStore.setState({ mapFocus: null, autoPaused: null });
+    useSimStore.setState({ speed: 1 });
+  });
+
+  /** Runs `n` animation frames, 100ms apart. Returns how many bracket strokes they drew. */
+  function frames(n: number): number {
+    const before = calls.filter((c) => c === 'stroke').length;
+    for (let i = 0; i < n; i++) {
+      const run = [...queued.values()];
+      queued = new Map();
+      now += 100;
+      act(() => run.forEach((cb) => cb(now)));
+    }
+    return calls.filter((c) => c === 'stroke').length - before;
+  }
+
+  function setReducedMotion(reduce: boolean) {
+    window.matchMedia = (query: string) =>
+      ({
+        matches: reduce && query.includes('reduced-motion'),
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }) as unknown as MediaQueryList;
+  }
+
+  function autoPausedOn(pos: { x: number; y: number }) {
+    useSimStore.setState({ speed: 0 });
+    useUiStore.setState({ mapFocus: { floor: 'd1', pos }, autoPaused: 'An adventurer gets stuck' });
+  }
+
+  it('pulses the marker every frame while auto-paused, and stops when the run resumes', () => {
+    setReducedMotion(false);
+    start();
+    autoPausedOn({ x: 6, y: 1 });
+    render(<MapArea />);
+    frames(1); // the pulse starts
+    // Then four bracket strokes per frame, frame after frame.
+    expect(frames(3)).toBe(12);
+    act(() => {
+      useSimStore.setState({ speed: 1 });
+      useUiStore.setState({ mapFocus: null, autoPaused: null });
+    });
+    frames(1);
+    expect(frames(3)).toBe(0);
+    expect(queued.size).toBe(0);
+  });
+
+  it('keeps the marker still under prefers-reduced-motion', () => {
+    setReducedMotion(true);
+    start();
+    autoPausedOn({ x: 6, y: 1 });
+    render(<MapArea />);
+    // Drawn with its brackets, then no more frames are asked for.
+    expect(calls.filter((c) => c === 'stroke').length).toBeGreaterThanOrEqual(4);
+    frames(1);
+    expect(frames(3)).toBe(0);
+    expect(queued.size).toBe(0);
   });
 });

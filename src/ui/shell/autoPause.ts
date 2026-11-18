@@ -1,6 +1,7 @@
 /**
  * Auto-pause (ETH-047): pauses the run when a highlight of a kind the player ticked in Options
- * happens, and centers the map where it did, so an idle player doesn't miss it.
+ * happens, and centers the map where it did and marks the tile (pulsing unless the player
+ * prefers reduced motion), so an idle player doesn't miss it. Resuming clears the marker.
  *
  * The check runs on the events as `simStore` receives them, so a worker host may have run a few
  * more steps in the same batch before the pause lands; the log and the map focus still point at
@@ -33,8 +34,14 @@ export function autoPauseHighlight(
  */
 export function watchAutoPause(): Unsubscribe {
   return useSimStore.subscribe((state, prev) => {
-    // Resuming clears the "auto-paused" notice.
-    if (prev.speed === 0 && state.speed !== 0) useUiStore.getState().noteAutoPause(null);
+    // Resuming clears the "auto-paused" notice and the map marker it put on the moment.
+    if (prev.speed === 0 && state.speed !== 0) {
+      const ui = useUiStore.getState();
+      if (ui.autoPaused !== null) {
+        ui.noteAutoPause(null);
+        ui.focusMap(null);
+      }
+    }
     if (state.events === prev.events || state.speed === 0) return;
     const ui = useUiStore.getState();
     const highlight = autoPauseHighlight(state.events, prev.nextSeq, ui.autoPause);

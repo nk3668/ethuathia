@@ -147,7 +147,7 @@ describe('auto-pause', () => {
     expect(useUiStore.getState().mapFocus).toBeNull();
   });
 
-  it('pauses on a chosen kind, centers the map on it, and clears the notice on resume', () => {
+  it('pauses on a chosen kind, centers the map on it, and clears the notice and marker on resume', () => {
     useUiStore.getState().setAutoPause('stuck', true);
     const unwatch = watchAutoPause();
     useSimStore.getState().receiveEvents([waited(1), stuck(2)]);
@@ -157,6 +157,7 @@ describe('auto-pause', () => {
     useSimStore.getState().togglePause();
     expect(useSimStore.getState().speed).toBe(1);
     expect(useUiStore.getState().autoPaused).toBeNull();
+    expect(useUiStore.getState().mapFocus).toBeNull();
     // Old events don't pause again; only new ones do.
     useSimStore.getState().receiveEvents([waited(3)]);
     expect(useSimStore.getState().speed).toBe(1);

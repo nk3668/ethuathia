@@ -243,11 +243,12 @@ scrolled to the bottom and stays put when the player scrolls up.
 
 **Highlights (ETH-047).** The log header has an `All` / `★ Highlights` filter. A highlight line
 shows a `★` before its sentence, and the sentence is an accent-colored button: clicking it
-centers the map on where it happened (follow mode) and marks that tile with a dashed accent
-ring until the player selects an adventurer, changes the camera mode or presses Escape on the
+centers the map on where it happened (follow mode) and frames that tile with the focus marker
+(§4.3) until the player selects an adventurer, changes the camera mode or presses Escape on the
 map. Options has an **Auto-pause** list with one checkbox per highlight kind, all off by
-default. When one fires, the run pauses, the map centers on it, and the log header says
-"Auto-paused: (kind)" until the run resumes.
+default. When one fires, the run pauses, the map centers on it, the focus marker pulses on the
+tile, and the log header says "Auto-paused: (kind)". Resuming the run clears the notice and the
+marker.
 
 ---
 
@@ -286,7 +287,11 @@ what the map shows.
 - **Party members** carry a small slot number at the cell's corner so they can be told apart
   without color.
 - **Hover:** cell outline and a tooltip listing what is on the tile.
-- **Map focus:** a dashed accent ring on a tile the player asked to see (a clicked highlight).
+- **Map focus:** four thick accent corner brackets framing a tile the player asked to see (a
+  clicked highlight) or that the run auto-paused on. The bracket shape is used by nothing else,
+  so it reads without its color. While auto-paused the brackets pulse in from one cell out to
+  just around the tile (1.2s period); under `prefers-reduced-motion` they stay still, one cell
+  out.
 - **Hit flash:** the cell flashes `--danger` for 120ms. Off under reduced motion; the log line
   carries the information either way.
 
