@@ -13,6 +13,8 @@ import { ruleDecide } from './ai/engine';
 import type { ActionRequest } from './actions';
 import { applyCommand } from './commands';
 import type { Command } from './commands';
+import { runTurnEnd, runTurnStart } from './domains';
+import { statValue } from './stats/getStat';
 import type { Emit, SimEvent } from './events';
 import { perceive } from './perception';
 import type { ActorEntity, Entity, EntityId, RunState } from './state';
@@ -60,16 +62,16 @@ export function step(state: RunState, commands: readonly Command[], options: Ste
 
   for (const command of commands) applyCommand(state, command, emit);
 
-  const due = new Set(state.party.filter((id) => canAct(state.entities[id])));
+  const due = new Set(state.party.filter((id) => canActIn(state, state.entities[id])));
   while (due.size > 0) {
     let acted = false;
     for (const actor of scheduledActors(state)) {
       // An earlier action this pass may have removed or disabled it.
-      if (!canAct(state.entities[actor.id]) || actor.actor.energy < ENERGY_THRESHOLD) continue;
+      if (!canActIn(state, state.entities[actor.id]) || actor.actor.energy < ENERGY_THRESHOLD) continue;
       takeTurn(state, actor, decide, emit);
       acted = true;
       due.delete(actor.id);
-      for (const id of due) if (!canAct(state.entities[id])) due.delete(id);
+      for (const id of due) if (!canActIn(state, state.entities[id])) due.delete(id);
       if (due.size === 0) break;
     }
     if (!acted) tick(state);
@@ -85,6 +87,12 @@ export function step(state: RunState, commands: readonly Command[], options: Ste
 function takeTurn(state: RunState, actor: ActorEntity, decide: Decide, emit: Emit): void {
   const inParty = state.party.includes(actor.id);
   if (inParty) perceive(state, actor.id);
+  // Domain turn hooks (statuses' triggers). Something there may kill or remove the actor.
+  runTurnStart({ state, actor, emit });
+  if (state.entities[actor.id] === undefined || actor.actor.hp <= 0) {
+    delete actor.actor.queued;
+    return;
+  }
   let request = actor.actor.queued;
   if (request === undefined) {
     request = decide({ state, actor, emit });
@@ -92,22 +100,24 @@ function takeTurn(state: RunState, actor: ActorEntity, decide: Decide, emit: Emi
     delete actor.actor.queued;
   }
   actor.actor.energy -= performAction(state, actor, request, emit);
+  if (state.entities[actor.id] === undefined) return;
+  runTurnEnd({ state, actor, emit });
   if (inParty && state.entities[actor.id] !== undefined) perceive(state, actor.id);
 }
 
 /** One tick: every scheduled actor gains its speed in energy, and the turn counter moves on. */
 function tick(state: RunState): void {
-  for (const actor of scheduledActors(state)) actor.actor.energy += actor.actor.speed;
+  for (const actor of scheduledActors(state)) actor.actor.energy += statValue(state, actor, 'speed');
   state.turn++;
 }
 
-/** True if this is a living actor that gains energy. */
-function canAct(entity: Entity | undefined): entity is ActorEntity {
-  return entity?.actor !== undefined && entity.actor.speed > 0 && entity.actor.hp > 0;
+/** True if this is a living actor that gains energy. Must be called on an entity of `state`. */
+function canActIn(state: RunState, entity: Entity | undefined): entity is ActorEntity {
+  return entity?.actor !== undefined && entity.actor.hp > 0 && statValue(state, entity, 'speed') > 0;
 }
 
 /** The actors that take part in time, in ascending id order: those that can act on a party floor. */
 function scheduledActors(state: RunState): ActorEntity[] {
   const floors = new Set(state.party.map((id: EntityId) => state.entities[id]?.floor));
-  return Object.values(state.entities).filter((e): e is ActorEntity => canAct(e) && floors.has(e.floor));
+  return Object.values(state.entities).filter((e): e is ActorEntity => floors.has(e.floor) && canActIn(state, e));
 }

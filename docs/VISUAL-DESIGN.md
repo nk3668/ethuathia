@@ -227,6 +227,11 @@ sentence and the error text in mono.
 ╰───────────────────────────╯
 ```
 
+Status badges (ETH-057) show the status's glyph in its color, its name and the turns left in
+mono, e.g. `» Hasted 12`. A harmful status has a dashed `--danger` outline, and its tooltip
+says "(harmful)" in words, with the description and turns left. Dead members show no badges,
+and compact cards leave them out.
+
 The selected card has an accent border. A possessed adventurer's card shows a filled accent
 header reading "Possessed", so the state is clear without relying on the border color.
 

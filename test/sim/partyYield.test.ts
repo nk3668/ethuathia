@@ -15,6 +15,7 @@ import {
   aiPathGrid,
   getEntity,
   isStep,
+  newStatsPart,
   RULE_ACTIONS,
   serialize,
   step,
@@ -119,7 +120,8 @@ describe('party members in narrow passages', () => {
       def: 'monster.test',
       floor: 'd1',
       pos: { x: 5, y: 1 },
-      actor: { energy: 0, speed: 0, hp: 5, maxHp: 5, mp: 0, maxMp: 0, faction: 'monster' },
+      actor: { energy: 0, hp: 5, mp: 0, faction: 'monster' },
+      stats: newStatsPart({ hp: 5 }),
     });
     const events = run(state, 30);
     expect(ofType(events, 'swapped')).toEqual([]);

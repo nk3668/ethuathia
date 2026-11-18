@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { FEATURES, TERRAIN } from '../../src/content';
-import { addEntity, createRun, moveEntity, perceiveParty, snapshot } from '../../src/sim';
+import { addEntity, createRun, moveEntity, newStatsPart, perceiveParty, snapshot } from '../../src/sim';
 import type { ActorPart, RunState, Snapshot } from '../../src/sim';
 import {
   atlasLayout,
@@ -52,7 +52,7 @@ const PARTY = [
   { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human' },
 ];
 
-const STATUE: ActorPart = { energy: 0, speed: 0, hp: 5, maxHp: 5, mp: 0, maxMp: 0, faction: 'monster' };
+const STATUE: ActorPart = { energy: 0, hp: 5, mp: 0, faction: 'monster' };
 
 function run(): RunState {
   return createRun({ party: PARTY, floorText: ROOMS }, 1);
@@ -186,7 +186,7 @@ describe('scene', () => {
 
   it('dims remembered tiles and forgets monsters out of view', () => {
     const state = run();
-    addEntity(state, { def: 'monster.cave_rat', floor: 'd1', pos: { x: 3, y: 2 }, actor: { ...STATUE } });
+    addEntity(state, { def: 'monster.cave_rat', floor: 'd1', pos: { x: 3, y: 2 }, actor: { ...STATUE }, stats: newStatsPart({ hp: 5 }) });
     perceiveParty(state);
     const glyphs = new GlyphTable();
     const before = buildScene(snapshot(state), { selected: null, hover: null }, glyphs);
@@ -245,7 +245,7 @@ describe('scene', () => {
 
   it('describes what is on a tile', () => {
     const state = run();
-    addEntity(state, { def: 'monster.cave_rat', floor: 'd1', pos: { x: 3, y: 2 }, actor: { ...STATUE } });
+    addEntity(state, { def: 'monster.cave_rat', floor: 'd1', pos: { x: 3, y: 2 }, actor: { ...STATUE }, stats: newStatsPart({ hp: 5 }) });
     perceiveParty(state);
     const snap = snapshot(state);
     expect(describeTile(snap, { x: 1, y: 1 })).toEqual({ pos: { x: 1, y: 1 }, fog: 'visible', things: ['Mira (party 1)', 'Floor'] });

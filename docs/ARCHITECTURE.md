@@ -137,6 +137,12 @@ Rules:
 | A Codex view of a content kind | a renderer file `src/ui/codex/renderers/<kind>.tsx` (§8.5) |
 | Data kept between runs | a profile slice in `src/meta/slices/`, one line in `PROFILE_SLICES` (see "Profile slices") |
 | An invariant | `registerInvariant('<domain>.name', …)` in the domain module (§11.1) |
+| A stat derivation (attributes, level) | a `StatProvider` in the domain's `statProviders` (Contracts, "Stats") |
+| Bundles from a new place (gear, Omens) | a `BundleSource` in the domain's `bundleSources` |
+| A trigger kind | a `TriggerKindDef` in the domain's `triggers`, fired with `fireTrigger` |
+| Work at the start or end of every actor's turn | the domain's `turnStart` / `turnEnd` hook |
+| An effect kind | `Effect` and `effectSchema` in `content/bundles.ts`, one case in `runEffect` |
+| A status | `defineStatus` in `src/content/statuses.ts` (data only) |
 | Content data | the kind's file in `src/content/` (§5) |
 
 ### Log text
@@ -209,13 +215,95 @@ The Codex (ETH-065) fills in from sim events. `src/sim/run/codex.ts` defines it:
 stay on the actor part), `accuracy`, `evasion`, `damage`, `armor`, `speed`, `sight`, `carry`.
 `STAT_IDS` lists them and `isStatId` checks one.
 
-- **ETH-057 builds `getStat(state, actor, stat)`** on these ids: base value plus modifiers, with
-  each contributing modifier's source for the tooltip (§2.2). Existing reads of HP, MP, speed
-  and sight move to it.
+`STAT_INFO` gives each one a label, tooltip text, a `base` (sight 8, all others 0) and a `min`
+(max HP 1, all others 0).
+
+**Reading a stat (ETH-057).** Never read a maximum, speed or sight from a field: `ActorPart` holds
+only current `hp` and `mp` (plus energy, faction, queued).
+
+- `statValue(state, entity, stat): number` for hot paths (scheduler, AI, combat rolls).
+- `getStat(state, entity, stat): StatResult` = `{ stat, value, parts }`, each part
+  `{ op: 'add' | 'mul', value, source: { id, label } }` (content id and display name, e.g.
+  `{ id: 'race.human', label: 'Human' }`), ready for a tooltip. `getStats` returns all nine.
+  Parts that change nothing are left out. Both give the same number.
+- **Formula:** value = (sum of `add` parts) × (product of `mul` parts), `Math.round`ed, clamped
+  to `STAT_INFO[stat].min`. Parts come from, in order:
+  1. **Stat providers** (`STAT_PROVIDERS`): `stats.base` (the entity's `stats.base[stat]`, or
+     `STAT_INFO` base, labeled "Base"), then `stats.class_race` (class HP/MP, race HP/MP bonus and
+     speed). **ETH-033 attributes and ETH-034 level add a provider** (`StatProvider`:
+     `{ id, contribute(state, entity, stat, sink) }`, calling `sink(op, value, sourceId, label?)`)
+     to the end of `STATS_DOMAIN.statProviders`; another domain lists it in its own
+     `statProviders`. They run in domain order, then list order.
+  2. **Bundle sources** (`BUNDLE_SOURCES`): every active bundle's `modifiers` for that stat, scaled
+     by potency (`add`: value × potency; `mul`: 1 + (value − 1) × potency). The stats domain has
+     `stats.attached` (`stats.bundles`) and `stats.statuses`. **Gear (ETH-043), run-wide Omens and
+     blessings (ETH-067/070) add a `BundleSource`** (`{ id, visit(state, entity, visit) }`, calling
+     `visit(bundle, sourceId, potency)`) in their domain's `bundleSources`, so their triggers fire
+     too.
+- After anything that may lower a maximum, call `clampVitals(state, entity)`; the attach,
+  detach, status and expiry helpers already do. `fillVitals` sets HP and MP to full.
+- Entities that act carry a `stats` part (`newStatsPart(base?)`): `{ base, bundles, statuses }`.
+  A monster sets its numbers in `base` (`newStatsPart({ hp: 6, speed: 120, damage: 2 })`) or
+  through a provider reading its def. An actor without the part gets `STAT_INFO` bases only
+  (speed 0: it never acts).
 - **Attributes (ETH-033) are not stats.** They are inputs that derive these ids (a strength
-  bonus becomes a `damage` modifier).
+  bonus becomes a `damage` part from a provider).
 - Content names stats by id string; `checkGame` checks refs of kind `stat` against `STAT_REFS`.
-  A new stat is one entry in `STAT_IDS`.
+  A new stat is one entry in `STAT_IDS` and `STAT_INFO`.
+
+### Bundles, effects, triggers and statuses
+
+The API every later item uses (ETH-057, §2.2):
+
+- **Data** (`src/content/bundles.ts`): `Bundle = { modifiers?, effects?, triggers? }`, Zod
+  `bundleSchema`, and `bundleRefs(path, bundle)` for a kind's `refs` (stat, status and trigger
+  ids). Any def that carries a bundle has a `bundle` field (status, `bundle.*` defs; later items,
+  food, Omens), and `bundleOf(id)` finds it. A def kind that embeds one adds `bundle: bundleSchema`
+  to its schema and `bundleRefs('bundle', def.bundle)` to its `refs`.
+- **Attaching:** `attachBundle(state, entity, bundleId, source?)` and
+  `detachBundles(state, entity, source)`; saves keep ids only. `StatsConfig.partyBundles` attaches
+  bundles to every party member at the start of a run.
+- **Effects:** `runEffect(ctx, effect)` / `runEffects` with `EffectCtx = { state, emit, self,
+  other?, source, potency }`. Kinds: `heal`, `damage`, `applyStatus`; each may say
+  `to: 'other'` (default `self`). Effects on a missing or dead target do nothing. **A new kind** is
+  one member of `Effect` and one option in `effectSchema` (`content/bundles.ts`) and one case in
+  `runEffect` (`sim/stats/effects.ts`). The `damage` effect only lowers HP (never below 0, clears
+  a queued action at 0) and emits `damaged`; **death is ETH-060's**: combat should handle an actor
+  at 0 HP after a `damaged` event, or route this case through its damage pipeline.
+- **Triggers:** content writes `{ on: 'trigger.some_kind', effects }`. A trigger kind is a
+  `TriggerKindDef` (`{ id: 'trigger.*', name, description, tags }`) listed in the firing domain's
+  `triggers`, which the hub registers in `TRIGGERS` (validation checks `on` against it). **To fire
+  one**, the domain that owns the moment calls
+  `fireTrigger(state, entity, 'trigger.hit', emit, otherId?)` at that moment: it runs every
+  matching trigger in the bundles active on `entity`, in bundle-source order, at each bundle's
+  potency. For example combat lists `trigger.hit` / `trigger.struck` and fires them after an
+  attack lands (attacker and target as each other's `other`). Nested firing stops at
+  `MAX_TRIGGER_DEPTH`. The stats domain owns `trigger.turn_start` and `trigger.turn_end`.
+- **Turn hooks:** `SimDomain.turnStart` / `turnEnd(ctx: TurnCtx)` run around every actor's turn
+  (`step.ts`, via the hub's `runTurnStart` / `runTurnEnd`). An actor left at 0 HP by `turnStart`
+  skips its action. The stats domain fires `trigger.turn_start` at the start, and at the end fires
+  `trigger.turn_end` and ticks statuses.
+- **Statuses** are content (`STATUSES`, `status.*`): `{ bundle, stacking, group?, maxStacks?,
+  harmful, glyph }`. `applyStatus(state, entity, statusId, turns, emit, potency = 1)`,
+  `removeStatus(state, entity, statusId, emit)` (the whole group), `tickStatuses`. Stacking is per
+  def, within a `group` (default: its id): `refresh` keeps one, with the longer remaining turns
+  and the stronger potency (the stronger status replaces the weaker); `extend` keeps one and adds
+  the turns; `stack` keeps separate instances up to `maxStacks` (default 5), then replaces the
+  one with the fewest turns left. **Food buffs (ETH-054)** are `refresh` statuses with one group
+  per effect type. Remaining turns count down at the end of each of the holder's turns; at 0 the
+  status expires (`statusExpired`). One applied during the holder's own action counts that turn.
+  `StatsConfig.partyStatuses` starts the party with statuses.
+- **Events** (log text in `logText/stats.ts`): `statusApplied` (with `mode`: `new`, `refreshed`,
+  `extended`, `stacked`), `statusExpired`, `statusRemoved`, `healed`, `damaged` (each with
+  `source`, a content id).
+- **Snapshot:** `snapshot.domains.stats.members[id]` = `{ statuses: [{ status, remaining,
+  potency }], stats: Record<StatId, StatResult> }` for each party member. The party card shows
+  the statuses as badges; stat tooltips can read `stats`.
+- **Codex:** `STATS_DISCOVERIES` marks a status `seen` on `statusApplied`;
+  `ui/codex/renderers/status.tsx` shows its effect, stacking rule and whether it is harmful.
+- **Invariants:** `stats.values` (every stat finite, max HP ≥ 1) and `stats.parts` (known stat
+  ids with finite bases, known bundles, known statuses with whole turns above 0 and potency
+  above 0); `core.actors` checks HP and MP against the maxima from `statValue`.
 
 ### Rewards
 
@@ -268,7 +356,8 @@ slice.
 parts and domain slices included. **A PR that changes the shape sets it to the version on main
 plus one when it rebases**, so two branches never ship different shapes under one number. If
 main moved past your version while your PR waited, rebase and bump again. ETH-055 made it 4,
-then 5 on main, and ETH-058 (the floors slice) 6.
+then 5 on main, ETH-058 (the floors slice) 6, and ETH-057 7 (the `stats` part; `speed`,
+`maxHp` and `maxMp` left `ActorPart`).
 
 ### Floors and arrival (ETH-058)
 
@@ -304,6 +393,10 @@ options that upgrades unlock (below). `building` and `upgrade` (`src/content/upg
 ETH-063) are full kinds; each building's
 defs live in `src/content/town/<building>.ts` (§6.2). A kind may add `check(defs)` for rules
 that span several defs (`checkKinds` runs it after the ref checks).
+
+ETH-057 added two real kinds: `bundle` (`bundles.ts`, `bundle.*`: a stand-alone bundle such as
+a trait or blessing) and `status` (`statuses.ts`, `status.*`, with four first defs: Hasted,
+Regenerating, Poisoned, Dazzled).
 
 ---
 
@@ -417,6 +510,22 @@ interface Bundle { modifiers: Modifier[]; triggers: Trigger[] }
   `Bundle`. Attaching one to an actor, the party or the run is the same operation.
 - New effect kinds are added to the interpreter once and are then available to every item,
   spell and trigger.
+
+As built (ETH-057), the full API is in Contracts ("Stats" and "Bundles, effects, triggers and
+statuses"). Differences from the sketch above:
+
+- A content `Modifier` has no `source`: whoever holds the bundle is the source (an attached
+  bundle's `source` id, the status id, later the item). `getStat` parts carry
+  `source: { id, label }`.
+- `getStat(state, entity, stat)` takes the state too, since providers read content and other
+  parts; `statValue` is the cheap form.
+- `Bundle` also has `effects` (run once by whoever uses it, e.g. a potion), and `Trigger.on` is
+  a registered trigger kind id (`trigger.turn_start`), not a `SimEvent` type: the domain that
+  owns a moment fires it with `fireTrigger`, so triggers never scan the event stream.
+- `heal` and `damage` amounts are whole numbers for now; dice arrive with combat (ETH-060) as
+  new fields or a new effect kind.
+- Timed statuses are a content kind holding a bundle plus a stacking rule; `runBundles` (§3.1)
+  will be a `BundleSource` of the run (ETH-067).
 
 ### 2.3 Actions
 
@@ -596,9 +705,10 @@ systems written as functions over `RunState`. Adventurers and monsters are both 
 combat, statuses and inventory are written once.
 
 As built (ETH-003), parts are added by the item that first needs them. So far: `actor`
-(energy, speed, HP, MP, faction), `adventurer` (name, class id, race id), `feature` (door
-with `open`, or stairs with `dir`) and `ai` (rules and decision memory, ETH-009, §4). Adventurers
-have the def `actor.adventurer`.
+(energy, current HP and MP, faction), `adventurer` (name, class id, race id), `feature` (door
+with `open`, or stairs with `dir`), `ai` (rules and decision memory, ETH-009, §4) and `stats`
+(base values, attached bundles and timed statuses, ETH-057; maxima, speed and sight are read
+with `getStat` / `statValue`). Adventurers have the def `actor.adventurer`.
 
 - **Ids** are positive integers from `nextEntityId`, never reused in a run. As keys of
   `entities` they iterate in ascending order.
@@ -637,6 +747,9 @@ As built in `src/sim/step.ts` (ETH-004):
 - **A decision that can't be done never stalls the loop:** it emits `actionFailed` and the
   actor waits, paying the wait cost.
 - **Party members perceive** before deciding and after acting (§3.7).
+- **Turn hooks (ETH-057):** each domain's `turnStart` runs after that first look and before
+  deciding (an actor it leaves at 0 HP skips the turn), and `turnEnd` after the action. Energy
+  per tick is the `speed` stat (`statValue`), and an actor with speed 0 or HP 0 is not scheduled.
 
 ### 3.4 RNG
 
@@ -788,8 +901,9 @@ As built (ETH-007):
   when light reaches them. The radius is the circle `dx² + dy² <= r² + r`.
 - **What blocks sight:** walls and closed doors (`sightBlockers`); open doors don't. The edge
   of the floor blocks too.
-- **Sight radius** comes only from `sightRadius(state, actor)`, `BASE_SIGHT_RADIUS` (8) for now.
-  Gloom, blindness and light sources change it there once stats exist.
+- **Sight radius** comes only from `sightRadius(state, actor)`, which is the `sight` stat
+  (`statValue`, base `BASE_SIGHT_RADIUS` = 8). Gloom, blindness and light sources change it with
+  `sight` modifiers in a bundle (the Dazzled status: −3).
 - **Memory is the party's, one per floor:** `RunState.memory[floorId]` rather than a grid per
   adventurer, since party members share everything they see. `addFloor` creates it empty.
   `terrain` is a `u8` grid of 0 (never seen) or 1 + the `Terrain` code last seen;
@@ -956,9 +1070,9 @@ As built (ETH-015):
 - **First defs:** terrain `wall` and `floor`; features `door` (states `closed` and `open`),
   `stairs_up` and `stairs_down`; class `class.vanguard`; race `race.human`; floor type
   `floor.halls`. A class sets starting max `hp` and `mp`; a race adds `hpBonus` and `mpBonus` and
-  sets `speed`. `createRun` builds each adventurer's actor part from them (`adventurerActor`)
-  and throws, naming the adventurer, on an unknown class or race. These become modifiers (§2.2)
-  when stats exist. `actor.adventurer` is not a def: an adventurer's look comes from its slot.
+  sets `speed`. The `stats.class_race` stat provider turns them into labeled stat parts
+  (ETH-057); `createRun` checks them (`adventurerActor`) and throws, naming the adventurer, on
+  an unknown class or race. `actor.adventurer` is not a def: an adventurer's look comes from its slot.
 
 ---
 
@@ -1018,9 +1132,9 @@ As built (ETH-063):
   `Def`) and `upgrade` (`UpgradeNodeDef`: `building`, `tier` from 1, `column` from 0, `cost` keyed
   by currency id `renown` / `trophies` / `favor:deity.<id>`, `requires`, optional
   `exclusiveGroup`, `grants`). Grants are `{ kind: 'bundle', scope: 'party' | 'run', bundle }`,
-  `{ kind: 'unlock', id }` and `{ kind: 'capacity', key, amount }`. `bundle` is a placeholder
-  `GrantBundle` (`{ modifiers: { stat, op, value }[] }`, TODO ETH-057: swap in the shared
-  `Bundle`). Capacity keys and their tooltip names are `CAPACITY_INFO` (`partySize`,
+  `{ kind: 'unlock', id }` and `{ kind: 'capacity', key, amount }`. `bundle` is the shared
+  `Bundle` (§2.2, `bundleSchema` plus a check that it has a modifier or trigger; its refs come
+  from `bundleRefs`). Capacity keys and their tooltip names are `CAPACITY_INFO` (`partySize`,
   `rosterSize`, `contractSlots`, `ruleSlots`); a new capacity is one entry there.
 - **Doctrine choices** (e.g. "Prioritize clearing floors" vs "Prioritize the stairs") are
   `unlock` grants of `doctrine.*` ids in a pick-one group, with no separate grant kind. The
@@ -1390,6 +1504,8 @@ even when no test looks at the part it broke.
   positions inside their floor, actors not in walls and one per tile; party ids unique, live
   adventurers; actor HP, MP and speed in range, and dead actors (HP 0 or below) hold no queued
   action.
+- Stats checks (ETH-057): `stats.values` and `stats.parts` (Contracts, "Bundles, effects,
+  triggers and statuses").
 
 ### 11.2 Soak (`tools/soak.ts`)
 

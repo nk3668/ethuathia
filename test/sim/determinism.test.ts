@@ -15,6 +15,15 @@ const CONFIG: RunConfig = {
   // mid-run and the party sometimes splits across them.
   depth: 3,
   floorTurnCap: 30,
+  // Timed statuses with triggers, stacking and a speed change, so their ticking, expiry and
+  // effects are covered by the hash and save checks (ETH-057).
+  partyStatuses: [
+    { status: 'status.hasted', turns: 30 },
+    { status: 'status.regenerating', turns: 12 },
+    { status: 'status.poisoned', turns: 5 },
+    { status: 'status.poisoned', turns: 8, potency: 2 },
+    { status: 'status.dazzled', turns: 50 },
+  ],
 };
 
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);

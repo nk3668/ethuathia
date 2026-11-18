@@ -4,6 +4,7 @@
  */
 import type { Def } from '../core';
 import { BOUNTY_KIND } from './bounties';
+import { BUNDLE_KIND } from './bundles';
 import { CLASS_KIND } from './classes';
 import { CONTRACT_KIND } from './contracts';
 import { DEITY_KIND } from './deities';
@@ -16,6 +17,7 @@ import type { ContentKind, RefTarget } from './kind';
 import { MONSTER_KIND } from './monsters';
 import { OMEN_KIND } from './omens';
 import { RACE_KIND } from './races';
+import { STATUS_KIND } from './statuses';
 import type { Glyph } from './schema';
 import { TERRAIN, TERRAIN_KIND } from './terrain';
 import './town';
@@ -28,6 +30,8 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
   CLASS_KIND,
   RACE_KIND,
   FLOOR_TYPE_KIND,
+  BUNDLE_KIND,
+  STATUS_KIND,
   MONSTER_KIND,
   ITEM_KIND,
   CONTRACT_KIND,

@@ -12,16 +12,17 @@ import { getEntity, getFloor } from './entities';
 import { computeFov } from './fov';
 import { Terrain } from './state';
 import type { ActorEntity, Entity, EntityId, FloorId, FloorMemory, RunState } from './state';
+import { statValue } from './stats/getStat';
 
-/** How far an actor sees before any modifiers. */
-export const BASE_SIGHT_RADIUS = 8;
+export { BASE_SIGHT_RADIUS } from './stats/statIds';
 
 /**
- * How far `actor` can see, in tiles. Every FOV goes through this one function, so modifiers that
- * change sight (the Gloom Omen, a blindness status, a lantern) are applied here once stats exist.
+ * How far `actor` can see, in tiles: its `sight` stat (base `BASE_SIGHT_RADIUS`). Every FOV goes
+ * through this one function, so whatever changes sight (the Gloom Omen, a dazzled status, a
+ * lantern) does it as a `sight` modifier in a bundle.
  */
-export function sightRadius(_state: RunState, _actor: ActorEntity): number {
-  return BASE_SIGHT_RADIUS;
+export function sightRadius(state: RunState, actor: ActorEntity): number {
+  return statValue(state, actor, 'sight');
 }
 
 /**

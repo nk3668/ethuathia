@@ -43,3 +43,31 @@ export function isStatId(value: unknown): value is StatId {
 
 /** The stat ids as a lookup for content validation: content refs of kind `stat` are checked here. */
 export const STAT_REFS: RefTarget = { kind: 'stat', has: isStatId };
+
+/** What the UI and `getStat` need to know about a stat. */
+export interface StatInfo {
+  /** Short label for tooltips and the Codex, e.g. "Max HP". */
+  readonly label: string;
+  /** One sentence for the tooltip. */
+  readonly description: string;
+  /** The value before any provider or bundle, unless the entity's `stats.base` sets one. */
+  readonly base: number;
+  /** The lowest value the stat can end at; the final value is clamped to it. */
+  readonly min: number;
+}
+
+/** How far an actor sees before any modifiers (docs/ARCHITECTURE.md §3.7). */
+export const BASE_SIGHT_RADIUS = 8;
+
+/** Every stat's label, tooltip text, base value and minimum. */
+export const STAT_INFO: Readonly<Record<StatId, StatInfo>> = {
+  hp: { label: 'Max HP', description: 'Hit points when fully healed. At 0 HP an adventurer falls.', base: 0, min: 1 },
+  mp: { label: 'Max MP', description: 'Magic points when fully rested, spent on spells and abilities.', base: 0, min: 0 },
+  accuracy: { label: 'Accuracy', description: 'How likely an attack is to hit.', base: 0, min: 0 },
+  evasion: { label: 'Evasion', description: 'How likely an attack against this actor is to miss.', base: 0, min: 0 },
+  damage: { label: 'Damage', description: 'Damage dealt by an attack, before armor.', base: 0, min: 0 },
+  armor: { label: 'Armor', description: 'Damage taken off each hit.', base: 0, min: 0 },
+  speed: { label: 'Speed', description: 'Energy gained each turn: 100 acts once a turn, 200 twice.', base: 0, min: 0 },
+  sight: { label: 'Sight', description: 'How many tiles away this actor can see.', base: BASE_SIGHT_RADIUS, min: 0 },
+  carry: { label: 'Carry', description: 'How much can be carried before being overloaded.', base: 0, min: 0 },
+};

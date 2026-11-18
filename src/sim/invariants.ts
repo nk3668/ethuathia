@@ -12,6 +12,7 @@ import { findNonPlain, Grid, isRngState } from '../core';
 import { inFloorBounds } from './entities';
 import { RNG_STREAMS, Terrain } from './state';
 import type { RunState } from './state';
+import { statValue } from './stats/getStat';
 
 /**
  * Checks one invariant. Returns a readable line for each violation (naming the entity, floor or
@@ -181,9 +182,12 @@ registerInvariant('core.actors', (state) => {
   for (const entity of Object.values(state.entities)) {
     const a = entity.actor;
     if (a === undefined) continue;
-    if (a.maxHp <= 0 || a.hp > a.maxHp) problems.push(`actor ${entity.id} has HP ${a.hp}/${a.maxHp}`);
-    if (a.maxMp < 0 || a.mp < 0 || a.mp > a.maxMp) problems.push(`actor ${entity.id} has MP ${a.mp}/${a.maxMp}`);
-    if (a.speed < 0) problems.push(`actor ${entity.id} has speed ${a.speed}`);
+    const maxHp = statValue(state, entity, 'hp');
+    const maxMp = statValue(state, entity, 'mp');
+    const speed = statValue(state, entity, 'speed');
+    if (maxHp <= 0 || a.hp > maxHp) problems.push(`actor ${entity.id} has HP ${a.hp}/${maxHp}`);
+    if (maxMp < 0 || a.mp < 0 || a.mp > maxMp) problems.push(`actor ${entity.id} has MP ${a.mp}/${maxMp}`);
+    if (speed < 0) problems.push(`actor ${entity.id} has speed ${speed}`);
     if (a.hp <= 0 && a.queued !== undefined) problems.push(`dead actor ${entity.id} still has a queued action`);
   }
   return problems;

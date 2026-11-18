@@ -19,9 +19,10 @@ import type { GenStepDef } from './gen/types';
 import type { ItemsTypes } from './items';
 import type { QuestsTypes } from './quests';
 import type { DiscoveryRules, RunDomainTypes } from './run';
-import type { SimEvent } from './events';
-import type { FloorId, RunConfig, RunState } from './state';
+import type { Emit, SimEvent } from './events';
+import type { ActorEntity, FloorId, RunConfig, RunState } from './state';
 import type { StatsTypes } from './stats';
+import type { BundleSource, StatProvider, TriggerKindDef } from './stats/types';
 
 /** The types one domain contributes. Each domain exports one of these as `<Domain>Types`. */
 export interface DomainShape {
@@ -90,6 +91,8 @@ export interface RunTracker<S> {
  *   `GEN_STEPS`; ids must be unique across domains (`cond.*`, `act.*`, `gen.*`).
  * - `trackers` are the domain's run trackers, in the order they should run.
  * - `discoveries` maps the domain's event types to the content they discover for the Codex.
+ * - `statProviders`, `bundleSources` and `triggers` feed the stats tables (§2.2), in domain order.
+ * - `turnStart` and `turnEnd` run around every actor's turn (`step.ts`), in domain order.
  */
 export interface SimDomain<T extends DomainShape> {
   readonly actions: ActionRecord<T['request']>;
@@ -105,4 +108,24 @@ export interface SimDomain<T extends DomainShape> {
    * `DISCOVERY_RULES`, which `CODEX_TRACKER` reads.
    */
   readonly discoveries?: DiscoveryRules;
+  /** Stat derivation steps (`STAT_PROVIDERS`), run core first, then in domain order (§2.2). */
+  readonly statProviders?: readonly StatProvider[];
+  /** Where active bundles come from (`BUNDLE_SOURCES`), for `getStat` and `fireTrigger`. */
+  readonly bundleSources?: readonly BundleSource[];
+  /** The trigger kinds this domain fires (`TRIGGERS`, ids `trigger.*`). */
+  readonly triggers?: readonly TriggerKindDef[];
+  /**
+   * Runs at the start of every actor's turn, before it decides, in domain order. It may change
+   * the state and emit events; an actor left dead skips its action.
+   */
+  turnStart?(ctx: TurnCtx): void;
+  /** Runs at the end of every actor's turn, after its action, in domain order. */
+  turnEnd?(ctx: TurnCtx): void;
+}
+
+/** What a domain's turn hooks get. */
+export interface TurnCtx {
+  readonly state: RunState;
+  readonly actor: ActorEntity;
+  readonly emit: Emit;
 }

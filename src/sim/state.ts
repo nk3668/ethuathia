@@ -22,7 +22,7 @@ import type { StatsConfig, StatsParts } from './stats';
  * A branch that changes the shape sets it to (the version on main) + 1 when it rebases, so two
  * branches never ship different shapes under one number (docs/ARCHITECTURE.md, Contracts).
  */
-export const STATE_VERSION = 6;
+export const STATE_VERSION = 7;
 
 /**
  * Entity ids are positive integers handed out in order from `RunState.nextEntityId` and never
@@ -148,15 +148,17 @@ export interface FloorMemory {
 
 export type Faction = 'party' | 'monster' | 'neutral';
 
-/** Anything that takes turns: adventurers and monsters. */
+/**
+ * Anything that takes turns: adventurers and monsters. Speed and the HP and MP maxima are stats
+ * (the stats domain's `getStat` / `statValue`), not fields here.
+ */
 export interface ActorPart {
   /** Builds up by `speed` each tick; the actor acts at `ENERGY_THRESHOLD` (§3.3). */
   energy: number;
-  speed: number;
+  /** Current HP. The maximum is the `hp` stat (`statValue(state, entity, 'hp')`). */
   hp: number;
-  maxHp: number;
+  /** Current MP. The maximum is the `mp` stat. */
   mp: number;
-  maxMp: number;
   faction: Faction;
   /**
    * An action a `playerAction` command asked for. The actor's next turn does it instead of

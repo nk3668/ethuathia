@@ -16,13 +16,23 @@ import { COMBAT_DOMAIN } from './combat';
 import type { CommandRecord, Command } from './commands';
 import { CORE_ACTIONS } from './coreActions';
 import { CORE_COMMANDS } from './coreCommands';
-import type { DomainKey, DomainShape, DomainSnapshots, DomainStates, DomainTypes, RunTracker, SimDomain, SnapshotCtx } from './domain';
+import type {
+  DomainKey,
+  DomainShape,
+  DomainSnapshots,
+  DomainStates,
+  DomainTypes,
+  RunTracker,
+  SimDomain,
+  SnapshotCtx,
+  TurnCtx,
+} from './domain';
 import { FLOORS_DOMAIN } from './floors';
 import { ROOM_STEPS } from './gen/steps';
 import { ITEMS_DOMAIN } from './items';
 import { QUESTS_DOMAIN } from './quests';
 import { CORE_DISCOVERIES } from './coreEvents';
-import { CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS } from './registries';
+import { BUNDLE_SOURCES, CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS, STAT_PROVIDERS, TRIGGERS } from './registries';
 import { RUN_DOMAIN } from './run';
 import type { DiscoveryRule } from './run';
 import type { RunConfig } from './state';
@@ -83,6 +93,30 @@ for (const def of [...CORE_CONDITIONS, ...ALL.flatMap((d) => d.conditions ?? [])
 for (const def of [...CORE_RULE_ACTIONS, ...ALL.flatMap((d) => d.ruleActions ?? [])]) RULE_ACTIONS.register(def);
 for (const def of [...ROOM_STEPS, ...ALL.flatMap((d) => d.genSteps ?? [])]) GEN_STEPS.register(def);
 
+for (const def of ALL.flatMap((d) => d.triggers ?? [])) TRIGGERS.register(def);
+STAT_PROVIDERS.push(...unique('stat provider', ALL.flatMap((d) => d.statProviders ?? [])));
+BUNDLE_SOURCES.push(...unique('bundle source', ALL.flatMap((d) => d.bundleSources ?? [])));
+
+/** `items`, refusing an id listed twice. */
+function unique<T extends { readonly id: string }>(what: string, items: readonly T[]): readonly T[] {
+  const ids = new Set<string>();
+  for (const item of items) {
+    if (ids.has(item.id)) throw new Error(`Two domains define the ${what} "${item.id}"`);
+    ids.add(item.id);
+  }
+  return items;
+}
+
+/** Runs every domain's `turnStart` hook for `ctx.actor`, in domain order (`step.ts`). */
+export function runTurnStart(ctx: TurnCtx): void {
+  for (const d of ALL) d.turnStart?.(ctx);
+}
+
+/** Runs every domain's `turnEnd` hook for `ctx.actor`, in domain order (`step.ts`). */
+export function runTurnEnd(ctx: TurnCtx): void {
+  for (const d of ALL) d.turnEnd?.(ctx);
+}
+
 /** Every domain's run trackers, in domain order. ETH-062 runs them over each step's events. */
 export const RUN_TRACKERS: readonly RunTracker<unknown>[] = ALL.flatMap((d) => d.trackers ?? []);
 {
@@ -115,4 +149,4 @@ export function domainSnapshots(ctx: SnapshotCtx): DomainSnapshots {
   return out as DomainSnapshots;
 }
 
-export { CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS };
+export { BUNDLE_SOURCES, CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS, STAT_PROVIDERS, TRIGGERS };

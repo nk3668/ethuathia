@@ -34,7 +34,8 @@ const generationSteps = { kind: 'generation step', has: (id: string) => id === '
 
 describe('shipped content', () => {
   it('passes validation, with floor types checked against a generation step registry', () => {
-    expect(checkContent([{ kind: 'generation step', has: () => true }, { kind: 'stat', has: () => true }])).toEqual([]);
+    const anything = (kind: string) => ({ kind, has: () => true });
+    expect(checkContent(['generation step', 'stat', 'trigger'].map(anything))).toEqual([]);
   });
 
   it('defines the terrain and features M0 draws, each with a glyph', () => {

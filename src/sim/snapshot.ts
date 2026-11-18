@@ -15,6 +15,7 @@ import type { Intent } from './ai/types';
 import type { DomainSnapshots } from './domain';
 import { domainSnapshots } from './domains';
 import type { EntityId, Faction, FeaturePart, FloorId, RunState } from './state';
+import { statValue } from './stats/getStat';
 
 /**
  * What a snapshot should show. With neither field set, the floor of the first living party
@@ -173,9 +174,9 @@ function memberView(state: RunState, id: EntityId): PartyMemberView[] {
     pos: { x: e.pos.x, y: e.pos.y },
     alive: actor.hp > 0,
     hp: actor.hp,
-    maxHp: actor.maxHp,
+    maxHp: statValue(state, e, 'hp'),
     mp: actor.mp,
-    maxMp: actor.maxMp,
+    maxMp: statValue(state, e, 'mp'),
     intent: intent ? clonePlain(intent) : null,
   };
   return [view];

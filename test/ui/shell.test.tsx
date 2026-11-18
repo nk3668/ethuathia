@@ -115,6 +115,20 @@ describe('log text', () => {
     ]);
   });
 
+  it('describes statuses, healing and damage with their sources', () => {
+    const say = (event: SimEvent) => describeEvent(event, names).text;
+    expect(say({ type: 'statusApplied', turn: 1, actor: 1, status: 'status.poisoned', turns: 3, potency: 1, mode: 'new' })).toBe(
+      'Mira is Poisoned (3 turns).',
+    );
+    expect(say({ type: 'statusApplied', turn: 1, actor: 1, status: 'status.hasted', turns: 1, potency: 1.5, mode: 'refreshed' })).toBe(
+      'Mira is Hasted ×1.5 again, refreshed (1 turn).',
+    );
+    expect(say({ type: 'statusExpired', turn: 1, actor: 1, status: 'status.hasted' })).toBe('Mira is no longer Hasted.');
+    expect(say({ type: 'statusRemoved', turn: 1, actor: 1, status: 'status.poisoned' })).toBe('Mira is cured of Poisoned.');
+    expect(say({ type: 'healed', turn: 1, actor: 1, amount: 2, source: 'status.regenerating' })).toBe('Mira heals 2 HP (Regenerating).');
+    expect(say({ type: 'damaged', turn: 1, actor: 1, amount: 1, source: 'status.poisoned' })).toBe('Mira loses 1 HP (Poisoned).');
+  });
+
   it('describes failures and rejected commands', () => {
     expect(describeEvent({ type: 'actionFailed', turn: 1, actor: 1, action: 'move', reason: 'Blocked' }, names)).toEqual({
       category: 'system',
@@ -161,6 +175,29 @@ describe('AppShell at desktop width', () => {
     expect(party.textContent).toContain('Human Vanguard');
     expect(party.textContent).toContain('Explore: heading for unexplored ground · baseline #3');
     expect(party.textContent).toContain('✝ Dead');
+  });
+
+  it('shows status badges with turns remaining on living members', () => {
+    const domains = fixtureDomains();
+    const stats = { ...(domains.stats.members[1] as NonNullable<(typeof domains.stats.members)[number]>) };
+    const withStatuses: Snapshot = {
+      ...SNAPSHOT,
+      domains: {
+        ...domains,
+        stats: {
+          members: {
+            1: { ...stats, statuses: [{ status: 'status.poisoned', remaining: 4, potency: 1 }, { status: 'status.hasted', remaining: 1, potency: 1 }] },
+            2: { ...stats, statuses: [{ status: 'status.hasted', remaining: 9, potency: 1 }] },
+          },
+        },
+      },
+    };
+    useSimStore.getState().receiveSnapshot(withStatuses);
+    render(<AppShell />);
+    const badges = within(screen.getByRole('region', { name: 'Party' })).getAllByRole('list', { name: 'Statuses' });
+    // Oren is dead, so only Mira's list shows.
+    expect(badges).toHaveLength(1);
+    expect(within(badges[0] as HTMLElement).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['! Poisoned 4', '» Hasted 1']);
   });
 
   it('selects an adventurer from their card', async () => {
