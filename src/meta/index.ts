@@ -20,3 +20,25 @@ export { defineSlice } from './slice';
 export type { ProfileSlice, SliceMigration, SliceState } from './slice';
 export { HISTORY_LIMIT } from './slices/history';
 export type { History, RunRecord } from './slices/history';
+export type { Upgrades } from './slices/upgrades';
+export {
+  canAfford,
+  canPurchase,
+  capacity,
+  chosenInGroup,
+  describeGrant,
+  formatCurrencies,
+  isUnlocked,
+  nodeCost,
+  nodeStatus,
+  ownedNodes,
+  owns,
+  profileGrants,
+  purchase,
+  RESPEC_FEE_RATE,
+  respec,
+  respecFee,
+  respecPlan,
+  shortfall,
+} from './upgrades';
+export type { ActiveGrant, NodeStatus, PurchaseCheck, RespecPlan } from './upgrades';

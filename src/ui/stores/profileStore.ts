@@ -8,7 +8,7 @@
  * overwritten; importing a save or a hard reset recovers from a failed load.
  */
 import { create } from 'zustand';
-import { applyRunResult, decodeSave, encodeSave, newProfile } from '../../meta';
+import { applyRunResult, canPurchase, decodeSave, encodeSave, newProfile, purchase, respec, respecPlan } from '../../meta';
 import type { Profile } from '../../meta';
 import { startAutosave } from '../../platform';
 import type { AutosaveOptions, SaveStore } from '../../platform';
@@ -35,6 +35,10 @@ export interface ProfileStoreState {
 
   /** Banks a finished run's rewards (meta `applyRunResult`). */
   applyRunResult(result: RunResult): void;
+  /** Buys an upgrade node (meta `purchase`). Returns false, changing nothing, if it can't be bought. */
+  purchase(nodeId: string): boolean;
+  /** Undoes the choice in a pick-one group (meta `respec`). Returns false if nothing in it is owned. */
+  respec(group: string): boolean;
   /** Writes the profile now if it changed (or always, with `force`). */
   save(force?: boolean): Promise<void>;
   /** The save string, for export. */
@@ -65,6 +69,18 @@ export const useProfileStore = create<ProfileStoreState>()((set, get) => ({
 
   applyRunResult: (result) => {
     set((s) => ({ profile: applyRunResult(s.profile, result), dirty: true }));
+  },
+
+  purchase: (nodeId) => {
+    if (!canPurchase(get().profile, nodeId).ok) return false;
+    set((s) => ({ profile: purchase(s.profile, nodeId), dirty: true }));
+    return true;
+  },
+
+  respec: (group) => {
+    if (respecPlan(get().profile, group) === null) return false;
+    set((s) => ({ profile: respec(s.profile, group), dirty: true }));
+    return true;
   },
 
   save: async (force = false) => {

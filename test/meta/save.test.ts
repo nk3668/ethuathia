@@ -44,10 +44,9 @@ describe('encodeSave / decodeSave', () => {
     const decoded = decodeSave(envelope({ currencies: { version: 1, data: { renown: 1, trophies: 0, favor: {} } }, oldThing: { version: 1, data: 1 } }));
     if (!decoded.ok) throw new Error(decoded.error);
     expect(decoded.profile.history).toEqual(newProfile().history);
-    expect(decoded.notes).toEqual([
-      '"history" was not in the save and starts fresh.',
-      '"oldThing" is not used by this version of the game and was dropped.',
-    ]);
+    // Other slices newer than this save add their own "starts fresh" notes.
+    expect(decoded.notes).toContain('"history" was not in the save and starts fresh.');
+    expect(decoded.notes).toContain('"oldThing" is not used by this version of the game and was dropped.');
   });
 
   it.each([

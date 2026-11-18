@@ -16,13 +16,13 @@ import { DEFS, TERRAIN_IDS } from './state';
  * Every problem found, as lines naming the def or table at fault; empty when all is well:
  *
  * - content shapes and cross-references (`checkContent`), with floor types' steps looked up in
- *   `GEN_STEPS` and stat ids in `STAT_REFS`;
+ *   `GEN_STEPS`, stat ids in `STAT_REFS` and unlocked conditions and rule actions in theirs;
  * - each floor type's step parameters, when all its steps exist;
  * - the content ids the sim names in code: `TERRAIN_IDS` and the feature ids in `DEFS`;
  * - the conditions and rule actions the baseline rules name.
  */
 export function checkGame(): string[] {
-  const problems = checkContent([GEN_STEPS, STAT_REFS]);
+  const problems = checkContent([GEN_STEPS, STAT_REFS, CONDITIONS, RULE_ACTIONS]);
   problems.push(...checkFloorParams(FLOOR_TYPES.all()));
 
   TERRAIN_IDS.forEach((id, code) => {

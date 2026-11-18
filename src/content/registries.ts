@@ -7,6 +7,7 @@ import { BOUNTY_KIND } from './bounties';
 import { CLASS_KIND } from './classes';
 import { CONTRACT_KIND } from './contracts';
 import { DEITY_KIND } from './deities';
+import { DOCTRINE_KIND } from './doctrines';
 import { FEATURE_KIND, FEATURES } from './features';
 import { FLOOR_TYPE_KIND } from './floors';
 import { ITEM_KIND } from './items';
@@ -17,6 +18,8 @@ import { OMEN_KIND } from './omens';
 import { RACE_KIND } from './races';
 import type { Glyph } from './schema';
 import { TERRAIN, TERRAIN_KIND } from './terrain';
+import './town';
+import { BUILDING_KIND, UPGRADE_KIND } from './upgrades';
 
 /** Every content kind, in the order they are validated. A new kind is added here. */
 export const CONTENT_KINDS: readonly ContentKind[] = [
@@ -31,6 +34,9 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
   BOUNTY_KIND,
   OMEN_KIND,
   DEITY_KIND,
+  DOCTRINE_KIND,
+  BUILDING_KIND,
+  UPGRADE_KIND,
 ];
 
 /**

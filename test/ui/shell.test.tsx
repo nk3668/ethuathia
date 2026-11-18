@@ -189,7 +189,7 @@ describe('AppShell at desktop width', () => {
     ]);
     expect(tabs.getByRole('tabpanel', { name: 'Rules' }).textContent).toContain('Behavior rules');
     await user.click(tabs.getByRole('tab', { name: 'Town' }));
-    expect(tabs.getByRole('tabpanel', { name: 'Town' }).textContent).toContain('Town opens');
+    expect(tabs.getByRole('tabpanel', { name: 'Town' }).textContent).toContain('Guild Hall');
     expect(useUiStore.getState().tab).toBe('town');
   });
 
