@@ -7,7 +7,7 @@ priority: P2
 milestone: M4
 epic: risk-omens
 size: M
-depends_on: [ETH-023, ETH-044, ETH-064]
+depends_on: [ETH-023, ETH-044, ETH-064, ETH-072]
 created: 2026-11-17
 updated: 2026-11-17
 ---

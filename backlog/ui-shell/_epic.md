@@ -35,3 +35,4 @@ A consistent, readable dark interface: shared tokens and components, the in-run 
 - [x] [ETH-047 Highlights feed and optional auto-pause](ETH-047-highlights-auto-pause.md)
 - [ ] [ETH-064 Prepare screen and building a run config from the profile](ETH-064-prepare-screen.md)
 - [ ] [ETH-066 Possess an adventurer and play them directly](ETH-066-possession.md)
+- [ ] [ETH-073 Collapse repeated identical AI trace lines in the log](ETH-073-collapse-repeated-trace-lines.md)
