@@ -67,6 +67,24 @@
   grid-area: party;
 }
 
+/* The Prepare screen covers the party, map and log areas (every column but the side tabs). */
+.prepare {
+  display: flex;
+  flex-direction: column;
+  grid-row: 1 / -1;
+  grid-column: 1 / 3;
+  min-width: 0;
+  min-height: 0;
+}
+
+.prepare > * {
+  flex: 1;
+}
+
+.shell[data-layout='narrow'] .prepare {
+  grid-column: 1 / -1;
+}
+
 .map {
   grid-area: map;
 }
@@ -84,4 +102,9 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+}
+
+/* With no log strip on the Prepare screen, the side tabs run the full height. */
+.main[data-screen='prepare'] .tabs {
+  grid-row: 1 / -1;
 }

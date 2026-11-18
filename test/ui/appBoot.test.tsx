@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 /**
  * App-boot smoke test (docs/ARCHITECTURE.md §11): the whole app, started the way `main.tsx`
- * starts it but on an `InlineHost` instead of the worker, plays 300 turns without logging an
+ * starts it but on an `InlineHost` instead of the worker, opens on the Prepare screen, descends,
+ * plays 300 turns without logging an
  * error, and the map and party are on screen. It catches breakage between the sim and the UI
  * that no unit test covers, such as a snapshot field the UI reads but the sim stopped sending.
  */
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InlineHost, validateGame } from '../../src/sim';
 import { App } from '../../src/ui/App';
-import { DEMO_RUN } from '../../src/ui/demoRun';
 import { useSimStore } from '../../src/ui/stores/simStore';
 
 /** Party turns the smoke test plays. */
@@ -54,6 +54,10 @@ describe('app boot', () => {
     render(<App createHost={() => (host = new InlineHost())} seed={11} />);
     if (host === undefined) throw new Error('App did not create a host');
     const started = host;
+    // It opens on the Prepare screen; Descend starts the run.
+    fireEvent.click(screen.getByRole('button', { name: 'Descend' }));
+    const members = useSimStore.getState().snapshot?.party ?? [];
+    expect(members.length).toBeGreaterThan(0);
 
     let played = 0;
     while (played < TURNS) {
@@ -70,7 +74,7 @@ describe('app boot', () => {
     await waitFor(() => expect(draws).toBeGreaterThan(0));
 
     const party = screen.getByRole('region', { name: 'Party' });
-    for (const member of DEMO_RUN.party) expect(within(party).getByRole('button', { name: member.name })).toBeTruthy();
+    for (const member of members) expect(within(party).getByRole('button', { name: member.name })).toBeTruthy();
     expect(screen.getByRole('banner', { name: 'Top bar' }).textContent).toMatch(/Turn [1-9]/);
     expect(within(screen.getByRole('region', { name: 'Log' })).getAllByRole('listitem').length).toBeGreaterThan(0);
 

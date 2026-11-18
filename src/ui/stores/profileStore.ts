@@ -9,7 +9,7 @@
  */
 import { create } from 'zustand';
 import { applyRunResult, canPurchase, decodeSave, encodeSave, newProfile, purchase, respec, respecPlan } from '../../meta';
-import type { Profile, Settings } from '../../meta';
+import type { Profile, RunChoices, Settings } from '../../meta';
 import { startAutosave } from '../../platform';
 import type { AutosaveOptions, SaveStore } from '../../platform';
 import type { RunResult } from '../../sim';
@@ -37,6 +37,8 @@ export interface ProfileStoreState {
   applyRunResult(result: RunResult): void;
   /** Changes some of the player's settings (the profile's `settings` slice), e.g. `{ autoRestart: true }`. */
   updateSettings(changes: Partial<Settings>): void;
+  /** Changes some of the remembered Prepare choices (the profile's `prepare` slice), e.g. `{ dungeon }`. */
+  updateRunChoices(changes: Partial<RunChoices>): void;
   /** Buys an upgrade node (meta `purchase`). Returns false, changing nothing, if it can't be bought. */
   purchase(nodeId: string): boolean;
   /** Undoes the choice in a pick-one group (meta `respec`). Returns false if nothing in it is owned. */
@@ -75,6 +77,13 @@ export const useProfileStore = create<ProfileStoreState>()((set, get) => ({
 
   updateSettings: (changes) => {
     set((s) => ({ profile: { ...s.profile, settings: { ...s.profile.settings, ...changes } }, dirty: true }));
+  },
+
+  updateRunChoices: (changes) => {
+    set((s) => ({
+      profile: { ...s.profile, prepare: { ...s.profile.prepare, choices: { ...s.profile.prepare.choices, ...changes } } },
+      dirty: true,
+    }));
   },
 
   purchase: (nodeId) => {

@@ -3,9 +3,14 @@
  * next one (CLAUDE.md §2, "Core loop").
  *
  * When the host reports a run end, `App` banks the result in the profile and calls `runEnded`,
- * which opens the run summary. Waiting for the player is the default: the next run starts when
- * they press "Start next run". With the profile's `settings.autoRestart` on, `watchAutoRestart`
- * starts it after `AUTO_RESTART_MS` instead, unless the player cancels that countdown.
+ * which opens the run summary. Waiting for the player is the default: **Continue** goes back to
+ * the Prepare screen (`openPrepare`), where Descend starts the next run; "Start next run" starts
+ * one at once with the same choices. With the profile's `settings.autoRestart` on,
+ * `watchAutoRestart` starts it after `AUTO_RESTART_MS` instead, unless the player cancels that
+ * countdown or goes back to Prepare.
+ *
+ * Every start goes through the starter `App` registers (`setRunStarter`), which builds the
+ * config from the profile's remembered Prepare choices with `buildRunConfig` (ETH-064).
  */
 import { create } from 'zustand';
 import type { RunRecord } from '../../meta';
@@ -15,7 +20,17 @@ import { useProfileStore } from './profileStore';
 /** How long the run summary counts down before an auto-restart. */
 export const AUTO_RESTART_MS = 5000;
 
+/** What fills the middle of the screen: the Prepare screen, or the run (party, map, log). */
+export type Screen = 'prepare' | 'run';
+
 export interface RunStoreState {
+  /**
+   * The Prepare screen or the run. Defaults to `run` so the shell renders a snapshot on its own
+   * (tests, the kit); `App` opens on `prepare` at launch.
+   */
+  screen: Screen;
+  /** Why the last attempt to start a run failed (shown on the Prepare screen), or `null`. */
+  startError: string | null;
   /** The run that just ended, until the next one starts; `null` while a run goes on. */
   report: RunReport | null;
   /** Whether the run summary modal is showing. */
@@ -33,10 +48,14 @@ export interface RunStoreState {
   showPastRun(record: RunRecord | null): void;
   /** Cancels the pending auto-restart for this run only (the setting stays on). */
   cancelRestart(): void;
-  /** Starts the next run with the same settings, through the starter `App` registered. */
+  /** Starts the next run from the remembered Prepare choices, through the starter `App` registered. */
   startNext(): void;
-  /** Forgets the finished run: a new run has started. */
+  /** Forgets the finished run: a new run has started. Shows the run. */
   runStarted(): void;
+  /** Goes to the Prepare screen. Forgets the finished run, so no auto-restart is pending. */
+  openPrepare(): void;
+  /** Records that starting a run failed, and goes to the Prepare screen to show why. */
+  startFailed(message: string): void;
 }
 
 /** Starts a new run; registered by `App`, which owns the host. */
@@ -51,6 +70,8 @@ export function setRunStarter(start: () => void): Unsubscribe {
 }
 
 export const useRunStore = create<RunStoreState>()((set) => ({
+  screen: 'run',
+  startError: null,
   report: null,
   summaryOpen: false,
   restartAt: null,
@@ -61,7 +82,10 @@ export const useRunStore = create<RunStoreState>()((set) => ({
   showPastRun: (pastRun) => set({ pastRun }),
   cancelRestart: () => set({ restartCancelled: true, restartAt: null }),
   startNext: () => starter?.(),
-  runStarted: () => set({ report: null, summaryOpen: false, restartAt: null, restartCancelled: false }),
+  runStarted: () => set({ screen: 'run', startError: null, report: null, summaryOpen: false, restartAt: null, restartCancelled: false }),
+  openPrepare: () => set({ screen: 'prepare', report: null, summaryOpen: false, restartAt: null, restartCancelled: false }),
+  startFailed: (message) =>
+    set({ screen: 'prepare', startError: message, report: null, summaryOpen: false, restartAt: null, restartCancelled: false }),
 }));
 
 /** Timers, injectable for tests. */

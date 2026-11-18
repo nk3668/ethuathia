@@ -215,10 +215,10 @@ describe('run trackers', () => {
 
   it('reduce events purely into their state and rewards', () => {
     const start = DEPTH_TRACKER.init();
-    const deeper = DEPTH_TRACKER.reduce(start, e({ type: 'floorEntered', actor: 1, floor: 'd3', depth: 3, firstVisit: true }));
+    const deeper = DEPTH_TRACKER.reduce(start, e({ type: 'floorEntered', actor: 1, floor: 'd3', depth: 3, firstVisit: true, floorType: null }));
     expect(start).toEqual({ deepest: 1 });
     expect(deeper).toEqual({ deepest: 3 });
-    expect(DEPTH_TRACKER.reduce(deeper, e({ type: 'floorEntered', actor: 1, floor: 'd2', depth: 2, firstVisit: false }))).toBe(deeper);
+    expect(DEPTH_TRACKER.reduce(deeper, e({ type: 'floorEntered', actor: 1, floor: 'd2', depth: 2, firstVisit: false, floorType: null }))).toBe(deeper);
     expect(DEPTH_TRACKER.rewards?.(deeper)).toEqual({ renown: 2 * RENOWN_PER_FLOOR });
 
     const turns = TURNS_TRACKER.reduce(TURNS_TRACKER.init(), e({ type: 'waited', actor: 1 }, 3 * TURNS_PER_RENOWN + 1));

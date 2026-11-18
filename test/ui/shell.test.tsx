@@ -350,16 +350,19 @@ describe('AppShell under 1000px wide', () => {
 });
 
 describe('App', () => {
-  it('starts a run on the host it is given and shows it', () => {
+  it('opens on the Prepare screen, then starts a run on the host it is given and shows it', () => {
     let host: InlineHost | undefined;
     const createHost = () => (host = new InlineHost());
     render(<App createHost={createHost} seed={5} />);
     if (!host) throw new Error('no host');
+    expect(screen.getByRole('heading', { name: 'Prepare the next run' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Descend' }));
     expect(host.speed).toBe(1);
 
     const party = screen.getByRole('region', { name: 'Party' });
-    expect(within(party).getByRole('button', { name: 'Mira' })).toBeTruthy();
-    expect(within(party).getByRole('button', { name: 'Oren' })).toBeTruthy();
+    for (const member of useSimStore.getState().snapshot?.party ?? []) {
+      expect(within(party).getByRole('button', { name: member.name })).toBeTruthy();
+    }
 
     const started = host;
     act(() => {

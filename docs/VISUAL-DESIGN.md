@@ -212,7 +212,8 @@ speed button is marked `aria-disabled` (kit `Button` styles it like `disabled`, 
 toggle keeps its fill). `aria-disabled` rather than `disabled` keeps the tooltips reachable;
 they say "The run stopped on an error and can’t be resumed." A `SimErrorBanner` (`role="alert"`)
 lies across the top of the map: a `--danger` border, a cross icon, a heading, a plain-language
-sentence and the error text in mono.
+sentence, the error text in mono and a **Start a new run** button (ETH-064: a fresh run from the
+remembered Prepare choices).
 
 ### 3.2 Party card
 
@@ -470,6 +471,18 @@ than kept, a note says how many are kept.
 Three columns matching the order of decisions. The reward multiplier updates as Omens are
 toggled, and its tooltip lists each Omen's contribution.
 
+As built (ETH-064, `ui/prepare/`): the app opens on it, and it fills the party, map and log
+areas while the top bar and side tabs stay. A heading "Prepare the next run" and a one-line
+lead, then the columns (small uppercase labels **Party**, **Loadout & rules**, **Where & how
+hard**; a column with no panels is left out), each a stack of kit `Panel`s, and **Descend**
+(primary, focused) at the bottom right. Party: one raised row per open slot with Class and Race
+selects ("Random" first) and a line naming the picks with `Explain` links; slots past the party
+size are dashed, faint rows with a padlock and "Locked: raise the party size in the Guild Hall".
+From the town: each owned upgrade that strengthens the party, with its effect. Dungeon: a radio
+list; the chosen variant has a 2px accent border as well as the checked radio, and a locked one
+is dashed and faint with a padlock. If a run can't start, an alert with a cross icon and a
+`--danger` border says why above the columns.
+
 ### 6.2 Run summary
 
 A centred modal: outcome heading (Victory, Retreat or Wipe, each with its own icon), one row
@@ -485,9 +498,10 @@ to the heading, so the outcome never rests on color. Then the cause, "Floor N re
 the party with each member's fate, a currency table (Earned, Lost, Banked; the Omen multiplier
 column arrives with ETH-067), "Met this run" (the Codex discoveries), a placeholder epitaph in
 italics, the Auto-restart checkbox with "Next run in N s" and Cancel while counting down, and
-the buttons **Review log** (ghost; closes it, Escape too) and **Start next run** (primary,
-focused; stands in for Continue until the Prepare screen). With the modal closed, a banner at
-the bottom of the map says the run is over and offers **Show summary** and **Start next run**.
+the buttons **Review log** (ghost; closes it, Escape too), **Start next run** (secondary; the
+same choices again at once) and **Continue** (primary, focused; to the Prepare screen, ETH-064).
+With the modal closed, a banner at the bottom of the map says the run is over and offers
+**Show summary**, **Start next run** and **Continue**.
 A past run reopened from the Stats tab (ETH-048) uses the same modal titled "Run N · Outcome",
 without the auto-restart toggle, and with one primary **Close** button.
 

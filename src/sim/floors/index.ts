@@ -22,7 +22,7 @@ import { featureAt, moveEntity } from '../entities';
 import { registerInvariant } from '../invariants';
 import { runEffects } from '../stats/effects';
 import type { EntityId, FloorId, RunConfig } from '../state';
-import { arrivalStairs, arrivalTile, dungeonDepth, floorIdAt, floorNode, stairsOn, stairsTarget } from './dungeon';
+import { arrivalStairs, arrivalTile, dungeonDepth, floorIdAt, floorNode, floorTypeOf, stairsOn, stairsTarget } from './dungeon';
 import type { StairsDir } from './dungeon';
 import { fountainAt, FOUNTAIN_CONDITIONS, FOUNTAIN_GEN_STEPS, FOUNTAIN_RULE_ACTIONS } from './fountains';
 import { FLOORS_CONDITIONS, FLOORS_RULE_ACTIONS, names, stairsGathering } from './rules';
@@ -41,9 +41,10 @@ export type FloorsEvent =
   /**
    * `actor` arrived on `floor` (at `depth`). `firstVisit` is true when nobody had been there, so
    * the floor was just built. The hook for anything that happens on arrival: depth rewards,
-   * contracts, the run ending at the exit. Not emitted for the floor a run starts on.
+   * contracts, the run ending at the exit. Not emitted for the floor a run starts on. `floorType`
+   * is the floor type it is built from (`floor.halls`, for the Codex), `null` if hand-built.
    */
-  | { type: 'floorEntered'; actor: EntityId; floor: FloorId; depth: number; firstVisit: boolean }
+  | { type: 'floorEntered'; actor: EntityId; floor: FloorId; depth: number; firstVisit: boolean; floorType: string | null }
   /**
    * `actor` led the party (`party`: every living member, gathered at the stairs) up the first
    * floor's stairs and out of the dungeon, at `pos` on `floor`. The run domain ends the run on it:
@@ -168,7 +169,7 @@ export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {
       if (slice.arrived[to] === undefined) slice.arrived[to] = state.turn;
       slice.deepest = Math.max(slice.deepest, depth);
       emit({ type: 'tookStairs', actor: actor.id, dir, from, to, depth, pos: { x: pos.x, y: pos.y } });
-      emit({ type: 'floorEntered', actor: actor.id, floor: to, depth, firstVisit });
+      emit({ type: 'floorEntered', actor: actor.id, floor: to, depth, firstVisit, floorType: floorTypeOf(state, to) });
     },
   },
   drink: {
@@ -279,5 +280,7 @@ export const FLOORS_DOMAIN: SimDomain<FloorsTypes> = {
       { id: FEATURE_FOUNTAIN.id, mark: 'used' },
       ...(DRAUGHTS.has(e.draught) ? [{ id: e.draught, mark: 'seen' as const }] : []),
     ],
+    // The floor type (ETH-064) is seen on arrival; hand-built floors have none.
+    floorEntered: (e) => (e.floorType === null ? [] : [{ id: e.floorType, mark: 'seen' }]),
   },
 };

@@ -15,8 +15,8 @@ const TURN_FORMAT = new Intl.NumberFormat('en-US');
 /**
  * The run summary modal (docs/VISUAL-DESIGN.md §6.2): the outcome and its cause, each
  * adventurer's fate, the currency breakdown (earned at risk, lost to a wipe, banked), the Codex
- * discoveries, an epitaph, and the way on: start the next run, review the log, or let
- * auto-restart count down.
+ * discoveries, an epitaph, and the way on: Continue to the Prepare screen, start the next run at
+ * once with the same choices, review the log, or let auto-restart count down.
  */
 export function RunSummary() {
   const report = useRunStore((s) => s.report);
@@ -40,6 +40,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const liveParty = useSimStore((s) => s.snapshot?.party);
   const recorded = partyOf(report);
   const party = recorded.length > 0 || past ? recorded.map((m) => ({ id: m.actor, name: m.name })) : liveParty;
+  const openPrepare = useRunStore((s) => s.openPrepare);
   const look = OUTCOME_LOOK[report.end.outcome];
   const fallen = fallenOf(report);
   const found = discoveriesOf(report);
@@ -136,8 +137,11 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
               <Button variant="ghost" onClick={close}>
                 Review log
               </Button>
-              <Button ref={next} variant="primary" onClick={startNext}>
+              <Button variant="secondary" onClick={startNext}>
                 Start next run
+              </Button>
+              <Button ref={next} variant="primary" onClick={openPrepare}>
+                Continue
               </Button>
             </>
           )}
@@ -208,12 +212,13 @@ export function AutoRestart() {
   );
 }
 
-/** Over the map once a run has ended and the summary is closed: show it again, or start the next run. */
+/** Over the map once a run has ended and the summary is closed: show it again, go to Prepare, or start the next run. */
 export function RunOverBanner() {
   const report = useRunStore((s) => s.report);
   const open = useRunStore((s) => s.summaryOpen);
   const setSummaryOpen = useRunStore((s) => s.setSummaryOpen);
   const startNext = useRunStore((s) => s.startNext);
+  const openPrepare = useRunStore((s) => s.openPrepare);
   if (report === null || open) return null;
   const look = OUTCOME_LOOK[report.end.outcome];
   return (
@@ -225,8 +230,11 @@ export function RunOverBanner() {
       <Button variant="ghost" onClick={() => setSummaryOpen(true)}>
         Show summary
       </Button>
-      <Button variant="primary" onClick={startNext}>
+      <Button variant="secondary" onClick={startNext}>
         Start next run
+      </Button>
+      <Button variant="primary" onClick={openPrepare}>
+        Continue
       </Button>
     </div>
   );

@@ -12,7 +12,7 @@
  * A leaf module: it imports no sim values except the registries, so core files (perception,
  * the step loop, snapshots, invariants) can call it without an import cycle.
  */
-import { findDef } from '../../content';
+import { findDef, UPGRADES, upgradeBundle } from '../../content';
 import type { Bundle } from '../../content';
 import { BUNDLE_SOURCES, STAT_PROVIDERS } from '../registries';
 import type { Entity, RunState } from '../state';
@@ -28,8 +28,9 @@ export function newStatsPart(base: StatsPart['base'] = {}): StatsPart {
 const bundleCache = new Map<string, Bundle>();
 
 /**
- * The bundle carried by the def with id `id`: a `bundle.*` def, a status, or any def with a
- * `bundle` field. Throws on an unknown id or a def without one. Defs never change after load,
+ * The bundle carried by the def with id `id`: a `bundle.*` def, a status, any def with a
+ * `bundle` field, or an upgrade node's party-scope bundle grants (`upgradeBundle`; ETH-064
+ * attaches those by node id, from `partyBundles`). Throws on an unknown id or a def without one. Defs never change after load,
  * so lookups are cached.
  */
 export function bundleOf(id: string): Bundle {
@@ -37,8 +38,9 @@ export function bundleOf(id: string): Bundle {
   if (cached !== undefined) return cached;
   const def = findDef(id) as { bundle?: unknown } | undefined;
   if (def === undefined) throw new Error(`Unknown bundle id "${id}"`);
-  if (typeof def.bundle !== 'object' || def.bundle === null) throw new Error(`Content "${id}" has no bundle`);
-  const bundle = def.bundle as Bundle;
+  const own = UPGRADES.has(id) ? upgradeBundle(UPGRADES.get(id), 'party') : def.bundle;
+  if (typeof own !== 'object' || own === null) throw new Error(`Content "${id}" has no bundle`);
+  const bundle = own as Bundle;
   bundleCache.set(id, bundle);
   return bundle;
 }
