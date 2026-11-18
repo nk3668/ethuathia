@@ -8,6 +8,7 @@
 import { codexSlice } from './codex';
 import { currenciesSlice } from './currencies';
 import { historySlice } from './history';
+import { milestonesSlice } from './milestones';
 import { settingsSlice } from './settings';
 import { upgradesSlice } from './upgrades';
 
@@ -17,4 +18,5 @@ export const PROFILE_SLICES = {
   upgrades: upgradesSlice,
   codex: codexSlice,
   settings: settingsSlice,
+  milestones: milestonesSlice,
 } as const;

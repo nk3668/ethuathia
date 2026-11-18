@@ -414,6 +414,13 @@ opens a detail card below the graph with the description, the same facts as the 
 reason it can't be bought, **Buy for …** and, in a pick-one tier, **Respec** with what it gives
 up, refunds and keeps as the fee.
 
+Locked buildings (ETH-074): the tab reads "Smithy 🔒" (screen-reader text "(locked)") and its
+tooltip ends "Locked: Reach floor 3.". The tab stays selectable; its panel is a dashed
+`--border-strong` card: "🔒 Smithy is locked", the description, "Unlocks when you: **Reach
+floor 3**" and the progress ("Deepest so far: floor 2"). An opened building's tab tooltip adds
+"Opened after run N". The run summary gains an **Unlocked** section ("🔓 Smithy opens in town:
+you reached floor 3.") when the run opened something.
+
 ### 5.3 Codex
 
 A two-pane view: category list and search on the left, entry on the right. An entry shows the

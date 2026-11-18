@@ -5,6 +5,7 @@
  */
 import { assertPlainData } from '../core';
 import type { RunResult } from '../sim';
+import { unlockMilestones } from './milestones';
 import { checkRunResult } from './runResult';
 import type { ProfileSlice, SliceState } from './slice';
 import { PROFILE_SLICES } from './slices';
@@ -28,7 +29,7 @@ export function newProfile(): Profile {
 /**
  * Banks a finished run into the profile and returns the new profile. Each slice's
  * `onRunResult` step runs in `PROFILE_SLICES` order on its own slice; slices without one are
- * kept as they are. Throws a `RangeError` if `result` is malformed (e.g. it lost more than was
+ * kept as they are. Then milestones met by the new totals are unlocked (`unlockMilestones`). Throws a `RangeError` if `result` is malformed (e.g. it lost more than was
  * at risk), since that is a bug in the run, not something to bank.
  */
 export function applyRunResult(profile: Profile, result: RunResult): Profile {
@@ -38,7 +39,7 @@ export function applyRunResult(profile: Profile, result: RunResult): Profile {
   for (const [key, slice] of SLICE_ENTRIES) {
     if (slice.onRunResult) next[key] = slice.onRunResult(profile[key], result);
   }
-  return next as Profile;
+  return unlockMilestones(next as Profile);
 }
 
 /**

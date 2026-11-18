@@ -3,3 +3,4 @@
  * next to these and one line here. Order here is the Town tab's building order.
  */
 export * from './guildHall';
+export * from './smithy';
