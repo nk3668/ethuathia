@@ -84,7 +84,8 @@ describe('createRun', () => {
   });
 
   it('generates the first floor from its own seed-and-floor RNG when there is no floor text', () => {
-    const state = createRun(ONE, 5);
+    // Without monsters, so the printed floor shows only terrain, features and the party.
+    const state = createRun({ ...ONE, monsters: false }, 5);
     const expected = generateFloor(FLOOR_TYPES.get(FIRST_FLOOR_TYPE), new Rng(floorRngState(5, 'd1')));
     const hero = getEntity(state, state.party[0] as number);
     const up = expected.features.find((f) => f.feature.kind === 'stairs' && f.feature.dir === 'up');

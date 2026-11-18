@@ -103,7 +103,9 @@ describe('the item actions', () => {
     hero.actor.hp = 5;
     events = by(state, act(hero.id, { id: 'use', index: 0 }));
     expect(events.map((e) => e.type)).toEqual(expect.arrayContaining(['used', 'healed']));
-    expect(hero.actor.hp).toBe(Math.min(17, statValue(state, hero, 'hp')));
+    // 5 + 12 from the potion, plus any natural recovery (ETH-060) at the end of the turn.
+    const recovered = ofType(events, 'recovered').reduce((n, e) => n + e.amount, 0);
+    expect(hero.actor.hp).toBe(Math.min(17 + recovered, statValue(state, hero, 'hp')));
     expect(hero.inventory?.items).toEqual([{ def: POTION, qty: 1 }]);
 
     events = by(state, act(hero.id, { id: 'drop', index: 0 }));

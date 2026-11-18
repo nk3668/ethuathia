@@ -106,6 +106,14 @@ describe('tools/headless', () => {
     expect(report.split('\n')[1]).toMatch(/done \(retreat\)/);
   });
 
+  it('reports kills and what killed the party', () => {
+    const results = [
+      result(1, { kills: 10, deaths: 0, deathCauses: {} }),
+      result(2, { kills: 4, deaths: 2, deathCauses: { 'monster.gloam_rat': 1, 'monster.mossling': 1 } }),
+    ];
+    expect(formatReport(results)).toContain('Kills per run: mean 7.0. Deaths: 2 (monster.gloam_rat 1, monster.mossling 1).');
+  });
+
   it('says so when no seed needs a look', () => {
     const report = formatReport([result(1)]);
     expect(report).toContain('1 run: 1 reached the bottom, 0 hit the turn cap, 0 triggered stuck detection.');

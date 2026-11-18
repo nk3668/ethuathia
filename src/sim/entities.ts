@@ -7,6 +7,7 @@
  */
 import { clonePlain, Grid } from '../core';
 import type { Pos } from '../core';
+import { MONSTERS } from '../content';
 import type { FloorPlan } from './floorText';
 import type { Entity, EntityId, Floor, FloorId, RunState } from './state';
 
@@ -34,6 +35,7 @@ export function addFloor(state: RunState, id: FloorId, plan: FloorPlan): Floor {
   state.memory[id] = { terrain: new Grid(plan.terrain.width, plan.terrain.height, 'u8').toBuffer(), features: {} };
   for (const { def, pos, feature } of plan.features) addEntity(state, { def, floor: id, pos, feature });
   for (const { pos, item } of plan.items ?? []) addEntity(state, { def: item.def, floor: id, pos, item });
+  for (const spawn of plan.spawns ?? []) addEntity(state, { ...spawn, floor: id });
   return floor;
 }
 
@@ -110,9 +112,45 @@ export function entitiesAt(state: RunState, floorId: FloorId, pos: Pos): Entity[
   return entitiesOnFloor(state, floorId).filter((e) => e.pos.x === pos.x && e.pos.y === pos.y);
 }
 
-/** The actor (adventurer or monster) at `pos`, if any. At most one actor stands on a tile. */
+/** True for an actor still standing: one with HP left. A fallen adventurer takes up no tile. */
+export function isStanding(entity: Entity): boolean {
+  return entity.actor !== undefined && entity.actor.hp > 0;
+}
+
+/**
+ * The standing actor (adventurer or monster) at `pos`, if any: the first to arrive. At most one
+ * actor stands on a tile, except creatures that share tiles (`sharesTile`), which may crowd
+ * together. Fallen adventurers lie where they fell without taking up the tile.
+ */
 export function actorAt(state: RunState, floorId: FloorId, pos: Pos): Entity | undefined {
-  return entitiesAt(state, floorId, pos).find((e) => e.actor !== undefined);
+  return entitiesAt(state, floorId, pos).find(isStanding);
+}
+
+/** Every standing actor at `pos`, in the order they arrived there. */
+export function actorsAt(state: RunState, floorId: FloorId, pos: Pos): Entity[] {
+  return entitiesAt(state, floorId, pos).filter(isStanding);
+}
+
+/**
+ * True for a creature that can crowd onto a tile with others of its sort: small folk and swarms
+ * whose monster def says `sharesTile`. Adventurers never do.
+ */
+export function sharesTile(entity: Entity): boolean {
+  return entity.adventurer === undefined && MONSTERS.has(entity.def) && MONSTERS.get(entity.def).sharesTile === true;
+}
+
+/** Whether two actors may stand on one tile: only when both share tiles (`sharesTile`). */
+export function mayShareTile(a: Entity, b: Entity): boolean {
+  return sharesTile(a) && sharesTile(b);
+}
+
+/**
+ * The actor at `pos` that keeps `mover` from stepping there, if any: anyone, unless both it and
+ * the mover share tiles. This is the one rule for who may stand together (movement, pathing,
+ * spawning and the `core.positions` invariant all follow it).
+ */
+export function blockerAt(state: RunState, mover: Entity, floorId: FloorId, pos: Pos): Entity | undefined {
+  return actorsAt(state, floorId, pos).find((e) => e.id !== mover.id && !mayShareTile(mover, e));
 }
 
 /** The feature (door, stairs, ...) at `pos`, if any. */

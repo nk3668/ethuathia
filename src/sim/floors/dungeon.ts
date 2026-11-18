@@ -121,6 +121,8 @@ export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
     plan.features = plan.features.filter((f) => !(f.feature.kind === 'stairs' && f.feature.dir === 'down'));
   }
   capFountains(plan, configMaxFountains(config.maxFountains));
+  // `RunConfig.monsters: false` (the combat domain's config) builds floors without creatures.
+  if (config.monsters === false) delete plan.spawns;
   return plan;
 }
 

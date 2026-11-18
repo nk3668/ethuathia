@@ -57,6 +57,10 @@ export interface SoakResult {
    */
   outcome: 'cap' | 'stalled' | 'ended' | 'failed';
   stuck: number;
+  /** Monsters the party killed (ETH-060). */
+  kills: number;
+  /** Party members who fell (ETH-060). */
+  deaths: number;
   /** Why the seed failed, as readable lines. Empty when it passed. */
   failures: string[];
   hash: string;
@@ -80,6 +84,8 @@ export function soakSeed(seed: number, options: SoakOptions): SoakResult {
   const failures: string[] = [];
   let outcome: SoakResult['outcome'] = 'cap';
   let stuck = 0;
+  let kills = 0;
+  let deaths = 0;
   let steps = 0;
   let state: RunState | null = null;
   /** The saved-and-loaded copy, stepped alongside `state` for `ROUND_TRIP_STEPS` from `roundTripAt`. */
@@ -106,6 +112,8 @@ export function soakSeed(seed: number, options: SoakOptions): SoakResult {
         break;
       }
       stuck += events.filter((e) => e.type === 'stuck').length;
+      kills += events.filter((e) => e.type === 'killed' && e.byParty).length;
+      deaths += events.filter((e) => e.type === 'fell').length;
       const problems = checkInvariants(state);
       if (problems.length > 0) failures.push(...problems.map((p) => `step ${steps} (turn ${state?.turn}): ${p}`));
 
@@ -151,6 +159,8 @@ export function soakSeed(seed: number, options: SoakOptions): SoakResult {
     turn: state?.turn ?? 0,
     outcome: failures.length > 0 ? 'failed' : outcome,
     stuck,
+    kills,
+    deaths,
     failures,
     hash,
   };
@@ -176,6 +186,7 @@ export function formatSoakReport(results: readonly SoakResult[], cap: number): s
   const lines = [
     `${results.length} seeds at a cap of ${cap} party turns (${steps} steps): ${results.length - failed.length} passed, ${failed.length} failed.`,
     `Ended: ${results.filter((r) => r.outcome === 'ended').length}. Stalled: ${stalled.length}. Runs with stuck detection: ${stuckRuns.length} (most in one run: ${maxStuck}, limit ${MAX_STUCK_PER_RUN}).`,
+    `Kills: ${results.reduce((n, r) => n + r.kills, 0)}. Party members fallen: ${results.reduce((n, r) => n + r.deaths, 0)}.`,
   ];
   const failures = soakFailures(results);
   lines.push(failures.length === 0 ? 'Failures: none.' : `Failures:\n${failures.map((f) => `  ${f}`).join('\n')}`);
