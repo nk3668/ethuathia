@@ -277,7 +277,9 @@ with a registry, a minimal schema (the `Def` fields only), a `KIND` in `CONTENT_
 (`deities.ts`). The owning item extends the def type and the schema together and adds the
 defs. `src/content/index.ts` re-exports them with `export *`.
 
-`building` and `upgrade` (`src/content/upgrades.ts`, ETH-063) are full kinds; each building's
+`doctrine` (`src/content/doctrines.ts`, ETH-063) is a placeholder too: party-wide behavior
+options that upgrades unlock (below). `building` and `upgrade` (`src/content/upgrades.ts`,
+ETH-063) are full kinds; each building's
 defs live in `src/content/town/<building>.ts` (§6.2). A kind may add `check(defs)` for rules
 that span several defs (`checkKinds` runs it after the ref checks).
 
@@ -998,6 +1000,10 @@ As built (ETH-063):
   `GrantBundle` (`{ modifiers: { stat, op, value }[] }`, TODO ETH-057: swap in the shared
   `Bundle`). Capacity keys and their tooltip names are `CAPACITY_INFO` (`partySize`,
   `rosterSize`, `contractSlots`, `ruleSlots`); a new capacity is one entry there.
+- **Doctrine choices** (e.g. "Prioritize clearing floors" vs "Prioritize the stairs") are
+  `unlock` grants of `doctrine.*` ids in a pick-one group, with no separate grant kind. The
+  placeholder `doctrine` kind exists so those ids validate. The doctrine item adds the defs
+  and reads `isUnlocked(profile, 'doctrine.x')` to offer each one.
 - **Validation:** refs (building, prerequisites, Favor deities, stats against `STAT_REFS`, unlock
   ids against the registry named by their prefix; `checkGame` also passes `CONDITIONS` and
   `RULE_ACTIONS` for Library unlocks), plus `ContentKind.check`, a new optional hook for rules

@@ -6,6 +6,7 @@ import {
   CLASS_KIND,
   CONTENT_KINDS,
   DEITY_KIND,
+  DOCTRINE_KIND,
   UPGRADE_KIND,
   UPGRADES,
 } from '../../src/content';
@@ -106,6 +107,23 @@ describe('upgrade node content', () => {
       'upgrade "upgrade.a": grants[0].id refers to unknown class "class.nobody"',
       'upgrade "upgrade.a": grants[1].id refers to a thing, but there is no thing registry to check it in',
       'upgrade "upgrade.a": grants[2].bundle.modifiers[0].stat refers to unknown stat "luck"',
+    ]);
+  });
+
+  it('expresses a doctrine choice as a pick-one pair of doctrine unlocks', () => {
+    const doctrines = withDefs(DOCTRINE_KIND, [
+      { id: 'doctrine.clear_floors', name: 'Clear floors', description: 'Explore every floor fully.', tags: [] },
+      { id: 'doctrine.find_stairs', name: 'Find the stairs', description: 'Head down as soon as possible.', tags: [] },
+    ]);
+    const nodes = [
+      node('a', { exclusiveGroup: 'hall.doctrine', grants: [{ kind: 'unlock', id: 'doctrine.clear_floors' }] }),
+      node('b', { column: 1, exclusiveGroup: 'hall.doctrine', grants: [{ kind: 'unlock', id: 'doctrine.find_stairs' }] }),
+    ];
+    const kinds = [withDefs(BUILDING_KIND, [hall]), withDefs(UPGRADE_KIND, nodes)];
+    expect(checkKinds([...kinds, doctrines], [stats])).toEqual([]);
+    expect(checkKinds([...kinds, withDefs(DOCTRINE_KIND, [])], [stats])).toEqual([
+      'upgrade "upgrade.a": grants[0].id refers to unknown doctrine "doctrine.clear_floors"',
+      'upgrade "upgrade.b": grants[0].id refers to unknown doctrine "doctrine.find_stairs"',
     ]);
   });
 

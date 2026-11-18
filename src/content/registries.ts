@@ -7,6 +7,7 @@ import { BOUNTY_KIND } from './bounties';
 import { CLASS_KIND } from './classes';
 import { CONTRACT_KIND } from './contracts';
 import { DEITY_KIND } from './deities';
+import { DOCTRINE_KIND } from './doctrines';
 import { FEATURE_KIND, FEATURES } from './features';
 import { FLOOR_TYPE_KIND } from './floors';
 import { ITEM_KIND } from './items';
@@ -33,6 +34,7 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
   BOUNTY_KIND,
   OMEN_KIND,
   DEITY_KIND,
+  DOCTRINE_KIND,
   BUILDING_KIND,
   UPGRADE_KIND,
 ];

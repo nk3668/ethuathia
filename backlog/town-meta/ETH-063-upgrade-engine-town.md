@@ -32,3 +32,4 @@ Every building's tree uses the same engine. See `CLAUDE.md` §4 and `docs/ARCHIT
 - 2026-11-17: Done. Content kinds `building` and `upgrade` (`src/content/upgrades.ts`, buildings under `src/content/town/`), engine in `src/meta/upgrades.ts`, `upgrades` profile slice, Town tab in `src/ui/town/`. Bundle grants use a placeholder `GrantBundle` until ETH-057 lands.
 - 2026-11-17: (default) A respec refunds the full price of every node it gives up (the chosen node plus owned nodes that need it) and keeps a fee of 50% of the chosen node's cost, rounded up — alternatives: no refund and a flat fee; a fee per building.
 - 2026-11-17: (default) Guild Hall costs are Renown only (50 / 80 / 120 / 250 / 400 / 600) — to be tuned once runs earn Renown.
+- 2026-11-18: Doctrine choices are `unlock` grants of `doctrine.*` ids in a pick-one group; added a placeholder `doctrine` content kind so they validate. The doctrine behavior is a separate item.
