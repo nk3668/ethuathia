@@ -9,7 +9,7 @@ epic: ui-shell
 size: M
 depends_on: [ETH-055]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 ## Summary
@@ -42,3 +42,4 @@ In an idle game the player shouldn't miss the big moments. See `CLAUDE.md` §1 (
 - 2026-11-17: (default) Auto-pause also centers the map on the moment and shows "Auto-paused: (kind)" in the log header until resumed — alternative: pause only.
 - 2026-11-17: (default) Auto-pause choices persist in `uiStore` (localStorage); ETH-059 landed without a settings slice, so moving them to a profile settings slice is a follow-up — alternative: add that slice here.
 - 2026-11-17: Done. Log filter All / Highlights, clickable highlight lines that center and mark the map, Options auto-pause checkboxes (all off), `watchAutoPause` bound in `App`.
+- 2026-11-18: Nate answered the auto-pause question: "Yes, pause and highlight the event somehow." Follow-up: the focus marker is now corner brackets (a shape no other overlay uses) that pulse while auto-paused, stay still under `prefers-reduced-motion`, and clear when the run resumes.

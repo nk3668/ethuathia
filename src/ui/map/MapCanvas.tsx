@@ -4,6 +4,7 @@ import type { KeyboardEvent, MouseEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Pos } from '../../core';
 import { ExplainCard } from '../codex/Explain';
+import { useMediaQuery } from '../shell/useMediaQuery';
 import { useSimStore } from '../stores/simStore';
 import { useUiStore } from '../stores/uiStore';
 import type { MapFocus } from '../stores/uiStore';
@@ -13,6 +14,11 @@ import { MapRenderer } from './MapRenderer';
 import type { MapView } from './MapRenderer';
 import { describeTile, tileSubject } from './scene';
 import { AsciiTheme } from './theme';
+
+/** One focus-marker pulse, in milliseconds. */
+export const FOCUS_PULSE_MS = 1200;
+
+export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 const NO_LINES: readonly string[] = [];
 
@@ -49,7 +55,8 @@ const ARROWS: Readonly<Record<string, Pos>> = {
  * Hovering a tile (or moving the keyboard cursor with the arrow keys while the map has focus)
  * outlines it and shows a tooltip naming what is there. Clicking an adventurer, or pressing
  * Enter on one, selects it. A map focus from `uiStore` (a clicked highlight) is centered and
- * marked while it is on the shown floor; Escape clears it.
+ * marked with corner brackets while it is on the shown floor; Escape clears it. While the run is
+ * auto-paused on it the brackets pulse, unless the player prefers reduced motion.
  */
 export function MapCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -60,6 +67,11 @@ export function MapCanvas() {
   const select = useUiStore((s) => s.select);
   const focus = useUiStore((s) => s.mapFocus);
   const focusMap = useUiStore((s) => s.focusMap);
+  const autoPaused = useUiStore((s) => s.autoPaused !== null);
+  const paused = useSimStore((s) => s.speed === 0);
+  const reducedMotion = useMediaQuery(REDUCED_MOTION_QUERY);
+  /** The focus marker's pulse phase, or `null` while it is still. Read by `draw`. */
+  const pulseRef = useRef<number | null>(null);
   const depth = useSimStore((s) => s.snapshot?.floor.depth ?? null);
   const [hover, setHover] = useState<Pos | null>(null);
   const viewRef = useRef<Omit<MapView, 'focus'> & { focus: MapFocus | null }>({ mode, selected, hover, focus });
@@ -72,6 +84,29 @@ export function MapCanvas() {
     viewRef.current = { mode, selected, hover, focus };
     scheduleRef.current();
   }, [mode, selected, hover, focus]);
+
+  // Pulse the focus marker while the run is auto-paused on it: one redraw per animation frame.
+  const pulsing = focus !== null && autoPaused && paused && !reducedMotion;
+  useEffect(() => {
+    if (!pulsing) {
+      pulseRef.current = null;
+      scheduleRef.current();
+      return;
+    }
+    let frame = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      pulseRef.current = ((now - start) % FOCUS_PULSE_MS) / FOCUS_PULSE_MS;
+      scheduleRef.current();
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(frame);
+      pulseRef.current = null;
+      scheduleRef.current();
+    };
+  }, [pulsing]);
 
   const lines = useTileLines(hover);
   const subject = useSimStore((s) => (hover && s.snapshot ? tileSubject(s.snapshot, hover) : null));
@@ -134,7 +169,11 @@ export function MapCanvas() {
       const start = performance.now();
       const { focus: place, ...view } = viewRef.current;
       // A focus on another floor can't be shown; the camera follows as usual.
-      renderer.draw(snap, { ...view, focus: place && place.floor === snap.floor.id ? place.pos : null });
+      renderer.draw(snap, {
+        ...view,
+        focus: place && place.floor === snap.floor.id ? place.pos : null,
+        pulse: pulseRef.current,
+      });
       if (import.meta.env.DEV) canvas.dataset.frameMs = (performance.now() - start).toFixed(2);
       // The floor may have moved under a resting pointer.
       const pointer = pointerRef.current;

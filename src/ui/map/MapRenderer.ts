@@ -42,10 +42,25 @@ export interface MapView {
   /** The tile under the pointer or the keyboard cursor. */
   hover: Pos | null;
   /**
-   * A tile to show instead of following an adventurer, on the shown floor (a clicked highlight).
-   * Follow mode centers on it; both modes mark it with a dashed ring.
+   * A tile to show instead of following an adventurer, on the shown floor (a clicked or
+   * auto-paused highlight). Follow mode centers on it; both modes frame it with corner brackets.
    */
   focus?: Pos | null;
+  /**
+   * The focus marker's pulse phase in [0, 1), or `null`/absent for a still marker (reduced
+   * motion, or a focus the run isn't paused on). Each new phase redraws the marker.
+   */
+  pulse?: number | null;
+}
+
+/** How far out the focus brackets sit, in cells from the focus tile, at rest and at the pulse's tightest. */
+export const FOCUS_SPREAD = { rest: 1, tight: 0.35 } as const;
+
+/** The focus brackets' spread for a pulse phase: out at rest, in at mid-phase, smoothly. */
+export function focusSpread(pulse: number | null | undefined): number {
+  if (pulse === null || pulse === undefined) return FOCUS_SPREAD.rest;
+  const t = (1 - Math.cos(2 * Math.PI * pulse)) / 2; // 0 → 1 → 0 over a period
+  return FOCUS_SPREAD.rest - (FOCUS_SPREAD.rest - FOCUS_SPREAD.tight) * t;
 }
 
 /** What one `draw` call did, for tests and frame timing. */
@@ -71,6 +86,8 @@ export class MapRenderer {
   private view: View | null = null;
   private scene: Scene | null = null;
   private dirty = true;
+  /** The focus tile the last frame marked, so its brackets can be cleared when it goes. */
+  private lastFocus: Pos | null = null;
 
   constructor(
     private readonly canvas: MapCanvasLike | HTMLCanvasElement,
@@ -118,6 +135,9 @@ export class MapRenderer {
 
     const range = visibleRange(next, floor, this.viewport);
     const ctx = this.ctx;
+    const focus = view.focus && inFloor(floor, view.focus) ? view.focus : null;
+    const lastFocus = this.lastFocus;
+    this.lastFocus = focus;
     let tiles = 0;
     if (changed === null) {
       ctx.fillStyle = this.palette.background;
@@ -128,16 +148,64 @@ export class MapRenderer {
           tiles++;
         }
       }
+      if (focus) this.drawFocus(focus, floor, view.pulse);
       return { full: true, tiles };
     }
-    for (const i of changed) {
+    // The focus brackets reach into the 3×3 block around the focus tile, so that block is drawn
+    // again whenever the focus is on screen or has just gone, to clear the old brackets.
+    const redraw = new Set(changed);
+    if (focus) for (const i of neighborhood(floor, focus)) redraw.add(i);
+    if (lastFocus) for (const i of neighborhood(floor, lastFocus)) redraw.add(i);
+    for (const i of redraw) {
       const x = i % floor.width;
       const y = (i - x) / floor.width;
       if (x < range.x0 || x >= range.x1 || y < range.y0 || y >= range.y1) continue;
       this.drawTile(x, y, scene.codes[i] as number, false);
       tiles++;
     }
+    if (focus) this.drawFocus(focus, floor, view.pulse);
     return { full: false, tiles };
+  }
+
+  /**
+   * Corner brackets around the focus tile: a shape no other overlay uses, so it reads without
+   * its color. They sit `focusSpread(pulse)` cells out, kept inside the floor and the 3×3 block
+   * that `draw` redraws.
+   */
+  private drawFocus(focus: Pos, floor: { width: number; height: number }, pulse: number | null | undefined): void {
+    const view = this.view as View;
+    const ctx = this.ctx;
+    const line = Math.max(1, Math.round(this.dpr));
+    const width = line * 2;
+    const spreadX = Math.round(focusSpread(pulse) * view.cellW);
+    const spreadY = Math.round(focusSpread(pulse) * view.cellH);
+    const half = width / 2;
+    // Clamped to the floor, so a marker at an edge never paints the off-floor background.
+    const fx0 = view.originX;
+    const fy0 = view.originY;
+    const fx1 = view.originX + floor.width * view.cellW;
+    const fy1 = view.originY + floor.height * view.cellH;
+    const x0 = Math.max(fx0, view.originX + focus.x * view.cellW - spreadX) + half;
+    const y0 = Math.max(fy0, view.originY + focus.y * view.cellH - spreadY) + half;
+    const x1 = Math.min(fx1, view.originX + (focus.x + 1) * view.cellW + spreadX) - half;
+    const y1 = Math.min(fy1, view.originY + (focus.y + 1) * view.cellH + spreadY) - half;
+    const arm = Math.max(line * 2, Math.round(Math.min(x1 - x0, y1 - y0) / 3));
+    ctx.setLineDash([]);
+    ctx.lineWidth = width;
+    ctx.strokeStyle = this.palette.selection;
+    for (const [cx, cy, dx, dy] of [
+      [x0, y0, 1, 1],
+      [x1, y0, -1, 1],
+      [x0, y1, 1, -1],
+      [x1, y1, -1, -1],
+    ] as const) {
+      ctx.beginPath();
+      ctx.moveTo(cx + dx * arm, cy);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy + dy * arm);
+      ctx.stroke();
+    }
+    ctx.lineWidth = line;
   }
 
   /** The tile under a point given in CSS pixels from the canvas's top-left, if any. */
@@ -197,14 +265,8 @@ export class MapRenderer {
       ctx.strokeStyle = this.palette.selection;
       ctx.strokeRect(px + inset, py + inset, view.cellW - line, view.cellH - line);
     }
-    if (overlay & Overlay.Focus) {
-      // Dashed accent ring, a little inside the selection ring, so it never reads as a selection.
-      const extra = overlay & Overlay.Selected ? line * 2 : 0;
-      ctx.setLineDash([line * 3, line * 2]);
-      ctx.strokeStyle = this.palette.selection;
-      ctx.strokeRect(px + inset + extra, py + inset + extra, view.cellW - line - 2 * extra, view.cellH - line - 2 * extra);
-      ctx.setLineDash([]);
-    }
+    // `Overlay.Focus` is drawn once per frame by `drawFocus`, after every tile, since it reaches
+    // into the neighboring cells.
     if (overlay & Overlay.Hover) {
       // Dashed when it shares the cell with the selection ring, so both stay visible.
       ctx.setLineDash(overlay & Overlay.Selected ? [line * 2, line * 2] : []);
@@ -214,4 +276,19 @@ export class MapRenderer {
       ctx.setLineDash([]);
     }
   }
+}
+
+function inFloor(floor: { width: number; height: number }, pos: Pos): boolean {
+  return pos.x >= 0 && pos.y >= 0 && pos.x < floor.width && pos.y < floor.height;
+}
+
+/** The tile indices of the 3×3 block centered on `pos`, cut to the floor. */
+function neighborhood(floor: { width: number; height: number }, pos: Pos): number[] {
+  const out: number[] = [];
+  for (let y = pos.y - 1; y <= pos.y + 1; y++) {
+    for (let x = pos.x - 1; x <= pos.x + 1; x++) {
+      if (inFloor(floor, { x, y })) out.push(y * floor.width + x);
+    }
+  }
+  return out;
 }

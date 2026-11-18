@@ -32,6 +32,7 @@ import {
   visibleRange,
 } from '../../src/ui/map';
 import type { AtlasCanvas, CellState, GlyphTheme, MapContext, View } from '../../src/ui/map';
+import { FOCUS_SPREAD, focusSpread } from '../../src/ui/map/MapRenderer';
 import { cellFog, cellGlyph, cellOverlay, encodeCell } from '../../src/ui/map/scene';
 
 // ---------------------------------------------------------------------------------------------
@@ -492,6 +493,44 @@ describe('MapRenderer', () => {
     const view = renderer.currentView as View;
     const mira = tileRect(view, { x: 1, y: 1 });
     expect(rings[0]?.args).toEqual([mira.x + 0.5, mira.y + 0.5, mira.w - 1, mira.h - 1]);
+  });
+
+  it('frames a focus tile with four corner brackets, and clears them when it goes', () => {
+    const { renderer, calls } = setup();
+    const snap = snapshot(run());
+    renderer.draw(snap, { mode: 'follow', selected: null, hover: null });
+    calls.length = 0;
+    // The small floor already fits the view, so only the focus tile's 3×3 block is drawn again.
+    const focused = renderer.draw(snap, { mode: 'follow', selected: null, hover: null, focus: { x: 3, y: 2 } });
+    expect(focused).toEqual({ full: false, tiles: 9 });
+    expect(calls.filter((c) => c.name === 'stroke')).toHaveLength(4);
+    expect(calls.filter((c) => c.name === 'strokeRect')).toHaveLength(0);
+    const view = renderer.currentView as View;
+    const cell = tileRect(view, { x: 3, y: 2 });
+    // At rest the brackets sit one cell out: the first corner starts at the top-left of the 3×3 block.
+    const corner = calls.find((c) => c.name === 'lineTo');
+    expect(corner?.args).toEqual([cell.x - cell.w + 1, cell.y - cell.h + 1]);
+
+    // A still frame with the same focus redraws the 3×3 block under the brackets and the brackets.
+    calls.length = 0;
+    const again = renderer.draw(snap, { mode: 'follow', selected: null, hover: null, focus: { x: 3, y: 2 }, pulse: 0.5 });
+    expect(again).toEqual({ full: false, tiles: 9 });
+    expect(calls.filter((c) => c.name === 'stroke')).toHaveLength(4);
+
+    // Dropping the focus redraws the block once more, to clear the brackets, and draws none.
+    calls.length = 0;
+    const gone = renderer.draw(snap, { mode: 'follow', selected: null, hover: null });
+    expect(gone.full).toBe(false);
+    expect(gone.tiles).toBe(9);
+    expect(calls.filter((c) => c.name === 'stroke')).toHaveLength(0);
+  });
+
+  it('pulses the focus brackets in and out, still when there is no pulse', () => {
+    expect(focusSpread(null)).toBe(FOCUS_SPREAD.rest);
+    expect(focusSpread(undefined)).toBe(FOCUS_SPREAD.rest);
+    expect(focusSpread(0)).toBe(FOCUS_SPREAD.rest);
+    expect(focusSpread(0.5)).toBeCloseTo(FOCUS_SPREAD.tight);
+    expect(focusSpread(0.25)).toBeCloseTo((FOCUS_SPREAD.rest + FOCUS_SPREAD.tight) / 2);
   });
 
   it('redraws everything when resized or switched to fit, and fits the floor', () => {

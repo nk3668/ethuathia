@@ -12,7 +12,8 @@ import { glyphStyle } from './glyphs';
 export type CellState = 'visible' | 'remembered';
 
 /** The parts of a 2D context the renderer and themes draw on the map with. */
-export type MapContext = AtlasContext & Pick<CanvasRenderingContext2D, 'drawImage' | 'strokeRect' | 'setLineDash'>;
+export type MapContext = AtlasContext &
+  Pick<CanvasRenderingContext2D, 'drawImage' | 'strokeRect' | 'setLineDash' | 'beginPath' | 'moveTo' | 'lineTo' | 'stroke'>;
 
 export interface GlyphTheme {
   /** A cell's width over its height. */
