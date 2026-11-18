@@ -14,4 +14,9 @@ export const FLOORS_LOG_TEXT: LogTextRecord<FloorsEvent> = {
     quiet: true,
     text: (e, nameOf) => `${nameOf(e.actor)} ${e.firstVisit ? 'discovers' : 'returns to'} floor ${e.depth}.`,
   },
+  leftDungeon: {
+    category: 'discovery',
+    text: (e, nameOf) =>
+      e.party.length > 1 ? `${nameOf(e.actor)} leads the party up the stairs and out of the dungeon.` : `${nameOf(e.actor)} climbs the stairs and walks out of the dungeon.`,
+  },
 };

@@ -3,6 +3,7 @@
  * time-away use to run a sim without touching `RunState`.
  */
 import type { Command } from '../commands';
+import type { RunReport } from '../run/end';
 import type { SimEvent } from '../events';
 import type { Snapshot, ViewOptions } from '../snapshot';
 import type { RunConfig } from '../state';
@@ -40,6 +41,12 @@ export interface SimHost {
    * throwing to the caller (`InlineHost`) never calls it.
    */
   onError(listener: (message: string) => void): Unsubscribe;
+  /**
+   * Called once when the run ends (ETH-062), right after the update that carries its last events
+   * (`runEnded` among them), with the result to bank and how it ended. The run stays as it
+   * ended until the next `start`.
+   */
+  onRunEnded(listener: (report: RunReport) => void): Unsubscribe;
   /** Stops the host for good and drops every listener. */
   dispose(): void;
 }

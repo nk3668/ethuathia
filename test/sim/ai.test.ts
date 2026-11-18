@@ -53,7 +53,7 @@ function exploreUntilIdle(state: RunState, cap = EXPLORE_TURN_CAP): { turns: num
   for (let turns = 1; turns <= cap; turns++) {
     const now = step(state, []);
     events.push(...now);
-    if (fired(now).some((e) => e.action === 'act.wait')) return { turns, events };
+    if (fired(now).some((e) => e.action === 'act.wait' || e.action === 'act.retreat_run')) return { turns, events };
   }
   return { turns: null, events };
 }
@@ -123,7 +123,7 @@ describe('decision engine', () => {
       rule('cond.always', 'act.test_step', { x: 0, y: 1 }), // this one
       rule('cond.always', 'act.test_step', { x: 1, y: 1 }),
     ]);
-    const events = step(state, []);
+    const events = step(state, []).filter((e) => e.type !== 'runStarted');
     expect(events).toEqual([
       {
         type: 'ruleFired',
@@ -148,7 +148,7 @@ describe('decision engine', () => {
     hero.ai = newAiPart([rule('cond.test_never', 'act.test_step', { x: 1, y: 0 })]);
     // The room is all in view, so there is nothing to explore: the baseline waits.
     expect(fired(step(state, []))).toMatchObject([
-      { rule: { set: 'baseline', index: 6 }, action: 'act.wait', detail: 'Wait: nothing else to do' },
+      { rule: { set: 'baseline', index: 8 }, action: 'act.wait', detail: 'Wait: nothing else to do' },
     ]);
   });
 
@@ -182,7 +182,7 @@ describe('decision engine', () => {
     // The baseline is a plain rule list: an adventurer could be given the same rules as its own.
     const { state, hero } = setup(['#####', '#@..#', '#...#', '#####']);
     hero.ai = newAiPart(BASELINE_RULES.map((r) => structuredClone(r)));
-    expect(fired(step(state, []))[0]?.rule).toEqual({ set: 'own', index: 6 });
+    expect(fired(step(state, []))[0]?.rule).toEqual({ set: 'own', index: 8 });
   });
 });
 
@@ -201,9 +201,11 @@ describe('baseline exploration', () => {
       expect(missed, `seed ${seed}`).toEqual([]);
       expect(explored(state, 'd1').fraction, `seed ${seed}`).toBe(1);
 
-      // Stopped: it stays put and keeps waiting.
+      // Done: on the bottom (only) floor it turns back and walks out, ending the run.
+      for (let i = 0; i < EXPLORE_TURN_CAP && state.domains.run.end === null; i++) step(state, []);
+      expect(state.domains.run.end?.outcome, `seed ${seed}`).toBe('retreat');
       const at = { ...hero.pos };
-      for (let i = 0; i < 5; i++) expect(fired(step(state, [])).map((e) => e.action)).toEqual(['act.wait']);
+      expect(step(state, [])).toEqual([]);
       expect(hero.pos).toEqual(at);
     }
     // Takes about 4 s alone; parallel agents and CI load push it past the 5 s default.
@@ -306,7 +308,7 @@ describe('stuck detection', () => {
     expect(stuck).toEqual({
       type: 'stuck',
       actor: hero.id,
-      rule: { set: 'baseline', index: 2 },
+      rule: { set: 'baseline', index: 4 },
       action: 'act.explore',
       turns: STUCK_TURNS,
       detail:

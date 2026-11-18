@@ -23,7 +23,8 @@ describe('discovery rules', () => {
 
   it('name only content ids that exist', () => {
     for (const [type, rules] of DISCOVERY_RULES) {
-      const sample = { type, turn: 0 } as SimEvent;
+      // `runStarted` lists the party, so the sample carries one member.
+      const sample = { type, turn: 0, party: [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }] } as unknown as SimEvent;
       for (const rule of rules) for (const d of rule(sample)) expect(findDef(d.id), `${type} → ${d.id}`).toBeDefined();
     }
   });
@@ -81,6 +82,7 @@ describe('CODEX_TRACKER', () => {
     const state = createRun(config, 3);
     let codex = CODEX_TRACKER.init();
     for (let i = 0; i < 30; i++) for (const event of step(state, [])) codex = CODEX_TRACKER.reduce(codex, event);
-    expect(codex).toEqual({ 'feature.door': ['used'] });
+    // The party's class and race are met at the start (`runStarted`), the door when it is opened.
+    expect(codex).toEqual({ 'class.vanguard': ['seen'], 'race.human': ['seen'], 'feature.door': ['used'] });
   });
 });

@@ -462,6 +462,16 @@ screen) and **Review log**, plus an **Auto-restart** toggle (off by default, mir
 Options). While it is on, the modal shows a countdown to the next run and the countdown can be
 cancelled.
 
+As built (ETH-062, `ui/shell/RunSummary.tsx`): a `role="dialog"` over a dimmed backdrop, with a
+3px top border in the outcome's color and the outcome icon (★ Victory, ⇡ Retreat, ✝ Wipe) next
+to the heading, so the outcome never rests on color. Then the cause, "Floor N reached · T turns",
+the party with each member's fate, a currency table (Earned, Lost, Banked; the Omen multiplier
+column arrives with ETH-067), "Met this run" (the Codex discoveries), a placeholder epitaph in
+italics, the Auto-restart checkbox with "Next run in N s" and Cancel while counting down, and
+the buttons **Review log** (ghost; closes it, Escape too) and **Start next run** (primary,
+focused; stands in for Continue until the Prepare screen). With the modal closed, a banner at
+the bottom of the map says the run is over and offers **Show summary** and **Start next run**.
+
 ### 6.3 While you were away
 
 A centred modal: time away, runs completed, currency earned, notable events (deaths, new Codex

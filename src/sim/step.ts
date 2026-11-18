@@ -17,6 +17,8 @@ import { runTurnEnd, runTurnStart } from './domains';
 import { statValue } from './stats/getStat';
 import type { Emit, SimEvent } from './events';
 import { perceive } from './perception';
+import { announceStart, runOver, settleRun } from './run/end';
+import { reduceTrackers } from './run/trackers';
 import type { ActorEntity, Entity, EntityId, RunState } from './state';
 
 /** Energy an actor needs before it can act. */
@@ -59,23 +61,33 @@ export function step(state: RunState, commands: readonly Command[], options: Ste
   const events: SimEvent[] = [];
   const emit: Emit = (event) => events.push({ ...event, turn: state.turn });
   const decide = options.decide ?? ruleDecide;
+  // A finished run stays as it ended (ETH-062).
+  if (runOver(state)) return events;
+  announceStart(state, emit);
 
   for (const command of commands) applyCommand(state, command, emit);
+  let over = settleRun(state, events, 0, emit);
 
-  const due = new Set(state.party.filter((id) => canActIn(state, state.entities[id])));
-  while (due.size > 0) {
+  const due = new Set(over ? [] : state.party.filter((id) => canActIn(state, state.entities[id])));
+  while (due.size > 0 && !over) {
     let acted = false;
     for (const actor of scheduledActors(state)) {
       // An earlier action this pass may have removed or disabled it.
       if (!canActIn(state, state.entities[actor.id]) || actor.actor.energy < ENERGY_THRESHOLD) continue;
+      const from = events.length;
       takeTurn(state, actor, decide, emit);
       acted = true;
+      // The party may have left the dungeon, or its last member fallen.
+      over = settleRun(state, events, from, emit);
+      if (over) break;
       due.delete(actor.id);
       for (const id of due) if (!canActIn(state, state.entities[id])) due.delete(id);
       if (due.size === 0) break;
     }
     if (!acted) tick(state);
   }
+  // Run trackers see the whole step's events, `runEnded` included (docs/ARCHITECTURE.md, "Rewards").
+  reduceTrackers(state, events);
   return events;
 }
 

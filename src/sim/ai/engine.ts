@@ -29,19 +29,23 @@ export const DROP_TURNS = 20;
 
 /**
  * The built-in rules every adventurer falls back on after its own (CLAUDE.md §5.3), in order:
- * back off after getting stuck; head down without waiting once the floor's turn cap is spent;
+ * back off after getting stuck; once the party has turned back, climb out with it (waiting at
+ * the stairs up for the others); head down without waiting once the floor's turn cap is spent;
  * explore the frontier; once nothing is left to explore, go down the stairs with the party,
- * waiting at them until everyone on the floor has gathered; and otherwise wait (on the bottom
- * floor too, until run end replaces that). Combat and fleeing join them in M1. The floors
- * conditions and rule actions are in `src/sim/floors/rules.ts`.
+ * waiting at them until everyone on the floor has gathered; on the bottom floor with nothing
+ * left to do, turn back and leave (a retreat until contracts make it a victory); otherwise
+ * wait. Combat and fleeing join them in M1. The floors conditions and rule actions are in
+ * `src/sim/floors/rules.ts`, the heading-out ones in `src/sim/run/rules.ts`.
  */
 export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.stuck' }, action: { id: 'act.back_off' }, enabled: true },
+  { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
+  { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   { condition: { id: 'cond.floor_overstayed' }, action: { id: 'act.descend', params: { regroup: false } }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.explore' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.descend' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.gather' }, enabled: true },
-  { condition: { id: 'cond.bottom_floor' }, action: { id: 'act.wait' }, enabled: true },
+  { condition: { id: 'cond.bottom_floor' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true },
 ];
 

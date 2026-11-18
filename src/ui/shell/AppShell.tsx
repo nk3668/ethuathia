@@ -7,6 +7,7 @@ import { LogPanel } from './LogPanel';
 import { LogResizer } from './LogResizer';
 import { MapArea } from './MapArea';
 import { PartyColumn } from './PartyColumn';
+import { RunSummary } from './RunSummary';
 import { SideDrawer, SidePanel } from './SidePanel';
 import { TopBar } from './TopBar';
 import { NARROW_QUERY, useMediaQuery } from './useMediaQuery';
@@ -68,6 +69,7 @@ export function AppShell() {
         </div>
       </main>
       {drawerShown && <SideDrawer id={drawerId} onClose={() => setDrawerOpen(false)} />}
+      <RunSummary />
     </div>
   );
 }

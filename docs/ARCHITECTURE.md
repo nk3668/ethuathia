@@ -174,8 +174,8 @@ contract complete, a level-up) is tagged on its log-text entry, not in a central
 
 `HIGHLIGHT_KINDS` (`ui/shell/text.ts`) is collected from `LOG_TEXT`, so the log's Highlights
 filter and the Options auto-pause list pick up a new kind with no other edit. Auto-pause choices
-are all off by default and live in `uiStore.autoPause` for now (they move to the profile's
-settings once the profile has a settings slice).
+are all off by default and live in `uiStore.autoPause` for now. The profile has had a
+`settings` slice since ETH-062; moving them there is a follow-up.
 
 ### Rule conditions, rule actions, generation steps and trackers
 
@@ -188,13 +188,61 @@ generation steps with `defineGenStep` from `gen/types.ts`.
 A run tracker is the interface from §2.4 and §6.4:
 
 ```ts
-interface RunTracker<S> { id: string; init(): S; reduce(state: S, event: SimEvent): S }
+interface RunTracker<S> {
+  id: string; init(): S; reduce(state: S, event: SimEvent): S;
+  rewards?(state: S): RewardAmounts;   // at-risk currency this state is worth
+  extras?(state: S): unknown;          // RunResult.extras[id]; default: the state itself
+}
 ```
 
-`reduce` is pure (no randomness, no change to `state` in place). ETH-062 builds the framework
-that runs every tracker over each step's events and keeps their states in the run domain's slice.
-**At run end it puts each tracker's final state in `RunResult.extras[tracker.id]`**, which is
-how profile slices read tracker output (the `codex` slice reads `extras['track.codex']`).
+`reduce`, `rewards` and `extras` are pure (no randomness, no change to `state` in place). The
+framework (ETH-062, `src/sim/run/trackers.ts`):
+
+1. `createRun` starts every tracker at `init()` in `state.domains.run.trackers[id]`.
+2. At the **end of each step**, `reduceTrackers` folds that step's events, in order, into each
+   tracker's state (tracker order = `RUN_TRACKERS`, domain order). A run's last step includes
+   its `runEnded`. Then `rewards.atRisk` is recomputed as the sum of every tracker's
+   `rewards(state)` (amounts of 0 left out). Nothing else writes it; the `run.rewardsAtRisk`
+   invariant checks that.
+3. **At run end `RunResult.extras[tracker.id]` gets `extras(state)`, by default the final
+   state**, which is how profile slices read tracker output (the `codex` slice reads
+   `extras['track.codex']`). The run domain adds `extras['run.end']`, the `RunEnd`.
+
+A tracker's state is plain data, part of the run state (saved with it) and must not keep
+references to event objects. The base trackers are `track.depth` (Renown per floor reached below
+the first, `RENOWN_PER_FLOOR` 10), `track.turns` (one Renown per `TURNS_PER_RENOWN` 50 game
+turns), `track.kills` (Trophies; a placeholder until ETH-060 adds a kill event, then
+`trophiesForKill(difficulty)` per kill) and `track.deaths` (who fell, from `fell` events).
+
+### Run end (ETH-062)
+
+All in `src/sim/run/`:
+
+- **State:** `state.domains.run` holds `rewards.atRisk`, `trackers`, `started`, `leaving`
+  (`{ turn, reason: 'ordered' | 'rule', by, announced }` once the party turns back), `fallen`
+  (party ids in the order they fell) and `end` (`null` while running, then
+  `RunEnd { outcome, turn, cause, depth }`). Once `end` is set, `step` returns `[]` and changes
+  nothing.
+- **Events:** `runStarted { party: { actor, name, classId, raceId }[], depth }` is the first
+  event of the first step (the Codex discovers the party's classes and races from it);
+  `turnedBack { actor | null, reason }`; `fell { actor, name, floor, pos, depth }` when a party
+  member's HP reaches 0 by any cause (a highlight); `runEnded { outcome, cause, depth }`, always
+  a run's last event. The floors domain's stairs action emits `leftDungeon { actor, party,
+  floor, pos }` when the party walks out of the first floor's up stairs, which are refused unless
+  every living member is gathered there (`stairsGathering`).
+- **Ending:** `step` calls `settleRun` after the commands and after every action. It notices the
+  party turning back (a `retreat` command, or any `ruleFired` for `act.retreat_run`), new falls,
+  `leftDungeon` (a **victory** if at least one victory check applies and all that apply are met,
+  else a **retreat**) and nobody alive (a **wipe**).
+- **Victory checks** are a registry like the rule registries: `SimDomain.victoryChecks`, joined
+  into `VICTORY_CHECKS`. A `VictoryCheck` is `{ id, check(state) → { applies, met, detail } }`.
+  Contracts (ETH-024) add theirs; with none registered (now), walking out is a retreat.
+- **Result:** `runResult(state)` builds the `RunResult` (a fresh copy); `runReport(state)` is
+  `{ result, end }`, what the hosts hand the UI. `lost` stays empty until ETH-023.
+- **Heading out:** `cond.heading_out` holds once `leaving` is set; `act.retreat_run` climbs to
+  the remembered stairs up and takes them once the floor's living members are gathered (at the
+  exit, the whole party); `act.gather { dir: 'up' }` waits. `act.descend` and the down
+  `act.gather` refuse while heading out.
 
 ### Codex discoveries
 
@@ -349,6 +397,10 @@ sim events ──► RunTrackers ──► state.domains.run.rewards.atRisk ─�
   one), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
   `atRisk - lost`, the `history` slice records the run. The Omen multiplier is not applied yet;
   ETH-067 adds it, either as a field on `RunResult` or by multiplying in the trackers.
+- **Run end to profile (ETH-062):** the host calls `onRunEnded(report)` once, right after the
+  update with the run's last events (`HostMessage` `runEnded` from the worker). `App` then calls
+  `profileStore.applyRunResult(report.result)`, saves, and opens the run summary through
+  `runStore`.
 
 ### Profile slices
 
@@ -369,6 +421,9 @@ needs no migration. The save envelope's own `SAVE_VERSION` changes only if the e
 does (§6.5). Slices are plain data and change only through pure functions that return a new
 slice.
 
+The `settings` slice (ETH-062, `src/meta/slices/settings.ts`) holds game settings kept with the
+save: `autoRestart` (default `false`) so far. `profileStore.updateSettings(changes)` changes it.
+
 ### State version
 
 `STATE_VERSION` (`src/sim/state.ts`) changes whenever the shape of `RunState` changes, entity
@@ -376,7 +431,8 @@ parts and domain slices included. **A PR that changes the shape sets it to the v
 plus one when it rebases**, so two branches never ship different shapes under one number. If
 main moved past your version while your PR waited, rebase and bump again. ETH-055 made it 4,
 then 5 on main, ETH-058 (the floors slice) 6, ETH-057 7 (the `stats` part; `speed`,
-`maxHp` and `maxMp` left `ActorPart`), and ETH-033 8 (`stats.attributes`).
+`maxHp` and `maxMp` left `ActorPart`), ETH-033 8 (`stats.attributes`), and ETH-062 9 (the run
+slice's trackers and run end).
 
 ### Floors and arrival (ETH-058)
 
@@ -888,7 +944,8 @@ As built in `src/sim/gen/` (ETH-006):
 - **Stairs (ETH-058):** the `stairs` action (`{ id: 'stairs', dir }`) on matching stairs moves
   the actor to the linked stairs of the floor above or below (the up stairs when going down),
   or the nearest free tile if someone stands there. The first floor's up stairs lead out of the
-  dungeon and are refused until leaving exists (ETH-025, ETH-062). A floor keeps its layout,
+  dungeon: taking them with the whole living party gathered there emits `leftDungeon` and ends
+  the run (ETH-062, "Run end" in Contracts); otherwise they are refused. A floor keeps its layout,
   features and party memory when left; only floors with a party member on them are scheduled
   (§3.3), so the rest stay as they were left.
 - **The rooms-and-corridors steps:**
@@ -999,9 +1056,11 @@ As built in `src/sim/ai/` (ETH-009):
   6 turns away", with the condition's detail in brackets when it has one. The same is kept as
   `ai.memory.intent` for the party card.
 - **Baseline rules**, in order: `cond.stuck → act.back_off`,
+  `cond.heading_out → act.retreat_run`, `cond.heading_out → act.gather { dir: 'up' }`,
   `cond.floor_overstayed → act.descend { regroup: false }`, `cond.always → act.explore`,
-  `cond.always → act.descend`, `cond.always → act.gather`, `cond.bottom_floor → act.wait`,
-  `cond.always → act.wait`. The floors ones (ETH-058) are in `src/sim/floors/rules.ts`:
+  `cond.always → act.descend`, `cond.always → act.gather`, `cond.bottom_floor → act.retreat_run`,
+  `cond.always → act.wait`. The heading-out ones (ETH-062) are in `src/sim/run/rules.ts`; the
+  floors ones (ETH-058) in `src/sim/floors/rules.ts`:
   - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
     default) a member on the stairs takes them only when every living member on that floor is
     gathered (`gatheringAt`: within `GATHER_RADIUS`, 2, of the stairs or of a gathered member,
@@ -1012,8 +1071,9 @@ As built in `src/sim/ai/` (ETH-009):
   - `cond.floor_overstayed` holds once the party has been on the floor `floorTurnCap` game
     turns (default `FLOOR_TURN_CAP`, 1000), the safety net: the baseline then heads down
     without exploring further or waiting.
-  - `cond.bottom_floor` holds on the bottom floor, where the baseline waits until run end
-    (ETH-062) replaces it.
+  - `cond.bottom_floor` holds on the bottom floor, where the baseline, with nothing left to
+    explore, fires `act.retreat_run`: the party turns back, climbs out and the run ends as a
+    retreat (ETH-062; a victory once contracts add victory checks).
   - `act.explore` is frontier-based: the goals are tiles the actor could enter (on the party
     memory's path grid, closed doors at `OPEN_DOOR_COST`) with an unseen neighbor. Standing on one
     always reveals its neighbors, so each goal reached shrinks the frontier, and explored dead
@@ -1268,6 +1328,10 @@ As built (ETH-010):
   once. `send` queues a command for the next step. `onError` (on the interface since ETH-021)
   gets a message when the host stops the run on an error: the worker pauses on a bad message or
   a thrown sim error, then reports it. `InlineHost` never calls it; its errors throw to the caller.
+  `onRunEnded(report)` (ETH-062) is called once when the run ends, right after the update with
+  its last events; `SimSession.step()` returns `ended` (the `RunReport`) on that step, the
+  `PacedRunner` flushes at once and stops stepping, and the worker posts `runEnded`.
+  `InlineHost.run` stops at the end too.
 - **InlineHost:** `run(steps)` runs that many steps now and delivers one batch and one
   snapshot. `setSpeed` is only recorded.
 - **Headless tools** step a `SimSession` directly: `step()` returns each step's events, and
@@ -1315,6 +1379,12 @@ As built (ETH-012), the stores are in `ui/stores/`:
   `bindSaveStore(store)` loads the save and starts autosave; `App` binds the store from its
   `createSaveStore` prop (default `createSaveStore()` from platform). The top bar shows the
   profile's banked currencies.
+- `runStore` (ETH-062): `report` (the finished run until the next starts), `summaryOpen`,
+  `restartAt` and `restartCancelled`; `startNext` calls the starter `App` registers with
+  `setRunStarter` (same config, a new seed). `watchAutoRestart` starts the next run
+  `AUTO_RESTART_MS` (5 s) after a run ends while the profile's `settings.autoRestart` is on and
+  the countdown wasn't cancelled. Waiting for the player is the default. The run summary modal
+  (`shell/RunSummary.tsx`) and the "run is over" banner over the map read it.
 - `uiStore`: `selected`, `tab`, `drawerOpen`, `logHeight`, `logFilter` and `mapCamera`
   (ETH-013). Zustand's `persist` keeps `logHeight`, `tab` and `mapCamera` in `localStorage`
   (key `ethuathia.ui`), through a wrapper that
@@ -1534,7 +1604,7 @@ and load (`serialize`/`deserialize`) halfway whose copy, stepped alongside the o
 `ROUND_TRIP_STEPS` (50), gives different events or state hashes (compared every `HASH_EVERY`
 steps and at the end of that window); or a **stuck storm**,
 more than `MAX_STUCK_PER_RUN` (5) `stuck` events in one run. A step where nobody can act ends
-the run as `stalled`, which is not a failure.
+the soak as `stalled`, and a run that ends (`runEnded`, ETH-062) as `ended`; neither is a failure.
 
 - `test/sim/soak.test.ts` runs 30 seeds at `TEST_SOAK_CAP` (150) party turns in `npm test`,
   about 2 seconds.
@@ -1562,6 +1632,10 @@ cards show every member, and the top bar and log show the run.
   turns mean/min/max, explored, depth mean/max, turns per floor) with before, after and delta,
   then how many seeds end in a different state hash. Reports from before ETH-058 count as depth
   1. M1 items add rows to `METRICS` (death causes, currency per hour) as the report grows.
+- Since ETH-062 a headless run stops when the run ends: `done` means it reached the bottom and
+  ended, `early` that it ended above the bottom. `SeedResult` adds `end` (the outcome), `runTurns`
+  (return trip included; `turns` stays the turn the party turned back) and `atRisk`. `METRICS`
+  adds ended above bottom, one row per outcome, run turns and Renown and Trophies at risk.
 
 ### 11.5 PR gates
 

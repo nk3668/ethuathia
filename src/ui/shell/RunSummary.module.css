@@ -1,0 +1,189 @@
+/* The run summary (docs/VISUAL-DESIGN.md §6.2): a centred modal over the whole screen. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 55%);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(480px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-raised);
+  border: var(--border-width) solid var(--border-strong);
+  border-top: 3px solid var(--text-muted);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-overlay);
+  color: var(--text);
+}
+
+.dialog[data-outcome='victory'] {
+  border-top-color: var(--renown);
+}
+
+.dialog[data-outcome='retreat'] {
+  border-top-color: var(--accent);
+}
+
+.dialog[data-outcome='wipe'] {
+  border-top-color: var(--danger);
+}
+
+.dialog p,
+.dialog h2,
+.dialog h3 {
+  margin: 0;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: var(--font-weight-heading);
+}
+
+.icon {
+  color: var(--accent);
+}
+
+.dialog[data-outcome='victory'] .icon {
+  color: var(--renown);
+}
+
+.dialog[data-outcome='wipe'] .icon {
+  color: var(--danger);
+}
+
+.cause {
+  color: var(--text);
+}
+
+.facts {
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-label);
+}
+
+.heading {
+  margin-bottom: var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-label);
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
+  font-weight: var(--font-weight-medium);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.name {
+  font-weight: var(--font-weight-medium);
+}
+
+.fell {
+  color: var(--danger);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 2px var(--space-2) 2px 0;
+  text-align: right;
+  font-weight: var(--font-weight-regular);
+}
+
+.table th[scope='row'],
+.table thead th:first-child {
+  text-align: left;
+}
+
+.table thead th {
+  color: var(--text-faint);
+  font-size: var(--font-size-label);
+}
+
+.table tbody tr {
+  border-top: var(--border-width) solid var(--border);
+}
+
+.found {
+  color: var(--text-muted);
+}
+
+.epitaph {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.restart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.toggle input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.countdown {
+  color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* Over the bottom of the map once the summary is closed. */
+.banner {
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: var(--space-2);
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-raised);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-overlay);
+}
+
+.bannerText {
+  flex: 1;
+  min-width: 0;
+}

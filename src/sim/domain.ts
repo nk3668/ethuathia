@@ -20,6 +20,7 @@ import type { ItemsTypes } from './items';
 import type { QuestsTypes } from './quests';
 import type { DiscoveryRules, RunDomainTypes } from './run';
 import type { Emit, SimEvent } from './events';
+import type { RewardAmounts } from './run/result';
 import type { ActorEntity, FloorId, RunConfig, RunState } from './state';
 import type { StatsTypes } from './stats';
 import type { BundleSource, StatProvider, TriggerKindDef } from './stats/types';
@@ -69,15 +70,46 @@ export interface SnapshotCtx {
 
 /**
  * A reducer over the event stream (docs/ARCHITECTURE.md §2.4, §6.4): kills, depth reached,
- * conducts kept. Its state is plain data. The framework that runs trackers and stores their
- * state is built in ETH-062; domains contribute trackers through `SimDomain.trackers`.
+ * conducts kept. Its state is plain data. The run domain (ETH-062, `src/sim/run/trackers.ts`)
+ * keeps every tracker's state in `state.domains.run.trackers[id]` and, at the end of each step,
+ * reduces it over that step's events in order (a run's last step includes its `runEnded`). Then:
+ *
+ * - every tracker's `rewards(state)` is summed into `state.domains.run.rewards.atRisk`, the run's
+ *   at-risk currency, recomputed after every step (nothing else writes it);
+ * - at run end, `extras(state)` (default: the state itself) goes into `RunResult.extras[id]`,
+ *   where profile slices read it (`extras['track.codex']`).
+ *
+ * Domains contribute trackers through `SimDomain.trackers`.
  */
 export interface RunTracker<S> {
-  /** Unique, e.g. `track.kills` or `conduct.pacifist`. */
+  /** Unique, e.g. `track.kills` or `conduct.pacifist`. Also its key in `RunResult.extras`. */
   readonly id: string;
   init(): S;
   /** The tracker's next state after `event`. Must not change `state` in place or draw randomness. */
   reduce(state: S, event: SimEvent): S;
+  /**
+   * The at-risk currency this state is worth now (currency id → amount, `RewardAmounts`). Pure.
+   * Leave it out for a tracker that earns nothing, such as the Codex.
+   */
+  rewards?(state: S): RewardAmounts;
+  /** What goes into `RunResult.extras[id]` at run end. Plain data. Default: the state itself. */
+  extras?(state: S): unknown;
+}
+
+/**
+ * A victory condition (ETH-062): a domain's say in whether walking out of the dungeon wins the
+ * run. Contracts (ETH-024) add one. When the party leaves, the run is a victory if at least one
+ * check applies and every check that applies is met; otherwise it is a retreat.
+ */
+export interface VictoryCheck {
+  /** Unique, e.g. `victory.contracts`. */
+  readonly id: string;
+  /**
+   * Whether the check applies to this run (`applies: false` for a run with no contracts) and, if
+   * so, whether it is met, with a sentence for the run summary ("Both contracts complete").
+   * Must not change the state.
+   */
+  check(state: RunState): { applies: boolean; met: boolean; detail: string };
 }
 
 /**
@@ -93,6 +125,7 @@ export interface RunTracker<S> {
  * - `discoveries` maps the domain's event types to the content they discover for the Codex.
  * - `statProviders`, `bundleSources` and `triggers` feed the stats tables (§2.2), in domain order.
  * - `turnStart` and `turnEnd` run around every actor's turn (`step.ts`), in domain order.
+ * - `victoryChecks` are the domain's victory conditions (`VictoryCheck`).
  */
 export interface SimDomain<T extends DomainShape> {
   readonly actions: ActionRecord<T['request']>;
@@ -108,6 +141,7 @@ export interface SimDomain<T extends DomainShape> {
    * `DISCOVERY_RULES`, which `CODEX_TRACKER` reads.
    */
   readonly discoveries?: DiscoveryRules;
+  readonly victoryChecks?: readonly VictoryCheck[];
   /** Stat derivation steps (`STAT_PROVIDERS`), run core first, then in domain order (§2.2). */
   readonly statProviders?: readonly StatProvider[];
   /** Where active bundles come from (`BUNDLE_SOURCES`), for `getStat` and `fireTrigger`. */

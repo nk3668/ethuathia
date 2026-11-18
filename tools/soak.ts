@@ -52,9 +52,10 @@ export interface SoakResult {
    * - `cap`: ran the full cap.
    * - `stalled`: a step got nowhere because nobody could act (not a failure: later, a wiped
    *   party ends the run this way).
+   * - `ended`: the run ended (victory, retreat or wipe, ETH-062) before the cap.
    * - `failed`: see `failures`.
    */
-  outcome: 'cap' | 'stalled' | 'failed';
+  outcome: 'cap' | 'stalled' | 'ended' | 'failed';
   stuck: number;
   /** Why the seed failed, as readable lines. Empty when it passed. */
   failures: string[];
@@ -121,6 +122,11 @@ export function soakSeed(seed: number, options: SoakOptions): SoakResult {
           if (last) twin = null;
         }
       }
+      // The run is over (ETH-062): later steps do nothing.
+      if (events.some((e) => e.type === 'runEnded')) {
+        outcome = 'ended';
+        break;
+      }
     }
     if (twin !== null && failures.length === 0 && stateHash(twin) !== stateHash(state)) {
       failures.push(`step ${steps}: after a save and load at step ${roundTripAt}, the state hash differs`);
@@ -169,7 +175,7 @@ export function formatSoakReport(results: readonly SoakResult[], cap: number): s
   const steps = results.reduce((sum, r) => sum + r.steps, 0);
   const lines = [
     `${results.length} seeds at a cap of ${cap} party turns (${steps} steps): ${results.length - failed.length} passed, ${failed.length} failed.`,
-    `Stalled: ${stalled.length}. Runs with stuck detection: ${stuckRuns.length} (most in one run: ${maxStuck}, limit ${MAX_STUCK_PER_RUN}).`,
+    `Ended: ${results.filter((r) => r.outcome === 'ended').length}. Stalled: ${stalled.length}. Runs with stuck detection: ${stuckRuns.length} (most in one run: ${maxStuck}, limit ${MAX_STUCK_PER_RUN}).`,
   ];
   const failures = soakFailures(results);
   lines.push(failures.length === 0 ? 'Failures: none.' : `Failures:\n${failures.map((f) => `  ${f}`).join('\n')}`);

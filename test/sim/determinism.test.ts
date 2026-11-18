@@ -46,7 +46,10 @@ function commandsAt(state: RunState, i: number): Command[] {
     case 8:
       return [{ type: 'playerAction', actor: b, action: { id: 'move', dir: { x: 1, y: 0 } } }];
     case 12:
-      return [{ type: 'retreat' } as unknown as Command];
+      return [{ type: 'nonsense' } as unknown as Command];
+    // Late enough that the party is below the first floor and can't walk out before the last check.
+    case 85:
+      return [{ type: 'retreat' }];
     case 20:
       return [{ type: 'playerAction', actor: a, action: { id: 'stairs', dir: 'down' } }];
     case 41:
@@ -96,6 +99,7 @@ describe('determinism', () => {
     const { events } = play(createRun(CONFIG, 1), 0, STEPS);
     const all = events.flat();
     expect(all.some((e) => e.type === 'commandRejected')).toBe(true);
+    expect(all.some((e) => e.type === 'turnedBack' && e.reason === 'ordered')).toBe(true);
     // The run goes down the stairs, building a floor mid-run.
     expect(all.some((e) => e.type === 'floorEntered' && e.firstVisit)).toBe(true);
     // A command changes the run: the same seed without them ends somewhere else.

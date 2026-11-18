@@ -97,9 +97,31 @@ export function gatheringAt(state: RunState, floorId: FloorId, pos: Pos): Gather
   return { gathered, missing };
 }
 
-function names(actors: readonly ActorEntity[]): string {
+/**
+ * Who is gathered at the stairs at `pos` on `floorId` before taking them `dir`. Like
+ * `gatheringAt`, except that at the way out of the dungeon (the first floor's up stairs) the
+ * whole party leaves together, so living members on other floors count as missing too.
+ */
+export function stairsGathering(state: RunState, floorId: FloorId, pos: Pos, dir: StairsDir): Gathering {
+  const gathering = gatheringAt(state, floorId, pos);
+  if (dir === 'up' && stairsTarget(state, floorId, 'up') === null) {
+    for (const id of state.party) {
+      const e = state.entities[id];
+      if (e?.actor !== undefined && e.actor.hp > 0 && e.floor !== floorId) gathering.missing.push(e as ActorEntity);
+    }
+  }
+  return gathering;
+}
+
+/** "Mira", "Mira and Oren", "Brannoc, Mira and Oren". */
+export function names(actors: readonly ActorEntity[]): string {
   const list = actors.map(nameOf);
   return list.length <= 1 ? (list[0] ?? '') : `${list.slice(0, -1).join(', ')} and ${list.at(-1) as string}`;
+}
+
+/** True once the party has turned back for the surface (the run domain's `leaving`, ETH-062). */
+export function headingOut(state: RunState): boolean {
+  return state.domains.run.leaving !== null;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -121,7 +143,7 @@ export const COND_FLOOR_OVERSTAYED = defineCondition({
   describe: () => 'overstayed the floor',
 });
 
-/** True on the bottom floor of the dungeon, which has no stairs down. */
+/** True on the bottom floor of the dungeon, which has no stairs down. The baseline turns back there. */
 export const COND_BOTTOM_FLOOR = defineCondition({
   id: 'cond.bottom_floor',
   name: 'On the bottom floor',
@@ -168,6 +190,8 @@ export const ACT_DESCEND = defineRuleAction({
   parse: parseDescend,
   resolve(ctx, { regroup }): Resolved | null {
     const { state, actor } = ctx;
+    // Once the party has turned back for the surface, nobody heads down again.
+    if (headingOut(state)) return null;
     const to = stairsTarget(state, actor.floor, 'down');
     if (to === null) return null;
     const stairs = knownStairs(state, actor.floor, 'down');
@@ -197,27 +221,45 @@ export const ACT_DESCEND = defineRuleAction({
   describe: ({ regroup }) => (regroup ? 'go down the stairs with the party' : 'go down the stairs, not waiting for anyone'),
 });
 
+/** `act.gather`'s params: which stairs to gather at. */
+export interface GatherParams {
+  dir: StairsDir;
+}
+
+const parseGather: ParamParser<GatherParams> = (raw) => {
+  if (raw === undefined || raw === null) return { dir: 'down' };
+  if (typeof raw !== 'object' || Array.isArray(raw)) return 'Params must be an object';
+  const { dir, ...rest } = raw as Record<string, unknown>;
+  if (Object.keys(rest).length > 0) return `Unknown parameter "${Object.keys(rest)[0] as string}"`;
+  if (dir !== undefined && dir !== 'up' && dir !== 'down') return '"dir" must be "up" or "down"';
+  return { dir: dir ?? 'down' };
+};
+
 /**
- * Wait near the stairs down while the rest of the party gathers, or while another member is on
- * the stairs. Marked `idle`: standing still is the point, so stuck detection leaves it alone.
+ * Wait near the stairs while the rest of the party gathers, or while another member is on the
+ * stairs: the stairs down by default (descending), or the stairs up (`dir: 'up'`, heading out,
+ * where at the way out of the dungeon members on other floors are waited for too). Marked
+ * `idle`: standing still is the point, so stuck detection leaves it alone.
  */
 export const ACT_GATHER = defineRuleAction({
   id: 'act.gather',
   name: 'Gather at the stairs',
   description:
-    'Wait at the stairs down until the rest of the party on this floor has caught up, so everyone goes down together.',
+    'Wait at the stairs until the rest of the party on this floor has caught up, so everyone takes them together. ' +
+    'At the way out of the dungeon, wait for the whole party.',
   idle: true,
-  parse: noParams,
-  resolve({ state, actor }: AiCtx): Resolved | null {
-    if (stairsTarget(state, actor.floor, 'down') === null) return null;
-    const stairs = knownStairs(state, actor.floor, 'down');
+  parse: parseGather,
+  resolve({ state, actor }: AiCtx, { dir }): Resolved | null {
+    // Going down stops once the party heads out; going up needs a way up, or out.
+    if (dir === 'down' ? headingOut(state) || stairsTarget(state, actor.floor, 'down') === null : !headingOut(state)) return null;
+    const stairs = knownStairs(state, actor.floor, dir);
     if (stairs === null) return null;
-    const { gathered, missing } = gatheringAt(state, actor.floor, stairs);
+    const { gathered, missing } = stairsGathering(state, actor.floor, stairs, dir);
     if (!gathered.some((g) => g.id === actor.id)) return null;
-    const detail = missing.length > 0 ? `waiting at the stairs down for ${names(missing)}` : 'waiting for a turn at the stairs down';
+    const detail = missing.length > 0 ? `waiting at the stairs ${dir} for ${names(missing)}` : `waiting for a turn at the stairs ${dir}`;
     return { request: { id: 'wait' }, detail };
   },
-  describe: () => 'wait at the stairs down for the party',
+  describe: ({ dir }) => `wait at the stairs ${dir} for the party`,
 });
 
 /** The floors domain's conditions, in registration order. */

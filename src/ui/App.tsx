@@ -6,7 +6,8 @@ import { DEMO_RUN } from './demoRun';
 import { WorkerHost } from './host/workerHost';
 import { AppShell } from './shell/AppShell';
 import { watchAutoPause } from './shell/autoPause';
-import { bindSaveStore } from './stores/profileStore';
+import { bindSaveStore, useProfileStore } from './stores/profileStore';
+import { setRunStarter, useRunStore, watchAutoRestart } from './stores/runStore';
 import { bindHost, useSimStore } from './stores/simStore';
 import { useUiStore } from './stores/uiStore';
 
@@ -45,11 +46,35 @@ export function App({ createHost = createWorkerHost, seed, createSaveStore: make
     const offSelect = useUiStore.subscribe((now, before) => {
       if (now.selected !== before.selected) follow(now.selected);
     });
-    host.start(DEMO_RUN, seed ?? Date.now() % 2 ** 31);
-    // Runs at the speed the player last chose (1× at launch); the top bar's control changes it.
-    host.setSpeed(useSimStore.getState().speed);
+    // A run ends (ETH-062): bank its result in the profile, save, and show the run summary.
+    const offEnded = host.onRunEnded((report) => {
+      const profile = useProfileStore.getState();
+      profile.applyRunResult(report.result);
+      void profile.save();
+      useRunStore.getState().runEnded(report);
+    });
+    // Each run uses the same config (the demo party until the Prepare screen); a fixed `seed`
+    // (tests) counts up from there, otherwise every run gets a fresh one.
+    let runSeed = seed ?? Date.now() % 2 ** 31;
+    const startRun = () => {
+      useSimStore.getState().reset();
+      useRunStore.getState().runStarted();
+      host.start(DEMO_RUN, runSeed);
+      // Runs at the speed the player last chose (1× at launch); the top bar's control changes it.
+      host.setSpeed(useSimStore.getState().speed);
+    };
+    const offStarter = setRunStarter(() => {
+      runSeed = seed === undefined ? Date.now() % 2 ** 31 : (runSeed + 1) % 2 ** 31;
+      startRun();
+    });
+    // Starts the next run by itself when the player has turned auto-restart on.
+    const unwatchRestart = watchAutoRestart();
+    startRun();
     return () => {
       offSelect();
+      offEnded();
+      offStarter();
+      unwatchRestart();
       unbind();
       unwatch();
       host.dispose();

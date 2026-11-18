@@ -1,0 +1,132 @@
+/**
+ * Run trackers (docs/ARCHITECTURE.md, Contracts, "Rewards"): the framework that runs every
+ * domain's `RunTracker` over the event stream, and the run domain's own base trackers.
+ *
+ * How it works, end to end:
+ *
+ * 1. `createRun` starts every tracker at `init()`, in `state.domains.run.trackers[id]`.
+ * 2. At the end of each step, `reduceTrackers` folds that step's events (in order) into each
+ *    tracker's state, then recomputes `state.domains.run.rewards.atRisk` as the sum of every
+ *    tracker's `rewards(state)`. Nothing else writes `atRisk`.
+ * 3. At run end, `trackerExtras` gives each tracker's `extras(state)` (default: its state) for
+ *    `RunResult.extras[id]`.
+ */
+import type { RunTracker } from '../domain';
+import type { SimEvent } from '../events';
+import { TRACKER_LIST } from '../registries';
+import type { EntityId, RunState } from '../state';
+import { RENOWN, TROPHIES } from './result';
+import type { RewardAmounts } from './result';
+
+// ---------------------------------------------------------------------------------------------
+// Tunable reward constants (provisional; check changes with `npm run sim`)
+
+/** Renown for each floor reached below the first. */
+export const RENOWN_PER_FLOOR = 10;
+
+/** Game turns survived per point of Renown. */
+export const TURNS_PER_RENOWN = 50;
+
+/** Trophies per kill, times the monster's difficulty (at least 1). Used once kills exist (ETH-060). */
+export const TROPHIES_PER_DIFFICULTY = 1;
+
+// ---------------------------------------------------------------------------------------------
+// The framework
+
+/** Every registered tracker's starting state, keyed by tracker id. */
+export function initTrackers(): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const tracker of TRACKER_LIST) out[tracker.id] = tracker.init();
+  return out;
+}
+
+/**
+ * Folds `events` into every tracker's state, in tracker order and then event order, and
+ * recomputes the at-risk rewards. Called by `step` once per step with that step's events.
+ */
+export function reduceTrackers(state: RunState, events: readonly SimEvent[]): void {
+  const slice = state.domains.run;
+  for (const tracker of TRACKER_LIST) {
+    let s = Object.hasOwn(slice.trackers, tracker.id) ? slice.trackers[tracker.id] : tracker.init();
+    for (const event of events) s = tracker.reduce(s, event);
+    slice.trackers[tracker.id] = s;
+  }
+  slice.rewards.atRisk = trackerRewards(state);
+}
+
+/** The sum of every tracker's `rewards` for its current state. Amounts of 0 are left out. */
+export function trackerRewards(state: RunState): RewardAmounts {
+  const total: RewardAmounts = {};
+  for (const tracker of TRACKER_LIST) {
+    if (tracker.rewards === undefined || !Object.hasOwn(state.domains.run.trackers, tracker.id)) continue;
+    for (const [currency, amount] of Object.entries(tracker.rewards(state.domains.run.trackers[tracker.id]))) {
+      if (amount !== 0) total[currency] = (total[currency] ?? 0) + amount;
+    }
+  }
+  return total;
+}
+
+/** Each tracker's `extras` (default: its state), keyed by tracker id, for `RunResult.extras`. */
+export function trackerExtras(state: RunState): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const tracker of TRACKER_LIST) {
+    const s = state.domains.run.trackers[tracker.id];
+    out[tracker.id] = tracker.extras === undefined ? s : tracker.extras(s);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// The base trackers
+
+/** `track.depth`: the deepest floor reached, worth `RENOWN_PER_FLOOR` Renown per floor below the first. */
+export const DEPTH_TRACKER: RunTracker<{ deepest: number }> = {
+  id: 'track.depth',
+  init: () => ({ deepest: 1 }),
+  reduce: (s, e) => (e.type === 'floorEntered' && e.depth > s.deepest ? { deepest: e.depth } : s),
+  rewards: (s) => ({ [RENOWN]: RENOWN_PER_FLOOR * (s.deepest - 1) }),
+};
+
+/** `track.turns`: game turns survived (the last event's turn), one Renown per `TURNS_PER_RENOWN`. */
+export const TURNS_TRACKER: RunTracker<{ turns: number }> = {
+  id: 'track.turns',
+  init: () => ({ turns: 0 }),
+  reduce: (s, e) => (e.turn > s.turns ? { turns: e.turn } : s),
+  rewards: (s) => ({ [RENOWN]: Math.floor(s.turns / TURNS_PER_RENOWN) }),
+};
+
+/** Trophies for one kill of a monster of `difficulty`. */
+export function trophiesForKill(difficulty: number): number {
+  return TROPHIES_PER_DIFFICULTY * Math.max(1, difficulty);
+}
+
+/**
+ * `track.kills`: monsters killed and the Trophies they are worth. A placeholder until combat
+ * (ETH-060) adds a kill event: its `reduce` then adds a case for it, crediting
+ * `trophiesForKill(difficulty)` per monster the party kills.
+ */
+export const KILLS_TRACKER: RunTracker<{ kills: number; trophies: number }> = {
+  id: 'track.kills',
+  init: () => ({ kills: 0, trophies: 0 }),
+  reduce: (s) => s,
+  rewards: (s) => ({ [TROPHIES]: s.trophies }),
+};
+
+/** One party member who fell, for the run summary and the graveyard (M5). */
+export interface FallenRecord {
+  actor: EntityId;
+  name: string;
+  depth: number;
+  turn: number;
+}
+
+/** `track.deaths`: who fell, where and when, from the run domain's `fell` events. */
+export const DEATHS_TRACKER: RunTracker<{ fallen: FallenRecord[] }> = {
+  id: 'track.deaths',
+  init: () => ({ fallen: [] }),
+  reduce: (s, e) =>
+    e.type === 'fell' ? { fallen: [...s.fallen, { actor: e.actor, name: e.name, depth: e.depth, turn: e.turn }] } : s,
+};
+
+/** The run domain's trackers, in the order they run. */
+export const RUN_DOMAIN_TRACKERS = [DEPTH_TRACKER, TURNS_TRACKER, KILLS_TRACKER, DEATHS_TRACKER] as readonly RunTracker<unknown>[];

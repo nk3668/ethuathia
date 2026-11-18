@@ -32,6 +32,11 @@ function setSpeed(state: RunState, id: EntityId, speed: number): void {
   stats.base.speed = speed - 100;
 }
 
+/** A step's events without the run's first event, `runStarted`, which a first step always has. */
+function stepped(state: RunState, commands: Command[] = [], options?: { decide?: Decide }): SimEvent[] {
+  return step(state, commands, options).filter((e) => e.type !== 'runStarted');
+}
+
 /** The ids of the actors that took a turn, in order. */
 function actors(events: SimEvent[]): EntityId[] {
   return events.flatMap((e) => (e.type === 'waited' ? [e.actor] : []));
@@ -46,7 +51,7 @@ describe('step', () => {
     const state = createRun(ONE, 1);
     const id = state.party[0] as EntityId;
     const options = { decide: waitDecide };
-    expect(step(state, [], options)).toEqual([{ type: 'waited', actor: id, turn: 1 }]);
+    expect(stepped(state, [], options)).toEqual([{ type: 'waited', actor: id, turn: 1 }]);
     expect(state.turn).toBe(1);
     expect(getEntity(state, id).actor?.energy).toBe(0);
     expect(step(state, [], options)).toEqual([{ type: 'waited', actor: id, turn: 2 }]);
@@ -56,7 +61,7 @@ describe('step', () => {
     // The whole room is in view from the start, so the baseline has nothing to explore and waits.
     const state = createRun(ONE, 1);
     const id = state.party[0] as EntityId;
-    expect(step(state, []).map((e) => e.type)).toEqual(['ruleFired', 'waited']);
+    expect(stepped(state, []).map((e) => e.type)).toEqual(['ruleFired', 'waited']);
     expect(getEntity(state, id).ai?.memory.intent?.action).toBe('act.wait');
   });
 
@@ -144,7 +149,7 @@ describe('step', () => {
       emit({ type: 'commandRejected', command: 'trace', reason: `decided for ${actor.id}` });
       return { id: 'wait' };
     };
-    const events = step(state, [], { decide });
+    const events = stepped(state, [], { decide });
     expect(seen).toEqual(state.party);
     expect(events.map((e) => e.type)).toEqual(['commandRejected', 'waited']);
     expect(getEntity(state, state.party[0] as EntityId).actor?.energy).toBe(0);
@@ -154,7 +159,7 @@ describe('step', () => {
     const state = createRun(ONE, 1);
     const id = state.party[0] as EntityId;
     const decide: Decide = () => ({ id: 'fly' }) as unknown as ActionRequest;
-    expect(step(state, [], { decide })).toEqual([
+    expect(stepped(state, [], { decide })).toEqual([
       { type: 'actionFailed', actor: id, action: 'fly', reason: 'Unknown action "fly"', turn: 1 },
       { type: 'waited', actor: id, turn: 1 },
     ]);

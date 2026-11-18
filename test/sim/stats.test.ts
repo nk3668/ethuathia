@@ -300,7 +300,9 @@ describe('effects and triggers', () => {
     const stepped = step(state, []);
     expect(hero.actor.hp).toBe(0);
     expect(hero.actor.queued).toBeUndefined();
-    expect(stepped.filter((e) => 'actor' in e && e.actor === hero.id).map((e) => e.type)).toEqual(['damaged']);
+    // The run domain notices the fall (ETH-062): the lone hero's death ends the run as a wipe.
+    expect(stepped.filter((e) => 'actor' in e && e.actor === hero.id).map((e) => e.type)).toEqual(['damaged', 'fell']);
+    expect(stepped.at(-1)).toMatchObject({ type: 'runEnded', outcome: 'wipe' });
     expect(checkInvariants(state)).toEqual([]);
   });
 

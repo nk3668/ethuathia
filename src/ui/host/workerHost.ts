@@ -4,7 +4,19 @@
  * about 30 updates a second, each a batch of events and then a snapshot.
  */
 import { deliver, Listeners } from '../../sim';
-import type { Command, HostMessage, HostRequest, RunConfig, SimEvent, SimHost, Snapshot, Speed, Unsubscribe, ViewOptions } from '../../sim';
+import type {
+  Command,
+  HostMessage,
+  HostRequest,
+  RunConfig,
+  RunReport,
+  SimEvent,
+  SimHost,
+  Snapshot,
+  Speed,
+  Unsubscribe,
+  ViewOptions,
+} from '../../sim';
 
 /** The part of a `Worker` (or `MessagePort`) the host needs. */
 export interface WorkerPort {
@@ -26,6 +38,7 @@ export class WorkerHost implements SimHost {
   private readonly events = new Listeners<readonly SimEvent[]>();
   private readonly snapshots = new Listeners<Snapshot>();
   private readonly errors = new Listeners<string>();
+  private readonly ended = new Listeners<RunReport>();
   private started = false;
   private disposed = false;
 
@@ -66,9 +79,15 @@ export class WorkerHost implements SimHost {
     return this.errors.add(listener);
   }
 
+  /** Called once when the run ends, after the update with its last events. */
+  onRunEnded(listener: (report: RunReport) => void): Unsubscribe {
+    return this.ended.add(listener);
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.ended.clear();
     this.events.clear();
     this.snapshots.clear();
     this.errors.clear();
@@ -90,6 +109,9 @@ export class WorkerHost implements SimHost {
       case 'error':
         console.error(`Sim worker: ${message.message}`);
         this.errors.emit(message.message);
+        break;
+      case 'runEnded':
+        this.ended.emit(message.report);
         break;
     }
   }
