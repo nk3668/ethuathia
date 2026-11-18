@@ -23,8 +23,8 @@ export { defineSlice } from './slice';
 export type { ProfileSlice, SliceMigration, SliceState } from './slice';
 export { discoveriesSchema } from './slices/codex';
 export type { Codex } from './slices/codex';
-export { HISTORY_LIMIT } from './slices/history';
-export type { History, RunRecord } from './slices/history';
+export { HISTORY_LIMIT, runRecord } from './slices/history';
+export type { History, RunRecord, RunRecordMember } from './slices/history';
 export type { Upgrades } from './slices/upgrades';
 export type { Settings } from './slices/settings';
 export {

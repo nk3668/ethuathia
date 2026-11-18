@@ -3,6 +3,7 @@ import type { KeyboardEvent, ReactNode } from 'react';
 import { CodexPanel } from '../codex/CodexPanel';
 import { Button, Panel, Tabs } from '../kit';
 import type { TabItem } from '../kit';
+import { StatsPanel } from '../stats/StatsPanel';
 import { isSideTab, SIDE_TABS, useUiStore } from '../stores/uiStore';
 import type { SideTab } from '../stores/uiStore';
 import { TownPanel } from '../town/TownPanel';
@@ -11,12 +12,12 @@ import { SaveOptions } from './SaveOptions';
 import styles from './SidePanel.module.css';
 
 /** Each tab's label and, until its feature lands, a line saying when it will. */
-const TAB_INFO: Readonly<Record<SideTab, { label: string; empty: string }>> = {
+const TAB_INFO: Readonly<Record<SideTab, { label: string; empty?: string }>> = {
   rules: { label: 'Rules', empty: 'Behavior rules arrive in M3.' },
   town: { label: 'Town', empty: 'The Town opens in M2.' },
   codex: { label: 'Codex', empty: 'The Codex fills in as you discover things, from M2.' },
   graveyard: { label: 'Graveyard', empty: 'No one has fallen yet.' },
-  stats: { label: 'Stats', empty: 'Run statistics arrive in M1.' },
+  stats: { label: 'Stats' },
   options: { label: 'Options', empty: 'No options yet.' },
 };
 
@@ -24,6 +25,7 @@ const TAB_INFO: Readonly<Record<SideTab, { label: string; empty: string }>> = {
 const TAB_CONTENT: Partial<Record<SideTab, ReactNode>> = {
   town: <TownPanel />,
   codex: <CodexPanel />,
+  stats: <StatsPanel />,
   options: (
     <>
       <OptionsPanel />

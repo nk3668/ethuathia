@@ -1,16 +1,32 @@
 /**
- * The `history` slice: lifetime run totals and the most recent runs, for the Stats tab and the
- * time-away estimate (docs/ARCHITECTURE.md §6.6).
+ * The `history` slice: lifetime run totals and the most recent runs, for the Stats tab's run
+ * history (ETH-048) and the time-away estimate (docs/ARCHITECTURE.md §6.6).
+ *
+ * Each run is kept as a compact `RunRecord`, enough to show its run summary again: not the full
+ * `RunResult`, whose extras grow with every tracker.
  */
 import { z } from 'zod';
 import { currenciesSchema, subtractCurrencies } from '../currencies';
 import type { Currencies } from '../currencies';
-import type { RunOutcome } from '../../sim';
+import { CODEX_TRACKER } from '../../sim';
+import type { RunOutcome, RunResult } from '../../sim';
 import { currenciesFromRewards } from '../runResult';
 import { defineSlice } from '../slice';
 
-/** How many recent runs the profile keeps. */
-export const HISTORY_LIMIT = 20;
+/**
+ * How many recent runs the profile keeps (tunable). Older runs drop off the end; the lifetime
+ * totals still count them. Lowering it trims saved lists on load.
+ */
+export const HISTORY_LIMIT = 50;
+
+/** One adventurer in a recorded run. */
+export interface RunRecordMember {
+  readonly name: string;
+  readonly classId: string;
+  readonly raceId: string;
+  /** Where and when they fell, or `null` if they survived the run. */
+  readonly fell: { readonly depth: number; readonly turn: number } | null;
+}
 
 /** One finished run, as the history keeps it. */
 export interface RunRecord {
@@ -23,6 +39,12 @@ export interface RunRecord {
   readonly banked: Currencies;
   /** What the wipe took. */
   readonly lost: Currencies;
+  /** Why the run ended (`RunEnd.cause`); empty for runs recorded before ETH-048. */
+  readonly cause: string;
+  /** Who set out, in party order; empty for runs recorded before ETH-048. */
+  readonly party: readonly RunRecordMember[];
+  /** The content ids the Codex met this run. */
+  readonly met: readonly string[];
 }
 
 export interface History {
@@ -34,11 +56,33 @@ export interface History {
     readonly turns: number;
     readonly deepestDepth: number;
   };
-  /** The last `HISTORY_LIMIT` runs, oldest first. */
+  /** The last `HISTORY_LIMIT` runs, newest first. */
   readonly recent: readonly RunRecord[];
 }
 
 const count = z.number().int().nonnegative();
+
+/** Longest `cause` kept; longer ones are cut. */
+const MAX_CAUSE = 500;
+
+const memberSchema = z.object({
+  name: z.string().max(80),
+  classId: z.string().max(80),
+  raceId: z.string().max(80),
+  fell: z.object({ depth: count, turn: count }).nullable(),
+});
+
+const recordSchema = z.object({
+  run: z.number().int().positive(),
+  outcome: z.enum(['victory', 'retreat', 'wipe']),
+  turns: count,
+  deepestDepth: count,
+  banked: currenciesSchema,
+  lost: currenciesSchema,
+  cause: z.string().max(MAX_CAUSE),
+  party: z.array(memberSchema).max(16),
+  met: z.array(z.string().max(80)).max(1000),
+});
 
 const historySchema = z.object({
   totals: z.object({
@@ -49,40 +93,62 @@ const historySchema = z.object({
     turns: count,
     deepestDepth: count,
   }),
-  recent: z
-    .array(
-      z.object({
-        run: z.number().int().positive(),
-        outcome: z.enum(['victory', 'retreat', 'wipe']),
-        turns: count,
-        deepestDepth: count,
-        banked: currenciesSchema,
-        lost: currenciesSchema,
-      }),
-    )
-    .max(HISTORY_LIMIT),
+  recent: z.array(recordSchema).transform((records) => records.slice(0, HISTORY_LIMIT)),
 });
 
 const OUTCOME_TOTAL = { victory: 'victories', retreat: 'retreats', wipe: 'wipes' } as const;
 
+// What the record reads from `RunResult.extras`. A missing or odd value just leaves its part out:
+// the record is for showing, not for banking.
+const partyExtras = z.array(z.object({ actor: z.number(), name: z.string(), classId: z.string(), raceId: z.string() }));
+const deathsExtras = z.object({ fallen: z.array(z.object({ actor: z.number(), depth: count, turn: count })) });
+const endExtras = z.object({ cause: z.string() });
+
+/** The compact record of a finished run, numbered `run`. */
+export function runRecord(run: number, result: RunResult): RunRecord {
+  const party = partyExtras.safeParse(result.extras['run.party']);
+  const deaths = deathsExtras.safeParse(result.extras['track.deaths']);
+  const end = endExtras.safeParse(result.extras['run.end']);
+  const codex = result.extras[CODEX_TRACKER.id];
+  const fallen = deaths.success ? deaths.data.fallen : [];
+  return {
+    run,
+    outcome: result.outcome,
+    turns: result.turns,
+    deepestDepth: result.deepestDepth,
+    banked: subtractCurrencies(currenciesFromRewards(result.atRisk), currenciesFromRewards(result.lost)),
+    lost: currenciesFromRewards(result.lost),
+    cause: end.success ? end.data.cause.slice(0, MAX_CAUSE) : '',
+    party: party.success
+      ? party.data.map((m) => {
+          const fell = fallen.find((f) => f.actor === m.actor);
+          return { name: m.name, classId: m.classId, raceId: m.raceId, fell: fell === undefined ? null : { depth: fell.depth, turn: fell.turn } };
+        })
+      : [],
+    met: typeof codex === 'object' && codex !== null ? Object.keys(codex) : [],
+  };
+}
+
 export const historySlice = defineSlice<History>({
-  version: 1,
+  version: 2,
   schema: historySchema,
   init: () => ({
     totals: { runs: 0, victories: 0, retreats: 0, wipes: 0, turns: 0, deepestDepth: 0 },
     recent: [],
   }),
+  migrations: {
+    // v2 (ETH-048): newest first, and each run keeps its cause, party and Codex finds.
+    2: (old) => {
+      const v1 = old as { totals: unknown; recent: Record<string, unknown>[] };
+      return {
+        totals: v1.totals,
+        recent: [...v1.recent].reverse().map((r) => ({ ...r, cause: '', party: [], met: [] })),
+      };
+    },
+  },
   onRunResult: (history, result) => {
     const { totals } = history;
     const run = totals.runs + 1;
-    const record: RunRecord = {
-      run,
-      outcome: result.outcome,
-      turns: result.turns,
-      deepestDepth: result.deepestDepth,
-      banked: subtractCurrencies(currenciesFromRewards(result.atRisk), currenciesFromRewards(result.lost)),
-      lost: currenciesFromRewards(result.lost),
-    };
     const outcomeKey = OUTCOME_TOTAL[result.outcome];
     return {
       totals: {
@@ -92,7 +158,7 @@ export const historySlice = defineSlice<History>({
         turns: totals.turns + result.turns,
         deepestDepth: Math.max(totals.deepestDepth, result.deepestDepth),
       },
-      recent: [...history.recent, record].slice(-HISTORY_LIMIT),
+      recent: [runRecord(run, result), ...history.recent].slice(0, HISTORY_LIMIT),
     };
   },
 });

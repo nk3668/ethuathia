@@ -7,13 +7,14 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { newProfile } from '../../src/meta';
+import { applyRunResult, newProfile, runRecord } from '../../src/meta';
 import { emptyRunResult, favorKey, InlineHost } from '../../src/sim';
 import type { RunReport } from '../../src/sim';
 import { App } from '../../src/ui/App';
 import { RunSummary } from '../../src/ui/shell/RunSummary';
 import { OptionsPanel } from '../../src/ui/shell/OptionsPanel';
-import { currencyName, currencyRows, epitaph } from '../../src/ui/shell/runSummaryText';
+import { currencyName, currencyRows, epitaph, NO_CAUSE, reportFromRecord, unlockLines } from '../../src/ui/shell/runSummaryText';
+import { StatsPanel } from '../../src/ui/stats/StatsPanel';
 import { resetProfileStore, useProfileStore } from '../../src/ui/stores/profileStore';
 import { AUTO_RESTART_MS, setRunStarter, useRunStore, watchAutoRestart } from '../../src/ui/stores/runStore';
 import type { RestartTimers } from '../../src/ui/stores/runStore';
@@ -38,6 +39,7 @@ const WIPE: RunReport = {
 
 function resetRunStore(): void {
   useRunStore.getState().runStarted();
+  useRunStore.getState().showPastRun(null);
 }
 
 beforeEach(() => {
@@ -107,6 +109,75 @@ describe('RunSummary', () => {
     expect(useProfileStore.getState().profile.settings.autoRestart).toBe(true);
     expect((toggles[0] as HTMLInputElement).checked).toBe(true);
     expect(useProfileStore.getState().dirty).toBe(true);
+  });
+});
+
+describe('run history (ETH-048)', () => {
+  const PARTY_WIPE: RunReport = {
+    ...WIPE,
+    result: {
+      ...WIPE.result,
+      extras: {
+        ...WIPE.result.extras,
+        'run.end': WIPE.end,
+        'run.party': [
+          { actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' },
+          { actor: 2, name: 'Oren', classId: 'class.vanguard', raceId: 'race.human' },
+        ],
+      },
+    },
+  };
+
+  it('rebuilds a run report from its record', () => {
+    const record = runRecord(4, PARTY_WIPE.result);
+    const report = reportFromRecord(record);
+    expect(report.end).toEqual(WIPE.end);
+    expect(currencyRows(report)).toEqual(currencyRows(WIPE));
+    expect(epitaph(report)).toBe(epitaph(WIPE));
+    expect(reportFromRecord({ ...record, cause: '' }).end.cause).toBe(NO_CAUSE);
+  });
+
+  it('lists past runs newest first in the Stats tab, and each reopens its summary', async () => {
+    const user = userEvent.setup();
+    act(() => {
+      useProfileStore.getState().applyRunResult(PARTY_WIPE.result);
+      useProfileStore.getState().applyRunResult({ ...emptyRunResult('retreat'), turns: 90, deepestDepth: 2 });
+    });
+    render(
+      <>
+        <StatsPanel />
+        <RunSummary />
+      </>,
+    );
+    const runs = within(screen.getByRole('list', { name: /Past runs/ })).getAllByRole('button');
+    expect(runs.map((b) => b.textContent)).toEqual([
+      expect.stringContaining('Run 2 · Retreat'),
+      expect.stringContaining('Run 1 · Wipe'),
+    ]);
+    expect(runs[1]?.textContent).toContain('Mira ✝, Oren');
+
+    await user.click(runs[1] as HTMLElement);
+    const dialog = screen.getByRole('dialog', { name: 'Run 1 · Wipe' });
+    expect(dialog.textContent).toContain('Mira fell on floor 3.');
+    expect(within(dialog).getByRole('region', { name: 'The party' }).textContent).toContain('Oren survived');
+    expect(within(dialog).queryByRole('checkbox')).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'Start next run' })).toBeNull();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(runs[1]);
+  });
+
+  it("shows a past run's own unlocks, not the latest run's", () => {
+    let profile = applyRunResult(newProfile(), PARTY_WIPE.result);
+    profile = applyRunResult(profile, { ...emptyRunResult('retreat'), turns: 10, deepestDepth: 1 });
+    expect(unlockLines(profile, 1).map((l) => l.id)).toContain('building.smithy');
+    expect(unlockLines(profile)).toEqual([]);
+  });
+
+  it('says so when no run has finished', () => {
+    render(<StatsPanel />);
+    expect(screen.getByText(/No runs finished yet/)).toBeTruthy();
   });
 });
 
@@ -190,6 +261,9 @@ describe('App', () => {
     expect(profile.currencies.renown).toBeGreaterThan(0);
     // The Codex slice merged what the run met (ETH-065), the party's class among it.
     expect(profile.codex.entries['class.vanguard']).toEqual(['seen']);
+    // The run history keeps who set out and why the run ended (ETH-048).
+    expect(profile.history.recent[0]?.party.length).toBeGreaterThan(0);
+    expect(profile.history.recent[0]?.cause).toContain('walked out of the dungeon');
 
     // Closing it leaves a banner over the map to bring it back.
     await user.click(within(dialog).getByRole('button', { name: 'Review log' }));

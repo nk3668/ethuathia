@@ -88,7 +88,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-047](ui-shell/ETH-047-highlights-auto-pause.md) | Highlights feed and optional auto-pause | ui-shell | M2 | P2 | done | M |
 | [ETH-054](combat-items/ETH-054-food-buffs.md) | Food as consumables that grant short-term buffs | combat-items | M2 | P2 | idea | M |
 | [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Guild Hall doctrine: prioritize clearing floors or prioritize the stairs | town-meta | M2 | P2 | ready | S |
-| [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | idea | S |
+| [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |
 | [ETH-031](quests/ETH-031-quest-rule-conditions-ai.md) | Quest rule conditions and objective weighting in the AI | quests | M3 | P2 | idea | M |
 | [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M3 | P2 | idea | M |
