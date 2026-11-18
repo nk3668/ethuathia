@@ -3,6 +3,7 @@
  * tooltips and the map.
  */
 import type { Def } from '../core';
+import { ATTRIBUTE_KIND } from './attributes';
 import { BOUNTY_KIND } from './bounties';
 import { BUNDLE_KIND } from './bundles';
 import { CLASS_KIND } from './classes';
@@ -27,6 +28,7 @@ import { BUILDING_KIND, UPGRADE_KIND } from './upgrades';
 export const CONTENT_KINDS: readonly ContentKind[] = [
   TERRAIN_KIND,
   FEATURE_KIND,
+  ATTRIBUTE_KIND,
   CLASS_KIND,
   RACE_KIND,
   FLOOR_TYPE_KIND,

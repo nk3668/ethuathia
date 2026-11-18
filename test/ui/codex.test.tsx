@@ -67,7 +67,8 @@ describe('CodexPanel', () => {
     expect(within(classes).getByText('Seen')).toBeTruthy();
     expect(within(classes).getByText('1 / 1')).toBeTruthy();
     expect(within(classes).getByText(CLASS_VANGUARD.description)).toBeTruthy();
-    expect(within(classes).getByText('HP').nextSibling?.textContent).toBe(String(CLASS_VANGUARD.hp));
+    expect(within(classes).getByText('Grit').nextSibling?.textContent).toBe(String(CLASS_VANGUARD.attributes.grit));
+    expect(within(classes).getByText('Attributes').nextSibling?.textContent).toBe('BRN 11 · FIN 9 · WIT 4 · GRT 13');
   });
 
   it('fills in live from the running sim before the run ends', () => {
@@ -108,7 +109,7 @@ describe('Explain', () => {
     await user.tab();
     const tip = await screen.findByRole('tooltip');
     expect(tip.textContent).toContain(CLASS_VANGUARD.description);
-    expect(tip.textContent).toContain(`HP${CLASS_VANGUARD.hp}`);
+    expect(tip.textContent).toContain('AttributesBRN 11 · FIN 9 · WIT 4 · GRT 13');
   });
 
   it('renders an unknown id as plain text', () => {

@@ -122,6 +122,31 @@
   color: var(--text-muted);
 }
 
+/* Attributes (ETH-033): four small mono chips, "BRN 12". */
+.attributes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.attribute {
+  white-space: nowrap;
+}
+
+.attributeAbbr {
+  color: var(--text-muted);
+}
+
+.attributeRule {
+  color: var(--text-muted);
+}
+
 /* Compact: one line per member. */
 .compact {
   display: grid;

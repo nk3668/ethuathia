@@ -2,6 +2,7 @@
  * content: typed data definitions and their validation.
  * May import: core. See docs/ARCHITECTURE.md §1 and §5.
  */
+export * from './attributes';
 export { CLASS_KIND, CLASS_VANGUARD, CLASSES, defineClass } from './classes';
 export type { ClassDef } from './classes';
 export { defineFeature, FEATURE_DOOR, FEATURE_KIND, FEATURE_STAIRS_DOWN, FEATURE_STAIRS_UP, FEATURES } from './features';

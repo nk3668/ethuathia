@@ -101,16 +101,17 @@ function statusesOf(entity: Entity): [string, number, number][] {
 }
 
 describe('getStat', () => {
-  it('derives an adventurer from class and race, with each source labeled', () => {
+  it('derives an adventurer from its attributes and race, with each source labeled', () => {
     const { state, hero } = setup();
     expect(getStat(state, hero, 'hp')).toEqual({
       stat: 'hp',
       value: 20,
       parts: [
-        { op: 'add', value: 18, source: { id: 'class.vanguard', label: 'Vanguard' } },
-        { op: 'add', value: 2, source: { id: 'race.human', label: 'Human' } },
+        { op: 'add', value: 14, source: { id: 'attribute.grit', label: 'Grit 14' } },
+        { op: 'add', value: 6, source: { id: 'attribute.brawn', label: 'Brawn 12' } },
       ],
     });
+    expect(getStat(state, hero, 'speed').parts).toEqual([{ op: 'add', value: 100, source: { id: 'race.human', label: 'Human' } }]);
     expect(getStat(state, hero, 'speed').value).toBe(100);
     expect(getStat(state, hero, 'sight')).toMatchObject({ value: 8, parts: [{ op: 'add', value: 8, source: { label: 'Base' } }] });
   });
@@ -118,16 +119,17 @@ describe('getStat', () => {
   it('sums add parts, then applies mul parts, whatever order they come in', () => {
     const { state, hero } = setup();
     attachBundle(state, hero, MIGHT.id, 'class.vanguard');
-    // (18 + 2 + 10) × 1.5
+    // (14 + 6 + 10) × 1.5
     const hp = getStat(state, hero, 'hp');
     expect(hp.value).toBe(45);
     expect(hp.parts.map((p) => [p.op, p.value, p.source.label])).toEqual([
-      ['add', 18, 'Vanguard'],
-      ['add', 2, 'Human'],
+      ['add', 14, 'Grit 14'],
+      ['add', 6, 'Brawn 12'],
       ['add', 10, 'Vanguard'],
       ['mul', 1.5, 'Vanguard'],
     ]);
-    expect(statValue(state, hero, 'damage')).toBe(3);
+    // Brawn 12: +1, then the bundle's +3.
+    expect(statValue(state, hero, 'damage')).toBe(4);
   });
 
   it('agrees with statValue for every stat', () => {
@@ -150,7 +152,7 @@ describe('getStat', () => {
   });
 
   it('is fed by the stats domain providers and bundle sources, in order', () => {
-    expect(STAT_PROVIDERS.map((p) => p.id)).toEqual(['stats.base', 'stats.class_race']);
+    expect(STAT_PROVIDERS.map((p) => p.id)).toEqual(['stats.base', 'stats.class_race', 'stats.attributes']);
     expect(BUNDLE_SOURCES.map((s) => s.id)).toEqual(['stats.attached', 'stats.statuses']);
     expect(TRIGGERS.has('trigger.turn_start') && TRIGGERS.has('trigger.turn_end')).toBe(true);
   });

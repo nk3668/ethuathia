@@ -1,5 +1,6 @@
-/** Codex view of adventurer races. */
+/** Codex view of adventurer races: attribute adjustments (ETH-033) and speed. */
 import { RACES } from '../../../content';
+import { attributeLine } from '../attributeText';
 import { defineCodexRenderer } from '../types';
 
 export default defineCodexRenderer({
@@ -8,8 +9,7 @@ export default defineCodexRenderer({
   order: 20,
   hint: 'Take one into the dungeon to learn about it.',
   fields: (def) => [
-    { label: 'HP bonus', value: `+${def.hpBonus}`, hint: "Added to the class's starting maximum HP.", key: true },
-    { label: 'MP bonus', value: `+${def.mpBonus}`, hint: "Added to the class's starting maximum MP." },
+    { label: 'Attributes', value: attributeLine(def.attributes, true), hint: "Added to the class's starting attributes.", key: true },
     { label: 'Speed', value: def.speed, hint: 'Energy gained each tick; 100 acts once a turn.', key: true },
   ],
 });

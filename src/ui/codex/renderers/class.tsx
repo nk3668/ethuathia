@@ -1,5 +1,6 @@
-/** Codex view of adventurer classes. */
-import { CLASSES } from '../../../content';
+/** Codex view of adventurer classes: their starting attributes (ETH-033). */
+import { ATTRIBUTE_IDS, attributeDef, CLASSES } from '../../../content';
+import { attributeHint, attributeLine } from '../attributeText';
 import { defineCodexRenderer } from '../types';
 
 export default defineCodexRenderer({
@@ -8,7 +9,7 @@ export default defineCodexRenderer({
   order: 10,
   hint: 'Take one into the dungeon to learn about it.',
   fields: (def) => [
-    { label: 'HP', value: def.hp, hint: 'Starting maximum HP, before the race bonus.', key: true },
-    { label: 'MP', value: def.mp, hint: 'Starting maximum MP, before the race bonus.', key: true },
+    { label: 'Attributes', value: attributeLine(def.attributes), hint: 'Starting attributes, before the race adjusts them.', key: true },
+    ...ATTRIBUTE_IDS.map((a) => ({ label: attributeDef(a).name, value: def.attributes[a], hint: attributeHint(a) })),
   ],
 });

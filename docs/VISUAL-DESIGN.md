@@ -222,10 +222,16 @@ sentence and the error text in mono.
 │    Human Vanguard         │   muted; each word is an Explain link
 │ HP ▓▓▓▓▓▓▓░░░   41 / 58   │
 │ MP ▓▓▓░░░░░░░   12 / 40   │
+│ BRN 12 FIN 10 WIT 5 GRT 14│   attributes, mono, abbr muted
 │ [poisoned 4] [blessed]    │   status badges, turns remaining
 │ ➤ exploring · rule #3     │   intent; clicking opens that rule
 ╰───────────────────────────╯
 ```
+
+Attributes (ETH-033) are four mono chips, abbreviation muted and value in text color. Each
+chip's tooltip gives the name and value, the description, where the value comes from ("From:
+Vanguard 11, Human +1."), what it adds to each stat ("Adds: Max HP +6, Damage +1, Carry +24.")
+and, muted, the per-point rule. Compact cards and dead members leave them out.
 
 Status badges (ETH-057) show the status's glyph in its color, its name and the turns left in
 mono, e.g. `» Hasted 12`. A harmful status has a dashed `--danger` outline, and its tooltip

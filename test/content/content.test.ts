@@ -19,6 +19,7 @@ import {
   TERRAIN,
   TERRAIN_KIND,
   validateContent,
+  ATTRIBUTE_KIND,
 } from '../../src/content';
 import type { ClassDef, ContentKind, FeatureDef, FloorTypeDef, RaceDef, TerrainDef } from '../../src/content';
 
@@ -29,7 +30,7 @@ function withDefs<T extends Def>(kind: ContentKind<T>, defs: unknown[]): Content
   return { ...kind, registry };
 }
 
-const vanguard: ClassDef = { id: 'class.test', name: 'Test', description: 'A test class.', tags: [], hp: 10, mp: 0 };
+const vanguard: ClassDef = { id: 'class.test', name: 'Test', description: 'A test class.', tags: [], attributes: { brawn: 10, finesse: 10, wits: 10, grit: 10 } };
 const generationSteps = { kind: 'generation step', has: (id: string) => id === 'gen.rooms' };
 
 describe('shipped content', () => {
@@ -86,8 +87,8 @@ describe('validation', () => {
   });
 
   it('names the def and field of a malformed def', () => {
-    const problems = checkKinds([withDefs(CLASS_KIND, [vanguard, { ...vanguard, id: 'class.frail', hp: 0 }])]);
-    expect(problems).toEqual(['class "class.frail": hp: must be above 0']);
+    const problems = checkKinds([withDefs(CLASS_KIND, [vanguard, { ...vanguard, id: 'class.frail', attributes: { ...vanguard.attributes, grit: 0 } }])]);
+    expect(problems).toEqual(['class "class.frail": attributes.grit: must be at least 1']);
   });
 
   it('reports every problem in a def, with nested paths', () => {
@@ -109,15 +110,35 @@ describe('validation', () => {
   it('rejects an id outside the kind namespace, a missing field and an unknown field', () => {
     const problems = checkKinds([
       withDefs(RACE_KIND, [
-        { id: 'class.human', name: 'Human', description: 'Misfiled.', tags: [], hpBonus: 0, mpBonus: 0, speed: 100 },
-        { id: 'race.slow', name: 'Slow', description: 'No speed.', tags: [], hpBonus: 0, mpBonus: 0 },
-        { id: 'race.typo', name: 'Typo', description: 'Extra key.', tags: [], hpBonus: 0, mpBonus: 0, speed: 100, sped: 1 },
+        { id: 'class.human', name: 'Human', description: 'Misfiled.', tags: [], attributes: {}, speed: 100 },
+        { id: 'race.slow', name: 'Slow', description: 'No speed.', tags: [], attributes: {} },
+        { id: 'race.typo', name: 'Typo', description: 'Extra key.', tags: [], attributes: {}, speed: 100, sped: 1 },
       ]),
     ]);
     expect(problems).toHaveLength(3);
     expect(problems[0]).toBe('race "class.human": id: must look like "race.some_name" (lowercase, digits and _)');
     expect(problems[1]).toMatch(/^race "race\.slow": speed: /);
     expect(problems[2]).toMatch(/^race "race\.typo": \(def\): .*sped/);
+  });
+
+  it('checks class attributes are all set and whole, and race adjustments are whole and known', () => {
+    const problems = checkKinds([
+      withDefs(CLASS_KIND, [{ ...vanguard, id: 'class.weak', attributes: { brawn: 0, finesse: 10, wits: 1.5 } }]),
+      withDefs(RACE_KIND, [{ id: 'race.odd', name: 'Odd', description: 'Odd.', tags: [], attributes: { grit: -2, luck: 1 }, speed: 100 }]),
+    ]);
+    expect(problems).toEqual([
+      'class "class.weak": attributes.brawn: must be at least 1',
+      'class "class.weak": attributes.wits: must be a whole number',
+      expect.stringMatching(/^class "class\.weak": attributes\.grit: /),
+      expect.stringMatching(/^race "race\.odd": attributes/),
+    ]);
+  });
+
+  it('needs one attribute def per attribute key, with a matching id', () => {
+    const grit = ATTRIBUTE_KIND.registry.get('attribute.grit');
+    const problems = checkKinds([withDefs(ATTRIBUTE_KIND, [{ ...grit, id: 'attribute.guts' }])]);
+    expect(problems).toContain('attribute "attribute.guts": id must be "attribute.grit" for key "grit"');
+    expect(problems).toContain('attribute "brawn" has no def (expected "attribute.brawn")');
   });
 
   it('names a def without a usable id by its position', () => {
@@ -164,7 +185,7 @@ describe('validation', () => {
       schema: z.object({ id: z.string(), name: z.string(), description: z.string(), tags: z.array(z.string()), race: z.string() }),
       refs: (def) => [{ path: 'race', kind: 'race', id: def.race }],
     };
-    const human: RaceDef = { id: 'race.human', name: 'Human', description: 'Test.', tags: [], hpBonus: 0, mpBonus: 0, speed: 100 };
+    const human: RaceDef = { id: 'race.human', name: 'Human', description: 'Test.', tags: [], attributes: {}, speed: 100 };
     const kin = withDefs(kinKind, [
       { id: 'kin.a', name: 'A', description: 'A', tags: [], race: 'race.human' },
       { id: 'kin.b', name: 'B', description: 'B', tags: [], race: 'race.giant' },

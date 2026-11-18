@@ -27,7 +27,7 @@ Adventurers have attributes, grow by class when they level, have race aptitudes 
 - `docs/ROGUELIKE-SURVEY.md`: clean-room ideas from other roguelikes
 
 ## Items
-- [ ] [ETH-033 Four attributes and the stats derived from them](ETH-033-attributes-derived-stats.md)
+- [x] [ETH-033 Four attributes and the stats derived from them](ETH-033-attributes-derived-stats.md)
 - [ ] [ETH-034 XP, leveling and per-class attribute growth](ETH-034-xp-leveling-class-growth.md)
 - [ ] [ETH-035 Class equipment proficiencies and race aptitudes](ETH-035-proficiencies-aptitudes.md)
 - [ ] [ETH-036 Milestone-gated class and race unlocks bought at the Guild Hall](ETH-036-milestone-unlocks-guild-hall.md)

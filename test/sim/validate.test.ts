@@ -39,17 +39,17 @@ describe('validateGame', () => {
 });
 
 describe('adventurers from class and race', () => {
-  it('take HP and MP from the class plus the race bonus, and speed from the race', () => {
-    // Vanguard: 18 HP, 3 MP. Human: +2 HP, +2 MP, speed 100.
+  it('start as a party actor whose HP and MP createRun fills from the stats', () => {
     expect(adventurerActor({ name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' })).toEqual({
       energy: 0,
-      hp: 20,
-      mp: 5,
+      hp: 1,
+      mp: 0,
       faction: 'party',
     });
   });
 
-  it('are created by createRun with those values', () => {
+  it('are created by createRun with HP and MP from their attributes and speed from the race', () => {
+    // Vanguard + Human: Brawn 12, Wits 5, Grit 14 -> max HP 14 + 12 x 0.5 = 20, MP 5.
     const state = createRun({ party: [{ name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }] }, 1);
     const hero = getEntity(state, state.party[0] as number);
     expect(hero.actor).toMatchObject({ hp: 20, mp: 5 });
