@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../../src/core';
 import { DRAUGHTS, FLOOR_HALLS } from '../../src/content';
 import {
+  BASELINE_RULES,
   carriesHealingPotion,
   checkInvariants,
   createRun,
@@ -196,13 +197,32 @@ describe('baseline drinking', () => {
     for (let i = 0; i < 12 && !events.some((e) => e.type === 'drankFountain'); i++) events.push(...step(state, []));
     const fired = events.filter((e): e is Extract<SimEvent, { type: 'ruleFired' }> => e.type === 'ruleFired');
     expect(fired[0]).toMatchObject({
-      rule: { set: 'baseline', index: 4 },
+      rule: { set: 'baseline', index: BASELINE_RULES.findIndex((r) => r.action.id === 'act.drink_fountain') },
       condition: 'cond.hurt_no_healing',
       action: 'act.drink_fountain',
     });
     expect(fired[0]?.detail).toMatch(/heading for a fountain, 6 turns away \(HP 1\/\d+, below 50%, and no healing potion\)/);
     expect(events.find((e) => e.type === 'drankFountain')).toMatchObject({ actor: hero.id, fountain: fountain.id });
     expect(hero.pos).toEqual(fountain.pos);
+  });
+
+  it('leaves the fountain alone while carrying a healing potion, and drinks the potion at low HP (ETH-061)', () => {
+    const { state, hero, fountain } = setup();
+    hero.inventory = { items: [{ def: 'item.mending_draught', qty: 1 }] };
+    expect(carriesHealingPotion(state, hero)).toBe(true);
+    // Below half but above the potion's 35%: neither the fountain nor the potion.
+    const max = statValue(state, hero, 'hp');
+    hero.actor.hp = Math.floor(max * 0.45);
+    let events: SimEvent[] = [];
+    for (let i = 0; i < 12; i++) events.push(...step(state, []));
+    expect(events.some((e) => e.type === 'drankFountain')).toBe(false);
+    expect(events.some((e) => e.type === 'ruleFired' && e.action === 'act.drink_fountain')).toBe(false);
+    expect(draughtsOf(fountain)).toHaveLength(3);
+    // Lower still: the potion, not the fountain.
+    hero.actor.hp = 1;
+    events = step(state, []);
+    expect(events.filter((e) => e.type === 'used').map((e) => e.type === 'used' && e.item)).toEqual(['item.mending_draught']);
+    expect(events.some((e) => e.type === 'drankFountain')).toBe(false);
   });
 
   it('stops drinking once healthy, and leaves fountains alone when not hurt', () => {

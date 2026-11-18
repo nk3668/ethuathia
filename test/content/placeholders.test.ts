@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { BOUNTY_KIND, CONTENT_KINDS, CONTRACT_KIND, DEITY_KIND, DOCTRINE_KIND, ITEM_KIND, MONSTER_KIND, OMEN_KIND } from '../../src/content';
+import { BOUNTY_KIND, CONTENT_KINDS, CONTRACT_KIND, DEITY_KIND, DOCTRINE_KIND, MONSTER_KIND, OMEN_KIND } from '../../src/content';
 
 const PLACEHOLDERS = [
   [MONSTER_KIND, 'monster'],
-  [ITEM_KIND, 'item'],
   [CONTRACT_KIND, 'contract'],
   [BOUNTY_KIND, 'bounty'],
   [OMEN_KIND, 'omen'],

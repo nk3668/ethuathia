@@ -92,6 +92,15 @@ export function floorRngState(seed: number, floorId: FloorId): RngState {
 }
 
 /**
+ * The RNG state the items placed on floor `floorId` are drawn from (ETH-061): like
+ * `floorRngState`, from the seed and floor id alone, and separate from it, so loot changes never
+ * move a wall.
+ */
+export function lootRngState(seed: number, floorId: FloorId): RngState {
+  return seedState(seed, `loot/${floorId}`);
+}
+
+/**
  * The plan for floor `floorId`, before it is built: the config's hand-built text for that depth
  * (`floorText` for the first floor, else `floorTexts[depth - 1]`), or a generated
  * `DEFAULT_FLOOR_TYPE` floor. The bottom floor never has stairs down, and fountains beyond
@@ -104,7 +113,10 @@ export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
   const plan =
     text !== undefined
       ? parseFloorText(text)
-      : generateFloor(FLOOR_TYPES.get(DEFAULT_FLOOR_TYPE), new Rng(floorRngState(state.seed, floorId)));
+      : generateFloor(FLOOR_TYPES.get(DEFAULT_FLOOR_TYPE), new Rng(floorRngState(state.seed, floorId)), {
+          depth: node.depth,
+          loot: new Rng(lootRngState(state.seed, floorId)),
+        });
   if (node.down.length === 0) {
     plan.features = plan.features.filter((f) => !(f.feature.kind === 'stairs' && f.feature.dir === 'down'));
   }

@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { FEATURES, TERRAIN } from '../../src/content';
-import { addEntity, createRun, moveEntity, newStatsPart, perceiveParty, snapshot } from '../../src/sim';
+import { FEATURES, ITEMS, TERRAIN } from '../../src/content';
+import { addEntity, createRun, moveEntity, newStatsPart, perceiveParty, placeItem, snapshot } from '../../src/sim';
 import type { ActorPart, RunState, Snapshot } from '../../src/sim';
 import {
   atlasLayout,
@@ -33,7 +33,7 @@ import {
 } from '../../src/ui/map';
 import type { AtlasCanvas, CellState, GlyphTheme, MapContext, View } from '../../src/ui/map';
 import { FOCUS_SPREAD, focusSpread } from '../../src/ui/map/MapRenderer';
-import { cellFog, cellGlyph, cellOverlay, encodeCell } from '../../src/ui/map/scene';
+import { cellFog, cellGlyph, cellOverlay, encodeCell, tileSubject } from '../../src/ui/map/scene';
 
 // ---------------------------------------------------------------------------------------------
 // Fixtures
@@ -111,6 +111,7 @@ describe('glyphs', () => {
     const looks = [
       ...TERRAIN.all().map((d) => d.glyph),
       ...FEATURES.all().flatMap((d) => [d.glyph, ...Object.values(d.states ?? {})]),
+      ...ITEMS.all().map((d) => d.glyph),
     ];
     for (const glyph of looks) {
       expect(section).toContain(`\`${glyph.ch}\``);
@@ -255,6 +256,18 @@ describe('scene', () => {
     expect(describeTile(snap, { x: 0, y: 0 })?.things).toEqual(['Wall']);
     expect(describeTile(snap, { x: 8, y: 2 })).toEqual({ pos: { x: 8, y: 2 }, fog: 'unknown', things: ['Unexplored'] });
     expect(describeTile(snap, { x: -1, y: 0 })).toBeNull();
+  });
+
+  it('draws, names and explains items lying on a tile (ETH-061)', () => {
+    const state = run();
+    placeItem(state, 'd1', { x: 2, y: 2 }, { def: 'item.trail_biscuit', qty: 3 });
+    placeItem(state, 'd1', { x: 2, y: 2 }, { def: 'item.mending_draught', qty: 1 });
+    const snap = snapshot(state);
+    const glyphs = new GlyphTable();
+    const scene = buildScene(snap, { selected: null, hover: null }, glyphs);
+    expect(glyphs.id(cellGlyph(scene.codes[2 * scene.width + 2] as number))).toBe('item.mending_draught');
+    expect(describeTile(snap, { x: 2, y: 2 })?.things).toEqual(['Mending draught', 'Trail biscuit ×3', 'Floor']);
+    expect(tileSubject(snap, { x: 2, y: 2 })).toBe('item.mending_draught');
   });
 });
 

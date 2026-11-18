@@ -41,17 +41,28 @@ export function checkFloorType(type: FloorTypeDef): void {
   bindSteps(type);
 }
 
+/** What a floor is built for, beyond its layout RNG. */
+export interface GenerateOptions {
+  /** The floor's depth. Default 1. */
+  depth?: number;
+  /** The floor's loot RNG (`lootRngState`). Default: `rng` itself, after the layout steps. */
+  loot?: Rng;
+}
+
 /**
- * Builds a floor of `type`, drawing only from `rng` (the run's `dungeon` stream), so the same
- * rng state always gives the same floor. Every step is checked before any of them runs.
+ * Builds a floor of `type`, drawing only from `rng` (the floor's layout RNG) and `options.loot`,
+ * so the same states always give the same floor. Every step is checked before any of them runs.
  */
-export function generateFloor(type: FloorTypeDef, rng: Rng): FloorPlan {
+export function generateFloor(type: FloorTypeDef, rng: Rng, options: GenerateOptions = {}): FloorPlan {
   const steps = bindSteps(type);
   const draft: FloorDraft = {
     terrain: new Grid(type.size.w, type.size.h, 'u8', Terrain.Wall),
     rooms: [],
     features: [],
     starts: [],
+    depth: options.depth ?? 1,
+    loot: options.loot ?? rng,
+    items: [],
   };
   steps.forEach(({ stepId, run }, i) => {
     try {
@@ -60,5 +71,5 @@ export function generateFloor(type: FloorTypeDef, rng: Rng): FloorPlan {
       throw new Error(`${where(type, i, stepId)}: ${(err as Error).message}`, { cause: err });
     }
   });
-  return { terrain: draft.terrain, features: draft.features, starts: draft.starts };
+  return { terrain: draft.terrain, features: draft.features, starts: draft.starts, items: draft.items };
 }

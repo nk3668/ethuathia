@@ -204,7 +204,7 @@ describe('the baseline descent', () => {
     const events = runUntil(state, () => hero.floor === 'd2', 20);
     expect(hero.floor).toBe('d2');
     const descend = fired(events).find((e) => e.action === 'act.descend');
-    expect(descend).toMatchObject({ rule: { set: 'baseline', index: 3 }, condition: 'cond.floor_overstayed' });
+    expect(descend).toMatchObject({ rule: { set: 'baseline' }, condition: 'cond.floor_overstayed' });
     expect(descend?.detail).toContain('the limit is 3');
   });
 

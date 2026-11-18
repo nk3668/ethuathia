@@ -432,7 +432,8 @@ plus one when it rebases**, so two branches never ship different shapes under on
 main moved past your version while your PR waited, rebase and bump again. ETH-055 made it 4,
 then 5 on main, ETH-058 (the floors slice) 6, ETH-057 7 (the `stats` part; `speed`,
 `maxHp` and `maxMp` left `ActorPart`), ETH-033 8 (`stats.attributes`), ETH-062 9 (the run
-slice's trackers and run end), and ETH-072 10 (the `fountain` feature part).
+slice's trackers and run end), ETH-072 10 (the `fountain` feature part), and ETH-061 11
+(the `item` and `inventory` parts and the items slice).
 
 ### Floors and arrival (ETH-058)
 
@@ -462,15 +463,64 @@ What later items build on, all exported from `src/sim/floors/`:
   `dry`) and the `draught` kind (`draughts.ts`: `weight`, `bundle`, `outcome`). In floor text
   `{` is a fountain holding `TEXT_FOUNTAIN_DRAUGHTS`. **`RunConfig.maxFountains`** caps
   fountains per floor after generation (the first ones kept; nothing else on the floor changes):
-  the Dry Wells Omen (ETH-067) sets 0. `carriesHealingPotion(state, actor)` is the seam the
-  baseline's `cond.hurt_no_healing` asks; it returns `false` until ETH-061 gives it an inventory
-  to look in.
+  the Dry Wells Omen (ETH-067) sets 0. `carriesHealingPotion(state, actor)` (any pack entry with a `heal` effect, ETH-061) is
+  what the baseline's `cond.hurt_no_healing` asks.
+- **Loot RNG (ETH-061):** `lootRngState(seed, floorId)` is a second per-floor RNG, used only for
+  the items a floor starts with. `generateFloor(type, rng, { depth, loot })` gives it to the steps
+  as `FloorDraft.loot` (with `FloorDraft.depth`), so changing loot never moves a wall.
+
+### Items (ETH-061)
+
+All in `src/sim/items/`; content in `src/content/items.ts`.
+
+- **Content:** `ItemDef` = `{ glyph, category, weight, value, stack?, bundle?, loot? }`.
+  Categories (`ITEM_CATEGORIES`): `potion`, `scroll`, `food` (ETH-054 fills it), `weapon` and
+  `armor` (ETH-043 adds slots), `relic` (ETH-024; never dropped), `gold` (goes to the purse),
+  `junk`. `isJunk(def)` (category `junk` or tag `junk` / `corpse`), `isUsable(def)` (its bundle
+  has `effects`) and `healAmount(def)` read a def. `bundle.effects` run on use; `bundle.modifiers`
+  and `triggers` are for gear (ETH-043 makes equipped items a `BundleSource`). `bundleOf(itemId)`
+  works, since the field is called `bundle`.
+- **Instances:** `ItemInstance = { def, qty }`, plain data. Later features **add optional
+  fields** (equipped slot, enchantment, identified, affixes, heirloom history): no migration, and
+  `canStack(a, b)` compares every field but `qty`, so a new field keeps items apart by itself.
+  `addToStacks` merges up to the def's `stack`.
+- **Where items are:** on a floor, an entity whose `def` is the item id with an `item` part (the
+  instance); `placeItem(state, floor, pos, item)` adds one (merging), `itemsAt` / `floorItems`
+  find them. Carried, an entry of the actor's `inventory: { items: ItemInstance[] }`
+  (`ensureInventory`, `inventoryOf`, `addToInventory`, `takeFromInventory`). Adventurers get the
+  part on their first pickup. A `FloorPlan` may list `items`; `addFloor` creates them.
+- **Weight:** `carryWeight(state, entity)` against `carryLimit` (the `carry` stat, from
+  attributes); `isOverloaded`.
+- **Value:** `itemValue(state, item)` (whole stack) and `unitValue` (one) are the only scoring
+  function. They start from the def's `value` and apply `ITEM_VALUE_HOOKS` (`value.ts`) in
+  order: enchantment, affixes and identification add a hook there.
+- **Wanting and dropping:** `wantsItem(state, actor, item)`: never junk; always gold and relics;
+  otherwise only if it would survive dropping the least valuable things (`lowestValueIndex`: the
+  lowest unit value, the latest entry on a tie) until the pack is within `carry`. So the AI never
+  picks up what it would drop, nor drops what it would pick up again.
+- **Actions:** `pickup { item? }` (an entity id, default the top item on the tile; gold goes to
+  `state.domains.items.gold`), `drop { index, qty? }`, `use { index }` (runs the bundle's effects
+  through `runEffects`, source = the item id). Events: `itemSighted`, `pickedUp` (with `value`),
+  `goldPickedUp`, `dropped`, `used`; all carry `floor` and `pos`. A `pickedUp` worth at least
+  `NOTABLE_ITEM_VALUE` is the `valuableFind` highlight.
+- **Memory:** the party remembers items it has seen in `state.domains.items.known[floor][tile]`
+  (`KnownItem { def, qty }` lists, stale copies like remembered features). The items
+  `turnStart` hook updates it for each party member before it decides (`noticeItems`, emitting
+  `itemSighted`); pickup and drop refresh their tile (`rememberTile`). The AI plans on it.
+- **Generation:** `gen.loot` (in Hewn Halls after `gen.stairs`) puts `minItems`–`maxItems` items
+  on free room tiles, chosen from `lootTable(depth)` by `loot.weight`; gold piles are multiplied
+  by the depth.
+- **Snapshot:** `snapshot.domains.items` = `{ gold, members[id]: { items: ItemView[], weight,
+  carry }, floor: FloorItemView[] }`; `floor` lists items in view now and remembered ones out
+  of view, bottom first per tile. The map draws them over features; the selected party card shows
+  the pack and the gold.
+- **Codex:** `itemSighted` and `pickedUp` mark an item `seen`, `used` marks it `used`.
 
 ### Content kinds
 
 Besides terrain, features, classes, races and floor types, these kinds exist as placeholders
 with a registry, a minimal schema (the `Def` fields only), a `KIND` in `CONTENT_KINDS` and a
-`define*` helper, but no defs: `monster` (`src/content/monsters.ts`), `item` (`items.ts`),
+`define*` helper, but no defs: `monster` (`src/content/monsters.ts`),
 `contract` (`contracts.ts`), `bounty` (`bounties.ts`), `omen` (`omens.ts`) and `deity`
 (`deities.ts`). The owning item extends the def type and the schema together and adds the
 defs. `src/content/index.ts` re-exports them with `export *`.
@@ -976,6 +1026,8 @@ As built in `src/sim/gen/` (ETH-006):
     free room tiles, one per room while rooms last, each holding `minDraughts`–`maxDraughts`
     draughts rolled from the weighted `DRAUGHTS` table. It runs after `gen.stairs`, so it never
     shifts the earlier steps' draws.
+  - `gen.loot` (items domain, ETH-061): items on free room tiles, drawn from the floor's loot RNG
+    (`FloorDraft.loot`) by depth (Contracts, "Items").
 - A test floods 200 seeds from the up stairs and checks that every floor tile and the down
   stairs are reached. Seed 1's floor is pinned as text, so any change to a step's draws shows.
 
@@ -1002,7 +1054,8 @@ As built (ETH-007):
   `terrain` is a `u8` grid of 0 (never seen) or 1 + the `Terrain` code last seen;
   `features` copies each seen feature (`def` and part) by tile index. Tiles out of view keep
   their last known state, so a door shut behind the party is still remembered open. Monsters
-  are never remembered; items will be added beside features when they exist.
+  are never remembered. Items are remembered by the items domain in its own slice
+  (`state.domains.items.known`, ETH-061; Contracts, "Items").
 - **When it updates:** `createRun` records what the starting party sees, and in `step` each
   party member perceives before deciding (§5.1) and again after acting, so the memory already
   includes what a move revealed when the step returns. Other actors don't perceive yet.
@@ -1072,15 +1125,23 @@ As built in `src/sim/ai/` (ETH-009):
   `{ set: 'own' | 'baseline', index }` and `detail` reads "Explore: heading for unexplored ground
   6 turns away", with the condition's detail in brackets when it has one. The same is kept as
   `ai.memory.intent` for the party card.
-- **Baseline rules**, in order: `cond.stuck → act.back_off`,
-  `cond.heading_out → act.retreat_run`, `cond.heading_out → act.gather { dir: 'up' }`,
-  `cond.floor_overstayed → act.descend { regroup: false }`,
-  `cond.hurt_no_healing { below: 50 } → act.drink_fountain` (ETH-072, `src/sim/floors/fountains.ts`:
-  below half HP with no healing potion, walk to the nearest remembered fountain that isn't dry
-  and drink), `cond.always → act.explore`,
-  `cond.always → act.descend`, `cond.always → act.gather`, `cond.bottom_floor → act.retreat_run`,
-  `cond.always → act.wait`. The heading-out ones (ETH-062) are in `src/sim/run/rules.ts`; the
-  floors ones (ETH-058) in `src/sim/floors/rules.ts`:
+- **Baseline rules**, in order (0-based indices, as of ETH-061):
+  0 `cond.wounded { percent: 35 } → act.quaff_healing`, 1 `cond.overloaded → act.drop_lowest`,
+  2 `cond.stuck → act.back_off`, 3 `cond.heading_out → act.retreat_run`,
+  4 `cond.heading_out → act.gather { dir: 'up' }`, 5 `cond.floor_overstayed → act.descend { regroup: false }`,
+  6 `cond.hurt_no_healing { below: 50 } → act.drink_fountain`, 7 `cond.always → act.pick_up { maxDetour: 8 }`,
+  8 `cond.always → act.explore`, 9 `cond.always → act.descend`, 10 `cond.always → act.gather`,
+  11 `cond.bottom_floor → act.retreat_run`, 12 `cond.always → act.wait`. Tests should find an
+  index with `BASELINE_RULES.findIndex` rather than hard-code it. So a hurt adventurer drinks
+  its own healing potion below 35% HP first, and walks to a fountain below 50% only when it
+  carries none. The items ones (ETH-061) are spliced in from `ITEMS_BASELINE_URGENT` and
+  `ITEMS_BASELINE_LOOT` (`src/sim/items/rules.ts`): `act.quaff_healing` drinks the healing
+  potion that best covers the missing HP; `act.drop_lowest` drops the least valuable droppable
+  thing (as many of a stack as it takes to get within carry); `act.pick_up` picks up a wanted
+  item on the tile, or walks to the nearest remembered wanted one within `maxDetour` steps.
+  `act.drink_fountain` (ETH-072, `src/sim/floors/fountains.ts`) walks to the nearest remembered
+  fountain that isn't dry and drinks. The heading-out ones (ETH-062) are in
+  `src/sim/run/rules.ts`; the floors ones (ETH-058) in `src/sim/floors/rules.ts`:
   - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
     default) a member on the stairs takes them only when every living member on that floor is
     gathered (`gatheringAt`: within `GATHER_RADIUS`, 2, of the stairs or of a gathered member,

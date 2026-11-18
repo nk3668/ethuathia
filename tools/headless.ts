@@ -83,6 +83,10 @@ export interface SeedResult {
   bottom?: number;
   /** Each floor reached, from the first. */
   floors?: FloorResult[];
+  /** Items (stacks) the party picked up, gold piles not counted. Missing from reports before ETH-061. */
+  items?: number;
+  /** Gold in the party's purse at the end. Missing from reports before ETH-061. */
+  gold?: number;
   /** How many times stuck detection dropped a goal, and the turn it first did. */
   stuck: { count: number; firstTurn: number | null };
   /** `stateHash` of where the run stopped, to tell whether a change altered behavior. */
@@ -113,6 +117,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
   let turnedBack: number | null = null;
   let end: { outcome: RunOutcome; turn: number } | null = null;
   let steps = 0;
+  let items = 0;
   let snap = session.snapshot();
 
   while (steps < cap) {
@@ -121,6 +126,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
       if (e.type === 'floorEntered' && !reached.has(e.depth)) reached.set(e.depth, e.turn);
       if (e.type === 'turnedBack') turnedBack ??= e.turn;
       if (e.type === 'runEnded') end = { outcome: e.outcome, turn: e.turn };
+      if (e.type === 'pickedUp') items++;
       if (e.type !== 'stuck') continue;
       stuck.count++;
       stuck.firstTurn ??= e.turn;
@@ -168,6 +174,8 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     depth: snap.domains.floors.deepest,
     bottom: snap.domains.floors.depth,
     floors,
+    items,
+    gold: snap.domains.items.gold,
     stuck,
     hash: session.stateHash(),
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
@@ -244,6 +252,11 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
 
   const ends = RUN_OUTCOMES.map((o) => [o, results.filter((r) => r.end === o).length] as const).filter(([, n]) => n > 0);
   const endLine = ends.length === 0 ? '' : `Run outcomes: ${ends.map(([o, n]) => `${n} ${o}`).join(', ')}.`;
+  const picked = results.map((r) => r.items ?? 0);
+  const gold = results.map((r) => r.gold ?? 0);
+  const lootLine =
+    `Items picked up per run: mean ${(picked.reduce((a, b) => a + b, 0) / Math.max(1, picked.length)).toFixed(1)}, ` +
+    `max ${Math.max(0, ...picked)}. Gold per run: mean ${(gold.reduce((a, b) => a + b, 0) / Math.max(1, gold.length)).toFixed(1)}, max ${Math.max(0, ...gold)}.`;
 
   const flagged = results.flatMap((r) => {
     const reason = flagReason(r, cap);
@@ -257,7 +270,7 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     `${summary}.`,
     ...(endLine === '' ? [] : [endLine]),
     ...(turnLine === '' ? [] : [turnLine]),
-    ...(results.length === 0 ? [] : [depthLine]),
+    ...(results.length === 0 ? [] : [depthLine, lootLine]),
     flagged.length === 0 ? 'Flagged seeds: none.' : `Flagged seeds:\n${flagged.join('\n')}`,
   ].join('\n');
 }

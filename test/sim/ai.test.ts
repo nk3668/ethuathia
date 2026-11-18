@@ -32,6 +32,9 @@ const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' 
 /** Party turns a lone adventurer gets to explore a generated floor. The worst of 100 seeds takes about 280. */
 const EXPLORE_TURN_CAP = 600;
 
+/** Where the first baseline rule with this action sits, so tests survive rules added before it. */
+const baselineIndex = (action: string) => BASELINE_RULES.findIndex((r) => r.action.id === action);
+
 /** A run with one adventurer. `depth` 1 makes the floor the bottom one, with no stairs down to take. */
 function setup(floorText?: string[], seed = 1, depth?: number): { state: RunState; hero: ActorEntity } {
   const config = { party: [HERO], ...(floorText === undefined ? {} : { floorText }), ...(depth === undefined ? {} : { depth }) };
@@ -148,7 +151,7 @@ describe('decision engine', () => {
     hero.ai = newAiPart([rule('cond.test_never', 'act.test_step', { x: 1, y: 0 })]);
     // The room is all in view, so there is nothing to explore: the baseline waits.
     expect(fired(step(state, []))).toMatchObject([
-      { rule: { set: 'baseline', index: 9 }, action: 'act.wait', detail: 'Wait: nothing else to do' },
+      { rule: { set: 'baseline', index: BASELINE_RULES.length - 1 }, action: 'act.wait', detail: 'Wait: nothing else to do' },
     ]);
   });
 
@@ -182,7 +185,7 @@ describe('decision engine', () => {
     // The baseline is a plain rule list: an adventurer could be given the same rules as its own.
     const { state, hero } = setup(['#####', '#@..#', '#...#', '#####']);
     hero.ai = newAiPart(BASELINE_RULES.map((r) => structuredClone(r)));
-    expect(fired(step(state, []))[0]?.rule).toEqual({ set: 'own', index: 9 });
+    expect(fired(step(state, []))[0]?.rule).toEqual({ set: 'own', index: BASELINE_RULES.length - 1 });
   });
 });
 
@@ -308,7 +311,7 @@ describe('stuck detection', () => {
     expect(stuck).toEqual({
       type: 'stuck',
       actor: hero.id,
-      rule: { set: 'baseline', index: 5 },
+      rule: { set: 'baseline', index: baselineIndex('act.explore') },
       action: 'act.explore',
       turns: STUCK_TURNS,
       detail:
@@ -329,7 +332,7 @@ describe('stuck detection', () => {
     // After it: a different goal at once (backing off), and exploring only once the drop is over.
     const after = fired(events.slice(stuckAt + 1));
     expect(after[0]).toMatchObject({
-      rule: { set: 'baseline', index: 0 },
+      rule: { set: 'baseline', index: baselineIndex('act.back_off') },
       action: 'act.back_off',
       detail: 'Back off: backing away from where I got stuck at (4, 1) (gave up on Explore 0 turns ago)',
     });
