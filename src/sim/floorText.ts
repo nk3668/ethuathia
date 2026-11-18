@@ -21,6 +21,7 @@ import { clonePlain, Grid } from '../core';
 import type { Pos } from '../core';
 import { getEntity, getFloor } from './entities';
 import { DRAUGHT_MENDING } from '../content';
+import type { ItemInstance } from './items/instance';
 import { DEFS, Terrain } from './state';
 import type { FeaturePart, FloorId, RunState } from './state';
 
@@ -32,6 +33,14 @@ export interface FloorPlan {
   features: { def: string; pos: Pos; feature: FeaturePart }[];
   /** Positions marked `@`, in row order. */
   starts: Pos[];
+  /** Items lying on the floor, created by `addFloor` in order (ETH-061). Text never has any. */
+  items?: PlannedItem[];
+}
+
+/** An item a plan puts on a floor tile. */
+export interface PlannedItem {
+  pos: Pos;
+  item: ItemInstance;
 }
 
 /**

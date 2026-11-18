@@ -12,7 +12,7 @@
  *   `cond.hurt_no_healing` is the baseline's reason to: HP below a share of the maximum and no
  *   healing potion carried.
  */
-import { DRAUGHTS } from '../../content';
+import { DRAUGHTS, healAmount, ITEMS } from '../../content';
 import type { DraughtDef } from '../../content';
 import type { Pos, Rng } from '../../core';
 import { aiPathGrid, followMap } from '../ai/navigate';
@@ -25,6 +25,7 @@ import type { FloorDraft, GenStepDef, Rect } from '../gen/types';
 import type { FloorPlan } from '../floorText';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { registerInvariant } from '../invariants';
+import { inventoryOf } from '../items/inventory';
 import { getMemory } from '../perception';
 import { statValue } from '../stats/getStat';
 import { DEFS, Terrain } from '../state';
@@ -142,11 +143,11 @@ export function knownFlowingFountains(state: RunState, floorId: FloorId): Pos[] 
 }
 
 /**
- * Whether `actor` carries a healing potion. A seam until inventory exists: always `false`.
- * TODO(ETH-061): look in the actor's inventory for an item that heals once items exist.
+ * Whether `actor` carries a healing potion: any pack entry whose use heals its user (`healAmount`),
+ * the same items the baseline's `act.quaff_healing` drinks (ETH-061).
  */
-export function carriesHealingPotion(_state: RunState, _actor: ActorEntity): boolean {
-  return false;
+export function carriesHealingPotion(_state: RunState, actor: ActorEntity): boolean {
+  return inventoryOf(actor).some((item) => ITEMS.has(item.def) && healAmount(ITEMS.get(item.def)) > 0);
 }
 
 // ---------------------------------------------------------------------------------------------

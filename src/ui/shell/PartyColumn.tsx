@@ -2,7 +2,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { ATTRIBUTE_IDS, attributeDef, attributeDefId, STATUSES } from '../../content';
 import type { AttributeId } from '../../content';
 import { STAT_IDS, STAT_INFO } from '../../sim';
-import type { EntityId, MemberStatsView } from '../../sim';
+import type { EntityId, InventoryView, MemberStatsView } from '../../sim';
 import { Explain } from '../codex/Explain';
 import { attributeEffectText } from '../codex/attributeText';
 import { keyHint } from '../input/keymap';
@@ -251,6 +251,52 @@ function AttributeChips({ id }: { id: EntityId }) {
   );
 }
 
+/**
+ * The selected member's pack (ETH-061): weight carried against the Carry stat, the party's gold,
+ * then one line per stack with an `Explain` tooltip. The selector returns one string, so the list
+ * only re-renders when the pack or the gold changes.
+ */
+function Pack({ id }: { id: EntityId }) {
+  const key = useSimStore((s) => {
+    const items = s.snapshot?.domains.items;
+    const pack = items?.members[id];
+    return pack === undefined ? '' : JSON.stringify({ gold: items?.gold ?? 0, ...pack });
+  });
+  if (key === '') return null;
+  const pack = JSON.parse(key) as InventoryView & { gold: number };
+  const over = pack.weight > pack.carry;
+  return (
+    <section className={styles.pack} aria-label="Pack">
+      <p className={styles.packHeader}>
+        <Tooltip content="Weight carried, and the Carry stat. Over it, the least valuable things get dropped.">
+          <span tabIndex={0} data-over={over || undefined}>
+            Pack {pack.weight}/{pack.carry}
+            {over && ' (overloaded)'}
+          </span>
+        </Tooltip>
+        <Tooltip content="The party's gold this run, for merchants.">
+          <span tabIndex={0}>
+            <span aria-hidden="true">$ </span>
+            {pack.gold} gold
+          </span>
+        </Tooltip>
+      </p>
+      {pack.items.length === 0 ? (
+        <p className={styles.packEmpty}>Nothing carried.</p>
+      ) : (
+        <ul className={styles.packList}>
+          {pack.items.map((item, i) => (
+            <li key={`${item.def}-${i}`}>
+              <Explain id={item.def}>{contentName(item.def)}</Explain>
+              {item.qty > 1 && <span className={styles.packQty}> ×{item.qty}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function PartyCard({ id, slot, compact }: PartyCardProps) {
   const member = useMember(id);
   const selected = useUiStore((s) => s.selected === id);
@@ -303,6 +349,7 @@ function PartyCard({ id, slot, compact }: PartyCardProps) {
       )}
       {member.alive && <AttributeChips id={id} />}
       {member.alive && <StatusBadges id={id} />}
+      {member.alive && selected && <Pack id={id} />}
       {member.alive ? (
         <p className={styles.intent}>
           <span aria-hidden="true">➤ </span>

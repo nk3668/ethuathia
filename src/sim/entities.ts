@@ -33,6 +33,7 @@ export function addFloor(state: RunState, id: FloorId, plan: FloorPlan): Floor {
   state.floors[id] = floor;
   state.memory[id] = { terrain: new Grid(plan.terrain.width, plan.terrain.height, 'u8').toBuffer(), features: {} };
   for (const { def, pos, feature } of plan.features) addEntity(state, { def, floor: id, pos, feature });
+  for (const { pos, item } of plan.items ?? []) addEntity(state, { def: item.def, floor: id, pos, item });
   return floor;
 }
 

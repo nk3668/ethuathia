@@ -14,6 +14,7 @@
 import { validateAction } from '../actions';
 import type { ActionRequest } from '../actions';
 import type { Emit } from '../events';
+import { ITEMS_BASELINE_LOOT, ITEMS_BASELINE_URGENT } from '../items/rules';
 import { registerInvariant } from '../invariants';
 import { explored } from '../perception';
 import { CONDITIONS, RULE_ACTIONS } from '../registries';
@@ -29,22 +30,27 @@ export const DROP_TURNS = 20;
 
 /**
  * The built-in rules every adventurer falls back on after its own (CLAUDE.md §5.3), in order:
+ * quaff healing below 35% HP and drop the least valuable thing when overloaded (items, ETH-061);
  * back off after getting stuck; once the party has turned back, climb out with it (waiting at
  * the stairs up for the others); head down without waiting once the floor's turn cap is spent;
  * below half HP with no healing potion, drink from a known fountain (ETH-072);
- * explore the frontier; once nothing is left to explore, go down the stairs with the party,
+ * pick up wanted items a few steps away (items, ETH-061); explore the frontier; once nothing is left to explore, go down the stairs with the party,
  * waiting at them until everyone on the floor has gathered; on the bottom floor with nothing
  * left to do, turn back and leave (a retreat until contracts make it a victory); otherwise
  * wait. Combat and fleeing join them in M1. The floors conditions and rule actions are in
  * `src/sim/floors/rules.ts` (fountains in `src/sim/floors/fountains.ts`), the heading-out ones
- * in `src/sim/run/rules.ts`.
+ * in `src/sim/run/rules.ts`, the items ones in `src/sim/items/rules.ts`.
  */
 export const BASELINE_RULES: readonly Rule[] = [
+  // Items (ETH-061): quaff healing when hurt, drop the least valuable thing when overloaded.
+  ...ITEMS_BASELINE_URGENT,
   { condition: { id: 'cond.stuck' }, action: { id: 'act.back_off' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   { condition: { id: 'cond.floor_overstayed' }, action: { id: 'act.descend', params: { regroup: false } }, enabled: true },
   { condition: { id: 'cond.hurt_no_healing', params: { below: 50 } }, action: { id: 'act.drink_fountain' }, enabled: true },
+  // Items (ETH-061): pick up wanted items a short detour away.
+  ...ITEMS_BASELINE_LOOT,
   { condition: { id: 'cond.always' }, action: { id: 'act.explore' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.descend' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.gather' }, enabled: true },

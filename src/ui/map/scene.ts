@@ -84,7 +84,7 @@ export function partySlots(snap: Snapshot): Map<EntityId, number> {
 }
 
 /**
- * Each tile's look: terrain, then a feature on top of it, then an actor on top of that. Actors
+ * Each tile's look: terrain, then a feature on top of it, then items, then an actor on top of that. Actors
  * are only in the snapshot on tiles in view, so monsters are never remembered. Party members
  * are drawn over anything else on their tile, and dead ones are not drawn.
  */
@@ -100,6 +100,8 @@ export function buildScene(snap: Snapshot, options: SceneOptions, glyphs: GlyphT
   for (const f of snap.floor.features) {
     glyph[f.pos.y * width + f.pos.x] = glyphs.intern(featureGlyphId(f));
   }
+  // Items lie over features; the last listed on a tile is on top.
+  for (const item of snap.domains.items.floor) glyph[item.pos.y * width + item.pos.x] = glyphs.intern(item.def);
 
   const slots = partySlots(snap);
   const alive = new Set(snap.party.filter((m) => m.alive).map((m) => m.id));
@@ -149,13 +151,13 @@ export function changedTiles(prev: Scene | null, next: Scene): number[] | null {
 export interface TileInfo {
   pos: Pos;
   fog: 'unknown' | 'remembered' | 'visible';
-  /** What is there, top to bottom: actors, then the feature, then the terrain. */
+  /** What is there, top to bottom: actors, then items, then the feature, then the terrain. */
   things: string[];
 }
 
 /**
  * The content id the hover tooltip explains for a tile (ETH-065): the topmost thing on it that is
- * not a party member, an actor before a feature. `null` on an empty, unknown or off-floor tile;
+ * not a party member, an actor before an item before a feature. `null` on an empty, unknown or off-floor tile;
  * terrain is left out, since every tile has some.
  */
 export function tileSubject(snap: Snapshot, pos: Pos): string | null {
@@ -164,6 +166,8 @@ export function tileSubject(snap: Snapshot, pos: Pos): string | null {
   const party = new Set(snap.party.map((m) => m.id));
   const actor = snap.floor.actors.find((a) => a.pos.x === pos.x && a.pos.y === pos.y && !party.has(a.id));
   if (actor) return actor.def;
+  const items = snap.domains.items.floor.filter((i) => i.pos.x === pos.x && i.pos.y === pos.y);
+  if (items.length > 0) return (items[items.length - 1] as (typeof items)[number]).def;
   return snap.floor.features.find((f) => f.pos.x === pos.x && f.pos.y === pos.y)?.def ?? null;
 }
 
@@ -186,6 +190,8 @@ export function describeTile(snap: Snapshot, pos: Pos): TileInfo | null {
       things.push(contentName(a.def));
     }
   }
+  const items = snap.domains.items.floor.filter((it) => it.pos.x === pos.x && it.pos.y === pos.y);
+  for (const it of [...items].reverse()) things.push(it.qty === 1 ? contentName(it.def) : `${contentName(it.def)} ×${it.qty}`);
   const feature = snap.floor.features.find((f) => f.pos.x === pos.x && f.pos.y === pos.y);
   if (feature) {
     const f = feature.feature;

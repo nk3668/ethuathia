@@ -13,7 +13,7 @@ import { DOCTRINE_KIND } from './doctrines';
 import { DRAUGHT_KIND } from './draughts';
 import { FEATURE_KIND, FEATURES } from './features';
 import { FLOOR_TYPE_KIND } from './floors';
-import { ITEM_KIND } from './items';
+import { ITEM_KIND, ITEMS } from './items';
 import { checkKinds, ContentError } from './kind';
 import type { ContentKind, RefTarget } from './kind';
 import { MONSTER_KIND } from './monsters';
@@ -68,13 +68,14 @@ export function findDef(id: string): Def | undefined {
 }
 
 /**
- * The map look for a glyph id: a terrain or feature id (`terrain.wall`), or a feature id with a
+ * The map look for a glyph id: a terrain, feature or item id (`terrain.wall`), or a feature id with a
  * state (`feature.door.open`). A state the feature doesn't list falls back to its plain glyph.
  * `undefined` for anything else.
  */
 export function findGlyph(glyphId: string): Glyph | undefined {
   if (TERRAIN.has(glyphId)) return TERRAIN.get(glyphId).glyph;
   if (FEATURES.has(glyphId)) return FEATURES.get(glyphId).glyph;
+  if (ITEMS.has(glyphId)) return ITEMS.get(glyphId).glyph;
   const dot = glyphId.lastIndexOf('.');
   const base = glyphId.slice(0, dot);
   if (dot < 0 || !FEATURES.has(base)) return undefined;

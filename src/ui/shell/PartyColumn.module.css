@@ -159,3 +159,41 @@
 .compactBar {
   min-width: 0;
 }
+
+/* Pack (ETH-061): shown on the selected card. */
+.pack {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--font-size-label);
+}
+
+.packHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.packHeader [data-over] {
+  color: var(--danger);
+}
+
+.packEmpty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.packList {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.packQty {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}

@@ -111,7 +111,7 @@ export {
 } from './entities';
 export type { NewEntity } from './entities';
 export { floorToText, parseFloorText, planToText, TEXT_FOUNTAIN_DRAUGHTS } from './floorText';
-export type { FloorPlan } from './floorText';
+export type { FloorPlan, PlannedItem } from './floorText';
 export { checkFloorType, defineGenStep, generateFloor, readParams, rectTiles, ROOM_STEPS } from './gen';
 export type { BoundGenStep, FloorDraft, GenStepDef, NumberParam, Rect } from './gen';
 export {

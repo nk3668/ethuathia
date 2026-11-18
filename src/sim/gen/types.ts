@@ -2,7 +2,7 @@
  * The shapes shared by the floor generator and its steps (docs/ARCHITECTURE.md §3.6).
  */
 import type { Def, Grid, Pos, Rng } from '../../core';
-import type { FloorPlan } from '../floorText';
+import type { FloorPlan, PlannedItem } from '../floorText';
 
 /** A rectangle of tiles: `x` and `y` are its top-left tile. */
 export interface Rect {
@@ -21,6 +21,15 @@ export interface FloorDraft extends FloorPlan {
   terrain: Grid;
   /** Room interiors, in the order they were laid out. */
   rooms: Rect[];
+  /** The depth of the floor being built (1 when not known, e.g. in tests). */
+  depth: number;
+  /**
+   * The floor's loot RNG (`lootRngState`), separate from the layout RNG every step gets, so
+   * placing items never shifts the layout. Steps that place items draw only from this one.
+   */
+  loot: Rng;
+  /** Items to place on the floor, in order (`gen.loot`). */
+  items: PlannedItem[];
 }
 
 /** A step bound to checked parameters, ready to run. */
