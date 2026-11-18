@@ -51,6 +51,15 @@ export interface LogLine {
   parts: readonly LogPart[];
   /** Set when the event is a highlight: its kind and where it happened. */
   highlight?: Highlight;
+  /** Set when identical AI decisions in a row were folded into this line (ETH-073). */
+  repeat?: Repeat;
+}
+
+/** How many identical AI decisions a line stands for, and the turn of the last one. */
+export interface Repeat {
+  /** At least 2: the line's own event and the ones folded into it. */
+  count: number;
+  lastTurn: number;
 }
 
 /** A highlighted event's kind and place. */
@@ -116,22 +125,54 @@ export function highlightOf(event: SimEvent): Highlight | undefined {
  * - An AI decision is shown when an adventurer's goal changes: a `ruleFired` for the same rule
  *   and rule action as that adventurer's previous one is left out, since the engine traces
  *   every decision and most just continue the same goal.
+ * - Those left-out decisions are counted on the shown line (`repeat`) while they say exactly
+ *   the same thing (same rule, rule action and detail) and no other line has been shown since.
+ *   A different decision by that adventurer, or any other line, ends the count: a later
+ *   identical decision is left out uncounted, as before (ETH-073).
  */
 export function logLines(events: readonly { seq: number; event: SimEvent }[], nameOf: NameOf): LogLine[] {
   const goals = new Map<EntityId, string>();
   const lines: LogLine[] = [];
+  /** The last line, while it is an AI decision that identical ones can still fold into. */
+  let run: { actor: EntityId; key: string } | null = null;
   for (const { seq, event } of events) {
     if (textOf(event).quiet === true) continue;
     if (event.type === 'ruleFired') {
       const goal = `${event.rule.set}:${event.rule.index}:${event.action}`;
-      if (goals.get(event.actor) === goal) continue;
+      const key = `${goal}:${event.detail}`;
+      if (goals.get(event.actor) === goal) {
+        if (run !== null && run.actor === event.actor) {
+          const last = lines.at(-1) as LogLine;
+          if (run.key === key) {
+            lines[lines.length - 1] = { ...last, repeat: { count: (last.repeat?.count ?? 1) + 1, lastTurn: event.turn } };
+          } else {
+            run = null;
+          }
+        }
+        continue;
+      }
       goals.set(event.actor, goal);
+      run = { actor: event.actor, key };
+    } else {
+      run = null;
     }
     if (event.type === 'stuck') goals.delete(event.actor);
     const highlight = highlightOf(event);
     lines.push({ seq, turn: event.turn, ...describe(event, nameOf), ...(highlight && { highlight }) });
   }
   return lines;
+}
+
+/** A folded line's repeat count, e.g. `×12`. */
+export function repeatLabel(repeat: Repeat): string {
+  return `×${repeat.count}`;
+}
+
+/** A folded line's tooltip, e.g. "Repeated 12 times, turns 40 to 51." */
+export function repeatTooltip(line: Pick<LogLine, 'turn' | 'repeat'>): string {
+  const { repeat } = line;
+  if (repeat === undefined) return '';
+  return `Repeated ${repeat.count} times, turns ${line.turn} to ${repeat.lastTurn}.`;
 }
 
 /** One event as a category and a sentence, as plain text and in parts. */

@@ -246,6 +246,13 @@ decision only when an adventurer's goal changes (a different rule or rule action
 previous `ruleFired`), since the engine traces every decision. It follows new lines while
 scrolled to the bottom and stays put when the player scrolls up.
 
+**Repeats (ETH-073).** While an adventurer keeps making exactly the same decision (same rule,
+rule action and detail, e.g. waiting on the bottom floor) and no other line has been shown since,
+the decision's line ends with a muted `×N` count. Its tooltip (also read out to screen readers)
+gives the turn range: "Repeated 12 times, turns 40 to 51." Any other line, including another
+adventurer's, or a different decision by the same adventurer ends the count. Folding happens
+before filtering, so the filters see the same lines.
+
 **Highlights (ETH-047).** The log header has an `All` / `★ Highlights` filter. A highlight line
 shows a `★` before its sentence, and the sentence is an accent-colored button: clicking it
 centers the map on where it happened (follow mode) and frames that tile with the focus marker

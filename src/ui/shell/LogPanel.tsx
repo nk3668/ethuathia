@@ -2,12 +2,12 @@ import { memo, useLayoutEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { EntityId } from '../../sim';
 import { Explain } from '../codex/Explain';
-import { Button, Panel } from '../kit';
+import { Button, Panel, Tooltip } from '../kit';
 import { useSimStore } from '../stores/simStore';
 import { LOG_FILTERS, useUiStore } from '../stores/uiStore';
 import type { LogFilter, MapFocus } from '../stores/uiStore';
 import styles from './LogPanel.module.css';
-import { LOG_PREFIX, logLines } from './text';
+import { LOG_PREFIX, logLines, repeatLabel, repeatTooltip } from './text';
 import type { LogLine, LogPart } from './text';
 
 /** How close to the bottom (in pixels) still counts as "at the bottom" for auto-scrolling. */
@@ -27,7 +27,8 @@ const HIGHLIGHT_MARK = '★';
  * The log strip (docs/VISUAL-DESIGN.md §3.3): recent events from `simStore` as plain text,
  * newest at the bottom. It follows new lines while scrolled to the bottom and stays put when the
  * player has scrolled up to read. The Highlights filter (ETH-047) shows only notable moments, and
- * clicking a highlight centers the map where it happened. Category filters arrive in M1.
+ * clicking a highlight centers the map where it happened. Identical AI decisions in a row show as
+ * one line with a `×N` count (ETH-073). Category filters arrive in M1.
  */
 export function LogPanel() {
   const events = useSimStore((s) => s.events);
@@ -114,6 +115,17 @@ const Line = memo(function Line({ line, onShow }: { line: LogLine; onShow(focus:
       ) : (
         <span className={styles.text}>
           <Parts parts={line.parts} />
+          {line.repeat && (
+            <>
+              {' '}
+              <Tooltip content={repeatTooltip(line)}>
+                <span className={styles.repeat} tabIndex={0}>
+                  <span aria-hidden="true">{repeatLabel(line.repeat)}</span>
+                  <span className="sr-only">{repeatTooltip(line)}</span>
+                </span>
+              </Tooltip>
+            </>
+          )}
         </span>
       )}
     </li>

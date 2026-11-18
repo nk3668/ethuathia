@@ -154,6 +154,11 @@ event out of the log (moves and waits), and `text` is the sentence. An event typ
 entry fails to compile. Every new mechanic needs log text (CLAUDE.md §9), and this is where it
 goes.
 
+`logLines(events, nameOf)` turns events into `LogLine`s: it drops quiet events, shows a
+`ruleFired` only when the adventurer's goal changes, and folds identical consecutive decisions
+into the shown line's `repeat: { count, lastTurn }` (ETH-073, docs/VISUAL-DESIGN.md §3.3).
+Filters (Highlights, later categories) apply to its output.
+
 **Highlights (ETH-047).** A notable moment (a boss engaged, near death, an heirloom found, a
 contract complete, a level-up) is tagged on its log-text entry, not in a central list:
 
