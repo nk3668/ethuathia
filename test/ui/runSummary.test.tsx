@@ -86,7 +86,8 @@ describe('RunSummary', () => {
     expect(dialog.textContent).toContain('Here lies Mira');
     // Waiting is the default: no countdown.
     expect(within(dialog).queryByRole('status')).toBeNull();
-    expect(document.activeElement?.textContent).toBe('Start next run');
+    // Continue (to the Prepare screen) is the default way on.
+    expect(document.activeElement?.textContent).toBe('Continue');
 
     await user.click(within(dialog).getByRole('button', { name: 'Start next run' }));
     expect(started).toBe(1);
@@ -250,6 +251,7 @@ describe('App', () => {
     render(<App createHost={() => (host = new InlineHost())} seed={5} />);
     if (host === undefined) throw new Error('App did not create a host');
     const started = host;
+    await user.click(screen.getByRole('button', { name: 'Descend' }));
     act(() => {
       started.run(6000);
     });
@@ -273,5 +275,14 @@ describe('App', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(useRunStore.getState().report).toBeNull();
     expect(started.turn).toBe(0);
+
+    // Continue goes back to the Prepare screen instead.
+    act(() => {
+      started.run(6000);
+    });
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Continue' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(useRunStore.getState().screen).toBe('prepare');
+    expect(screen.getByRole('button', { name: 'Descend' })).toBeTruthy();
   });
 });

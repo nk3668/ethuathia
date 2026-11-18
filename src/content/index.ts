@@ -39,3 +39,5 @@ export * from './town';
 export * from './bundles';
 export * from './statuses';
 export * from './draughts';
+export * from './dungeons';
+export * from './recruits';

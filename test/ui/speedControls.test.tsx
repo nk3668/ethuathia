@@ -3,8 +3,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { InlineHost, SPEEDS } from '../../src/sim';
-import type { Snapshot, Unsubscribe } from '../../src/sim';
-import { DEMO_RUN } from '../../src/ui/demoRun';
+import type { RunConfig, Snapshot, Unsubscribe } from '../../src/sim';
 import { bindingFor, KEYMAP, keysFor } from '../../src/ui/input/keymap';
 import type { KeyPress } from '../../src/ui/input/keymap';
 import { AppShell } from '../../src/ui/shell/AppShell';
@@ -17,6 +16,13 @@ HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElemen
 let host: InlineHost;
 let unbind: Unsubscribe;
 
+const TWO_VANGUARDS: RunConfig = {
+  party: [
+    { name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' },
+    { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human' },
+  ],
+};
+
 beforeEach(() => {
   localStorage.clear();
   window.matchMedia = (query: string) =>
@@ -26,7 +32,7 @@ beforeEach(() => {
   useUiStore.setState({ logHeight: LOG_HEIGHT.default, tab: 'rules', selected: null, drawerOpen: false });
   host = new InlineHost();
   unbind = bindHost(host);
-  host.start(DEMO_RUN, 7);
+  host.start(TWO_VANGUARDS, 7);
 });
 afterEach(() => {
   cleanup();

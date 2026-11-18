@@ -91,6 +91,20 @@ export function floorRngState(seed: number, floorId: FloorId): RngState {
   return seedState(seed, `dungeon/${floorId}`);
 }
 
+/** The config's hand-built text for the floor at `depth`, if it has one. */
+function floorTextAt(state: RunState, depth: number): string[] | undefined {
+  const { config } = state;
+  return depth === 1 && config.floorText !== undefined ? config.floorText : config.floorTexts?.[depth - 1];
+}
+
+/**
+ * The floor type (content id, `floor.halls`) floor `floorId` is generated from, or `null` for a
+ * hand-built floor from the config's text. Changes nothing in `state`.
+ */
+export function floorTypeOf(state: RunState, floorId: FloorId): string | null {
+  return floorTextAt(state, floorNode(state, floorId).depth) === undefined ? DEFAULT_FLOOR_TYPE : null;
+}
+
 /**
  * The RNG state the items placed on floor `floorId` are drawn from (ETH-061): like
  * `floorRngState`, from the seed and floor id alone, and separate from it, so loot changes never
@@ -108,8 +122,7 @@ export function lootRngState(seed: number, floorId: FloorId): RngState {
  */
 export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
   const node = floorNode(state, floorId);
-  const { config } = state;
-  const text = node.depth === 1 && config.floorText !== undefined ? config.floorText : config.floorTexts?.[node.depth - 1];
+  const text = floorTextAt(state, node.depth);
   const plan =
     text !== undefined
       ? parseFloorText(text)
@@ -120,6 +133,7 @@ export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
   if (node.down.length === 0) {
     plan.features = plan.features.filter((f) => !(f.feature.kind === 'stairs' && f.feature.dir === 'down'));
   }
+  const { config } = state;
   capFountains(plan, configMaxFountains(config.maxFountains));
   // `RunConfig.monsters: false` (the combat domain's config) builds floors without creatures.
   if (config.monsters === false) delete plan.spawns;

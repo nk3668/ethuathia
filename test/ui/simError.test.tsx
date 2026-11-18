@@ -7,6 +7,7 @@ import { WorkerHost } from '../../src/ui/host/workerHost';
 import type { WorkerPort } from '../../src/ui/host/workerHost';
 import { AppShell } from '../../src/ui/shell/AppShell';
 import { STOPPED_HINT } from '../../src/ui/shell/SpeedControls';
+import { setRunStarter } from '../../src/ui/stores/runStore';
 import { bindHost, DEFAULT_SPEED, useSimStore } from '../../src/ui/stores/simStore';
 import { LOG_HEIGHT, useUiStore } from '../../src/ui/stores/uiStore';
 
@@ -94,6 +95,19 @@ describe('sim error', () => {
     expect(tooltip.textContent).not.toMatch(/Key:/);
     expect(logged).toHaveBeenCalledWith('Sim worker: Actor 3 has no position');
     logged.mockRestore();
+  });
+
+  it('starts a new run from the banner (ETH-064)', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let started = 0;
+    const off = setRunStarter(() => started++);
+    render(<AppShell />);
+    act(() => worker.reply({ type: 'error', message: 'boom' }));
+    await user.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Start a new run' }));
+    expect(started).toBe(1);
+    off();
+    vi.restoreAllMocks();
   });
 
   it('clears the banner and allows resuming when a new run resets the store', async () => {

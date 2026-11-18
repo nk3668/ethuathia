@@ -477,9 +477,11 @@ What later items build on, all exported from `src/sim/floors/`:
 - **Config:** `depth` (default `DEFAULT_DEPTH`, 10), `floorTexts` (hand-built floors by depth)
   and `floorTurnCap` (default `FLOOR_TURN_CAP`).
 - **Arrival hook:** the `stairs` action emits `tookStairs` then `floorEntered { actor, floor,
-  depth, firstVisit }`. React to arrivals (depth rewards, contracts, run end at the exit) with
-  a run tracker or trigger on `floorEntered`, not by editing the stairs action. The run's first
-  floor gets no `floorEntered`.
+  depth, firstVisit, floorType }`. React to arrivals (depth rewards, contracts, run end at the
+  exit) with a run tracker or trigger on `floorEntered`, not by editing the stairs action. The
+  run's first floor gets no `floorEntered`. `floorType` (ETH-064) is the floor type id the floor
+  is built from (`floorTypeOf(state, floor)`), or `null` for a hand-built floor; the Codex marks
+  it `seen` from this event.
 - **State:** `state.domains.floors` holds `deepest` and `arrived` (the turn the party first
   reached each floor).
 - **Party:** `gatheringAt(state, floor, pos)` says who is gathered at a place (chained within
@@ -554,6 +556,10 @@ with a registry, a minimal schema (the `Def` fields only), a `KIND` in `CONTENT_
 `contract` (`contracts.ts`), `bounty` (`bounties.ts`), `omen` (`omens.ts`) and `deity`
 (`deities.ts`). The owning item extends the def type and the schema together and adds the
 defs. `src/content/index.ts` re-exports them with `export *`.
+
+`dungeon` (`src/content/dungeons.ts`, ETH-064) is a full kind: a dungeon variant the Prepare
+screen offers (`depth`, `floorType`), first def `dungeon.old_delve`. A variant some upgrade
+unlocks is offered only once that upgrade is owned (§6.3).
 
 `doctrine` (`src/content/doctrines.ts`, ETH-063) is a placeholder too: party-wide behavior
 options that upgrades unlock (below). `building` and `upgrade` (`src/content/upgrades.ts`,
@@ -1375,6 +1381,34 @@ As built (ETH-063):
 sim takes: party members with their bundles, rule sets, patron blessing, Omen bundles and the
 reward multiplier, the dungeon variant, and any gravestones to place.
 
+As built (ETH-064, `src/meta/prepare/`):
+
+- **`buildRunConfig(profile, choices, seed)`** is the one path from profile to run: Descend,
+  Start next run, auto-restart and the sim-error banner's Start a new run all go through it (via
+  the starter `App` registers). Each choice section applies in order, then every owned upgrade
+  with a `party` bundle grant is added to `partyBundles` by **node id**
+  (`upgradePartyBundles`); the sim's `bundleOf` reads an upgrade node's party bundle grants
+  (`upgradeBundle` in content), so stat tooltips credit the upgrade ("Hardy Recruits").
+  `run`-scope bundle grants have no consumer yet. The result passes `checkRunConfig` (party
+  1–`MAX_PARTY_SIZE`, known classes, races and bundles, a valid depth) or it throws a
+  `RangeError`; `App` shows that on the Prepare screen (`runStore.startFailed`).
+- **Choice sections** are composed like profile slices: `RUN_CHOICES` (`prepare/index.ts`) maps
+  a key to `defineRunChoice({ schema, init, apply(ctx, choice) })`. `RunChoices` is derived from
+  it. `apply` adds to `ctx.config` and may draw from `ctx.rng` (`Rng.seeded(seed, 'prepare')`;
+  sections draw in record order). A choice the profile no longer allows falls back to what it
+  allows. **A later Prepare decision (contracts, bounties, Omens, patron) is a section file and
+  one line in `RUN_CHOICES`, plus a panel (§8.6).**
+- **Sections so far:** `party` (`{ slots: { classId | null, raceId | null }[] }`): the party
+  always fills `partySize(profile)` = `capacity(profile, 'partySize', BASE_PARTY_SIZE = 1)`
+  (max 4); open picks are random recruits from the available classes and races with a name from
+  `RECRUIT_NAMES` (content), no repeats. `dungeon` (`{ dungeonId }`) sets `depth`.
+- **Availability:** `isAvailable(profile, id)`: content that some upgrade node unlocks is locked
+  until that node is owned; everything else is open from the start (`availableClasses`,
+  `availableRaces`, `availableDungeons`).
+- **Remembered:** the `prepare` profile slice holds `{ choices: RunChoices }`. Each section's
+  saved value is checked by its own schema and replaced by its default if missing or invalid,
+  so a new section needs no migration. `profileStore.updateRunChoices(changes)` edits it.
+
 ### 6.4 Rewards and conducts
 
 ```ts
@@ -1496,8 +1530,8 @@ As built (ETH-012), the stores are in `ui/stores/`:
 - `simStore`: `snapshot` and `events`, a ring buffer of the last `EVENT_BUFFER_SIZE` (500)
   events, each with a sequence number for list keys. `bindHost(host)` feeds a `SimHost`'s
   snapshots and events into it and returns an unsubscribe. `App` creates the host (a
-  `WorkerHost`; tests pass an `InlineHost`), binds it and starts a demo run until the Prepare
-  screen exists. Since ETH-014 it also holds `speed` (0 is paused) and `resumeSpeed` (the last
+  `WorkerHost`; tests pass an `InlineHost`) and binds it; since ETH-064 the app opens on the
+  Prepare screen and starts no run until Descend. Since ETH-014 it also holds `speed` (0 is paused) and `resumeSpeed` (the last
   running speed); `setSpeed` records a speed and sends it to the host `bindHost` connected, and
   `togglePause` switches between 0 and `resumeSpeed`. `App` sends the store's speed (1× at
   launch) after `start`. The speed is not saved between sessions. Since ETH-021 `bindHost`
@@ -1511,7 +1545,10 @@ As built (ETH-012), the stores are in `ui/stores/`:
   profile's banked currencies.
 - `runStore` (ETH-062): `report` (the finished run until the next starts), `summaryOpen`,
   `restartAt` and `restartCancelled`; `startNext` calls the starter `App` registers with
-  `setRunStarter` (same config, a new seed). `watchAutoRestart` starts the next run
+  `setRunStarter`, which builds the config from the remembered choices with `buildRunConfig`
+  and a new seed (a fixed `seed` prop counts up). ETH-064 added `screen` (`prepare` or `run`;
+  `run` by default so the shell renders alone in tests, `App` opens `prepare`), `openPrepare`
+  (forgets the finished run, so no auto-restart is pending) and `startError` / `startFailed`. `watchAutoRestart` starts the next run
   `AUTO_RESTART_MS` (5 s) after a run ends while the profile's `settings.autoRestart` is on and
   the countdown wasn't cancelled. Waiting for the player is the default. The run summary modal
   (`shell/RunSummary.tsx`) and the "run is over" banner over the map read it. Since ETH-048
@@ -1562,6 +1599,17 @@ it.
 - **Log mentions:** a log-text `text` may return parts instead of a string,
   `[`${nameOf(e.actor)} opens a `, mention('feature.door', 'door'), '.']`; each `mention` renders
   as an `Explain` link. `LogLine.text` stays the plain sentence.
+
+### 8.6 Prepare screen (`ui/prepare/`, ETH-064)
+
+`PrepareScreen` takes the party, map and log areas of the shell while `runStore.screen` is
+`prepare` (the top bar and side tabs stay, so the Town can be visited first). It only lays out
+panels: each is a `.ts` file in `ui/prepare/panels/` whose default export is
+`definePreparePanel({ id, title, column, order, Component, shown? })`, picked up by
+`import.meta.glob` (`registry.ts`), with its component in `ui/prepare/components/`. Columns are
+`party`, `loadout` and `risk` (`PREPARE_COLUMNS`). A panel gets `{ profile, choices, update }`
+and edits its section through `update(key, value)`. Shipped panels: Party, From the town (the
+upgrade party bundles) and Dungeon. **A new panel is two files and no edit to the screen.**
 
 ### 8.2 Map renderer (`ui/map/`)
 

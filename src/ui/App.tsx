@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
+import { buildRunConfig } from '../meta';
 import { createSaveStore } from '../platform';
 import type { SaveStore } from '../platform';
-import type { EntityId, SimHost } from '../sim';
-import { DEMO_RUN } from './demoRun';
+import type { EntityId, RunConfig, SimHost } from '../sim';
 import { WorkerHost } from './host/workerHost';
 import { AppShell } from './shell/AppShell';
 import { watchAutoPause } from './shell/autoPause';
@@ -14,7 +14,7 @@ import { useUiStore } from './stores/uiStore';
 export interface AppProps {
   /** Makes the sim host. Defaults to a Web Worker; tests pass an `InlineHost`. */
   createHost?: () => SimHost;
-  /** The run's seed. Defaults to a new one each launch. */
+  /** The first run's seed; later runs count up from it. Defaults to a fresh seed for every run. */
   seed?: number;
   /** Where the profile is saved. Defaults to IndexedDB (memory if unavailable); tests pass a `MemorySaveStore`. */
   createSaveStore?: () => SaveStore;
@@ -25,9 +25,11 @@ function createWorkerHost(): SimHost {
 }
 
 /**
- * The app: starts a sim host, feeds it into `simStore` and shows the in-run shell. The UI only
- * reads snapshots and events from the store and talks to the run through the host (the speed
- * control sends through `simStore.setSpeed`, which `bindHost` connects to this host).
+ * The app: opens on the Prepare screen, starts each run on a sim host from the profile's
+ * remembered Prepare choices (`buildRunConfig`), feeds the host into `simStore` and shows the
+ * shell. The UI only reads snapshots and events from the store and talks to the run through the
+ * host (the speed control sends through `simStore.setSpeed`, which `bindHost` connects to this
+ * host).
  */
 export function App({ createHost = createWorkerHost, seed, createSaveStore: makeSaveStore = createSaveStore }: AppProps) {
   // Loads the profile and autosaves it (on a timer and when the window closes).
@@ -53,23 +55,32 @@ export function App({ createHost = createWorkerHost, seed, createSaveStore: make
       void profile.save();
       useRunStore.getState().runEnded(report);
     });
-    // Each run uses the same config (the demo party until the Prepare screen); a fixed `seed`
-    // (tests) counts up from there, otherwise every run gets a fresh one.
-    let runSeed = seed ?? Date.now() % 2 ** 31;
+    // Every run (Descend, Start next run, auto-restart, after a sim error) is built from the
+    // profile's remembered Prepare choices. A fixed `seed` (tests) is the first run's and counts
+    // up from there; otherwise every run gets a fresh one. The seed also draws random recruits.
+    let nextSeed = seed;
     const startRun = () => {
+      const runSeed = nextSeed ?? Date.now() % 2 ** 31;
+      if (nextSeed !== undefined) nextSeed = (nextSeed + 1) % 2 ** 31;
+      const { profile } = useProfileStore.getState();
+      let config: RunConfig;
+      try {
+        config = buildRunConfig(profile, profile.prepare.choices, runSeed);
+      } catch (error) {
+        useRunStore.getState().startFailed(error instanceof Error ? error.message : String(error));
+        return;
+      }
       useSimStore.getState().reset();
       useRunStore.getState().runStarted();
-      host.start(DEMO_RUN, runSeed);
+      host.start(config, runSeed);
       // Runs at the speed the player last chose (1× at launch); the top bar's control changes it.
       host.setSpeed(useSimStore.getState().speed);
     };
-    const offStarter = setRunStarter(() => {
-      runSeed = seed === undefined ? Date.now() % 2 ** 31 : (runSeed + 1) % 2 ** 31;
-      startRun();
-    });
+    const offStarter = setRunStarter(startRun);
     // Starts the next run by itself when the player has turned auto-restart on.
     const unwatchRestart = watchAutoRestart();
-    startRun();
+    // The game waits on the Prepare screen until the player descends (CLAUDE.md §2).
+    useRunStore.getState().openPrepare();
     return () => {
       offSelect();
       offEnded();

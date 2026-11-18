@@ -84,6 +84,22 @@ export type UpgradeGrant =
 
 export type UpgradeGrantKind = UpgradeGrant['kind'];
 
+/**
+ * Every `bundle` grant of `node` with this `scope`, merged into one bundle (modifiers, effects
+ * and triggers in grant order), or `undefined` if it has none. The sim attaches an upgrade's
+ * party bundle by the node's id (ETH-064), so tooltips credit the upgrade by name.
+ */
+export function upgradeBundle(node: UpgradeNodeDef, scope: 'party' | 'run'): Bundle | undefined {
+  const bundles = node.grants.flatMap((g) => (g.kind === 'bundle' && g.scope === scope ? [g.bundle] : []));
+  if (bundles.length === 0) return undefined;
+  if (bundles.length === 1) return bundles[0];
+  return {
+    modifiers: bundles.flatMap((b) => b.modifiers ?? []),
+    effects: bundles.flatMap((b) => b.effects ?? []),
+    triggers: bundles.flatMap((b) => b.triggers ?? []),
+  };
+}
+
 // --- Upgrade nodes ---------------------------------------------------------------------------
 
 export interface UpgradeNodeDef extends Def {

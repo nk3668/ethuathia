@@ -23,8 +23,8 @@ describe('discovery rules', () => {
 
   it('name only content ids that exist', () => {
     for (const [type, rules] of DISCOVERY_RULES) {
-      // `runStarted` lists the party, so the sample carries one member.
-      const sample = { type, turn: 0, party: [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }] } as unknown as SimEvent;
+      // `runStarted` lists the party, so the sample carries one member; `floorEntered` names a floor type.
+      const sample = { type, turn: 0, floorType: 'floor.halls', party: [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }] } as unknown as SimEvent;
       for (const rule of rules) for (const d of rule(sample)) expect(findDef(d.id), `${type} → ${d.id}`).toBeDefined();
     }
   });
@@ -42,6 +42,10 @@ describe('discovery rules', () => {
     // A domain's own map: the floors domain discovers the stairs taken.
     const stairs: SimEvent = { type: 'tookStairs', actor: 1, dir: 'down', from: 'd1', to: 'd2', depth: 2, pos: { x: 1, y: 1 }, turn: 9 };
     expect(discoveriesOf(stairs)).toEqual([{ id: 'feature.stairs_down', mark: 'used' }]);
+    // Arriving on a floor discovers its floor type (ETH-064); a hand-built floor has none.
+    const entered = { type: 'floorEntered', actor: 1, floor: 'd2', depth: 2, firstVisit: true, turn: 9 } as const;
+    expect(discoveriesOf({ ...entered, floorType: 'floor.halls' })).toEqual([{ id: 'floor.halls', mark: 'seen' }]);
+    expect(discoveriesOf({ ...entered, floorType: null })).toEqual([]);
   });
 });
 

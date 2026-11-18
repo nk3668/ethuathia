@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { useKeymap } from '../input/useKeymap';
+import { PrepareScreen } from '../prepare/PrepareScreen';
+import { useRunStore } from '../stores/runStore';
 import { useUiStore } from '../stores/uiStore';
 import styles from './AppShell.module.css';
 import { LogPanel } from './LogPanel';
@@ -16,11 +18,15 @@ import { NARROW_QUERY, useMediaQuery } from './useMediaQuery';
  * The in-run screen (docs/VISUAL-DESIGN.md §3): a CSS grid with five named areas, `topbar`,
  * `party`, `map`, `tabs` and `log`. Below about 1000px wide (`NARROW_QUERY`) the tab panel
  * becomes a drawer opened from the top bar and the party cards go compact.
+ *
+ * Between runs (`runStore.screen` is `prepare`) the Prepare screen takes the party, map and log
+ * areas; the top bar and the side tabs stay, so the Town can be visited before descending.
  */
 export function AppShell() {
   const narrow = useMediaQuery(NARROW_QUERY);
   const logHeight = useUiStore((s) => s.logHeight);
   const drawerOpen = useUiStore((s) => s.drawerOpen);
+  const screen = useRunStore((s) => s.screen);
   const setDrawerOpen = useUiStore((s) => s.setDrawerOpen);
   const drawerId = useId();
   const drawerButton = useRef<HTMLButtonElement>(null);
@@ -51,22 +57,32 @@ export function AppShell() {
           drawerButtonRef={drawerButton}
         />
       </div>
-      <main className={styles.main} inert={behindDrawer}>
-        <div className={styles.party}>
-          <PartyColumn compact={narrow} />
-        </div>
-        <div className={styles.map}>
-          <MapArea />
-        </div>
+      <main className={styles.main} data-screen={screen} inert={behindDrawer}>
+        {screen === 'prepare' ? (
+          <div className={styles.prepare}>
+            <PrepareScreen />
+          </div>
+        ) : (
+          <>
+            <div className={styles.party}>
+              <PartyColumn compact={narrow} />
+            </div>
+            <div className={styles.map}>
+              <MapArea />
+            </div>
+          </>
+        )}
         {!narrow && (
           <div className={styles.tabs}>
             <SidePanel className={styles.fill} />
           </div>
         )}
-        <div className={styles.log}>
-          <LogResizer />
-          <LogPanel />
-        </div>
+        {screen === 'run' && (
+          <div className={styles.log}>
+            <LogResizer />
+            <LogPanel />
+          </div>
+        )}
       </main>
       {drawerShown && <SideDrawer id={drawerId} onClose={() => setDrawerOpen(false)} />}
       <RunSummary />
