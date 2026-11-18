@@ -3,7 +3,7 @@
  * the root `registries.ts` and `domain.ts` can import them without a cycle.
  */
 import type { Def } from '../../core';
-import type { Bundle } from '../../content';
+import type { AttributeId, Bundle } from '../../content';
 import type { Emit } from '../events';
 import type { Entity, EntityId, RunState } from '../state';
 import type { StatId } from './statIds';
@@ -40,6 +40,12 @@ export interface StatsPart {
   bundles: AttachedBundle[];
   /** Timed statuses, in the order they were applied. */
   statuses: ActiveStatus[];
+  /**
+   * The actor's own attribute points (ETH-033), added to its class and race values; leveling
+   * (ETH-034) raises them. For an actor without a class (a monster), its whole attributes.
+   * Left out, an adventurer has only its class and race values and anyone else has none.
+   */
+  attributes?: Partial<Record<AttributeId, number>>;
 }
 
 /** Where a stat part came from, for the tooltip: a content id and its display label. */

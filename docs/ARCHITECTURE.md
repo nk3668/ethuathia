@@ -234,8 +234,8 @@ only current `hp` and `mp` (plus energy, faction, queued).
 - **Formula:** value = (sum of `add` parts) × (product of `mul` parts), `Math.round`ed, clamped
   to `STAT_INFO[stat].min`. Parts come from, in order:
   1. **Stat providers** (`STAT_PROVIDERS`): `stats.base` (the entity's `stats.base[stat]`, or
-     `STAT_INFO` base, labeled "Base"), then `stats.class_race` (class HP/MP, race HP/MP bonus and
-     speed). **ETH-033 attributes and ETH-034 level add a provider** (`StatProvider`:
+     `STAT_INFO` base, labeled "Base"), then `stats.class_race` (the race's speed), then
+     `stats.attributes` (ETH-033, below). **ETH-034 level adds a provider** (`StatProvider`:
      `{ id, contribute(state, entity, stat, sink) }`, calling `sink(op, value, sourceId, label?)`)
      to the end of `STATS_DOMAIN.statProviders`; another domain lists it in its own
      `statProviders`. They run in domain order, then list order.
@@ -251,8 +251,22 @@ only current `hp` and `mp` (plus energy, faction, queued).
   A monster sets its numbers in `base` (`newStatsPart({ hp: 6, speed: 120, damage: 2 })`) or
   through a provider reading its def. An actor without the part gets `STAT_INFO` bases only
   (speed 0: it never acts).
-- **Attributes (ETH-033) are not stats.** They are inputs that derive these ids (a strength
-  bonus becomes a `damage` part from a provider).
+- **Attributes (ETH-033) are not stats.** They are inputs that derive these ids. There are four,
+  with original names: **Brawn**, **Finesse**, **Wits** and **Grit** (`ATTRIBUTE_IDS` in
+  `src/content/attributes.ts`, keys `brawn`… ; each has an `attribute.<key>` def with its name,
+  three-letter `abbr` and Codex text, and the Codex shows them always). A class sets all four
+  (`ClassDef.attributes`), a race adjusts some (`RaceDef.attributes`, may be negative), and the
+  actor's own points sit in `stats.attributes` (optional; leveling raises it; for an actor with
+  no class, e.g. a monster, it is the whole value). `attributeValue(entity, attr)` sums them;
+  `getAttribute` / `getAttributes` give the parts (class, race, "Trained"/"Base").
+  The `stats.attributes` provider applies **`ATTRIBUTE_FORMULAS`** (`src/sim/stats/attributes.ts`,
+  the one table of tunable constants): each row adds `(attribute − from) × perPoint` to a stat,
+  credited to `attribute.<key>` and labeled with name and value ("Grit 14"). Max HP = Grit + ½
+  Brawn, MP = Wits, carry = 2 × Brawn (from 0); accuracy and evasion = Finesse − 10, damage =
+  ½ (Brawn − 10) (from `ATTRIBUTE_NEUTRAL` 10, so an average attribute adds nothing and a low one
+  subtracts). An entity with no adventurer part and no `stats.attributes` gets no attribute parts,
+  so monsters built from `stats.base` alone are unaffected. The snapshot's
+  `domains.stats.members[id].attributes` carries each `AttributeResult`.
 - Content names stats by id string; `checkGame` checks refs of kind `stat` against `STAT_REFS`.
   A new stat is one entry in `STAT_IDS` and `STAT_INFO`.
 
@@ -361,8 +375,8 @@ slice.
 parts and domain slices included. **A PR that changes the shape sets it to the version on main
 plus one when it rebases**, so two branches never ship different shapes under one number. If
 main moved past your version while your PR waited, rebase and bump again. ETH-055 made it 4,
-then 5 on main, ETH-058 (the floors slice) 6, and ETH-057 7 (the `stats` part; `speed`,
-`maxHp` and `maxMp` left `ActorPart`).
+then 5 on main, ETH-058 (the floors slice) 6, ETH-057 7 (the `stats` part; `speed`,
+`maxHp` and `maxMp` left `ActorPart`), and ETH-033 8 (`stats.attributes`).
 
 ### Floors and arrival (ETH-058)
 
@@ -1074,9 +1088,9 @@ As built (ETH-015):
   falling back to its plain `glyph`.
 - **First defs:** terrain `wall` and `floor`; features `door` (states `closed` and `open`),
   `stairs_up` and `stairs_down`; class `class.vanguard`; race `race.human`; floor type
-  `floor.halls`. A class sets starting max `hp` and `mp`; a race adds `hpBonus` and `mpBonus` and
-  sets `speed`. The `stats.class_race` stat provider turns them into labeled stat parts
-  (ETH-057); `createRun` checks them (`adventurerActor`) and throws, naming the adventurer, on
+  `floor.halls`. A class sets starting `attributes`; a race adjusts them and sets `speed`.
+  The `stats.attributes` and `stats.class_race` stat providers turn them into labeled stat
+  parts (ETH-033, ETH-057); `createRun` checks them (`adventurerActor`) and throws, naming the adventurer, on
   an unknown class or race. `actor.adventurer` is not a def: an adventurer's look comes from its slot.
 
 ---

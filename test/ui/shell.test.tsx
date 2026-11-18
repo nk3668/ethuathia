@@ -200,6 +200,22 @@ describe('AppShell at desktop width', () => {
     expect(within(badges[0] as HTMLElement).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['! Poisoned 4', '» Hasted 1']);
   });
 
+  it('shows attributes as compact chips, explaining where each comes from and what it adds', async () => {
+    const user = userEvent.setup();
+    useSimStore.getState().receiveSnapshot({ ...SNAPSHOT, domains: fixtureDomains() });
+    render(<AppShell />);
+    const party = screen.getByRole('region', { name: 'Party' });
+    const chips = within(party).getByRole('list', { name: 'Attributes' });
+    expect(within(chips).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['BRN 12', 'FIN 10', 'WIT 5', 'GRT 14']);
+    await user.hover(within(chips).getByLabelText('Brawn 12'));
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toContain('From: Vanguard 11, Human +1.');
+    expect(tip.textContent).toContain('Adds: Max HP +6, Damage +1, Carry +24.');
+    // Race and class are Explain links.
+    expect(party.querySelector('[data-explain="class.vanguard"]')).not.toBeNull();
+    expect(party.querySelector('[data-explain="race.human"]')).not.toBeNull();
+  });
+
   it('selects an adventurer from their card', async () => {
     const user = userEvent.setup();
     useSimStore.getState().receiveSnapshot(SNAPSHOT);

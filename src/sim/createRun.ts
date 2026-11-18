@@ -18,17 +18,15 @@ import type { ActorPart, AdventurerConfig, FloorId, RunConfig, RunState } from '
 export const FIRST_FLOOR_TYPE = DEFAULT_FLOOR_TYPE;
 
 /**
- * An adventurer's starting actor part: HP and MP at the class's values plus the race's bonuses
- * (the same sum the `stats.class_race` provider gives their maxima). Throws, naming the
- * adventurer, on an unknown class or race id. `createRun` fills HP and MP again once party
- * bundles are attached (`startPartyStats`).
+ * An adventurer's starting actor part, with HP and MP at a placeholder 1 and 0: their maxima
+ * come from the class and race attributes through the stat providers, and `createRun` fills
+ * them once the entity and its party bundles exist (`startPartyStats`). Throws, naming the
+ * adventurer, on an unknown class or race id.
  */
 export function adventurerActor(member: AdventurerConfig): ActorPart {
   if (!CLASSES.has(member.classId)) throw new Error(`Adventurer "${member.name}" has unknown class id "${member.classId}"`);
   if (!RACES.has(member.raceId)) throw new Error(`Adventurer "${member.name}" has unknown race id "${member.raceId}"`);
-  const cls = CLASSES.get(member.classId);
-  const race = RACES.get(member.raceId);
-  return { energy: 0, hp: cls.hp + race.hpBonus, mp: cls.mp + race.mpBonus, faction: 'party' };
+  return { energy: 0, hp: 1, mp: 0, faction: 'party' };
 }
 
 /**
@@ -37,7 +35,8 @@ export function adventurerActor(member: AdventurerConfig): ActorPart {
  * the other floors are built when first reached, `ensureFloor`), and the party placed at
  * the floor's `@` marks, or on its up stairs if it has none. Extra party members go on the
  * nearest free floor tiles, and the party's memory starts with what they can see. Each
- * adventurer's HP, MP and speed come from its class and race (the `stats.class_race` provider),
+ * adventurer's HP, MP and speed come from its class and race (the `stats.class_race` and
+ * `stats.attributes` providers),
  * plus the config's `partyBundles` and `partyStatuses`, so an unknown class, race, bundle or
  * status id throws. Each domain's state slice comes from `initDomains(config)`.
  * `config` is copied, not kept.

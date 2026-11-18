@@ -22,7 +22,7 @@ import type { StatsConfig, StatsParts } from './stats';
  * A branch that changes the shape sets it to (the version on main) + 1 when it rebases, so two
  * branches never ship different shapes under one number (docs/ARCHITECTURE.md, Contracts).
  */
-export const STATE_VERSION = 7;
+export const STATE_VERSION = 8;
 
 /**
  * Entity ids are positive integers handed out in order from `RunState.nextEntityId` and never

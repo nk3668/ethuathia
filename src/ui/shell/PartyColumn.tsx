@@ -1,6 +1,10 @@
 import { useShallow } from 'zustand/react/shallow';
-import { STATUSES } from '../../content';
-import type { EntityId } from '../../sim';
+import { ATTRIBUTE_IDS, attributeDef, attributeDefId, STATUSES } from '../../content';
+import type { AttributeId } from '../../content';
+import { STAT_IDS, STAT_INFO } from '../../sim';
+import type { EntityId, MemberStatsView } from '../../sim';
+import { Explain } from '../codex/Explain';
+import { attributeEffectText } from '../codex/attributeText';
 import { keyHint } from '../input/keymap';
 import { runKeyAction } from '../input/useKeymap';
 import { Bar, Button, Card, Panel, Tooltip } from '../kit';
@@ -8,6 +12,12 @@ import { useSimStore } from '../stores/simStore';
 import { useUiStore } from '../stores/uiStore';
 import styles from './PartyColumn.module.css';
 import { contentName, ruleLabel } from './text';
+
+/** A number as a signed contribution: "+6", "−1", "+0.5". */
+function signed(value: number): string {
+  const rounded = Math.round(value * 100) / 100;
+  return `${rounded < 0 ? '−' : '+'}${Math.abs(rounded)}`;
+}
 
 export interface PartyColumnProps {
   /** One line per member (number, name, HP) instead of the full card. */
@@ -105,7 +115,8 @@ function useMember(id: EntityId) {
       if (!m) return null;
       return {
         name: m.name,
-        kind: `${contentName(m.raceId)} ${contentName(m.classId)}`,
+        raceId: m.raceId,
+        classId: m.classId,
         alive: m.alive,
         hp: m.hp,
         maxHp: m.maxHp,
@@ -163,6 +174,83 @@ function StatusBadges({ id }: { id: EntityId }) {
   );
 }
 
+/** One attribute as the card shows it, with what it is made of and what it adds, for the tooltip. */
+interface AttributeChip {
+  attribute: AttributeId;
+  value: number;
+  /** Class, race and own points: "Vanguard 11". */
+  from: string[];
+  /** Stats it adds to: "Max HP +6". */
+  adds: string[];
+}
+
+function attributeChips(view: MemberStatsView | undefined): AttributeChip[] {
+  if (view === undefined) return [];
+  return ATTRIBUTE_IDS.map((attribute) => {
+    const result = view.attributes[attribute];
+    const source = attributeDefId(attribute);
+    const adds: string[] = [];
+    for (const stat of STAT_IDS) {
+      for (const part of view.stats[stat].parts) {
+        if (part.source.id === source && part.op === 'add') adds.push(`${STAT_INFO[stat].label} ${signed(part.value)}`);
+      }
+    }
+    return {
+      attribute,
+      value: result.value,
+      from: result.parts.map((p, i) => `${p.source.label} ${i === 0 ? p.value : signed(p.value)}`),
+      adds,
+    };
+  });
+}
+
+/**
+ * A member's four attributes as compact chips ("BRN 12"), each with a tooltip saying where its
+ * value comes from (class, race, training) and what it adds to each stat (ETH-033). The selector
+ * returns one string, so the chips only re-render when a value or contribution changes.
+ */
+function AttributeChips({ id }: { id: EntityId }) {
+  const key = useSimStore((s) => JSON.stringify(attributeChips(s.snapshot?.domains.stats.members[id])));
+  const chips = JSON.parse(key) as AttributeChip[];
+  if (chips.length === 0) return null;
+  return (
+    <ul className={styles.attributes} aria-label="Attributes">
+      {chips.map((chip) => {
+        const def = attributeDef(chip.attribute);
+        return (
+          <li key={chip.attribute}>
+            <Tooltip
+              content={
+                <>
+                  <strong>
+                    {def.name} {chip.value}
+                  </strong>
+                  <br />
+                  {def.description}
+                  {chip.from.length > 0 && (
+                    <>
+                      <br />
+                      From: {chip.from.join(', ')}.
+                    </>
+                  )}
+                  <br />
+                  {chip.adds.length > 0 ? <>Adds: {chip.adds.join(', ')}.</> : <>Adds nothing at this value.</>}
+                  <br />
+                  <span className={styles.attributeRule}>{attributeEffectText(chip.attribute)}.</span>
+                </>
+              }
+            >
+              <span className={styles.attribute} tabIndex={0} aria-label={`${def.name} ${chip.value}`}>
+                <span className={styles.attributeAbbr}>{def.abbr}</span> {chip.value}
+              </span>
+            </Tooltip>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function PartyCard({ id, slot, compact }: PartyCardProps) {
   const member = useMember(id);
   const selected = useUiStore((s) => s.selected === id);
@@ -206,11 +294,14 @@ function PartyCard({ id, slot, compact }: PartyCardProps) {
   return (
     <Card selected={selected} className={styles.card} data-dead={!member.alive || undefined}>
       <div className={styles.header}>{nameButton}</div>
-      <p className={styles.kind}>{member.kind}</p>
+      <p className={styles.kind}>
+        <Explain id={member.raceId}>{contentName(member.raceId)}</Explain> <Explain id={member.classId}>{contentName(member.classId)}</Explain>
+      </p>
       {hp}
       {member.maxMp > 0 && (
         <Bar label="MP" tone="mp" value={member.mp} max={member.maxMp} ariaLabel={`${member.name}'s MP`} />
       )}
+      {member.alive && <AttributeChips id={id} />}
       {member.alive && <StatusBadges id={id} />}
       {member.alive ? (
         <p className={styles.intent}>

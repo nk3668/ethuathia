@@ -6,7 +6,8 @@
  * Everything this domain adds lives in this folder (docs/ARCHITECTURE.md, Contracts). The root
  * files only compose what is exported here. Never import `domains.ts` or `index.ts` from this folder.
  */
-import { CLASSES, RACES, STATUSES } from '../../content';
+import { isAttributeId, RACES, STATUSES } from '../../content';
+import type { AttributeId } from '../../content';
 import type { ActionRecord } from '../actions';
 import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx, TurnCtx } from '../domain';
@@ -14,6 +15,8 @@ import type { Emit } from '../events';
 import { registerInvariant } from '../invariants';
 import type { DiscoveryRules } from '../run/codex';
 import type { EntityId, RunConfig, RunState } from '../state';
+import { getAttributes, PROVIDER_ATTRIBUTES } from './attributes';
+import type { AttributeResult } from './attributes';
 import { attachBundle } from './bundles';
 import { fireTrigger } from './effects';
 import { bundleOf, fillVitals, getStats, hasBundle, statValue } from './getStat';
@@ -43,6 +46,17 @@ export { applyStatus, ensureStats, removeStatus, tickStatuses } from './statuses
 export type { StatusApplyMode } from './statuses';
 export { fireTrigger, MAX_TRIGGER_DEPTH, runEffect, runEffects } from './effects';
 export { attachBundle, detachBundles } from './bundles';
+export {
+  ATTRIBUTE_FORMULAS,
+  ATTRIBUTE_NEUTRAL,
+  attributeValue,
+  formulasFor,
+  getAttribute,
+  getAttributes,
+  hasAttributes,
+  PROVIDER_ATTRIBUTES,
+} from './attributes';
+export type { AttributeFormula, AttributePart, AttributeResult } from './attributes';
 
 /** The events this domain emits (bodies, without `turn`). Each needs a formatter in `ui/shell/logText/stats.ts`. */
 export type StatsEvent =
@@ -82,6 +96,8 @@ export interface MemberStatsView {
   statuses: StatusView[];
   /** Every stat with its parts and their sources: what stat tooltips show. */
   stats: Record<StatId, StatResult>;
+  /** Every attribute with its parts (class, race, own points). */
+  attributes: Record<AttributeId, AttributeResult>;
 }
 
 /** This domain's slice of the snapshot, at `snapshot.domains.stats`. Plain data. */
@@ -159,6 +175,7 @@ export function statsSnapshot({ state }: SnapshotCtx): StatsSnapshot {
     members[id] = {
       statuses: (entity.stats?.statuses ?? []).map((s) => ({ status: s.status, remaining: s.remaining, potency: s.potency })),
       stats: getStats(state, entity),
+      attributes: getAttributes(entity),
     };
   }
   return { members };
@@ -177,23 +194,17 @@ export const PROVIDER_BASE: StatProvider = {
   },
 };
 
-/** An adventurer's class (HP, MP) and race (HP and MP bonuses, speed). */
+/**
+ * What an adventurer's class and race give directly rather than through attributes: the race's
+ * speed. Max HP, MP and the rest come from attributes (`stats.attributes`, ETH-033).
+ */
 export const PROVIDER_CLASS_RACE: StatProvider = {
   id: 'stats.class_race',
   contribute(_state, entity, stat, sink) {
     const a = entity.adventurer;
-    if (a === undefined) return;
-    const cls = CLASSES.get(a.classId);
+    if (a === undefined || stat !== 'speed') return;
     const race = RACES.get(a.raceId);
-    if (stat === 'hp') {
-      sink('add', cls.hp, cls.id, cls.name);
-      sink('add', race.hpBonus, race.id, race.name);
-    } else if (stat === 'mp') {
-      sink('add', cls.mp, cls.id, cls.name);
-      sink('add', race.mpBonus, race.id, race.name);
-    } else if (stat === 'speed') {
-      sink('add', race.speed, race.id, race.name);
-    }
+    sink('add', race.speed, race.id, race.name);
   },
 };
 
@@ -257,7 +268,10 @@ registerInvariant('stats.values', (state) => {
   return problems;
 });
 
-/** Stats parts are well formed: known stat ids with finite bases, known bundles and statuses with turns left. */
+/**
+ * Stats parts are well formed: known stat ids with finite bases, known bundles and statuses with
+ * turns left, and whole points in known attributes.
+ */
 registerInvariant('stats.parts', (state) => {
   const problems: string[] = [];
   for (const entity of Object.values(state.entities)) {
@@ -277,6 +291,10 @@ registerInvariant('stats.parts', (state) => {
       }
       if (!Number.isFinite(s.potency) || s.potency <= 0) problems.push(`entity ${entity.id} has status "${s.status}" at potency ${s.potency}`);
     }
+    for (const [attribute, value] of Object.entries(stats.attributes ?? {})) {
+      if (!isAttributeId(attribute)) problems.push(`entity ${entity.id} has points in unknown attribute "${attribute}"`);
+      else if (typeof value !== 'number' || !Number.isInteger(value)) problems.push(`entity ${entity.id} has ${attribute} points ${String(value)}`);
+    }
   }
   return problems;
 });
@@ -292,7 +310,7 @@ export const STATS_DOMAIN: SimDomain<StatsTypes> = {
   commands: STATS_COMMANDS,
   init: initStats,
   snapshot: statsSnapshot,
-  statProviders: [PROVIDER_BASE, PROVIDER_CLASS_RACE],
+  statProviders: [PROVIDER_BASE, PROVIDER_CLASS_RACE, PROVIDER_ATTRIBUTES],
   bundleSources: [SOURCE_ATTACHED, SOURCE_STATUSES],
   triggers: [TRIGGER_TURN_START, TRIGGER_TURN_END],
   turnStart: statsTurnStart,

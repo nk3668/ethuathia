@@ -1,18 +1,19 @@
 /**
- * Adventurer races: the folk an adventurer was born to. A race adds to the class's starting HP and
- * MP and sets the adventurer's speed (see `src/sim/run.ts`).
+ * Adventurer races: the folk an adventurer was born to. A race adjusts the class's starting
+ * attributes (ETH-033) and sets the adventurer's speed (the `stats.class_race` and
+ * `stats.attributes` providers in `src/sim/stats/`).
  */
 import { z } from 'zod';
 import { Registry } from '../core';
 import type { Def } from '../core';
+import { attributeBonusSchema } from './attributes';
+import type { AttributeId } from './attributes';
 import type { ContentKind } from './kind';
-import { defShape, nonNegativeInt, positiveInt } from './schema';
+import { defShape, positiveInt } from './schema';
 
 export interface RaceDef extends Def {
-  /** Added to the class's starting maximum HP. */
-  readonly hpBonus: number;
-  /** Added to the class's starting maximum MP. */
-  readonly mpBonus: number;
+  /** Added to the class's starting attributes; may be negative. Attributes left out get 0. */
+  readonly attributes: Readonly<Partial<Record<AttributeId, number>>>;
   /** Energy gained per tick; 100 acts once a turn (docs/ARCHITECTURE.md §3.3). */
   readonly speed: number;
 }
@@ -23,8 +24,7 @@ export const RACE_KIND: ContentKind<RaceDef> = {
   registry: RACES,
   schema: z.strictObject({
     ...defShape('race'),
-    hpBonus: nonNegativeInt,
-    mpBonus: nonNegativeInt,
+    attributes: attributeBonusSchema,
     speed: positiveInt,
   }),
 };
@@ -41,7 +41,6 @@ export const RACE_HUMAN = defineRace({
     'Restless folk from the river towns, quick to learn and slow to give up. They have no great gift, ' +
     'and no great failing either.',
   tags: [],
-  hpBonus: 2,
-  mpBonus: 2,
+  attributes: { brawn: 1, finesse: 1, wits: 1, grit: 1 },
   speed: 100,
 });
