@@ -78,6 +78,14 @@
   overflow-wrap: anywhere;
 }
 
+/* A folded line's repeat count; the tooltip gives the turn range. */
+.repeat {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: help;
+}
+
 .line[data-category='combat'] .prefix {
   color: var(--log-combat);
 }
