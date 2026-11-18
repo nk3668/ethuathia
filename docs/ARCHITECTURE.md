@@ -237,7 +237,9 @@ All in `src/sim/run/`:
 - **Victory checks** are a registry like the rule registries: `SimDomain.victoryChecks`, joined
   into `VICTORY_CHECKS`. A `VictoryCheck` is `{ id, check(state) → { applies, met, detail } }`.
   Contracts (ETH-024) add theirs; with none registered (now), walking out is a retreat.
-- **Result:** `runResult(state)` builds the `RunResult` (a fresh copy); `runReport(state)` is
+- **Result:** `runResult(state)` builds the `RunResult` (a fresh copy), with
+  `extras['run.end']` (the `RunEnd`) and `extras['run.party']` (`PartyMemberRecord[]`:
+  `{ actor, name, classId, raceId }` in party order, ETH-048); `runReport(state)` is
   `{ result, end }`, what the hosts hand the UI. `lost` stays empty until ETH-023.
 - **Heading out:** `cond.heading_out` holds once `leaving` is set; `act.retreat_run` climbs to
   the remembered stairs up and takes them once the floor's living members are gathered (at the
@@ -1262,7 +1264,12 @@ makes them easy to test and safe to autosave after.
 As built (ETH-059), `src/meta/profile.ts` composes the profile from slices (Contracts, "Profile
 slices"). The slices so far are `currencies` (banked Renown, Trophies and Favor per deity id,
 `{ renown, trophies, favor: Record<deity id, number> }`), `history` (lifetime totals and the
-last `HISTORY_LIMIT` (20) runs as `RunRecord`s), `upgrades` (owned upgrade node ids, §6.2) and `codex` (ETH-065: `{ entries: CodexDiscoveries }`, merged from `extras["track.codex"]`, Contracts "Codex discoveries"), `settings` and `milestones` (ETH-074: `{ unlocked: { id, run }[] }`, filled by `unlockMilestones` at the end of `applyRunResult`, §6.2). `checkProfile(profile)` returns one line per
+last `HISTORY_LIMIT` (50, tunable; a save holding more is trimmed on load) runs as compact
+`RunRecord`s, newest first: outcome, turns, deepest floor, banked and lost currencies, the
+cause, the party `{ name, classId, raceId, fell: { depth, turn } | null }` and the content ids
+met; `runRecord(run, result)` builds one from `extras['run.end']`, `['run.party']`,
+`['track.deaths']` and `['track.codex']`. Slice version 2 (ETH-048); v1 lists were oldest
+first without the details), `upgrades` (owned upgrade node ids, §6.2) and `codex` (ETH-065: `{ entries: CodexDiscoveries }`, merged from `extras["track.codex"]`, Contracts "Codex discoveries"), `settings` and `milestones` (ETH-074: `{ unlocked: { id, run }[] }`, filled by `unlockMilestones` at the end of `applyRunResult`, §6.2). `checkProfile(profile)` returns one line per
 problem. Currency names and tooltip text are `CURRENCY_INFO` in `src/meta/currencies.ts`.
 
 ### 6.2 Upgrade engine
@@ -1479,7 +1486,10 @@ As built (ETH-012), the stores are in `ui/stores/`:
   `setRunStarter` (same config, a new seed). `watchAutoRestart` starts the next run
   `AUTO_RESTART_MS` (5 s) after a run ends while the profile's `settings.autoRestart` is on and
   the countdown wasn't cancelled. Waiting for the player is the default. The run summary modal
-  (`shell/RunSummary.tsx`) and the "run is over" banner over the map read it.
+  (`shell/RunSummary.tsx`) and the "run is over" banner over the map read it. Since ETH-048
+  `pastRun` (a `RunRecord`, set by `showPastRun`) reopens the same modal for a past run from the
+  Stats tab (`ui/stats/StatsPanel.tsx`); `reportFromRecord` (`shell/runSummaryText.ts`) turns
+  the record back into a `RunReport`.
 - `uiStore`: `selected`, `tab`, `drawerOpen`, `logHeight`, `logFilter` and `mapCamera`
   (ETH-013). Zustand's `persist` keeps `logHeight`, `tab` and `mapCamera` in `localStorage`
   (key `ethuathia.ui`), through a wrapper that

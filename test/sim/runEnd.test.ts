@@ -99,11 +99,15 @@ describe('run end', () => {
     const renown = RENOWN_PER_FLOOR * 2 + Math.floor(state.turn / TURNS_PER_RENOWN);
     expect(result).toMatchObject({ outcome: 'retreat', atRisk: { renown }, lost: {}, turns: state.turn, deepestDepth: 3 });
     expect(result.atRisk[TROPHIES]).toBeUndefined();
-    expect(Object.keys(result.extras)).toEqual([...RUN_TRACKERS.map((t) => t.id), 'run.end']);
+    expect(Object.keys(result.extras)).toEqual([...RUN_TRACKERS.map((t) => t.id), 'run.end', 'run.party']);
     expect(result.extras['track.depth']).toEqual({ deepest: 3 });
     expect(result.extras['track.deaths']).toEqual({ fallen: [] });
     expect(result.extras['track.codex']).toMatchObject({ 'class.vanguard': ['seen'], 'race.human': ['seen'] });
     expect(result.extras['run.end']).toEqual(state.domains.run.end);
+    // Who set out, for the run summary and the run history (ETH-048).
+    expect(result.extras['run.party']).toEqual(
+      state.party.map((id) => ({ actor: id, name: state.entities[id]?.adventurer?.name, classId: 'class.vanguard', raceId: 'race.human' })),
+    );
     // A copy: changing it changes nothing in the state.
     (result.extras['track.depth'] as { deepest: number }).deepest = 99;
     expect(checkInvariants(state)).toEqual([]);

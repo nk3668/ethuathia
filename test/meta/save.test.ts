@@ -23,7 +23,7 @@ describe('encodeSave / decodeSave', () => {
   it('writes the format, version and each slice with its version', () => {
     const raw = JSON.parse(encodeSave(newProfile(), 7)) as Record<string, unknown>;
     expect(raw).toMatchObject({ format: SAVE_FORMAT, version: SAVE_VERSION, savedAt: 7 });
-    expect(raw.slices).toMatchObject({ currencies: { version: 1 }, history: { version: 1 } });
+    expect(raw.slices).toMatchObject({ currencies: { version: 1 }, history: { version: 2 } });
   });
 
   it('loads a hand-written v1 save of the current slices', () => {

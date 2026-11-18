@@ -78,15 +78,16 @@ describe('applyRunResult', () => {
     const { totals, recent } = profile.history;
     expect(totals).toEqual({
       runs: HISTORY_LIMIT + 5,
-      victories: 13,
+      victories: Math.ceil((HISTORY_LIMIT + 5) / 2),
       retreats: 0,
-      wipes: 12,
+      wipes: Math.floor((HISTORY_LIMIT + 5) / 2),
       turns: (HISTORY_LIMIT + 5) * 10,
       deepestDepth: HISTORY_LIMIT + 5,
     });
     expect(recent).toHaveLength(HISTORY_LIMIT);
-    expect(recent[0]?.run).toBe(6);
-    expect(recent.at(-1)?.run).toBe(HISTORY_LIMIT + 5);
+    // Newest first.
+    expect(recent[0]?.run).toBe(HISTORY_LIMIT + 5);
+    expect(recent.at(-1)?.run).toBe(6);
   });
 
   it('throws on a malformed result rather than banking it', () => {

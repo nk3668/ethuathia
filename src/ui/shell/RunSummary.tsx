@@ -6,7 +6,7 @@ import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
 import { useSimStore } from '../stores/simStore';
 import styles from './RunSummary.module.css';
-import { currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, OUTCOME_LOOK, unlockLines } from './runSummaryText';
+import { currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, OUTCOME_LOOK, partyOf, reportFromRecord, unlockLines } from './runSummaryText';
 import { contentName } from './text';
 
 /** Turn counts in full, as in the top bar. */
@@ -21,16 +21,25 @@ const TURN_FORMAT = new Intl.NumberFormat('en-US');
 export function RunSummary() {
   const report = useRunStore((s) => s.report);
   const open = useRunStore((s) => s.summaryOpen);
+  const pastRun = useRunStore((s) => s.pastRun);
+  // A past run opened from the run history (ETH-048) shows over everything, with only Close.
+  if (pastRun !== null) return <SummaryDialog key={pastRun.run} report={reportFromRecord(pastRun)} run={pastRun.run} />;
   if (report === null || !open) return null;
   return <SummaryDialog report={report} />;
 }
 
-function SummaryDialog({ report }: { report: RunReport }) {
+/** With `run`, the dialog shows that past run and only closes; without, the run that just ended. */
+function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const titleId = useId();
   const next = useRef<HTMLButtonElement>(null);
   const setSummaryOpen = useRunStore((s) => s.setSummaryOpen);
+  const showPastRun = useRunStore((s) => s.showPastRun);
   const startNext = useRunStore((s) => s.startNext);
-  const party = useSimStore((s) => s.snapshot?.party);
+  const past = run !== undefined;
+  const close = () => (past ? showPastRun(null) : setSummaryOpen(false));
+  const liveParty = useSimStore((s) => s.snapshot?.party);
+  const recorded = partyOf(report);
+  const party = recorded.length > 0 || past ? recorded.map((m) => ({ id: m.actor, name: m.name })) : liveParty;
   const look = OUTCOME_LOOK[report.end.outcome];
   const fallen = fallenOf(report);
   const found = discoveriesOf(report);
@@ -48,7 +57,7 @@ function SummaryDialog({ report }: { report: RunReport }) {
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             e.preventDefault();
-            setSummaryOpen(false);
+            close();
           }
         }}
       >
@@ -56,7 +65,7 @@ function SummaryDialog({ report }: { report: RunReport }) {
           <span aria-hidden="true" className={styles.icon}>
             {look.icon}
           </span>
-          {look.title}
+          {past ? `Run ${run} · ${look.title}` : look.title}
         </h2>
         <p className={styles.cause}>{report.end.cause}</p>
         <p className={styles.facts}>
@@ -111,19 +120,27 @@ function SummaryDialog({ report }: { report: RunReport }) {
           </section>
         )}
 
-        <Unlocked />
+        <Unlocked run={run} />
 
         <p className={styles.epitaph}>{epitaph(report)}</p>
 
-        <AutoRestart />
+        {!past && <AutoRestart />}
 
         <div className={styles.actions}>
-          <Button variant="ghost" onClick={() => setSummaryOpen(false)}>
-            Review log
-          </Button>
-          <Button ref={next} variant="primary" onClick={startNext}>
-            Start next run
-          </Button>
+          {past ? (
+            <Button ref={next} variant="primary" onClick={close}>
+              Close
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={close}>
+                Review log
+              </Button>
+              <Button ref={next} variant="primary" onClick={startNext}>
+                Start next run
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -132,11 +149,12 @@ function SummaryDialog({ report }: { report: RunReport }) {
 
 /**
  * What this run's milestones opened (ETH-074), e.g. "Smithy: you reached floor 3". The profile
- * has already banked the run when the summary opens, so these are its latest unlocks.
+ * has already banked the run when the summary opens, so these are its latest unlocks. For a past
+ * run (`run`, from the run history) they are the unlocks recorded under that run's number.
  */
-function Unlocked() {
+function Unlocked({ run }: { run?: number }) {
   const profile = useProfileStore((s) => s.profile);
-  const lines = unlockLines(profile);
+  const lines = unlockLines(profile, run);
   if (lines.length === 0) return null;
   return (
     <section aria-label="Unlocked">

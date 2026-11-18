@@ -1,0 +1,159 @@
+/* The Stats tab (docs/VISUAL-DESIGN.md §5.5): lifetime totals and the run history. */
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.stats h3,
+.stats p {
+  margin: 0;
+}
+
+.heading {
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-label);
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
+  font-weight: var(--font-weight-medium);
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  background: var(--bg-raised);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.total dt {
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-label);
+}
+
+.total dd {
+  margin: 0;
+  font-size: var(--font-size-heading);
+  line-height: var(--line-height-heading);
+  font-weight: var(--font-weight-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty,
+.note {
+  color: var(--text-muted);
+}
+
+.note {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-label);
+}
+
+.runs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A whole row is the button; a left border in the outcome's color, with the icon as the second signal. */
+.run {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-raised);
+  border: var(--border-width) solid var(--border);
+  border-left: 3px solid var(--text-muted);
+  border-radius: var(--radius-card);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+
+.run:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+.run[data-outcome='victory'] {
+  border-left-color: var(--renown);
+}
+
+.run[data-outcome='retreat'] {
+  border-left-color: var(--accent);
+}
+
+.run[data-outcome='wipe'] {
+  border-left-color: var(--danger);
+}
+
+.runHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.icon {
+  color: var(--accent);
+}
+
+.run[data-outcome='victory'] .icon {
+  color: var(--renown);
+}
+
+.run[data-outcome='wipe'] .icon {
+  color: var(--danger);
+}
+
+.runTitle {
+  font-weight: var(--font-weight-medium);
+}
+
+.facts {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-label);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.party {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.currencies {
+  display: flex;
+  gap: var(--space-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.renown {
+  color: var(--renown);
+}
+
+.trophies {
+  color: var(--trophies);
+}

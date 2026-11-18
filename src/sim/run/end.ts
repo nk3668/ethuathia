@@ -41,6 +41,14 @@ export interface Leaving {
   announced: boolean;
 }
 
+/** One party member as the run ended, in `RunResult.extras['run.party']` (ETH-048). */
+export interface PartyMemberRecord {
+  actor: EntityId;
+  name: string;
+  classId: string;
+  raceId: string;
+}
+
 /** What the host hands the UI when a run ends: the result to bank and how it ended. */
 export interface RunReport {
   result: RunResult;
@@ -55,11 +63,7 @@ export function announceStart(state: RunState, emit: Emit): void {
   const slice = state.domains.run;
   if (slice.started) return;
   slice.started = true;
-  const party = state.party.flatMap((id) => {
-    const a = state.entities[id]?.adventurer;
-    return a === undefined ? [] : [{ actor: id, name: a.name, classId: a.classId, raceId: a.raceId }];
-  });
-  emit({ type: 'runStarted', party, depth: dungeonDepth(state) });
+  emit({ type: 'runStarted', party: partyRecords(state), depth: dungeonDepth(state) });
 }
 
 /** True once the run has ended. */
@@ -158,8 +162,9 @@ function wipeCause(state: RunState): string {
 
 /**
  * The finished run's `RunResult`, for meta's `applyRunResult`: the at-risk totals, the turns,
- * the deepest floor and every tracker's extras (plus `extras['run.end']`, the `RunEnd`). `lost`
- * stays empty until the wipe penalty (ETH-023). Throws if the run hasn't ended.
+ * the deepest floor and every tracker's extras (plus `extras['run.end']`, the `RunEnd`, and
+ * `extras['run.party']`, the party's `PartyMemberRecord`s). `lost` stays empty until the wipe
+ * penalty (ETH-023). Throws if the run hasn't ended.
  */
 export function runResult(state: RunState): RunResult {
   const runEnd = state.domains.run.end;
@@ -170,7 +175,15 @@ export function runResult(state: RunState): RunResult {
     lost: {},
     turns: state.turn,
     deepestDepth: state.domains.floors.deepest,
-    extras: { ...trackerExtras(state), 'run.end': runEnd },
+    extras: { ...trackerExtras(state), 'run.end': runEnd, 'run.party': partyRecords(state) },
+  });
+}
+
+/** Who set out, in party order, for the run summary and the run history. */
+function partyRecords(state: RunState): PartyMemberRecord[] {
+  return state.party.flatMap((id) => {
+    const a = state.entities[id]?.adventurer;
+    return a === undefined ? [] : [{ actor: id, name: a.name, classId: a.classId, raceId: a.raceId }];
   });
 }
 

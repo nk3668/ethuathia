@@ -8,6 +8,7 @@
  * starts it after `AUTO_RESTART_MS` instead, unless the player cancels that countdown.
  */
 import { create } from 'zustand';
+import type { RunRecord } from '../../meta';
 import type { RunReport, Unsubscribe } from '../../sim';
 import { useProfileStore } from './profileStore';
 
@@ -23,9 +24,13 @@ export interface RunStoreState {
   restartAt: number | null;
   /** The player cancelled this run's auto-restart countdown. */
   restartCancelled: boolean;
+  /** A past run whose summary is open from the run history (ETH-048), or `null`. */
+  pastRun: RunRecord | null;
   /** Records a finished run and opens the summary. */
   runEnded(report: RunReport): void;
   setSummaryOpen(open: boolean): void;
+  /** Opens a past run's summary from the run history, or closes it with `null`. */
+  showPastRun(record: RunRecord | null): void;
   /** Cancels the pending auto-restart for this run only (the setting stays on). */
   cancelRestart(): void;
   /** Starts the next run with the same settings, through the starter `App` registered. */
@@ -50,8 +55,10 @@ export const useRunStore = create<RunStoreState>()((set) => ({
   summaryOpen: false,
   restartAt: null,
   restartCancelled: false,
+  pastRun: null,
   runEnded: (report) => set({ report, summaryOpen: true, restartCancelled: false }),
   setSummaryOpen: (summaryOpen) => set({ summaryOpen }),
+  showPastRun: (pastRun) => set({ pastRun }),
   cancelRestart: () => set({ restartCancelled: true, restartAt: null }),
   startNext: () => starter?.(),
   runStarted: () => set({ report: null, summaryOpen: false, restartAt: null, restartCancelled: false }),

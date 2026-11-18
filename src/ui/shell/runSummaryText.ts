@@ -2,11 +2,11 @@
  * Wording and figures for the run summary (`RunSummary.tsx`), kept apart from the components so
  * they can be tested on their own.
  */
-import { CURRENCY_INFO, latestUnlocks, milestoneTargets } from '../../meta';
-import type { Profile } from '../../meta';
+import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets } from '../../meta';
+import type { Currencies, Profile, RunRecord } from '../../meta';
 import { DEITIES, describeMilestoneMet } from '../../content';
-import { favorDeity, RENOWN, TROPHIES } from '../../sim';
-import type { FallenRecord, RunOutcome, RunReport } from '../../sim';
+import { favorDeity, favorKey, RENOWN, TROPHIES } from '../../sim';
+import type { FallenRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
 
 /** Each outcome's heading and icon, so it never rests on color alone. */
 export const OUTCOME_LOOK: Readonly<Record<RunOutcome, { title: string; icon: string }>> = {
@@ -65,13 +65,59 @@ export interface UnlockLine {
   why: string;
 }
 
-/** What the profile's latest run opened, from the `milestones` slice. */
-export function unlockLines(profile: Profile): UnlockLine[] {
+/** What the profile's latest run opened, or run number `run`'s (ETH-048), from the `milestones` slice. */
+export function unlockLines(profile: Profile, run?: number): UnlockLine[] {
   const targets = milestoneTargets();
-  return latestUnlocks(profile).flatMap((u) => {
+  const unlocks = run === undefined ? latestUnlocks(profile) : profile.milestones.unlocked.filter((u) => u.run === run);
+  return unlocks.flatMap((u) => {
     const target = targets.find((t) => t.id === u.id);
     return target === undefined ? [] : [{ id: u.id, name: target.name, why: describeMilestoneMet(target.unlock) }];
   });
+}
+
+/** Who set out (`extras['run.party']`, ETH-048), or an empty list if the result doesn't say. */
+export function partyOf(report: RunReport): readonly PartyMemberRecord[] {
+  const party = report.result.extras['run.party'];
+  return Array.isArray(party) ? (party as PartyMemberRecord[]) : [];
+}
+
+/** The cause shown for a past run recorded before causes were kept. */
+export const NO_CAUSE = 'No details were kept for this run.';
+
+/**
+ * A recorded run (the profile's `history`, ETH-048) as a `RunReport`, so the run summary can show
+ * it again. Party members are numbered by their place in the party.
+ */
+export function reportFromRecord(record: RunRecord): RunReport {
+  const earned = addCurrencies(record.banked, record.lost);
+  const party: PartyMemberRecord[] = record.party.map((m, i) => ({ actor: i, name: m.name, classId: m.classId, raceId: m.raceId }));
+  const fallen: FallenRecord[] = record.party.flatMap((m, i) => (m.fell === null ? [] : [{ actor: i, name: m.name, ...m.fell }]));
+  const end: RunEnd = { outcome: record.outcome, turn: record.turns, cause: record.cause === '' ? NO_CAUSE : record.cause, depth: record.deepestDepth };
+  return {
+    result: {
+      outcome: record.outcome,
+      atRisk: rewardsFromCurrencies(earned),
+      lost: rewardsFromCurrencies(record.lost),
+      turns: record.turns,
+      deepestDepth: record.deepestDepth,
+      extras: {
+        'run.end': end,
+        'run.party': party,
+        'track.deaths': { fallen },
+        'track.codex': Object.fromEntries(record.met.map((id) => [id, []])),
+      },
+    },
+    end,
+  };
+}
+
+/** `Currencies` as flat reward amounts (`renown`, `trophies`, `favor:<deity>`), leaving out zeros. */
+function rewardsFromCurrencies(c: Currencies): RewardAmounts {
+  const out: RewardAmounts = {};
+  if (c.renown > 0) out[RENOWN] = c.renown;
+  if (c.trophies > 0) out[TROPHIES] = c.trophies;
+  for (const [deity, n] of Object.entries(c.favor)) if (n > 0) out[favorKey(deity)] = n;
+  return out;
 }
 
 /** A placeholder epitaph until the lineage system writes real ones (M5, CLAUDE.md §7). */

@@ -440,6 +440,16 @@ its hint. Search matches only discovered entries. `Explain` links are underlined
 A list of gravestone cards: name, class and race, level, floor and cause of death, the epitaph
 in italics, and the heirloom left behind.
 
+### 5.5 Stats
+
+As built (ETH-048, `src/ui/stats/`): **Lifetime** totals as a three-column grid of small cards
+(runs, victories, retreats, wipes, deepest floor, turns; each value has a tooltip, outcome
+labels carry their icon), then **Run history**, newest first. Each past run is one button row:
+a 3px left border in the outcome's color plus its icon, "Run N · Outcome", floor and turns on
+the right, the party (✝ after those who fell) and the banked Renown and Trophies. Clicking a row
+reopens that run's summary (§6.2); closing it returns focus to the row. With more runs finished
+than kept, a note says how many are kept.
+
 ---
 
 ## 6. Full-screen views and modals
@@ -478,6 +488,8 @@ italics, the Auto-restart checkbox with "Next run in N s" and Cancel while count
 the buttons **Review log** (ghost; closes it, Escape too) and **Start next run** (primary,
 focused; stands in for Continue until the Prepare screen). With the modal closed, a banner at
 the bottom of the map says the run is over and offers **Show summary** and **Start next run**.
+A past run reopened from the Stats tab (ETH-048) uses the same modal titled "Run N · Outcome",
+without the auto-restart toggle, and with one primary **Close** button.
 
 ### 6.3 While you were away
 
