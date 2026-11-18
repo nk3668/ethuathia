@@ -113,14 +113,15 @@ describe('party members in narrow passages', () => {
     expect(ally.pos).toEqual({ x: 11, y: 1 });
   });
 
-  it('never swaps with a monster: it waits, then gives up on the goal', () => {
+  it('never swaps with a creature outside the party: it waits, then gives up on the goal', () => {
     const state = createRun({ party: [HERO], floorText: BENT_CORRIDOR }, 1);
     const hero = getEntity(state, state.party[0] as EntityId) as ActorEntity;
     const monster = addEntity(state, {
       def: 'monster.test',
       floor: 'd1',
       pos: { x: 5, y: 1 },
-      actor: { energy: 0, hp: 5, mp: 0, faction: 'monster' },
+      // Neutral, so the hero doesn't fight it (a hostile one would be attacked instead).
+      actor: { energy: 0, hp: 5, mp: 0, faction: 'neutral' },
       stats: newStatsPart({ hp: 5 }),
     });
     const events = run(state, 30);

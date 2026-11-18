@@ -59,5 +59,6 @@ export const FLOOR_HALLS = defineFloorType({
     { step: 'gen.stairs' },
     { step: 'gen.fountains', params: { min: 0, max: 2, minDraughts: 2, maxDraughts: 4 } },
     { step: 'gen.loot', params: { minItems: 3, maxItems: 6 } },
+    { step: 'gen.monsters' },
   ],
 });

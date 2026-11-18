@@ -37,7 +37,8 @@ const baselineIndex = (action: string) => BASELINE_RULES.findIndex((r) => r.acti
 
 /** A run with one adventurer. `depth` 1 makes the floor the bottom one, with no stairs down to take. */
 function setup(floorText?: string[], seed = 1, depth?: number): { state: RunState; hero: ActorEntity } {
-  const config = { party: [HERO], ...(floorText === undefined ? {} : { floorText }), ...(depth === undefined ? {} : { depth }) };
+  // No monsters: these tests are about exploring and the engine (combat has its own tests).
+  const config = { party: [HERO], monsters: false, ...(floorText === undefined ? {} : { floorText }), ...(depth === undefined ? {} : { depth }) };
   const state = createRun(config, seed);
   return { state, hero: getEntity(state, state.party[0] as EntityId) as ActorEntity };
 }

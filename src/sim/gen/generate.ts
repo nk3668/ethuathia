@@ -63,6 +63,7 @@ export function generateFloor(type: FloorTypeDef, rng: Rng, options: GenerateOpt
     depth: options.depth ?? 1,
     loot: options.loot ?? rng,
     items: [],
+    spawns: [],
   };
   steps.forEach(({ stepId, run }, i) => {
     try {
@@ -71,5 +72,5 @@ export function generateFloor(type: FloorTypeDef, rng: Rng, options: GenerateOpt
       throw new Error(`${where(type, i, stepId)}: ${(err as Error).message}`, { cause: err });
     }
   });
-  return { terrain: draft.terrain, features: draft.features, starts: draft.starts, items: draft.items };
+  return { terrain: draft.terrain, features: draft.features, starts: draft.starts, items: draft.items, spawns: draft.spawns };
 }
