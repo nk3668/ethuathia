@@ -133,6 +133,8 @@ Rules:
 | A rule condition / rule action | `defineCondition` / `defineRuleAction` in the domain, listed in its `conditions` / `ruleActions` (§4) |
 | A generation step | `defineGenStep` in the domain, listed in `genSteps`; a floor type names it in content (§3.6) |
 | A run tracker | a `RunTracker<S>` listed in the domain's `trackers` |
+| A Codex discovery | one line in the domain's `discoveries` map: event type → content ids and marks (see "Codex discoveries") |
+| A Codex view of a content kind | a renderer file `src/ui/codex/renderers/<kind>.tsx` (§8.5) |
 | Data kept between runs | a profile slice in `src/meta/slices/`, one line in `PROFILE_SLICES` (see "Profile slices") |
 | An invariant | `registerInvariant('<domain>.name', …)` in the domain module (§11.1) |
 | Content data | the kind's file in `src/content/` (§5) |
@@ -180,6 +182,26 @@ interface RunTracker<S> { id: string; init(): S; reduce(state: S, event: SimEven
 
 `reduce` is pure (no randomness, no change to `state` in place). ETH-062 builds the framework
 that runs every tracker over each step's events and keeps their states in the run domain's slice.
+**At run end it puts each tracker's final state in `RunResult.extras[tracker.id]`**, which is
+how profile slices read tracker output (the `codex` slice reads `extras['track.codex']`).
+
+### Codex discoveries
+
+The Codex (ETH-065) fills in from sim events. `src/sim/run/codex.ts` defines it:
+
+- A discovery is `{ id, mark }`: a **content id** and how it was met, `seen`, `killed` or `used`.
+  `CodexDiscoveries` is `Record<content id, CodexMark[]>`, marks in `CODEX_MARKS` order without
+  repeats; the run's tracker state and the profile's `codex` slice share the shape.
+- Each domain says which of its events discover what in `SimDomain.discoveries`, a
+  `DiscoveryRules` map typed per event type, e.g.
+  `discoveries: { monsterSighted: (e) => [{ id: e.monster, mark: 'seen' }] }`. Core's map is
+  `CORE_DISCOVERIES` (`coreEvents.ts`: an opened door). The hub joins them into
+  `DISCOVERY_RULES` (`registries.ts`), in domain order.
+- So an event that should discover something must carry the content id (not only an entity id):
+  the rule sees the event alone.
+- `CODEX_TRACKER` (`track.codex`, in the run domain's `trackers`) reduces events with those
+  rules. The UI also runs it over every event it receives (`simStore.discoveries`), so the Codex
+  shows the current run's finds before the run ends.
 
 ### Stats
 
@@ -966,7 +988,7 @@ makes them easy to test and safe to autosave after.
 As built (ETH-059), `src/meta/profile.ts` composes the profile from slices (Contracts, "Profile
 slices"). The slices so far are `currencies` (banked Renown, Trophies and Favor per deity id,
 `{ renown, trophies, favor: Record<deity id, number> }`), `history` (lifetime totals and the
-last `HISTORY_LIMIT` (20) runs as `RunRecord`s) and `upgrades` (owned upgrade node ids, §6.2). `checkProfile(profile)` returns one line per
+last `HISTORY_LIMIT` (20) runs as `RunRecord`s), `upgrades` (owned upgrade node ids, §6.2) and `codex` (ETH-065: `{ entries: CodexDiscoveries }`, merged from `extras["track.codex"]`, Contracts "Codex discoveries"). `checkProfile(profile)` returns one line per
 problem. Currency names and tooltip text are `CURRENCY_INFO` in `src/meta/currencies.ts`.
 
 ### 6.2 Upgrade engine
@@ -1176,7 +1198,8 @@ carry game-wide behavior:
 
 - **`NumberText`:** formats with suffixes (1.2k, 3.4M) and, given a stat breakdown, shows the
   contributing modifiers in its tooltip.
-- **`Explain`:** wraps any mention of a content id and shows its Codex entry on hover.
+- **`Explain`:** wraps any mention of a content id and shows its Codex entry on hover. Built in
+  ETH-065; it lives in `ui/codex/` with the Codex, not in the kit (§8.5).
 - **`NodeGraph`:** draws an upgrade tree as SVG from each node's `tier` and `column`.
 
 `Panel`, `Card`, `Button`, `Tabs`, `Tooltip` and `Bar` exist (ETH-011) and are exported from
@@ -1184,6 +1207,25 @@ carry game-wide behavior:
 use tokens only, which `test/ui/tokens.test.ts` enforces. In dev mode, `?kit` on the dev server
 URL opens `ui/dev/KitGallery`, which shows every component and state; production builds drop
 it.
+
+### 8.5 Codex and `Explain` (`ui/codex/`, ETH-065)
+
+- **Renderers:** each content kind has a file `ui/codex/renderers/<kind>.tsx` whose default
+  export is `defineCodexRenderer({ registry, label, order, hint?, alwaysKnown?, hidden?, glyph?,
+  group?, fields? })`. `registry` types `fields` and `group` with the real def type. `fields`
+  returns the stat table (`{ label, value, hint?, key? }`); `key` fields also show in `Explain`.
+  `group` is the subheading (a monster's family). `registry.ts` collects the files with
+  `import.meta.glob`, so a new or richer kind is one file and no edit to the tab; a kind with no
+  file gets a plain section. Two renderers for one kind throw at load.
+- **Discovered** = the profile's `codex` entries plus `simStore.discoveries` (`useDiscovered`).
+  Undiscovered entries show `???` and the renderer's `hint`; search only matches discovered
+  entries, so names never leak.
+- **`Explain id`** renders a content mention with a tooltip (`ExplainCard`: glyph, name, kind or
+  group, description, key fields). An unknown id renders as plain text. The map's hover tooltip
+  shows the `ExplainCard` of the top non-party thing on the tile (`tileSubject`).
+- **Log mentions:** a log-text `text` may return parts instead of a string,
+  `[`${nameOf(e.actor)} opens a `, mention('feature.door', 'door'), '.']`; each `mention` renders
+  as an `Explain` link. `LogLine.text` stays the plain sentence.
 
 ### 8.2 Map renderer (`ui/map/`)
 

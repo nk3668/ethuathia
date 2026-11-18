@@ -3,6 +3,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Pos } from '../../core';
+import { ExplainCard } from '../codex/Explain';
 import { useSimStore } from '../stores/simStore';
 import { useUiStore } from '../stores/uiStore';
 import type { MapFocus } from '../stores/uiStore';
@@ -10,7 +11,7 @@ import { followTarget } from './camera';
 import styles from './MapCanvas.module.css';
 import { MapRenderer } from './MapRenderer';
 import type { MapView } from './MapRenderer';
-import { describeTile } from './scene';
+import { describeTile, tileSubject } from './scene';
 import { AsciiTheme } from './theme';
 
 const NO_LINES: readonly string[] = [];
@@ -73,6 +74,7 @@ export function MapCanvas() {
   }, [mode, selected, hover, focus]);
 
   const lines = useTileLines(hover);
+  const subject = useSimStore((s) => (hover && s.snapshot ? tileSubject(s.snapshot, hover) : null));
   const tooltipOpen = hover !== null && lines.length > 0;
   const tooltipId = useId();
   const [tooltip, setTooltip] = useState<HTMLElement | null>(null);
@@ -282,6 +284,7 @@ export function MapCanvas() {
                 {line}
               </div>
             ))}
+            {subject !== null && <ExplainCard id={subject} heading={false} className={styles.explain} />}
           </div>
         </FloatingPortal>
       )}

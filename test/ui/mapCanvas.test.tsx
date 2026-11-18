@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { FEATURE_DOOR } from '../../src/content';
 import { createRun, moveEntity, snapshot } from '../../src/sim';
 import type { RunState } from '../../src/sim';
 import { fitView, tileRect } from '../../src/ui/map';
@@ -94,8 +95,9 @@ describe('MapCanvas', () => {
     expect(tooltip.textContent).toBe('Oren (party 2)FloorIn view');
     expect(canvas().getAttribute('aria-describedby')).toBe(tooltip.id);
 
+    // A feature or monster is also explained from its Codex entry (ETH-065).
     fireEvent.pointerMove(canvas(), point(4, 1));
-    expect(screen.getByRole('tooltip').textContent).toBe('Door (closed)FloorIn view');
+    expect(screen.getByRole('tooltip').textContent).toBe(`Door (closed)FloorIn view${FEATURE_DOOR.description}`);
     fireEvent.pointerMove(canvas(), point(8, 2));
     expect(screen.getByRole('tooltip').textContent).toBe('Unexplored');
 

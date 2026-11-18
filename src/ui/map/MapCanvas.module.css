@@ -35,6 +35,12 @@
   line-height: var(--line-height-label);
 }
 
+.explain {
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: var(--border-width) solid var(--border);
+}
+
 .controls {
   display: flex;
   gap: var(--space-1);

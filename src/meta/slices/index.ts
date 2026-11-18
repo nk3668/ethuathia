@@ -5,6 +5,7 @@
  *
  * Order matters only for `applyRunResult`: slices run their `onRunResult` steps in this order.
  */
+import { codexSlice } from './codex';
 import { currenciesSlice } from './currencies';
 import { historySlice } from './history';
 import { upgradesSlice } from './upgrades';
@@ -13,4 +14,5 @@ export const PROFILE_SLICES = {
   currencies: currenciesSlice,
   history: historySlice,
   upgrades: upgradesSlice,
+  codex: codexSlice,
 } as const;

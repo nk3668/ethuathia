@@ -1,13 +1,14 @@
 import { memo, useLayoutEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { EntityId } from '../../sim';
+import { Explain } from '../codex/Explain';
 import { Button, Panel } from '../kit';
 import { useSimStore } from '../stores/simStore';
 import { LOG_FILTERS, useUiStore } from '../stores/uiStore';
 import type { LogFilter, MapFocus } from '../stores/uiStore';
 import styles from './LogPanel.module.css';
 import { LOG_PREFIX, logLines } from './text';
-import type { LogLine } from './text';
+import type { LogLine, LogPart } from './text';
 
 /** How close to the bottom (in pixels) still counts as "at the bottom" for auto-scrolling. */
 const STICK_SLACK = 4;
@@ -111,8 +112,23 @@ const Line = memo(function Line({ line, onShow }: { line: LogLine; onShow(focus:
           {line.text}
         </button>
       ) : (
-        <span className={styles.text}>{line.text}</span>
+        <span className={styles.text}>
+          <Parts parts={line.parts} />
+        </span>
       )}
     </li>
   );
 });
+
+/** A sentence's parts, with each content mention as an `Explain` link. */
+function Parts({ parts }: { parts: readonly LogPart[] }) {
+  return parts.map((part, i) =>
+    typeof part === 'string' ? (
+      part
+    ) : (
+      <Explain key={i} id={part.ref}>
+        {part.label}
+      </Explain>
+    ),
+  );
+}

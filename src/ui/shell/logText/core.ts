@@ -1,6 +1,7 @@
 /** Log wording for the core domain's events (`src/sim/coreEvents.ts`). */
+import { FEATURE_DOOR } from '../../../content';
 import type { CoreEvent, RuleRef } from '../../../sim';
-import { defineHighlight } from './types';
+import { defineHighlight, mention } from './types';
 import type { LogTextRecord } from './types';
 
 /** An adventurer made no progress and dropped its goal: often a sign of a bad rule or a blocked path. */
@@ -19,7 +20,10 @@ export const CORE_LOG_TEXT: LogTextRecord<CoreEvent> = {
   moved: { category: 'system', quiet: true, text: (e, nameOf) => `${nameOf(e.actor)} moves.` },
   waited: { category: 'system', quiet: true, text: (e, nameOf) => `${nameOf(e.actor)} waits.` },
   swapped: { category: 'system', text: (e, nameOf) => `${nameOf(e.actor)} squeezes past ${nameOf(e.other)}.` },
-  doorOpened: { category: 'discovery', text: (e, nameOf) => `${nameOf(e.actor)} opens a door.` },
+  doorOpened: {
+    category: 'discovery',
+    text: (e, nameOf) => [`${nameOf(e.actor)} opens a `, mention(FEATURE_DOOR.id, 'door'), '.'],
+  },
   actionFailed: { category: 'system', text: (e, nameOf) => `${nameOf(e.actor)} can't ${e.action} (${e.reason})` },
   ruleFired: { category: 'ai', text: (e, nameOf) => `${nameOf(e.actor)}: ${e.detail} (${ruleLabel(e.rule)})` },
   stuck: { category: 'ai', highlight: HIGHLIGHT_STUCK, text: (e, nameOf) => `${nameOf(e.actor)}: ${e.detail} (${ruleLabel(e.rule)})` },

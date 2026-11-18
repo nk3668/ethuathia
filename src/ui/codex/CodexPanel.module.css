@@ -1,0 +1,146 @@
+.codex {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.search {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-2);
+  color: var(--text);
+  font: inherit;
+  background: var(--bg-app);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.search::placeholder {
+  color: var(--text-faint);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: baseline;
+  margin: 0;
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-heading);
+  line-height: var(--line-height-heading);
+}
+
+.count {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+  font-weight: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.groupHeading {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+  font-weight: normal;
+  line-height: var(--line-height-label);
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.entries > li + li {
+  border-top: var(--border-width) solid var(--border);
+}
+
+.entry,
+.unknown {
+  background: var(--bg-raised);
+}
+
+.entries > li:first-child {
+  border-top-left-radius: var(--radius-card);
+  border-top-right-radius: var(--radius-card);
+}
+
+.entries > li:last-child {
+  border-bottom-left-radius: var(--radius-card);
+  border-bottom-right-radius: var(--radius-card);
+}
+
+.summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+}
+
+.summary:hover {
+  background: var(--bg-hover);
+}
+
+.name {
+  font-weight: var(--font-weight-medium);
+}
+
+.marks {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+}
+
+.detail {
+  padding: 0 var(--space-2) var(--space-2) calc(var(--space-2) + 1ch + var(--space-2));
+}
+
+.unknown {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-muted);
+}
+
+.hint {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: var(--font-size-label);
+  text-align: right;
+}

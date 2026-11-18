@@ -13,8 +13,10 @@ import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx } from '../domain';
 import { registerInvariant } from '../invariants';
 import type { RunConfig } from '../state';
+import { CODEX_TRACKER } from './codex';
 import type { RewardAmounts } from './result';
 
+export * from './codex';
 export * from './result';
 
 /** The events this domain emits (bodies, without `turn`). Each needs a formatter in `ui/shell/logText/run.ts`. */
@@ -82,4 +84,5 @@ export const RUN_DOMAIN: SimDomain<RunDomainTypes> = {
   commands: RUN_DOMAIN_COMMANDS,
   init: initRunDomain,
   snapshot: runDomainSnapshot,
+  trackers: [CODEX_TRACKER],
 };

@@ -2,7 +2,8 @@
  * The composition hub (docs/ARCHITECTURE.md, Contracts): the one module whose top-level code
  * reads every domain. It lists the domains in a fixed order, builds `ACTIONS` and `COMMANDS`
  * from the core records and every domain's, and fills the code registries (`CONDITIONS`,
- * `RULE_ACTIONS`, `GEN_STEPS`) and `RUN_TRACKERS`, core first and then domain by domain.
+ * `RULE_ACTIONS`, `GEN_STEPS`, `DISCOVERY_RULES`) and `RUN_TRACKERS`, core first and then domain
+ * by domain.
  *
  * `src/sim/index.ts` loads this module before anything else, so the domains are always read
  * after they have finished loading. Domain modules must therefore never import this file, nor
@@ -20,8 +21,10 @@ import { FLOORS_DOMAIN } from './floors';
 import { ROOM_STEPS } from './gen/steps';
 import { ITEMS_DOMAIN } from './items';
 import { QUESTS_DOMAIN } from './quests';
-import { CONDITIONS, GEN_STEPS, RULE_ACTIONS } from './registries';
+import { CORE_DISCOVERIES } from './coreEvents';
+import { CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS } from './registries';
 import { RUN_DOMAIN } from './run';
+import type { DiscoveryRule } from './run';
 import type { RunConfig } from './state';
 import { STATS_DOMAIN } from './stats';
 
@@ -90,6 +93,14 @@ export const RUN_TRACKERS: readonly RunTracker<unknown>[] = ALL.flatMap((d) => d
   }
 }
 
+for (const rules of [CORE_DISCOVERIES, ...ALL.map((d) => d.discoveries ?? {})]) {
+  for (const [type, rule] of Object.entries(rules) as [string, DiscoveryRule][]) {
+    const list = DISCOVERY_RULES.get(type);
+    if (list === undefined) DISCOVERY_RULES.set(type, [rule]);
+    else list.push(rule);
+  }
+}
+
 /** Every domain's state slice for a new run: `RunState.domains`. */
 export function initDomains(config: RunConfig): DomainStates {
   const out: Partial<Record<DomainKey, object>> = {};
@@ -104,4 +115,4 @@ export function domainSnapshots(ctx: SnapshotCtx): DomainSnapshots {
   return out as DomainSnapshots;
 }
 
-export { CONDITIONS, GEN_STEPS, RULE_ACTIONS };
+export { CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS };

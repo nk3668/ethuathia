@@ -11,6 +11,7 @@
  * trigger): depth rewards, contracts that complete on reaching a floor, run end at the exit.
  * Never import `domains.ts` or `index.ts` from this folder.
  */
+import { FEATURE_STAIRS_DOWN, FEATURE_STAIRS_UP } from '../../content';
 import type { Pos } from '../../core';
 import type { ActionRecord } from '../actions';
 import type { CommandRecord } from '../commands';
@@ -204,4 +205,7 @@ export const FLOORS_DOMAIN: SimDomain<FloorsTypes> = {
   snapshot: floorsSnapshot,
   conditions: FLOORS_CONDITIONS,
   ruleActions: FLOORS_RULE_ACTIONS,
+  discoveries: {
+    tookStairs: (e) => [{ id: e.dir === 'up' ? FEATURE_STAIRS_UP.id : FEATURE_STAIRS_DOWN.id, mark: 'used' }],
+  },
 };

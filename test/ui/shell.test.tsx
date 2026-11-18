@@ -119,6 +119,7 @@ describe('log text', () => {
     expect(describeEvent({ type: 'actionFailed', turn: 1, actor: 1, action: 'move', reason: 'Blocked' }, names)).toEqual({
       category: 'system',
       text: "Mira can't move (Blocked)",
+      parts: ["Mira can't move (Blocked)"],
     });
     expect(describeEvent({ type: 'commandRejected', turn: 1, command: 'zap', reason: 'Unknown command' }, names).text).toBe(
       'Command "zap" ignored (Unknown command)',

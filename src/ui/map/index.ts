@@ -24,7 +24,7 @@ export { MapCanvas } from './MapCanvas';
 export { MapControls } from './MapControls';
 export { MapRenderer } from './MapRenderer';
 export type { DrawStats, MapCanvasLike, MapPalette, MapView } from './MapRenderer';
-export { buildScene, changedTiles, describeTile, Fog, GlyphTable, Overlay } from './scene';
+export { buildScene, changedTiles, describeTile, Fog, GlyphTable, Overlay, tileSubject } from './scene';
 export type { Scene, SceneOptions, TileInfo } from './scene';
 export { ASCII_ASPECT, AsciiTheme } from './theme';
 export type { CellState, GlyphTheme, MapContext } from './theme';

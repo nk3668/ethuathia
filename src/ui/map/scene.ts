@@ -153,6 +153,20 @@ export interface TileInfo {
   things: string[];
 }
 
+/**
+ * The content id the hover tooltip explains for a tile (ETH-065): the topmost thing on it that is
+ * not a party member, an actor before a feature. `null` on an empty, unknown or off-floor tile;
+ * terrain is left out, since every tile has some.
+ */
+export function tileSubject(snap: Snapshot, pos: Pos): string | null {
+  const { width, height, terrain } = snap.floor;
+  if (pos.x < 0 || pos.y < 0 || pos.x >= width || pos.y >= height || terrain[pos.y * width + pos.x] === 0) return null;
+  const party = new Set(snap.party.map((m) => m.id));
+  const actor = snap.floor.actors.find((a) => a.pos.x === pos.x && a.pos.y === pos.y && !party.has(a.id));
+  if (actor) return actor.def;
+  return snap.floor.features.find((f) => f.pos.x === pos.x && f.pos.y === pos.y)?.def ?? null;
+}
+
 /** Names what the party knows to be on a tile, or `null` if it is off the floor. */
 export function describeTile(snap: Snapshot, pos: Pos): TileInfo | null {
   const { width, height, terrain, visible } = snap.floor;

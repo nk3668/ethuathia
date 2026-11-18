@@ -4,7 +4,9 @@
  * `src/sim/<domain>/index.ts`; `events.ts` joins them all into `SimEventBody`.
  */
 import type { Pos } from '../core';
+import { FEATURE_DOOR } from '../content';
 import type { RuleRef } from './ai/types';
+import type { DiscoveryRules } from './run/codex';
 import type { EntityId, FloorId } from './state';
 
 /** What each core event carries. `emit` adds the `turn`. */
@@ -48,3 +50,11 @@ export type CoreEvent =
     }
   /** A command was ignored. `command` is its `type`, or `"?"` if it had none. Nothing changed. */
   | { type: 'commandRejected'; command: string; reason: string };
+
+/**
+ * What the core events discover for the Codex (`run/codex.ts`). Each domain lists its own in its
+ * `SimDomain.discoveries`.
+ */
+export const CORE_DISCOVERIES: DiscoveryRules = {
+  doorOpened: () => [{ id: FEATURE_DOOR.id, mark: 'used' }],
+};
