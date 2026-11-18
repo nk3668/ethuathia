@@ -12,6 +12,7 @@ import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx, TurnCtx } from '../domain';
 import type { Emit } from '../events';
 import { registerInvariant } from '../invariants';
+import type { DiscoveryRules } from '../run/codex';
 import type { EntityId, RunConfig, RunState } from '../state';
 import { attachBundle } from './bundles';
 import { fireTrigger } from './effects';
@@ -280,6 +281,11 @@ registerInvariant('stats.parts', (state) => {
   return problems;
 });
 
+/** Codex discoveries: a status is seen the first time it lands on anyone. */
+export const STATS_DISCOVERIES: DiscoveryRules = {
+  statusApplied: (e) => (STATUSES.has(e.status) ? [{ id: e.status, mark: 'seen' }] : []),
+};
+
 /** What this domain registers with the shared code, in this order. */
 export const STATS_DOMAIN: SimDomain<StatsTypes> = {
   actions: STATS_ACTIONS,
@@ -291,4 +297,5 @@ export const STATS_DOMAIN: SimDomain<StatsTypes> = {
   triggers: [TRIGGER_TURN_START, TRIGGER_TURN_END],
   turnStart: statsTurnStart,
   turnEnd: statsTurnEnd,
+  discoveries: STATS_DISCOVERIES,
 };

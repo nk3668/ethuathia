@@ -299,6 +299,8 @@ The API every later item uses (ETH-057, §2.2):
 - **Snapshot:** `snapshot.domains.stats.members[id]` = `{ statuses: [{ status, remaining,
   potency }], stats: Record<StatId, StatResult> }` for each party member. The party card shows
   the statuses as badges; stat tooltips can read `stats`.
+- **Codex:** `STATS_DISCOVERIES` marks a status `seen` on `statusApplied`;
+  `ui/codex/renderers/status.tsx` shows its effect, stacking rule and whether it is harmful.
 - **Invariants:** `stats.values` (every stat finite, max HP ≥ 1) and `stats.parts` (known stat
   ids with finite bases, known bundles, known statuses with whole turns above 0 and potency
   above 0); `core.actors` checks HP and MP against the maxima from `statValue`.

@@ -13,6 +13,7 @@ import {
   checkInvariants,
   createRun,
   detachBundles,
+  discoveriesOf,
   fieldOfView,
   fireTrigger,
   getEntity,
@@ -330,6 +331,12 @@ describe('snapshot and invariants', () => {
     expect(view?.statuses).toEqual([{ status: 'status.hasted', remaining: 4, potency: 1 }]);
     expect(view?.stats.speed.parts.map((p) => p.source.label)).toEqual(['Human', 'Hasted']);
     expect(snapshot(state).party[0]).toMatchObject({ hp: 20, maxHp: 20 });
+  });
+
+  it('discover a status for the Codex when it lands', () => {
+    expect(
+      discoveriesOf({ type: 'statusApplied', turn: 1, actor: 1, status: 'status.poisoned', turns: 3, potency: 1, mode: 'new' }),
+    ).toEqual([{ id: 'status.poisoned', mark: 'seen' }]);
   });
 
   it('catch statuses out of turns, unknown ids and non-finite values', () => {
