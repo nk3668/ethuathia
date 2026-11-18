@@ -1,6 +1,6 @@
 /**
- * Plain-text wording for the shell: content names, rule references and log lines. M1 replaces
- * the log wording with category filters and `Explain` links (docs/VISUAL-DESIGN.md §3.3).
+ * Wording for the shell: content names, rule references and log lines. A line's content mentions
+ * are `Explain` links (ETH-065, docs/VISUAL-DESIGN.md §3.3); category filters arrive in M1.
  *
  * Each event type's wording lives with its domain in `logText/<domain>.ts`; `LOG_TEXT` here only
  * joins them (docs/ARCHITECTURE.md, Contracts, "Log text").
@@ -14,11 +14,11 @@ import { ITEMS_LOG_TEXT } from './logText/items';
 import { QUESTS_LOG_TEXT } from './logText/quests';
 import { RUN_DOMAIN_LOG_TEXT } from './logText/run';
 import { STATS_LOG_TEXT } from './logText/stats';
-import type { HighlightKind, LogCategory, LogText, LogTextRecord, NameOf, Place } from './logText/types';
+import type { HighlightKind, LogCategory, LogPart, LogText, LogTextRecord, NameOf, Place } from './logText/types';
 
 export { ruleLabel } from './logText/core';
-export { defineHighlight } from './logText/types';
-export type { HighlightKind, LogCategory, LogText, LogTextRecord, NameOf, Place } from './logText/types';
+export { defineHighlight, mention } from './logText/types';
+export type { HighlightKind, LogCategory, LogPart, LogText, LogTextRecord, Mention, NameOf, Place } from './logText/types';
 
 /**
  * The name of a content id: its def's `name`, or for an id with no def (monsters until M1) the
@@ -45,7 +45,10 @@ export interface LogLine {
   seq: number;
   turn: number;
   category: LogCategory;
+  /** The sentence as plain text. */
   text: string;
+  /** The sentence in parts, with content mentions to show as `Explain` links. */
+  parts: readonly LogPart[];
   /** Set when the event is a highlight: its kind and where it happened. */
   highlight?: Highlight;
 }
@@ -131,8 +134,15 @@ export function logLines(events: readonly { seq: number; event: SimEvent }[], na
   return lines;
 }
 
-/** One event as a category and a sentence. */
-export function describe(event: SimEvent, nameOf: NameOf): Pick<LogLine, 'category' | 'text'> {
+/** One event as a category and a sentence, as plain text and in parts. */
+export function describe(event: SimEvent, nameOf: NameOf): Pick<LogLine, 'category' | 'text' | 'parts'> {
   const entry = textOf(event);
-  return { category: entry.category, text: entry.text(event, nameOf) };
+  const said = entry.text(event, nameOf);
+  const parts = typeof said === 'string' ? [said] : said;
+  return { category: entry.category, text: partsText(parts), parts };
+}
+
+/** Log parts as plain text: each mention as its label, or its content name. */
+export function partsText(parts: readonly LogPart[]): string {
+  return parts.map((p) => (typeof p === 'string' ? p : (p.label ?? contentName(p.ref)))).join('');
 }

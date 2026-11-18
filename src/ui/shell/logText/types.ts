@@ -54,8 +54,25 @@ export interface LogText<E> {
    * death. Without it every event of the type is a highlight.
    */
   readonly highlightWhen?: (event: E) => boolean;
-  /** The sentence, e.g. "Mira opens a door." */
-  text(event: E, nameOf: NameOf): string;
+  /**
+   * The sentence, e.g. "Mira opens a door." Return parts instead of a string to make content
+   * mentions `Explain` links: `[`${nameOf(e.actor)} opens a `, mention('feature.door', 'door'), '.']`.
+   */
+  text(event: E, nameOf: NameOf): string | readonly LogPart[];
+}
+
+/** A content id mentioned in a log line: shown as `label` (default: the def's name) with an Explain tooltip. */
+export interface Mention {
+  readonly ref: string;
+  readonly label?: string;
+}
+
+/** A piece of a log sentence: plain text or a content mention. */
+export type LogPart = string | Mention;
+
+/** A content mention for a log sentence. `label` is the wording, e.g. `door` for `feature.door`. */
+export function mention(ref: string, label?: string): Mention {
+  return label === undefined ? { ref } : { ref, label };
 }
 
 /**

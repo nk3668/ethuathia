@@ -9,6 +9,7 @@ export {
   ACTIONS,
   COMMANDS,
   CONDITIONS,
+  DISCOVERY_RULES,
   DOMAIN_KEYS,
   DOMAINS,
   domainSnapshots,
@@ -33,6 +34,7 @@ export { CORE_ACTIONS, isStep, stepBlocker } from './coreActions';
 export type { CoreRequest, MoveRequest, OpenDoorRequest, WaitRequest } from './coreActions';
 export { CORE_COMMANDS } from './coreCommands';
 export type { CoreCommand, PlayerActionCommand } from './coreCommands';
+export { CORE_DISCOVERIES } from './coreEvents';
 export type { CoreEvent } from './coreEvents';
 export * from './stats';
 export * from './floors';

@@ -106,3 +106,38 @@ describe('checkProfile', () => {
     expect(checkProfile(null)).toEqual(['profile is not an object']);
   });
 });
+
+describe('the codex slice', () => {
+  const codex = (found: unknown) => result({ extras: { 'track.codex': found } });
+
+  it('starts empty', () => {
+    expect(newProfile().codex).toEqual({ entries: {} });
+  });
+
+  it('merges the run discovery tracker output from extras', () => {
+    let profile = applyRunResult(newProfile(), codex({ 'feature.door': ['used'], 'monster.rat': ['killed'] }));
+    profile = applyRunResult(profile, codex({ 'feature.door': ['seen'], 'class.vanguard': ['seen'] }));
+    expect(profile.codex.entries).toEqual({
+      'feature.door': ['seen', 'used'],
+      'monster.rat': ['killed'],
+      'class.vanguard': ['seen'],
+    });
+    expect(checkProfile(profile)).toEqual([]);
+  });
+
+  it('is unchanged by a run without codex output', () => {
+    const profile = applyRunResult(newProfile(), codex({ 'feature.door': ['used'] }));
+    expect(applyRunResult(profile, result({})).codex).toBe(profile.codex);
+  });
+
+  it('throws on malformed codex output rather than keeping it', () => {
+    expect(() => applyRunResult(newProfile(), codex({ 'feature.door': ['eaten'] }))).toThrow(RangeError);
+    expect(() => applyRunResult(newProfile(), codex({ 'feature.door': ['used', 'seen'] }))).toThrow(/track\.codex/);
+    expect(() => applyRunResult(newProfile(), codex(['feature.door']))).toThrow(RangeError);
+  });
+
+  it('rejects a saved codex with marks out of order', () => {
+    const bad = { ...newProfile(), codex: { entries: { 'feature.door': ['used', 'used'] } } };
+    expect(checkProfile(bad)).toEqual([expect.stringMatching(/^codex\.entries\.feature\.door: /)]);
+  });
+});

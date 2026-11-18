@@ -5,7 +5,8 @@
  * host, never by touching state.
  */
 import { create } from 'zustand';
-import type { SimEvent, SimHost, Snapshot, Speed, Unsubscribe } from '../../sim';
+import { CODEX_TRACKER } from '../../sim';
+import type { CodexDiscoveries, SimEvent, SimHost, Snapshot, Speed, Unsubscribe } from '../../sim';
 
 /** How many recent events the store keeps. Older ones drop off the front. */
 export const EVENT_BUFFER_SIZE = 500;
@@ -32,6 +33,11 @@ export interface SimStoreState {
   events: readonly LoggedEvent[];
   /** The sequence number the next event gets. */
   nextSeq: number;
+  /**
+   * What this run has discovered for the Codex so far: every event received, reduced with the
+   * run's discovery tracker (`CODEX_TRACKER`), so nothing is lost when the buffer rolls.
+   */
+  discoveries: CodexDiscoveries;
   /** The speed last sent to the host. 0 is paused. */
   speed: Speed;
   /** The speed resuming goes back to: the last running speed chosen. */
@@ -52,7 +58,7 @@ export interface SimStoreState {
   togglePause(): void;
   /** Records that the host stopped the run on an error and paused it. Sends nothing. */
   hostFailed(message: string): void;
-  /** Forgets the snapshot, events and error, e.g. when a new run starts. The speed is kept. */
+  /** Forgets the snapshot, events, discoveries and error, e.g. when a new run starts. The speed is kept. */
   reset(): void;
 }
 
@@ -60,6 +66,7 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
   snapshot: null,
   events: [],
   nextSeq: 0,
+  discoveries: CODEX_TRACKER.init(),
   speed: DEFAULT_SPEED,
   resumeSpeed: DEFAULT_SPEED,
   error: null,
@@ -71,7 +78,8 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
       const skipped = incoming.length - kept.length;
       const added = kept.map((event, i) => ({ seq: state.nextSeq + skipped + i, event }));
       const events = [...state.events, ...added].slice(-EVENT_BUFFER_SIZE);
-      return { events, nextSeq: state.nextSeq + incoming.length };
+      const discoveries = incoming.reduce(CODEX_TRACKER.reduce, state.discoveries);
+      return { events, nextSeq: state.nextSeq + incoming.length, discoveries };
     }),
   setSpeed: (speed) => {
     if (speed !== 0 && get().error !== null) return;
@@ -83,7 +91,7 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
     setSpeed(speed === 0 ? resumeSpeed : 0);
   },
   hostFailed: (message) => set({ speed: 0, error: message }),
-  reset: () => set({ snapshot: null, events: [], nextSeq: 0, error: null }),
+  reset: () => set({ snapshot: null, events: [], nextSeq: 0, discoveries: CODEX_TRACKER.init(), error: null }),
 }));
 
 /**

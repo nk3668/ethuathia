@@ -18,7 +18,7 @@ import type { FloorsTypes } from './floors';
 import type { GenStepDef } from './gen/types';
 import type { ItemsTypes } from './items';
 import type { QuestsTypes } from './quests';
-import type { RunDomainTypes } from './run';
+import type { DiscoveryRules, RunDomainTypes } from './run';
 import type { SimEvent } from './events';
 import type { FloorId, RunConfig, RunState } from './state';
 import type { StatsTypes } from './stats';
@@ -89,6 +89,7 @@ export interface RunTracker<S> {
  * - `conditions`, `ruleActions` and `genSteps` go into `CONDITIONS`, `RULE_ACTIONS` and
  *   `GEN_STEPS`; ids must be unique across domains (`cond.*`, `act.*`, `gen.*`).
  * - `trackers` are the domain's run trackers, in the order they should run.
+ * - `discoveries` maps the domain's event types to the content they discover for the Codex.
  */
 export interface SimDomain<T extends DomainShape> {
   readonly actions: ActionRecord<T['request']>;
@@ -99,4 +100,9 @@ export interface SimDomain<T extends DomainShape> {
   readonly ruleActions?: readonly RuleActionDef[];
   readonly genSteps?: readonly GenStepDef[];
   readonly trackers?: readonly RunTracker<unknown>[];
+  /**
+   * What the domain's events discover for the Codex, by event type (`run/codex.ts`). Goes into
+   * `DISCOVERY_RULES`, which `CODEX_TRACKER` reads.
+   */
+  readonly discoveries?: DiscoveryRules;
 }

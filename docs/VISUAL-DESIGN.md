@@ -397,6 +397,14 @@ A two-pane view: category list and search on the left, entry on the right. An en
 glyph at large size in its map color, the description, a stat table, and where it has been
 seen. Undiscovered entries appear as `???` with a hint.
 
+**As built (ETH-065).** The side panel is too narrow for two panes, so the Codex is one column:
+a search box, a row of section toggle buttons (`All`, then one per kind, `aria-pressed`), then a
+section per kind with a `known / total` count. Entries sit in a bordered list; a discovered one
+is a disclosure row (glyph in its map color, name, and how it was met: `Seen · Slain · Used`)
+that opens to the description and stat table. An undiscovered one shows a faint `?`, `???` and
+its hint. Search matches only discovered entries. `Explain` links are underlined with a dotted
+`--text-faint` line, the same as the kit tooltip trigger.
+
 ### 5.4 Graveyard
 
 A list of gravestone cards: name, class and race, level, floor and cause of death, the epitaph
