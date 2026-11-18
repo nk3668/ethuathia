@@ -12,6 +12,7 @@ import { clonePlain } from '../../core';
 import type { Command } from '../commands';
 import type { ViewOptions } from '../snapshot';
 import type { SimEvent } from '../events';
+import type { RunReport } from '../run/end';
 import type { RunConfig } from '../state';
 import { SimSession } from './session';
 import type { HostUpdate, Speed } from './types';
@@ -57,6 +58,8 @@ export class PacedRunner {
   constructor(
     private readonly onUpdate: (update: HostUpdate) => void,
     private readonly now: Clock,
+    /** Called once when the run ends, right after the update with its last events. */
+    private readonly onRunEnded: (report: RunReport) => void = () => undefined,
   ) {}
 
   get speed(): Speed {
@@ -136,11 +139,16 @@ export class PacedRunner {
   }
 
   private advance(session: SimSession): void {
-    const { events, progressed } = session.step();
+    const { events, progressed, ended } = session.step();
     for (const event of events) this.events.push(event);
     this.stepsSinceAnchor++;
     this.dirty = true;
-    this.stalled = !progressed;
+    // A finished run does nothing more, so stop stepping it.
+    this.stalled = !progressed || ended !== null;
+    if (ended !== null) {
+      this.flush(session);
+      this.onRunEnded(ended);
+    }
   }
 
   private flush(session: SimSession): void {

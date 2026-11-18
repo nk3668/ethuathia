@@ -3,6 +3,7 @@
  * data, posted with structured clone.
  */
 import type { Command } from '../commands';
+import type { RunReport } from '../run/end';
 import type { ViewOptions } from '../snapshot';
 import type { RunConfig } from '../state';
 
@@ -37,7 +38,9 @@ export type HostMessage =
   /** Events since the last update, in order, then the snapshot after them. */
   | ({ type: 'update' } & HostUpdate)
   /** The worker could not do what it was asked, or the sim threw. The run is paused. */
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  /** The run ended (ETH-062), sent right after the update with its last events. */
+  | { type: 'runEnded'; report: RunReport };
 
 /**
  * Checks the shape of a message the worker received, or returns why it is malformed. Commands

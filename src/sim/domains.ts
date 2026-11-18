@@ -32,7 +32,17 @@ import { ROOM_STEPS } from './gen/steps';
 import { ITEMS_DOMAIN } from './items';
 import { QUESTS_DOMAIN } from './quests';
 import { CORE_DISCOVERIES } from './coreEvents';
-import { BUNDLE_SOURCES, CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS, STAT_PROVIDERS, TRIGGERS } from './registries';
+import {
+  BUNDLE_SOURCES,
+  CONDITIONS,
+  DISCOVERY_RULES,
+  GEN_STEPS,
+  RULE_ACTIONS,
+  STAT_PROVIDERS,
+  TRACKER_LIST,
+  TRIGGERS,
+  VICTORY_CHECKS,
+} from './registries';
 import { RUN_DOMAIN } from './run';
 import type { DiscoveryRule } from './run';
 import type { RunConfig } from './state';
@@ -117,14 +127,21 @@ export function runTurnEnd(ctx: TurnCtx): void {
   for (const d of ALL) d.turnEnd?.(ctx);
 }
 
-/** Every domain's run trackers, in domain order. ETH-062 runs them over each step's events. */
-export const RUN_TRACKERS: readonly RunTracker<unknown>[] = ALL.flatMap((d) => d.trackers ?? []);
-{
-  const ids = new Set<string>();
-  for (const tracker of RUN_TRACKERS) {
-    if (ids.has(tracker.id)) throw new Error(`Two domains define the run tracker "${tracker.id}"`);
-    ids.add(tracker.id);
-  }
+/**
+ * Every domain's run trackers, in domain order. The run domain runs them over each step's events
+ * (`src/sim/run/trackers.ts`); it reads them from `TRACKER_LIST` in `registries.ts`, which is
+ * this same array.
+ */
+export const RUN_TRACKERS: readonly RunTracker<unknown>[] = TRACKER_LIST;
+for (const tracker of ALL.flatMap((d) => d.trackers ?? [])) {
+  if (TRACKER_LIST.some((t) => t.id === tracker.id)) throw new Error(`Two domains define the run tracker "${tracker.id}"`);
+  TRACKER_LIST.push(tracker);
+}
+
+/** Every domain's victory checks, in domain order (`VICTORY_CHECKS` in `registries.ts`). */
+for (const check of ALL.flatMap((d) => d.victoryChecks ?? [])) {
+  if (VICTORY_CHECKS.some((c) => c.id === check.id)) throw new Error(`Two domains define the victory check "${check.id}"`);
+  VICTORY_CHECKS.push(check);
 }
 
 for (const rules of [CORE_DISCOVERIES, ...ALL.map((d) => d.discoveries ?? {})]) {
@@ -149,4 +166,4 @@ export function domainSnapshots(ctx: SnapshotCtx): DomainSnapshots {
   return out as DomainSnapshots;
 }
 
-export { BUNDLE_SOURCES, CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS, STAT_PROVIDERS, TRIGGERS };
+export { BUNDLE_SOURCES, CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS, STAT_PROVIDERS, TRIGGERS, VICTORY_CHECKS };

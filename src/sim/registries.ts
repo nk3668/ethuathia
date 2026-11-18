@@ -10,6 +10,7 @@
  */
 import { Registry } from '../core';
 import type { ConditionDef, RuleActionDef } from './ai/types';
+import type { RunTracker, VictoryCheck } from './domain';
 import type { GenStepDef } from './gen/types';
 import type { DiscoveryRule } from './run/codex';
 import type { BundleSource, StatProvider, TriggerKindDef } from './stats/types';
@@ -37,3 +38,12 @@ export const STAT_PROVIDERS: StatProvider[] = [];
 
 /** Every bundle source, in run order: what `getStat` and `fireTrigger` read bundles from. */
 export const BUNDLE_SOURCES: BundleSource[] = [];
+
+/**
+ * Every run tracker, in domain order (`RUN_TRACKERS` in `domains.ts` is this list). The run
+ * domain reads it at run time to run the trackers; never at load time.
+ */
+export const TRACKER_LIST: RunTracker<unknown>[] = [];
+
+/** Every victory check, in domain order (ETH-062). Read at run time only. */
+export const VICTORY_CHECKS: VictoryCheck[] = [];

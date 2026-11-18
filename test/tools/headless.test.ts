@@ -34,6 +34,10 @@ describe('tools/headless', () => {
     expect(results.map((r) => r.seed)).toEqual([1, 2, 3]);
     for (const r of results) {
       expect(r.outcome, `seed ${r.seed}`).toBe('done');
+      // The baseline turns back on the bottom floor and walks out: a retreat (ETH-062).
+      expect(r.end, `seed ${r.seed}`).toBe('retreat');
+      expect(r.runTurns, `seed ${r.seed}`).toBeGreaterThan(r.turns);
+      expect(r.atRisk?.renown, `seed ${r.seed}`).toBeGreaterThan(0);
       expect(r.depth, `seed ${r.seed}`).toBe(2);
       expect(r.bottom, `seed ${r.seed}`).toBe(2);
       expect(r.floors?.map((f) => f.depth)).toEqual([1, 2]);
@@ -89,6 +93,17 @@ describe('tools/headless', () => {
     const lines = report.split('\n');
     expect(lines[0]).toBe('seed  turns  depth  explored  stuck  result  state hash');
     expect(lines[3]).toBe('   3    200    2/2    100.0%      2  done    00000000000000');
+  });
+
+  it('reports run outcomes and flags runs that ended above the bottom', () => {
+    const report = formatReport([
+      result(1, { end: 'retreat', runTurns: 300 }),
+      result(2, { outcome: 'early', end: 'wipe', runTurns: 90, turns: 90, depth: 1, floors: [{ depth: 1, turns: 90, explored: 0.5 }] }),
+    ]);
+    expect(report).toContain('2 runs: 1 reached the bottom, 1 ended above it, 0 hit the turn cap');
+    expect(report).toContain('Run outcomes: 1 retreat, 1 wipe.');
+    expect(report).toContain('  seed 2: ended (wipe) on turn 90 without reaching the bottom (floor 1 of 2)');
+    expect(report.split('\n')[1]).toMatch(/done \(retreat\)/);
   });
 
   it('says so when no seed needs a look', () => {

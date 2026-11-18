@@ -21,7 +21,7 @@ import { registerInvariant } from '../invariants';
 import type { EntityId, FloorId, RunConfig } from '../state';
 import { arrivalStairs, arrivalTile, dungeonDepth, floorIdAt, floorNode, stairsOn, stairsTarget } from './dungeon';
 import type { StairsDir } from './dungeon';
-import { FLOORS_CONDITIONS, FLOORS_RULE_ACTIONS } from './rules';
+import { FLOORS_CONDITIONS, FLOORS_RULE_ACTIONS, names, stairsGathering } from './rules';
 
 export * from './dungeon';
 export * from './rules';
@@ -38,7 +38,13 @@ export type FloorsEvent =
    * the floor was just built. The hook for anything that happens on arrival: depth rewards,
    * contracts, the run ending at the exit. Not emitted for the floor a run starts on.
    */
-  | { type: 'floorEntered'; actor: EntityId; floor: FloorId; depth: number; firstVisit: boolean };
+  | { type: 'floorEntered'; actor: EntityId; floor: FloorId; depth: number; firstVisit: boolean }
+  /**
+   * `actor` led the party (`party`: every living member, gathered at the stairs) up the first
+   * floor's stairs and out of the dungeon, at `pos` on `floor`. The run domain ends the run on it:
+   * a victory if its victory checks pass, else a retreat (ETH-062).
+   */
+  | { type: 'leftDungeon'; actor: EntityId; party: EntityId[]; floor: FloorId; pos: Pos };
 
 /** Take the stairs you are standing on, going `dir`. */
 export interface StairsRequest {
@@ -104,7 +110,8 @@ export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {
     name: 'Take the stairs',
     description:
       'Go up or down the stairs you are standing on, arriving on the linked stairs of the floor above or below. ' +
-      'A floor nobody has reached yet is discovered on arrival; floors already visited are as the party left them.',
+      'A floor nobody has reached yet is discovered on arrival; floors already visited are as the party left them. ' +
+      'The first floor’s stairs up lead out of the dungeon: the whole party must be gathered there, and leaving ends the run.',
     tags: [],
     cost: 100,
     parse: (raw) => (isDir(raw.dir) ? { id: 'stairs', dir: raw.dir } : 'The direction must be "up" or "down"'),
@@ -112,14 +119,23 @@ export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {
       const here = featureAt(state, actor.floor, actor.pos)?.feature;
       if (here?.kind !== 'stairs' || here.dir !== dir) return `There are no stairs ${dir} here`;
       if (stairsTarget(state, actor.floor, dir) === null) {
-        return dir === 'up' ? 'These stairs lead out of the dungeon, and leaving isn’t possible yet' : 'These stairs lead nowhere';
+        if (dir === 'down') return 'These stairs lead nowhere';
+        // The way out of the dungeon: the party leaves together, which ends the run (ETH-062).
+        const { missing } = stairsGathering(state, actor.floor, actor.pos, 'up');
+        if (missing.length > 0) {
+          return `These stairs lead out of the dungeon, and the party leaves together: ${names(missing)} ${missing.length === 1 ? 'is' : 'are'} not here yet`;
+        }
       }
       return null;
     },
     execute: ({ state, actor, emit }, { dir }) => {
       const from = actor.floor;
       const to = stairsTarget(state, from, dir);
-      if (to === null) return;
+      if (to === null) {
+        const { gathered } = stairsGathering(state, from, actor.pos, 'up');
+        emit({ type: 'leftDungeon', actor: actor.id, party: gathered.map((g) => g.id), floor: from, pos: { x: actor.pos.x, y: actor.pos.y } });
+        return;
+      }
       const firstVisit = state.floors[to] === undefined;
       const pos = arrivalTile(state, to, arrivalStairs(state, to, dir));
       if (pos === null) throw new Error(`Floor "${to}" has no free tile to arrive on`);

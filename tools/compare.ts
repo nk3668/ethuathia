@@ -16,6 +16,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { floorTurns } from './headless';
 import type { Outcome, SeedResult } from './headless';
+import type { RunOutcome } from '../src/sim';
 
 /** Bumped when the shape of `SimReport` changes. */
 export const REPORT_VERSION = 1;
@@ -54,7 +55,8 @@ export function parseReport(text: string, source: string): SimReport {
   return report as SimReport;
 }
 
-const ROW = /^\s*(\d+)\s+(\d+)\s+(?:(\d+)\/(\d+)\s+)?(\d+(?:\.\d+)?)%\s+(-|\d+)\s+(done|idle|cap|stalled)\s+(\S+)\s*$/;
+const ROW =
+  /^\s*(\d+)\s+(\d+)\s+(?:(\d+)\/(\d+)\s+)?(\d+(?:\.\d+)?)%\s+(-|\d+)\s+(done|early|idle|cap|stalled)(?: \((victory|retreat|wipe)\))?\s+(\S+)\s*$/;
 
 /**
  * Reads the per-seed rows of the printed report (`formatReport`), for refs made before `--json`.
@@ -65,11 +67,12 @@ export function parseReportText(text: string): SeedResult[] {
   return text.split(/\r?\n/).flatMap((line) => {
     const m = ROW.exec(line);
     if (m === null) return [];
-    const [, seed, turns, depth, bottom, explored, stuck, outcome, hash] = m as unknown as (string | undefined)[];
+    const [, seed, turns, depth, bottom, explored, stuck, outcome, end, hash] = m as unknown as (string | undefined)[];
     return [
       {
         seed: Number(seed),
         outcome: outcome as Outcome,
+        ...(end === undefined ? {} : { end: end as RunOutcome }),
         turns: Number(turns),
         ...(depth === undefined ? {} : { depth: Number(depth), bottom: Number(bottom) }),
         steps: 0,
@@ -95,6 +98,7 @@ export interface Metric {
 const mean = (xs: number[]) => (xs.length === 0 ? null : xs.reduce((a, b) => a + b, 0) / xs.length);
 const doneTurns = (rs: readonly SeedResult[]) => rs.filter((r) => r.outcome === 'done').map((r) => r.turns);
 const countOf = (o: Outcome) => (rs: readonly SeedResult[]) => rs.filter((r) => r.outcome === o).length;
+const endOf = (o: RunOutcome) => (rs: readonly SeedResult[]) => rs.filter((r) => r.end === o).length;
 
 /** The rows of the comparison table. Later items add deaths, currency per hour and so on. */
 export const METRICS: Metric[] = [
@@ -113,6 +117,14 @@ export const METRICS: Metric[] = [
   { name: 'depth, mean', value: (rs) => mean(rs.map((r) => r.depth ?? 1)), digits: 2 },
   { name: 'depth, max', value: (rs) => (rs.length === 0 ? null : Math.max(...rs.map((r) => r.depth ?? 1))), digits: 0 },
   { name: 'turns per floor, mean', value: (rs) => mean(floorTurns(rs)), digits: 1 },
+  // Run outcomes (ETH-062). Reports from before it have no run end, so these read 0.
+  { name: 'ended above bottom', value: countOf('early'), digits: 0 },
+  { name: 'outcome: victory', value: endOf('victory'), digits: 0 },
+  { name: 'outcome: retreat', value: endOf('retreat'), digits: 0 },
+  { name: 'outcome: wipe', value: endOf('wipe'), digits: 0 },
+  { name: 'run turns, mean (ended)', value: (rs) => mean(rs.flatMap((r) => (r.runTurns === undefined ? [] : [r.runTurns]))), digits: 1 },
+  { name: 'renown at risk, mean', value: (rs) => mean(rs.map((r) => r.atRisk?.renown ?? 0)), digits: 1 },
+  { name: 'trophies at risk, mean', value: (rs) => mean(rs.map((r) => r.atRisk?.trophies ?? 0)), digits: 1 },
 ];
 
 function fmt(value: number | null, digits: number): string {

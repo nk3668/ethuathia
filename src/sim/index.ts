@@ -22,6 +22,7 @@ export {
   runTurnStart,
   STAT_PROVIDERS,
   TRIGGERS,
+  VICTORY_CHECKS,
 } from './domains';
 export type {
   DomainKey,
@@ -33,6 +34,7 @@ export type {
   SimDomain,
   SnapshotCtx,
   TurnCtx,
+  VictoryCheck,
 } from './domain';
 export { isActionId, parseRequest, performAction, validateAction } from './actions';
 export type { ActionCtx, ActionDef, ActionId, ActionRecord, ActionRequest, ActorCtx, BaseRequest, RequestOf } from './actions';

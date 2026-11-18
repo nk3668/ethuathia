@@ -7,8 +7,8 @@
  */
 import { parseArgs } from 'node:util';
 import { CLASS_VANGUARD, RACE_HUMAN } from '../src/content';
-import { ACT_WAIT, DROP_TURNS, floorIdAt, SimSession } from '../src/sim';
-import type { AdventurerConfig, Explored, RunConfig, Snapshot } from '../src/sim';
+import { ACT_WAIT, DROP_TURNS, floorIdAt, RUN_OUTCOMES, SimSession } from '../src/sim';
+import type { AdventurerConfig, Explored, RewardAmounts, RunConfig, RunOutcome, Snapshot } from '../src/sim';
 
 /**
  * Party turns a run may take before it is stopped. A lone adventurer takes about 200–300 party
@@ -37,12 +37,14 @@ export interface HeadlessOptions {
 
 /**
  * How one seed's run went.
- * - `done`: the party reached the bottom floor, explored it and settled there.
+ * - `done`: the party reached the bottom floor and the run ended (since ETH-062, by walking back
+ *   out; before it, by settling on the bottom floor). `end` says how.
+ * - `early`: the run ended without reaching the bottom (a wipe, or a retreat on the way down).
  * - `idle`: the party settled above the bottom floor, with nowhere left to go.
  * - `cap`: still going after `cap` party turns.
  * - `stalled`: a step got nowhere because nobody could act.
  */
-export type Outcome = 'done' | 'idle' | 'cap' | 'stalled';
+export type Outcome = 'done' | 'early' | 'idle' | 'cap' | 'stalled';
 
 /** One floor the party reached. */
 export interface FloorResult {
@@ -60,10 +62,17 @@ export interface SeedResult {
   seed: number;
   outcome: Outcome;
   /**
-   * Game turns (`RunState.turn`) taken: up to the turn the party settled when `done` or `idle`,
-   * else up to where the run stopped.
+   * Game turns (`RunState.turn`) taken to get as deep as the party went: up to the turn it turned
+   * back for the surface (or settled, before ETH-062), else up to where the run stopped. The
+   * return trip is in `runTurns`.
    */
   turns: number;
+  /** How the run ended (ETH-062), if it did. */
+  end?: RunOutcome;
+  /** Game turns until the run ended, return trip included. Only for runs that ended. */
+  runTurns?: number;
+  /** The run's at-risk currency when it stopped (currency id → amount). */
+  atRisk?: RewardAmounts;
   /** Party turns (steps) run, including the ones spent confirming the party had settled. */
   steps: number;
   /** How much of the last floor reached the party saw. */
@@ -101,6 +110,8 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
   const reached = new Map<number, number>([[1, 0]]);
   let outcome: Outcome = 'cap';
   let idleSince: number | null = null;
+  let turnedBack: number | null = null;
+  let end: { outcome: RunOutcome; turn: number } | null = null;
   let steps = 0;
   let snap = session.snapshot();
 
@@ -108,6 +119,8 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     const { events, progressed } = session.step();
     for (const e of events) {
       if (e.type === 'floorEntered' && !reached.has(e.depth)) reached.set(e.depth, e.turn);
+      if (e.type === 'turnedBack') turnedBack ??= e.turn;
+      if (e.type === 'runEnded') end = { outcome: e.outcome, turn: e.turn };
       if (e.type !== 'stuck') continue;
       stuck.count++;
       stuck.firstTurn ??= e.turn;
@@ -118,6 +131,10 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     }
     steps++;
     snap = session.snapshot();
+    if (end !== null) {
+      outcome = snap.domains.floors.deepest === snap.domains.floors.depth ? 'done' : 'early';
+      break;
+    }
     if (!idle(snap)) {
       idleSince = null;
       continue;
@@ -130,8 +147,8 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     }
   }
 
-  const settled = outcome === 'done' || outcome === 'idle';
-  const turns = settled && idleSince !== null ? idleSince : snap.turn;
+  const settled = end === null && (outcome === 'done' || outcome === 'idle');
+  const turns = end !== null ? (turnedBack ?? end.turn) : settled && idleSince !== null ? idleSince : (turnedBack ?? snap.turn);
   const depths = [...reached.keys()].sort((a, b) => a - b);
   const floors = depths.map((depth, i): FloorResult => {
     const next = reached.get(depths[i + 1] ?? -1);
@@ -153,6 +170,8 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     floors,
     stuck,
     hash: session.stateHash(),
+    ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
+    atRisk: { ...snap.domains.run.atRisk },
   };
 }
 
@@ -167,6 +186,7 @@ export function flagReason(result: SeedResult, cap = DEFAULT_TURN_CAP): string |
   const where = `floor ${result.depth ?? 1} of ${result.bottom ?? 1}`;
   if (result.outcome === 'cap') reasons.push(`hit the turn cap (${cap} party turns) on ${where} at ${percent(result.explored)} explored`);
   if (result.outcome === 'idle') reasons.push(`settled on ${where} with no way further down`);
+  if (result.outcome === 'early') reasons.push(`ended (${result.end ?? '?'}) on turn ${result.runTurns ?? result.turns} without reaching the bottom (${where})`);
   if (result.outcome === 'stalled') reasons.push(`stalled on turn ${result.turns}: nobody could act`);
   const { count, firstTurn } = result.stuck;
   if (count > 0) reasons.push(`stuck detection fired ${count} time${count === 1 ? '' : 's'} (first on turn ${firstTurn})`);
@@ -191,7 +211,7 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     `${r.depth ?? 1}/${r.bottom ?? 1}`,
     percent(r.explored),
     r.stuck.count === 0 ? '-' : String(r.stuck.count),
-    r.outcome,
+    r.end === undefined ? r.outcome : `${r.outcome} (${r.end})`,
     r.hash,
   ]);
   const widths = header.map((h, i) => Math.max(h.length, ...rows.map((row) => (row[i] as string).length)));
@@ -204,6 +224,7 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
   const count = (o: Outcome) => results.filter((r) => r.outcome === o).length;
   const summary = [
     `${results.length} run${results.length === 1 ? '' : 's'}: ${done.length} reached the bottom`,
+    ...(count('early') > 0 ? [`${count('early')} ended above it`] : []),
     ...(count('idle') > 0 ? [`${count('idle')} settled above it`] : []),
     `${count('cap')} hit the turn cap`,
     ...(count('stalled') > 0 ? [`${count('stalled')} stalled`] : []),
@@ -221,6 +242,9 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     `min ${Math.min(...depths)}, max ${Math.max(...depths)}. ` +
     `Turns per floor: mean ${mean(perFloor)}, max ${Math.max(...perFloor)}.`;
 
+  const ends = RUN_OUTCOMES.map((o) => [o, results.filter((r) => r.end === o).length] as const).filter(([, n]) => n > 0);
+  const endLine = ends.length === 0 ? '' : `Run outcomes: ${ends.map(([o, n]) => `${n} ${o}`).join(', ')}.`;
+
   const flagged = results.flatMap((r) => {
     const reason = flagReason(r, cap);
     return reason === null ? [] : [`  seed ${r.seed}: ${reason}`];
@@ -231,6 +255,7 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     ...rows.map(line),
     '',
     `${summary}.`,
+    ...(endLine === '' ? [] : [endLine]),
     ...(turnLine === '' ? [] : [turnLine]),
     ...(results.length === 0 ? [] : [depthLine]),
     flagged.length === 0 ? 'Flagged seeds: none.' : `Flagged seeds:\n${flagged.join('\n')}`,

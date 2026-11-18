@@ -6,6 +6,7 @@
 import type { Command } from '../commands';
 import type { SimEvent } from '../events';
 import { clonePlain } from '../../core';
+import type { RunReport } from '../run/end';
 import type { Snapshot, ViewOptions } from '../snapshot';
 import type { RunConfig } from '../state';
 import { SimSession } from './session';
@@ -16,6 +17,7 @@ export class InlineHost implements SimHost {
   private session: SimSession | null = null;
   private readonly events = new Listeners<readonly SimEvent[]>();
   private readonly snapshots = new Listeners<Snapshot>();
+  private readonly ended = new Listeners<RunReport>();
   private currentSpeed: Speed = 1;
   private view: ViewOptions = {};
 
@@ -62,14 +64,26 @@ export class InlineHost implements SimHost {
     const session = this.current();
     const events: SimEvent[] = [];
     let done = 0;
+    let ended: RunReport | null = null;
     while (done < steps) {
       const result = session.step();
       events.push(...result.events);
       if (!result.progressed) break;
       done++;
+      // A finished run does nothing more.
+      if (result.ended !== null) {
+        ended = result.ended;
+        break;
+      }
     }
     deliver({ events, snapshot: session.snapshot() }, this.events, this.snapshots);
+    if (ended !== null) this.ended.emit(ended);
     return done;
+  }
+
+  /** Called once when the run ends, right after the batch with its last events. */
+  onRunEnded(listener: (report: RunReport) => void): Unsubscribe {
+    return this.ended.add(listener);
   }
 
   onSnapshot(listener: (snapshot: Snapshot) => void): Unsubscribe {
@@ -92,6 +106,7 @@ export class InlineHost implements SimHost {
     this.session = null;
     this.events.clear();
     this.snapshots.clear();
+    this.ended.clear();
   }
 
   private current(): SimSession {

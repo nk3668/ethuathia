@@ -125,16 +125,17 @@ describe('the stairs action', () => {
     expect(checkInvariants(state)).toEqual([]);
   });
 
-  it('refuses without matching stairs underfoot, and out of the dungeon', () => {
-    const { state, hero } = setup({ floorTexts: [['#####', '#<@>#', '#####'], D2, D3] });
+  it('refuses without matching stairs underfoot, and out of the dungeon without the whole party', () => {
+    const { state, hero } = setup({ party: [HERO, MIRA], floorTexts: [['##########', '#<@>....@#', '##########'], D2, D3] });
     expect(ofType(by(state, act(hero.id, { id: 'stairs', dir: 'down' })), 'actionFailed')).toMatchObject([
       { reason: 'There are no stairs down here' },
     ]);
     by(state, act(hero.id, { id: 'move', dir: { x: -1, y: 0 } }));
     expect(ofType(by(state, act(hero.id, { id: 'stairs', dir: 'up' })), 'actionFailed')).toMatchObject([
-      { reason: 'These stairs lead out of the dungeon, and leaving isn’t possible yet' },
+      { reason: 'These stairs lead out of the dungeon, and the party leaves together: Mira is not here yet' },
     ]);
     expect(hero.floor).toBe('d1');
+    expect(state.domains.run.end).toBeNull();
   });
 
   it('puts an arrival next to the stairs when someone stands on them', () => {
@@ -151,24 +152,22 @@ describe('the stairs action', () => {
 });
 
 describe('the baseline descent', () => {
-  it('descends once a floor is explored, arrives on the linked stairs, and waits on the bottom floor', () => {
+  it('descends once a floor is explored, arrives on the linked stairs, and turns back on the bottom floor', () => {
     const { state, hero } = setup();
-    const events = runUntil(state, () => hero.floor === 'd3' && hero.ai?.memory.intent?.action === 'act.wait');
-    expect(hero.floor).toBe('d3');
+    const events = runUntil(state, () => hero.ai?.memory.intent?.action === 'act.retreat_run');
+    // It arrived on the bottom floor's stairs up, saw all of the tiny floor and went straight back up.
+    expect(hero.floor).toBe('d2');
     expect(ofType(events, 'tookStairs').map((e) => [e.from, e.to])).toEqual([
       ['d1', 'd2'],
       ['d2', 'd3'],
+      ['d3', 'd2'],
     ]);
     // Each floor was fully explored before the hero went down.
     expect(fired(events).filter((e) => e.action === 'act.descend').at(0)?.detail).toBe(
       'Descend: heading for the stairs down, 6 turns away',
     );
-    expect(hero.ai?.memory.intent?.detail).toBe('Wait: nothing else to do (on the bottom floor, floor 3 of 3)');
+    expect(hero.ai?.memory.intent?.detail).toBe('Retreat: taking the stairs up to floor 2 (on the bottom floor, floor 3 of 3)');
     expect(ofType(events, 'stuck')).toEqual([]);
-    // It stays put.
-    const at = { ...hero.pos };
-    for (let i = 0; i < 5; i++) step(state, []);
-    expect(hero.pos).toEqual(at);
   });
 
   it('gathers the party at the stairs and goes down together', () => {
@@ -205,7 +204,7 @@ describe('the baseline descent', () => {
     const events = runUntil(state, () => hero.floor === 'd2', 20);
     expect(hero.floor).toBe('d2');
     const descend = fired(events).find((e) => e.action === 'act.descend');
-    expect(descend).toMatchObject({ rule: { set: 'baseline', index: 1 }, condition: 'cond.floor_overstayed' });
+    expect(descend).toMatchObject({ rule: { set: 'baseline', index: 3 }, condition: 'cond.floor_overstayed' });
     expect(descend?.detail).toContain('the limit is 3');
   });
 

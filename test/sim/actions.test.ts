@@ -183,7 +183,7 @@ describe('actions in the step loop', () => {
   it('rejects a player action with a malformed direction', () => {
     const { state, hero } = setup();
     const events = step(state, [{ type: 'playerAction', actor: hero.id, action: { id: 'move', dir: { x: 3, y: 0 } } }]);
-    expect(events[0]).toMatchObject({ type: 'commandRejected', command: 'playerAction' });
+    expect(events.find((e) => e.type !== 'runStarted')).toMatchObject({ type: 'commandRejected', command: 'playerAction' });
     expect(hero.actor.queued).toBeUndefined();
   });
 });

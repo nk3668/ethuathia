@@ -23,6 +23,7 @@ export type { Codex } from './slices/codex';
 export { HISTORY_LIMIT } from './slices/history';
 export type { History, RunRecord } from './slices/history';
 export type { Upgrades } from './slices/upgrades';
+export type { Settings } from './slices/settings';
 export {
   canAfford,
   canPurchase,

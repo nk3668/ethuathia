@@ -7,6 +7,8 @@ import { clonePlain } from '../../core';
 import type { Command } from '../commands';
 import type { SimEvent } from '../events';
 import { createRun } from '../createRun';
+import { runOver, runReport } from '../run/end';
+import type { RunReport } from '../run/end';
 import { stateHash } from '../serialize';
 import { snapshot } from '../snapshot';
 import type { Snapshot, ViewOptions } from '../snapshot';
@@ -37,12 +39,24 @@ export class SimSession {
    * One step (one party turn) with the queued commands. Returns its events, and whether it got
    * anywhere: false if the turn did not move and nothing happened, as when nobody can act.
    */
-  step(): { events: SimEvent[]; progressed: boolean } {
+  step(): { events: SimEvent[]; progressed: boolean; ended: RunReport | null } {
     const commands = this.pending;
     this.pending = [];
     const turn = this.state.turn;
+    const wasOver = runOver(this.state);
     const events = step(this.state, commands);
-    return { events, progressed: events.length > 0 || this.state.turn !== turn };
+    const ended = !wasOver && runOver(this.state) ? runReport(this.state) : null;
+    return { events, progressed: events.length > 0 || this.state.turn !== turn, ended };
+  }
+
+  /** True once the run has ended; later steps do nothing. */
+  get over(): boolean {
+    return runOver(this.state);
+  }
+
+  /** The finished run's report, or `null` while it goes on. */
+  report(): RunReport | null {
+    return runOver(this.state) ? runReport(this.state) : null;
   }
 
   /** What later snapshots show by default, e.g. `{ follow: selectedId }`. A copy is kept. */

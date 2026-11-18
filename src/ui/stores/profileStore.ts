@@ -9,7 +9,7 @@
  */
 import { create } from 'zustand';
 import { applyRunResult, canPurchase, decodeSave, encodeSave, newProfile, purchase, respec, respecPlan } from '../../meta';
-import type { Profile } from '../../meta';
+import type { Profile, Settings } from '../../meta';
 import { startAutosave } from '../../platform';
 import type { AutosaveOptions, SaveStore } from '../../platform';
 import type { RunResult } from '../../sim';
@@ -35,6 +35,8 @@ export interface ProfileStoreState {
 
   /** Banks a finished run's rewards (meta `applyRunResult`). */
   applyRunResult(result: RunResult): void;
+  /** Changes some of the player's settings (the profile's `settings` slice), e.g. `{ autoRestart: true }`. */
+  updateSettings(changes: Partial<Settings>): void;
   /** Buys an upgrade node (meta `purchase`). Returns false, changing nothing, if it can't be bought. */
   purchase(nodeId: string): boolean;
   /** Undoes the choice in a pick-one group (meta `respec`). Returns false if nothing in it is owned. */
@@ -69,6 +71,10 @@ export const useProfileStore = create<ProfileStoreState>()((set, get) => ({
 
   applyRunResult: (result) => {
     set((s) => ({ profile: applyRunResult(s.profile, result), dirty: true }));
+  },
+
+  updateSettings: (changes) => {
+    set((s) => ({ profile: { ...s.profile, settings: { ...s.profile.settings, ...changes } }, dirty: true }));
   },
 
   purchase: (nodeId) => {

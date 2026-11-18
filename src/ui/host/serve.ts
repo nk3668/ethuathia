@@ -16,7 +16,11 @@ export interface ServePort {
 
 /** Serves a sim on `port` until the worker is terminated or the port closed. */
 export function serveSim(port: ServePort, now: Clock = () => performance.now()): void {
-  const runner = new PacedRunner((update) => port.postMessage({ type: 'update', ...update }), now);
+  const runner = new PacedRunner(
+    (update) => port.postMessage({ type: 'update', ...update }),
+    now,
+    (report) => port.postMessage({ type: 'runEnded', report }),
+  );
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   const fail = (error: unknown) => {

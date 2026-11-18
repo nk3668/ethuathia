@@ -108,7 +108,7 @@ describe('InlineHost', () => {
     host.send(command);
     (command as { actor: number }).actor = FIRST;
     host.run(1);
-    expect(events[0]).toMatchObject({ type: 'commandRejected', reason: 'No entity 99', turn: 0 });
+    expect(events.find((e) => e.type !== 'runStarted')).toMatchObject({ type: 'commandRejected', reason: 'No entity 99', turn: 0 });
   });
 
   it('stops listening when unsubscribed or disposed, and needs a run first', () => {

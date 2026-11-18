@@ -1,6 +1,7 @@
 import { MapCanvas } from '../map/MapCanvas';
 import { MapControls } from '../map/MapControls';
 import styles from './MapArea.module.css';
+import { RunOverBanner } from './RunSummary';
 import { SimErrorBanner } from './SimErrorBanner';
 
 /**
@@ -18,6 +19,7 @@ export function MapArea() {
         <MapControls />
       </div>
       <SimErrorBanner />
+      <RunOverBanner />
     </section>
   );
 }

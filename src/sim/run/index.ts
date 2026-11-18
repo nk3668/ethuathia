@@ -1,50 +1,96 @@
 /**
- * The run domain: how a run ends (victory, retreat, wipe), run trackers and the at-risk rewards.
- * Built by ETH-062 (run end, run trackers and the run summary).
+ * The run domain (ETH-062): how a run ends (victory, retreat, wipe), run trackers and the at-risk
+ * rewards.
  *
- * Everything this domain adds lives in this folder (docs/ARCHITECTURE.md, Contracts): declare
- * its events, action requests, commands, state slice, snapshot slice, entity parts and config
- * fields below (or in files this index re-exports), and list its rule conditions, rule actions,
- * generation steps and run trackers in `RUN_DOMAIN`. The root files only compose what is exported
- * here. Never import `domains.ts` or `index.ts` from this folder.
+ * - `result.ts`: `RunResult`, what a finished run hands to meta, and the currency ids.
+ * - `trackers.ts`: the tracker framework (every domain's `RunTracker` over the event stream into
+ *   `rewards.atRisk` and `RunResult.extras`) and the base trackers (depth, turns, kills, deaths).
+ * - `end.ts`: noticing the end (`settleRun`), its cause, and building the `RunResult`.
+ * - `rules.ts`: `cond.heading_out` and `act.retreat_run`.
+ * - Here: the events, the `retreat` command, the state and snapshot slices and the invariants.
+ *
+ * Never import `domains.ts` or `index.ts` from this folder.
  */
+import type { Pos } from '../../core';
 import type { ActionRecord } from '../actions';
 import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx } from '../domain';
 import { registerInvariant } from '../invariants';
-import type { RunConfig } from '../state';
+import { TRACKER_LIST } from '../registries';
+import type { EntityId, FloorId, RunConfig } from '../state';
+import { livingParty } from './end';
+import type { Leaving, LeavingReason, RunEnd } from './end';
+import { RUN_OUTCOMES } from './result';
+import type { RewardAmounts, RunOutcome } from './result';
+import { RUN_DOMAIN_CONDITIONS, RUN_DOMAIN_RULE_ACTIONS } from './rules';
 import { CODEX_TRACKER } from './codex';
-import type { RewardAmounts } from './result';
+import { initTrackers, RUN_DOMAIN_TRACKERS, trackerRewards } from './trackers';
 
 export * from './codex';
 export * from './result';
+export * from './trackers';
+export * from './end';
+export * from './rules';
 
-/** The events this domain emits (bodies, without `turn`). Each needs a formatter in `ui/shell/logText/run.ts`. */
-export type RunDomainEvent = never;
+/** The events this domain emits (bodies, without `turn`). Each has wording in `ui/shell/logText/run.ts`. */
+export type RunDomainEvent =
+  /**
+   * The run's first event: who set out (with class and race ids, which the Codex discovers) into
+   * a dungeon `depth` floors deep.
+   */
+  | { type: 'runStarted'; party: { actor: EntityId; name: string; classId: string; raceId: string }[]; depth: number }
+  /** The party turned back for the surface: ordered (`actor` null) or by `actor`'s retreat rule. */
+  | { type: 'turnedBack'; actor: EntityId | null; reason: LeavingReason }
+  /** A party member's HP reached 0: they fell on `floor` (at `depth`). */
+  | { type: 'fell'; actor: EntityId; name: string; floor: FloorId; pos: Pos; depth: number }
+  /** The run is over. Always the last event of a run. */
+  | { type: 'runEnded'; outcome: RunOutcome; cause: string; depth: number };
 
-/** The action requests this domain defines. Each needs an entry in `RUN_DOMAIN_ACTIONS`. */
+/** The action requests this domain defines. Leaving uses the floors domain's `stairs`. */
 export type RunDomainRequest = never;
 
-/** The commands this domain accepts. Each needs an entry in `RUN_DOMAIN_COMMANDS`. */
-export type RunDomainCommand = never;
+/** Turn the whole party back: everyone heads up and out of the dungeon, ending the run as a retreat. */
+export interface RetreatCommand {
+  type: 'retreat';
+}
+
+/** The commands this domain accepts. */
+export type RunDomainCommand = RetreatCommand;
 
 /** This domain's slice of the run state, at `state.domains.run`. Plain data. */
 export interface RunDomainState {
   /**
    * The reward flow (docs/ARCHITECTURE.md, Contracts, "Rewards"): run trackers reduce sim
-   * events into `rewards.atRisk`; at run end it goes into the `RunResult`, and meta's
-   * `applyRunResult` banks it (losing a share on a wipe). The sim never touches banked currency.
+   * events into `rewards.atRisk` (`trackers.ts`); at run end it goes into the `RunResult`, and
+   * meta's `applyRunResult` banks it (losing a share on a wipe). The sim never touches banked
+   * currency.
    */
   rewards: { atRisk: RewardAmounts };
+  /** Whether `runStarted` has been emitted (on the first step). */
+  started: boolean;
+  /** Every run tracker's state, keyed by tracker id. */
+  trackers: Record<string, unknown>;
+  /** Set once the party turns back for the surface. */
+  leaving: Leaving | null;
+  /** Party members who have fallen, in the order they fell. */
+  fallen: EntityId[];
+  /** `null` while the run goes on; how it ended once it has. */
+  end: RunEnd | null;
 }
 
 /** This domain's slice of the snapshot, at `snapshot.domains.run`. Plain data. */
-export interface RunDomainSnapshot {}
+export interface RunDomainSnapshot {
+  /** This run's earnings so far, not yet banked. */
+  atRisk: RewardAmounts;
+  /** True once the party has turned back for the surface. */
+  leaving: boolean;
+  end: RunEnd | null;
+}
 
-/** Optional parts this domain adds to `Entity`, e.g. `inventory?: InventoryPart`. */
+/** Optional parts this domain adds to `Entity`. */
 export interface RunDomainParts {}
 
-/** Fields this domain adds to `RunConfig`. Make them optional, so older configs stay valid. */
+/** Fields this domain adds to `RunConfig`. */
 export interface RunDomainConfig {}
 
 /** This domain's row in `DomainTypes` (`src/sim/domain.ts`). */
@@ -58,25 +104,78 @@ export interface RunDomainTypes {
 
 export const RUN_DOMAIN_ACTIONS: ActionRecord<RunDomainRequest> = {};
 
-export const RUN_DOMAIN_COMMANDS: CommandRecord<RunDomainCommand> = {};
+export const RUN_DOMAIN_COMMANDS: CommandRecord<RunDomainCommand> = {
+  retreat: {
+    type: 'retreat',
+    apply(state) {
+      const slice = state.domains.run;
+      if (slice.end !== null) return 'The run is over';
+      if (slice.leaving !== null) return 'The party is already heading out';
+      slice.leaving = { turn: state.turn, reason: 'ordered', by: null, announced: false };
+      return null;
+    },
+  },
+};
 
 /** The state slice for a new run. */
 export function initRunDomain(_config: RunConfig): RunDomainState {
-  return { rewards: { atRisk: {} } };
+  return { rewards: { atRisk: {} }, started: false, trackers: initTrackers(), leaving: null, fallen: [], end: null };
 }
 
 /** The snapshot slice. Shares nothing with the state. */
-export function runDomainSnapshot(_ctx: SnapshotCtx): RunDomainSnapshot {
-  return {};
+export function runDomainSnapshot({ state }: SnapshotCtx): RunDomainSnapshot {
+  const slice = state.domains.run;
+  return {
+    atRisk: { ...slice.rewards.atRisk },
+    leaving: slice.leaving !== null,
+    end: slice.end === null ? null : { ...slice.end },
+  };
 }
 
-// Invariants for this domain's state (docs/ARCHITECTURE.md §11.1), registered when the module
-// loads. Names are namespaced by domain.
-registerInvariant('run.rewardsAtRisk', (state) =>
-  Object.entries(state.domains.run.rewards.atRisk)
+// Invariants for this domain's state (docs/ARCHITECTURE.md §11.1).
+
+registerInvariant('run.rewardsAtRisk', (state) => {
+  const problems = Object.entries(state.domains.run.rewards.atRisk)
     .filter(([, amount]) => !Number.isFinite(amount) || amount < 0)
-    .map(([currency, amount]) => `at-risk ${currency} is ${amount}, not a finite amount of 0 or more`),
-);
+    .map(([currency, amount]) => `at-risk ${currency} is ${amount}, not a finite amount of 0 or more`);
+  // Nothing but the trackers writes it.
+  const expected = trackerRewards(state);
+  const actual = state.domains.run.rewards.atRisk;
+  for (const key of new Set([...Object.keys(expected), ...Object.keys(actual)])) {
+    if ((expected[key] ?? 0) !== (actual[key] ?? 0)) problems.push(`at-risk ${key} is ${actual[key] ?? 0}, the trackers say ${expected[key] ?? 0}`);
+  }
+  return problems;
+});
+
+registerInvariant('run.trackers', (state) => {
+  const problems: string[] = [];
+  const states = state.domains.run.trackers;
+  for (const tracker of TRACKER_LIST) if (!Object.hasOwn(states, tracker.id)) problems.push(`tracker "${tracker.id}" has no state`);
+  for (const id of Object.keys(states)) {
+    if (!TRACKER_LIST.some((t) => t.id === id)) problems.push(`state for unknown tracker "${id}"`);
+  }
+  return problems;
+});
+
+registerInvariant('run.end', (state) => {
+  const problems: string[] = [];
+  const { end, leaving, fallen } = state.domains.run;
+  if (leaving !== null && (!Number.isSafeInteger(leaving.turn) || leaving.turn < 0 || leaving.turn > state.turn)) {
+    problems.push(`the party turned back on turn ${leaving.turn}`);
+  }
+  if (new Set(fallen).size !== fallen.length) problems.push('a party member fell twice');
+  for (const id of fallen) {
+    if (!state.party.includes(id)) problems.push(`fallen ${id} is not in the party`);
+    else if ((state.entities[id]?.actor?.hp ?? 0) > 0) problems.push(`fallen ${id} has HP left`);
+  }
+  if (end === null) return problems;
+  if (!RUN_OUTCOMES.includes(end.outcome)) problems.push(`outcome "${end.outcome}" is not a run outcome`);
+  if (end.turn > state.turn || end.turn < 0) problems.push(`the run ended on turn ${end.turn}, now ${state.turn}`);
+  const living = livingParty(state).length;
+  if (end.outcome === 'wipe' && living > 0) problems.push(`a wipe with ${living} party member(s) alive`);
+  if (end.outcome !== 'wipe' && living === 0) problems.push(`a ${end.outcome} with nobody alive`);
+  return problems;
+});
 
 /** What this domain registers with the shared code, in this order. */
 export const RUN_DOMAIN: SimDomain<RunDomainTypes> = {
@@ -84,5 +183,11 @@ export const RUN_DOMAIN: SimDomain<RunDomainTypes> = {
   commands: RUN_DOMAIN_COMMANDS,
   init: initRunDomain,
   snapshot: runDomainSnapshot,
-  trackers: [CODEX_TRACKER],
+  conditions: RUN_DOMAIN_CONDITIONS,
+  ruleActions: RUN_DOMAIN_RULE_ACTIONS,
+  trackers: [...RUN_DOMAIN_TRACKERS, CODEX_TRACKER],
+  // The party's classes and races are met when the run starts.
+  discoveries: {
+    runStarted: (e) => e.party.flatMap((m) => [{ id: m.classId, mark: 'seen' as const }, { id: m.raceId, mark: 'seen' as const }]),
+  },
 };
