@@ -36,7 +36,9 @@ export function partyGlyphId(slot: number): string {
 
 /** The glyph id a remembered or visible feature is drawn with: its def id and its state. */
 export function featureGlyphId(feature: FeatureView): string {
-  if (feature.feature.kind === 'door') return `${feature.def}.${feature.feature.open ? 'open' : 'closed'}`;
+  const f = feature.feature;
+  if (f.kind === 'door') return `${feature.def}.${f.open ? 'open' : 'closed'}`;
+  if (f.kind === 'fountain') return `${feature.def}.${f.draughts.length > 0 ? 'flowing' : 'dry'}`;
   return feature.def;
 }
 

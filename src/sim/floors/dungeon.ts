@@ -14,6 +14,7 @@ import { actorAt, addFloor, featureAt, getFloor } from '../entities';
 import { parseFloorText } from '../floorText';
 import type { FloorPlan } from '../floorText';
 import { generateFloor } from '../gen/generate';
+import { capFountains, configMaxFountains } from './fountains';
 import { Terrain } from '../state';
 import type { DungeonGraph, Entity, Floor, FloorId, FloorNode, RunConfig, RunState } from '../state';
 
@@ -93,7 +94,8 @@ export function floorRngState(seed: number, floorId: FloorId): RngState {
 /**
  * The plan for floor `floorId`, before it is built: the config's hand-built text for that depth
  * (`floorText` for the first floor, else `floorTexts[depth - 1]`), or a generated
- * `DEFAULT_FLOOR_TYPE` floor. The bottom floor never has stairs down. Changes nothing in `state`.
+ * `DEFAULT_FLOOR_TYPE` floor. The bottom floor never has stairs down, and fountains beyond
+ * `RunConfig.maxFountains` are left out (`capFountains`). Changes nothing in `state`.
  */
 export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
   const node = floorNode(state, floorId);
@@ -106,6 +108,7 @@ export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
   if (node.down.length === 0) {
     plan.features = plan.features.filter((f) => !(f.feature.kind === 'stairs' && f.feature.dir === 'down'));
   }
+  capFountains(plan, configMaxFountains(config.maxFountains));
   return plan;
 }
 

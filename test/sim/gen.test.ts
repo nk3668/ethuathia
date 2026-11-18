@@ -135,7 +135,7 @@ describe('generateFloor', () => {
         "####.......##.......#########################......+.......#####",
         "####.......################......>.....######......#############",
         "###########################............########+################",
-        "###########################............+........################",
+        "###########################.......{....+........################",
         "###########################............#########################",
         "################################################################",
         "################################################################",
@@ -167,7 +167,7 @@ describe('generateFloor', () => {
 
 describe('generation steps and floor types', () => {
   it('registers the rooms-and-corridors steps', () => {
-    expect(GEN_STEPS.all().map((s) => s.id)).toEqual(['gen.rooms', 'gen.corridors', 'gen.doors', 'gen.stairs']);
+    expect(GEN_STEPS.all().map((s) => s.id)).toEqual(['gen.rooms', 'gen.corridors', 'gen.doors', 'gen.stairs', 'gen.fountains']);
     for (const step of GEN_STEPS.all()) expect(step.description.length).toBeGreaterThan(0);
   });
 

@@ -10,6 +10,7 @@ import { CLASS_KIND } from './classes';
 import { CONTRACT_KIND } from './contracts';
 import { DEITY_KIND } from './deities';
 import { DOCTRINE_KIND } from './doctrines';
+import { DRAUGHT_KIND } from './draughts';
 import { FEATURE_KIND, FEATURES } from './features';
 import { FLOOR_TYPE_KIND } from './floors';
 import { ITEM_KIND } from './items';
@@ -34,6 +35,7 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
   FLOOR_TYPE_KIND,
   BUNDLE_KIND,
   STATUS_KIND,
+  DRAUGHT_KIND,
   MONSTER_KIND,
   ITEM_KIND,
   CONTRACT_KIND,

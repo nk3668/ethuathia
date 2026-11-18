@@ -41,7 +41,7 @@ describe('shipped content', () => {
 
   it('defines the terrain and features M0 draws, each with a glyph', () => {
     expect(TERRAIN.all().map((d) => d.id)).toEqual(['terrain.wall', 'terrain.floor']);
-    expect(FEATURES.all().map((d) => d.id)).toEqual(['feature.door', 'feature.stairs_up', 'feature.stairs_down']);
+    expect(FEATURES.all().map((d) => d.id)).toEqual(['feature.door', 'feature.stairs_up', 'feature.stairs_down', 'feature.fountain']);
     for (const def of [...TERRAIN.all(), ...FEATURES.all()]) expect([...def.glyph.ch]).toHaveLength(1);
   });
 

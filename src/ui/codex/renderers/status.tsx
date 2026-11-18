@@ -14,7 +14,8 @@ function statLabel(stat: string): string {
   return isStatId(stat) ? STAT_INFO[stat].label : stat;
 }
 
-function effectText(effect: Effect): string {
+/** One effect in words: "heals 8 HP", "applies Queasy for 20 turns". Also used by the draught renderer. */
+export function effectText(effect: Effect): string {
   switch (effect.kind) {
     case 'heal':
       return `heals ${effect.amount} HP`;

@@ -431,8 +431,8 @@ parts and domain slices included. **A PR that changes the shape sets it to the v
 plus one when it rebases**, so two branches never ship different shapes under one number. If
 main moved past your version while your PR waited, rebase and bump again. ETH-055 made it 4,
 then 5 on main, ETH-058 (the floors slice) 6, ETH-057 7 (the `stats` part; `speed`,
-`maxHp` and `maxMp` left `ActorPart`), ETH-033 8 (`stats.attributes`), and ETH-062 9 (the run
-slice's trackers and run end).
+`maxHp` and `maxMp` left `ActorPart`), ETH-033 8 (`stats.attributes`), ETH-062 9 (the run
+slice's trackers and run end), and ETH-072 10 (the `fountain` feature part).
 
 ### Floors and arrival (ETH-058)
 
@@ -453,6 +453,18 @@ What later items build on, all exported from `src/sim/floors/`:
   reached each floor).
 - **Party:** `gatheringAt(state, floor, pos)` says who is gathered at a place (chained within
   `GATHER_RADIUS`) and who is missing; `partyOnFloor` lists the living members on a floor.
+- **Fountains (ETH-072, `floors/fountains.ts`):** a core feature part
+  `{ kind: 'fountain', draughts: string[] }`, the draught ids still in it (drunk from the front;
+  empty is dry), rolled by `gen.fountains` from the floor's RNG, so drinking draws nothing. The
+  `drink` action (standing on it) emits `drankFountain { actor, fountain, draught, left, floor,
+  pos }`, runs the draught's `bundle.effects` on the drinker (source: the draught id), then
+  `fountainRanDry` when the last one is gone. Content: `feature.fountain` (states `flowing`,
+  `dry`) and the `draught` kind (`draughts.ts`: `weight`, `bundle`, `outcome`). In floor text
+  `{` is a fountain holding `TEXT_FOUNTAIN_DRAUGHTS`. **`RunConfig.maxFountains`** caps
+  fountains per floor after generation (the first ones kept; nothing else on the floor changes):
+  the Dry Wells Omen (ETH-067) sets 0. `carriesHealingPotion(state, actor)` is the seam the
+  baseline's `cond.hurt_no_healing` asks; it returns `false` until ETH-061 gives it an inventory
+  to look in.
 
 ### Content kinds
 
@@ -471,7 +483,8 @@ that span several defs (`checkKinds` runs it after the ref checks).
 
 ETH-057 added two real kinds: `bundle` (`bundles.ts`, `bundle.*`: a stand-alone bundle such as
 a trait or blessing) and `status` (`statuses.ts`, `status.*`, with four first defs: Hasted,
-Regenerating, Poisoned, Dazzled).
+Regenerating, Poisoned, Dazzled; ETH-072 added Keen-eyed and Queasy). ETH-072 added `draught`
+(`draughts.ts`, `draught.*`): the fountain table (Mending, Bright, Brackish and Still water).
 
 ---
 
@@ -959,6 +972,10 @@ As built in `src/sim/gen/` (ETH-006):
     orthogonal-only doorway rule (§2.3), so a door never cuts a route. No two doors touch.
   - `gen.stairs`: up stairs on a random room tile, down stairs in a random room from the half
     farthest from it by walking distance.
+  - `gen.fountains` (ETH-072, in the floors domain): `min`–`max` fountains (Hewn Halls: 0–2) on
+    free room tiles, one per room while rooms last, each holding `minDraughts`–`maxDraughts`
+    draughts rolled from the weighted `DRAUGHTS` table. It runs after `gen.stairs`, so it never
+    shifts the earlier steps' draws.
 - A test floods 200 seeds from the up stairs and checks that every floor tile and the down
   stairs are reached. Seed 1's floor is pinned as text, so any change to a step's draws shows.
 
@@ -1057,7 +1074,10 @@ As built in `src/sim/ai/` (ETH-009):
   `ai.memory.intent` for the party card.
 - **Baseline rules**, in order: `cond.stuck → act.back_off`,
   `cond.heading_out → act.retreat_run`, `cond.heading_out → act.gather { dir: 'up' }`,
-  `cond.floor_overstayed → act.descend { regroup: false }`, `cond.always → act.explore`,
+  `cond.floor_overstayed → act.descend { regroup: false }`,
+  `cond.hurt_no_healing { below: 50 } → act.drink_fountain` (ETH-072, `src/sim/floors/fountains.ts`:
+  below half HP with no healing potion, walk to the nearest remembered fountain that isn't dry
+  and drink), `cond.always → act.explore`,
   `cond.always → act.descend`, `cond.always → act.gather`, `cond.bottom_floor → act.retreat_run`,
   `cond.always → act.wait`. The heading-out ones (ETH-062) are in `src/sim/run/rules.ts`; the
   floors ones (ETH-058) in `src/sim/floors/rules.ts`:

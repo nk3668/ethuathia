@@ -6,7 +6,7 @@
  * Content (classes, monsters, features) is referenced by id only, never copied in.
  */
 import type { GridBuffer, Pos, RngState } from '../core';
-import { FEATURE_DOOR, FEATURE_STAIRS_DOWN, FEATURE_STAIRS_UP, TERRAIN_FLOOR, TERRAIN_WALL } from '../content';
+import { FEATURE_DOOR, FEATURE_FOUNTAIN, FEATURE_STAIRS_DOWN, FEATURE_STAIRS_UP, TERRAIN_FLOOR, TERRAIN_WALL } from '../content';
 import type { ActionRequest } from './actions';
 import type { AiPart } from './ai/types';
 import type { CombatConfig, CombatParts } from './combat';
@@ -22,7 +22,7 @@ import type { StatsConfig, StatsParts } from './stats';
  * A branch that changes the shape sets it to (the version on main) + 1 when it rebases, so two
  * branches never ship different shapes under one number (docs/ARCHITECTURE.md, Contracts).
  */
-export const STATE_VERSION = 9;
+export const STATE_VERSION = 10;
 
 /**
  * Entity ids are positive integers handed out in order from `RunState.nextEntityId` and never
@@ -60,6 +60,7 @@ export const DEFS = {
   door: FEATURE_DOOR.id,
   stairsUp: FEATURE_STAIRS_UP.id,
   stairsDown: FEATURE_STAIRS_DOWN.id,
+  fountain: FEATURE_FOUNTAIN.id,
 } as const;
 
 // ---------------------------------------------------------------------------------------------
@@ -174,8 +175,15 @@ export interface AdventurerPart {
   raceId: string;
 }
 
-/** Something built into a tile: a door or stairs, later altars, graves and fountains. */
-export type FeaturePart = { kind: 'door'; open: boolean } | { kind: 'stairs'; dir: 'up' | 'down' };
+/**
+ * Something built into a tile: a door, stairs or a fountain, later altars and graves. A
+ * fountain's `draughts` are the draught ids (`draught.*`) it still holds, drunk from the front;
+ * empty means it has run dry. They are rolled when the floor is built (ETH-072).
+ */
+export type FeaturePart =
+  | { kind: 'door'; open: boolean }
+  | { kind: 'stairs'; dir: 'up' | 'down' }
+  | { kind: 'fountain'; draughts: string[] };
 
 /**
  * One entity type with optional parts, not a full entity-component system. Systems are

@@ -189,7 +189,8 @@ export function describeTile(snap: Snapshot, pos: Pos): TileInfo | null {
   const feature = snap.floor.features.find((f) => f.pos.x === pos.x && f.pos.y === pos.y);
   if (feature) {
     const f = feature.feature;
-    things.push(f.kind === 'door' ? `${contentName(feature.def)} (${f.open ? 'open' : 'closed'})` : contentName(feature.def));
+    const state = f.kind === 'door' ? (f.open ? 'open' : 'closed') : f.kind === 'fountain' ? (f.draughts.length > 0 ? 'flowing' : 'dry') : null;
+    things.push(state === null ? contentName(feature.def) : `${contentName(feature.def)} (${state})`);
   }
   things.push(contentName(TERRAIN_IDS[t - 1] ?? 'terrain.unknown'));
   return { pos, fog: visible[i] === 1 ? 'visible' : 'remembered', things };

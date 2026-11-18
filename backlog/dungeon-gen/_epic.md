@@ -26,4 +26,4 @@ Varied, always-connected floors built from reusable generation steps, linked int
 - [x] [ETH-006 Dungeon gen pipeline: rooms-and-corridors floor](ETH-006-dungeon-gen-pipeline.md)
 - [ ] [ETH-046 Traps and searching](ETH-046-traps-searching.md)
 - [ ] [ETH-049 Dungeon merchants](ETH-049-dungeon-merchants.md)
-- [ ] [ETH-072 Fountains with a documented effect table and a drink action](ETH-072-fountains.md)
+- [x] [ETH-072 Fountains with a documented effect table and a drink action](ETH-072-fountains.md)

@@ -103,6 +103,30 @@ export const STATUS_POISONED = defineStatus({
   glyph: { ch: '!', color: '#a6e22e' },
 });
 
+/** From a fountain's bright water (ETH-072). */
+export const STATUS_KEEN_EYED = defineStatus({
+  id: 'status.keen_eyed',
+  name: 'Keen-eyed',
+  description: 'The dark seems thinner: sees 2 tiles further. Reapplying refreshes the duration.',
+  tags: ['buff'],
+  bundle: { modifiers: [{ stat: 'sight', op: 'add', value: 2 }] },
+  stacking: 'refresh',
+  harmful: false,
+  glyph: { ch: '^', color: '#9fd8ff' },
+});
+
+/** From a fountain's brackish water (ETH-072). */
+export const STATUS_QUEASY = defineStatus({
+  id: 'status.queasy',
+  name: 'Queasy',
+  description: 'A sour, rolling stomach: acts a little more slowly (speed ×0.85). Reapplying refreshes the duration.',
+  tags: ['debuff'],
+  bundle: { modifiers: [{ stat: 'speed', op: 'mul', value: 0.85 }] },
+  stacking: 'refresh',
+  harmful: true,
+  glyph: { ch: '~', color: '#b5a94a' },
+});
+
 export const STATUS_DAZZLED = defineStatus({
   id: 'status.dazzled',
   name: 'Dazzled',

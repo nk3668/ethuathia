@@ -57,5 +57,6 @@ export const FLOOR_HALLS = defineFloorType({
     { step: 'gen.corridors', params: { extraChance: 0.15 } },
     { step: 'gen.doors', params: { chance: 0.7, openChance: 0.25 } },
     { step: 'gen.stairs' },
+    { step: 'gen.fountains', params: { min: 0, max: 2, minDraughts: 2, maxDraughts: 4 } },
   ],
 });

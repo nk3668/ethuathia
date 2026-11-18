@@ -5,7 +5,15 @@
 export * from './attributes';
 export { CLASS_KIND, CLASS_VANGUARD, CLASSES, defineClass } from './classes';
 export type { ClassDef } from './classes';
-export { defineFeature, FEATURE_DOOR, FEATURE_KIND, FEATURE_STAIRS_DOWN, FEATURE_STAIRS_UP, FEATURES } from './features';
+export {
+  defineFeature,
+  FEATURE_DOOR,
+  FEATURE_FOUNTAIN,
+  FEATURE_KIND,
+  FEATURE_STAIRS_DOWN,
+  FEATURE_STAIRS_UP,
+  FEATURES,
+} from './features';
 export type { FeatureDef } from './features';
 export { defineFloorType, FLOOR_HALLS, FLOOR_TYPE_KIND, FLOOR_TYPES } from './floors';
 export type { FloorStepRef, FloorTypeDef } from './floors';
@@ -29,3 +37,4 @@ export * from './upgrades';
 export * from './town';
 export * from './bundles';
 export * from './statuses';
+export * from './draughts';
