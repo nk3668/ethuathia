@@ -33,6 +33,7 @@ export * from './bounties';
 export * from './omens';
 export * from './deities';
 export * from './doctrines';
+export * from './milestones';
 export * from './upgrades';
 export * from './town';
 export * from './bundles';

@@ -34,4 +34,4 @@ Between runs the player spends three currencies on branching upgrade trees that 
 More items are added when M2 becomes the current milestone.
 - [x] [ETH-063 Upgrade engine and the Town screen with a Guild Hall](ETH-063-upgrade-engine-town.md)
 - [ ] [ETH-071 Guild Hall doctrine: prioritize clearing floors or prioritize the stairs](ETH-071-doctrine-clear-or-stairs.md)
-- [ ] [ETH-074 Town buildings unlocked by milestones](ETH-074-locked-buildings.md)
+- [x] [ETH-074 Town buildings unlocked by milestones](ETH-074-locked-buildings.md)

@@ -6,7 +6,7 @@ import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
 import { useSimStore } from '../stores/simStore';
 import styles from './RunSummary.module.css';
-import { currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, OUTCOME_LOOK } from './runSummaryText';
+import { currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, OUTCOME_LOOK, unlockLines } from './runSummaryText';
 import { contentName } from './text';
 
 /** Turn counts in full, as in the top bar. */
@@ -111,6 +111,8 @@ function SummaryDialog({ report }: { report: RunReport }) {
           </section>
         )}
 
+        <Unlocked />
+
         <p className={styles.epitaph}>{epitaph(report)}</p>
 
         <AutoRestart />
@@ -125,6 +127,29 @@ function SummaryDialog({ report }: { report: RunReport }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * What this run's milestones opened (ETH-074), e.g. "Smithy: you reached floor 3". The profile
+ * has already banked the run when the summary opens, so these are its latest unlocks.
+ */
+function Unlocked() {
+  const profile = useProfileStore((s) => s.profile);
+  const lines = unlockLines(profile);
+  if (lines.length === 0) return null;
+  return (
+    <section aria-label="Unlocked">
+      <h3 className={styles.heading}>Unlocked</h3>
+      <ul className={styles.list}>
+        {lines.map((line) => (
+          <li key={line.id}>
+            <span aria-hidden="true">🔓 </span>
+            <span className={styles.name}>{line.name}</span> opens in town: {line.why}.
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

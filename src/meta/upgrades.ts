@@ -12,11 +12,12 @@
  * - `capacity(profile, key, base)`: a limit such as `partySize` or `contractSlots` (ETH-028).
  * - `isUnlocked(profile, id)`: whether an upgrade unlocked a content id (ETH-036 class unlocks).
  */
-import { CAPACITY_INFO, findDef, groupNodes, UPGRADES } from '../content';
+import { BUILDINGS, CAPACITY_INFO, describeMilestone, findDef, groupNodes, UPGRADES } from '../content';
 import type { CapacityKey, UpgradeGrant, UpgradeNodeDef } from '../content';
 import { formatNumber } from '../core';
 import { addCurrencies, CURRENCY_INFO, emptyCurrencies, subtractCurrencies } from './currencies';
 import type { Currencies } from './currencies';
+import { lockingMilestone } from './milestones';
 import type { Profile } from './profile';
 import { currenciesFromRewards } from './runResult';
 
@@ -119,6 +120,12 @@ export function canPurchase(profile: Profile, nodeId: string): PurchaseCheck {
   if (!UPGRADES.has(nodeId)) return { ok: false, status: 'unknown', reason: `There is no upgrade "${nodeId}".` };
   const node = UPGRADES.get(nodeId);
   if (owns(profile, nodeId)) return { ok: false, status: 'owned', reason: 'Already owned.' };
+
+  const shut = lockingMilestone(profile, node.building);
+  if (shut !== null) {
+    const building = BUILDINGS.get(node.building).name;
+    return { ok: false, status: 'locked', missing: [], reason: `The ${building} opens when you ${describeMilestone(shut).toLowerCase()}.` };
+  }
 
   if (node.exclusiveGroup !== undefined) {
     const chosen = chosenInGroup(profile, node.exclusiveGroup);

@@ -2,8 +2,9 @@
  * Wording and figures for the run summary (`RunSummary.tsx`), kept apart from the components so
  * they can be tested on their own.
  */
-import { CURRENCY_INFO } from '../../meta';
-import { DEITIES } from '../../content';
+import { CURRENCY_INFO, latestUnlocks, milestoneTargets } from '../../meta';
+import type { Profile } from '../../meta';
+import { DEITIES, describeMilestoneMet } from '../../content';
 import { favorDeity, RENOWN, TROPHIES } from '../../sim';
 import type { FallenRecord, RunOutcome, RunReport } from '../../sim';
 
@@ -54,6 +55,23 @@ export function fallenOf(report: RunReport): readonly FallenRecord[] {
 export function discoveriesOf(report: RunReport): string[] {
   const codex = report.result.extras['track.codex'];
   return typeof codex === 'object' && codex !== null ? Object.keys(codex) : [];
+}
+
+/** One line per thing the latest run's milestones opened (ETH-074). */
+export interface UnlockLine {
+  id: string;
+  name: string;
+  /** The milestone met, as a past-tense clause: "you reached floor 3". */
+  why: string;
+}
+
+/** What the profile's latest run opened, from the `milestones` slice. */
+export function unlockLines(profile: Profile): UnlockLine[] {
+  const targets = milestoneTargets();
+  return latestUnlocks(profile).flatMap((u) => {
+    const target = targets.find((t) => t.id === u.id);
+    return target === undefined ? [] : [{ id: u.id, name: target.name, why: describeMilestoneMet(target.unlock) }];
+  });
 }
 
 /** A placeholder epitaph until the lineage system writes real ones (M5, CLAUDE.md §7). */

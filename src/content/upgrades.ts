@@ -19,18 +19,27 @@ import type { Def } from '../core';
 import { bundleRefs, bundleSchema } from './bundles';
 import type { Bundle } from './bundles';
 import type { ContentKind, ContentRef } from './kind';
+import { milestoneSchema } from './milestones';
+import type { Milestone } from './milestones';
 import { defShape, idSchema, positiveInt } from './schema';
 
 // --- Buildings -------------------------------------------------------------------------------
 
 /** A Town building. Its tree is every upgrade node naming it; the Town tab lists buildings in registration order. */
-export type BuildingDef = Def;
+export interface BuildingDef extends Def {
+  /**
+   * The milestone that opens the building (`src/content/milestones.ts`). Without one it is open
+   * from the start. Until it is met the Town tab shows the building locked, with this text, and
+   * its nodes can't be bought.
+   */
+  readonly unlock?: Milestone;
+}
 
 export const BUILDINGS = new Registry<BuildingDef>('building');
 
 export const BUILDING_KIND: ContentKind<BuildingDef> = {
   registry: BUILDINGS,
-  schema: z.strictObject({ ...defShape('building') }),
+  schema: z.strictObject({ ...defShape('building'), unlock: milestoneSchema.optional() }),
 };
 
 /** Registers a building def and returns it. Its shape is checked by `validateContent`. */

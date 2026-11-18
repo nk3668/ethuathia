@@ -1201,7 +1201,7 @@ makes them easy to test and safe to autosave after.
 As built (ETH-059), `src/meta/profile.ts` composes the profile from slices (Contracts, "Profile
 slices"). The slices so far are `currencies` (banked Renown, Trophies and Favor per deity id,
 `{ renown, trophies, favor: Record<deity id, number> }`), `history` (lifetime totals and the
-last `HISTORY_LIMIT` (20) runs as `RunRecord`s), `upgrades` (owned upgrade node ids, §6.2) and `codex` (ETH-065: `{ entries: CodexDiscoveries }`, merged from `extras["track.codex"]`, Contracts "Codex discoveries"). `checkProfile(profile)` returns one line per
+last `HISTORY_LIMIT` (20) runs as `RunRecord`s), `upgrades` (owned upgrade node ids, §6.2) and `codex` (ETH-065: `{ entries: CodexDiscoveries }`, merged from `extras["track.codex"]`, Contracts "Codex discoveries"), `settings` and `milestones` (ETH-074: `{ unlocked: { id, run }[] }`, filled by `unlockMilestones` at the end of `applyRunResult`, §6.2). `checkProfile(profile)` returns one line per
 problem. Currency names and tooltip text are `CURRENCY_INFO` in `src/meta/currencies.ts`.
 
 ### 6.2 Upgrade engine
@@ -1245,6 +1245,20 @@ As built (ETH-063):
   spanning several defs: a prerequisite must be in the same building on an earlier tier (which
   rules out cycles), a pick-one group has 2+ nodes on one tier of one building, and no two
   nodes share a cell.
+- **Milestones (ETH-074).** A building may name an `unlock` milestone (`BuildingDef.unlock`);
+  without one it is open from the start. The vocabulary is data in `src/content/milestones.ts`:
+  `{ kind: 'reachDepth', depth }`, `{ kind: 'finishRuns', count }`, `{ kind: 'winRuns', count }`,
+  checked by `milestoneMet(m, progress)` against `MilestoneProgress` (`deepestDepth`, `runs`,
+  `victories`: lifetime totals from the `history` slice) and worded by `describeMilestone`
+  ("Reach floor 3"), `describeMilestoneMet` and `describeProgress`. A new kind is one union
+  member, one schema option and one case in each of those. `applyRunResult` ends with
+  `unlockMilestones(profile)` (`src/meta/milestones.ts`), which records each newly met target in
+  the `milestones` slice as `{ id, run }`; recorded unlocks stay even if content changes.
+  `isMilestoneOpen`, `lockingMilestone`, `unlockOf` and `latestUnlocks` (what the last run
+  opened, for the run summary) read it, and `canPurchase` refuses nodes of a locked building
+  (`locked`, "The Smithy opens when you reach floor 3."). `milestoneTargets()` lists the defs with
+  milestones (buildings only so far); another kind joins by adding itself there. The Smithy
+  exists as a locked placeholder (no nodes; reach floor 3, a default).
 - **A new building** is a file in `src/content/town/` (its `defineBuilding` and
   `defineUpgrade`s) and one line in `town/index.ts`, plus, only if the generic tree isn't
   enough, a component and one line in `BUILDING_PANELS` (`src/ui/town/panels.ts`).
