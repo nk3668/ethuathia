@@ -152,8 +152,8 @@ describe('getStat', () => {
   });
 
   it('is fed by the stats domain providers and bundle sources, in order', () => {
-    expect(STAT_PROVIDERS.map((p) => p.id)).toEqual(['stats.base', 'stats.class_race', 'stats.attributes']);
-    expect(BUNDLE_SOURCES.map((s) => s.id)).toEqual(['stats.attached', 'stats.statuses', 'stats.run', 'items.equipped']);
+    expect(STAT_PROVIDERS.map((p) => p.id)).toEqual(['stats.base', 'stats.class_race', 'stats.attributes', 'combat.overlay']);
+    expect(BUNDLE_SOURCES.map((s) => s.id)).toEqual(['stats.attached', 'stats.statuses', 'stats.run', 'combat.templates', 'items.equipped']);
     expect(TRIGGERS.has('trigger.turn_start') && TRIGGERS.has('trigger.turn_end')).toBe(true);
   });
 });

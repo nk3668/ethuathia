@@ -5,7 +5,6 @@
  * content use them all. The Library can hand each one to the player's own rules.
  */
 import type { Pos } from '../../core';
-import { MONSTERS } from '../../content';
 import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, RuleActionDef } from '../ai/types';
@@ -266,8 +265,3 @@ export const COMBAT_CONDITIONS: readonly ConditionDef[] = [COND_ENEMY_ADJACENT, 
 
 /** The combat domain's rule actions, in registration order. */
 export const COMBAT_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_ATTACK_ADJACENT, ACT_APPROACH_ENEMY, ACT_FLEE, ACT_WANDER];
-
-/** The display name of a monster def, or the id. */
-export function monsterName(defId: string): string {
-  return MONSTERS.has(defId) ? MONSTERS.get(defId).name : defId;
-}

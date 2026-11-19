@@ -17,6 +17,7 @@ import { domainSnapshots } from './domains';
 import type { EntityId, Faction, FeaturePart, FloorId, RunState } from './state';
 import { statValue } from './stats/getStat';
 import { actorName } from './combat/death';
+import { monsterTint } from './combat/overlay';
 
 /**
  * What a snapshot should show. With neither field set, the floor of the first living party
@@ -47,10 +48,12 @@ export interface ActorView {
   def: string;
   pos: Pos;
   faction: Faction;
-  /** An adventurer's name, or a monster's kind (its def's name). */
+  /** An adventurer's name, or a monster's (`monsterName`: its kind with its templates' prefixes, or its own name, ETH-117). */
   name: string;
   hp: number;
   maxHp: number;
+  /** A templated monster's map color (`glyphTint`, ETH-117), drawn instead of its def's. */
+  tint?: string;
 }
 
 /** The shown floor, fog applied. */
@@ -152,6 +155,7 @@ function floorView(state: RunState, floorId: FloorId): FloorView {
   for (const id of [...floor.entities].sort((a, b) => a - b)) {
     const e = state.entities[id];
     if (e?.actor === undefined || visible[e.pos.y * width + e.pos.x] !== 1) continue;
+    const tint = monsterTint(e);
     actors.push({
       id: e.id,
       def: e.def,
@@ -160,6 +164,7 @@ function floorView(state: RunState, floorId: FloorId): FloorView {
       name: actorName(e),
       hp: e.actor.hp,
       maxHp: statValue(state, e, 'hp'),
+      ...(tint === undefined ? {} : { tint }),
     });
   }
 

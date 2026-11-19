@@ -39,8 +39,9 @@ function fellText(e: Extract<RunDomainEvent, { type: 'fell' }>): LogPart[] {
   const sentence = `${deathLine(e.name, e.killer, e.depth, 'present')}.`;
   const k = e.killer;
   const refs: [string, string][] = [];
-  if (k !== null && k.kind !== 'adventurer') refs.push([k.def, k.name.toLowerCase()]);
-  if (k?.source?.kind === 'monster') refs.push([k.source.def, k.source.name.toLowerCase()]);
+  // A proper name ("Vell the Unbowed", ETH-117) keeps its capitals in the sentence.
+  if (k !== null && k.kind !== 'adventurer') refs.push([k.def, k.proper === true ? k.name : k.name.toLowerCase()]);
+  if (k?.source?.kind === 'monster') refs.push([k.source.def, k.source.proper === true ? k.source.name : k.source.name.toLowerCase()]);
   const parts: LogPart[] = [];
   let rest = sentence.slice(e.name.length);
   for (const [ref, label] of refs) {

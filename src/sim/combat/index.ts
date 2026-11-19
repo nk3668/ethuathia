@@ -28,20 +28,31 @@ import type { Emit } from '../events';
 import { fireTrigger, runEffect } from '../stats/effects';
 import { applyStatus } from '../stats/statuses';
 import { statValue } from '../stats/getStat';
+import { STAT_IDS } from '../stats/statIds';
 import type { TriggerKindDef } from '../stats/types';
 import { actorName, killActor, reapDead } from './death';
+import type { DroppedLoot } from './death';
 import { FLEE_ACTION } from './flee';
 import type { FleeRequest } from './flee';
 import { GEN_MONSTERS } from './monsters';
 import type { MonsterPart } from './monsters';
+import { namesOf, overlayProblems, PROVIDER_OVERLAY, SOURCE_TEMPLATES, templateMetKey, templatesField } from './overlay';
+import type { ShownName } from './overlay';
 import { boltable, canSee, isAlly, rolePowers, ROLE_CONDITIONS, ROLE_RULE_ACTIONS } from './roles';
 import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, hpPercent, isHostile } from './rules';
 
 export * from './death';
 export * from './flee';
 export * from './monsters';
+export * from './overlay';
 export * from './roles';
 export * from './rules';
+
+/**
+ * How an event names the monsters in it whose overlay changes their name (ETH-117), keyed by
+ * entity id (`namesOf`). Left out when no one's does, so plain monsters' events are unchanged.
+ */
+export type EventNames = Record<EntityId, ShownName>;
 
 /** The events this domain emits (bodies, without `turn`). Each has wording in `ui/shell/logText/combat.ts`. */
 export type CombatEvent =
@@ -62,9 +73,10 @@ export type CombatEvent =
       floor: FloorId;
       pos: Pos;
       ranged?: boolean;
+      names?: EventNames;
     }
   /** `actor` swung at (or, `ranged`, bolted) `target` and missed. */
-  | { type: 'missed'; actor: EntityId; actorDef: string; target: EntityId; targetDef: string; ranged?: boolean }
+  | { type: 'missed'; actor: EntityId; actorDef: string; target: EntityId; targetDef: string; ranged?: boolean; names?: EventNames }
   /**
    * `actor` used a support power on its ally `target` (ETH-040): `mend` heals it (a `healed`
    * event follows), `bolster` gives it a status (a `statusApplied` follows).
@@ -78,11 +90,13 @@ export type CombatEvent =
       power: AidPower;
       floor: FloorId;
       pos: Pos;
+      names?: EventNames;
     }
   /**
    * A monster (`actor`, def `def`, called `name`) died at `pos` and left the run, from `cause` (a
    * content id: the killer's def, a status, or `combat.unknown`). A party member at 0 HP falls
-   * instead: the run domain's `fell`.
+   * instead: the run domain's `fell`. ETH-117: `proper` when `name` is its own name, `templates`
+   * its template ids, `drops` what it carried, now lying where it fell.
    */
   | {
       type: 'died';
@@ -93,12 +107,15 @@ export type CombatEvent =
       killer: EntityId | null;
       floor: FloorId;
       pos: Pos;
+      proper?: true;
+      templates?: string[];
+      drops?: DroppedLoot[];
     }
   /**
    * `killer` struck the blow that killed `victim` (a monster or a party member). `byParty` is
    * true when the killer is in the party; `threat` is the victim's monster threat (0 for
-   * adventurers). The kills tracker credits Trophies from it. `ranged` is set when the blow was
-   * a bolt (ETH-075).
+   * adventurers; `monsterThreat`, with its templates, ETH-117). The kills tracker credits Trophies
+   * from it. `ranged` is set when the blow was a bolt (ETH-075).
    */
   | {
       type: 'killed';
@@ -111,16 +128,20 @@ export type CombatEvent =
       floor: FloorId;
       pos: Pos;
       ranged?: boolean;
+      names?: EventNames;
     }
-  /** A party member (`actor`) saw `monster` (def `def`) for the first time, at `pos`. */
-  | { type: 'monsterSighted'; actor: EntityId; monster: EntityId; def: string; floor: FloorId; pos: Pos }
+  /**
+   * A party member (`actor`) saw `monster` (def `def`) for the first time, at `pos`. `templates`
+   * (ETH-117) are the monster's template ids, which the Codex marks seen too.
+   */
+  | { type: 'monsterSighted'; actor: EntityId; monster: EntityId; def: string; floor: FloorId; pos: Pos; templates?: string[]; names?: EventNames }
   /** An adventurer caught their breath and got back `amount` HP (natural recovery). */
   | { type: 'recovered'; actor: EntityId; amount: number }
   /**
    * `actor` tried to flee but `enemy` (def `enemyDef`), next to it, held it back: it failed its
    * `chance`% Flee check (ETH-081, Finesse) and lost the turn at `pos`.
    */
-  | { type: 'fleeFailed'; actor: EntityId; enemy: EntityId; enemyDef: string; chance: number; floor: FloorId; pos: Pos };
+  | { type: 'fleeFailed'; actor: EntityId; enemy: EntityId; enemyDef: string; chance: number; floor: FloorId; pos: Pos; names?: EventNames };
 
 /** Strike the creature one step away in `dir`. */
 export interface AttackRequest {
@@ -291,6 +312,7 @@ export const COMBAT_ACTIONS: ActionRecord<CombatRequest> = {
         power,
         floor: t.floor,
         pos: { x: t.pos.x, y: t.pos.y },
+        ...namesOf(actor, t),
       });
       const { mend, bolster } = rolePowers(actor);
       if (power === 'mend' && mend !== undefined) {
@@ -317,7 +339,7 @@ function strike(state: RunState, actor: ActorEntity, target: ActorEntity, emit: 
   const how = ranged ? { ranged: true } : {};
   const chance = hitChance(statValue(state, actor, 'accuracy'), statValue(state, target, 'evasion'));
   if (!rng.chance(chance)) {
-    emit({ type: 'missed', actor: actor.id, actorDef: actor.def, target: target.id, targetDef: target.def, ...how });
+    emit({ type: 'missed', actor: actor.id, actorDef: actor.def, target: target.id, targetDef: target.def, ...how, ...namesOf(actor, target) });
     return;
   }
   const dealt = Math.min(target.actor.hp, afterArmor(rollDamage(rng, statValue(state, actor, 'damage')), statValue(state, target, 'armor')));
@@ -334,6 +356,7 @@ function strike(state: RunState, actor: ActorEntity, target: ActorEntity, emit: 
     floor: target.floor,
     pos: { x: target.pos.x, y: target.pos.y },
     ...how,
+    ...namesOf(actor, target),
   });
   if (target.actor.hp > 0) fireTrigger(state, target, TRIGGER_STRUCK.id, emit, actor.id);
   if (actor.actor.hp > 0) fireTrigger(state, actor, TRIGGER_HIT.id, emit, target.id);
@@ -407,7 +430,16 @@ function noticeMonsters(state: RunState, viewer: ActorEntity, emit: TurnCtx['emi
   for (const m of unseen) {
     if (m?.monster === undefined || !seen.has(m.pos.y * width + m.pos.x)) continue;
     m.monster.sighted = true;
-    emit({ type: 'monsterSighted', actor: viewer.id, monster: m.id, def: m.def, floor: m.floor, pos: { x: m.pos.x, y: m.pos.y } });
+    emit({
+      type: 'monsterSighted',
+      actor: viewer.id,
+      monster: m.id,
+      def: m.def,
+      floor: m.floor,
+      pos: { x: m.pos.x, y: m.pos.y },
+      ...templatesField(m),
+      ...namesOf(m),
+    });
   }
 }
 
@@ -433,6 +465,25 @@ registerInvariant('combat.monsters', (state) => {
       problems.push(`monster ${e.id} (${e.def}) is missing its actor, monster, ai or stats part`);
     }
     if (!isMonster && e.monster !== undefined) problems.push(`entity ${e.id} (${e.def}) has a monster part but is not a monster`);
+  }
+  return problems;
+});
+
+/**
+ * Overlays are well formed (ETH-117): at most `MAX_TEMPLATES` known templates that fit the def,
+ * known stats with finite changes, known bundles, a sane threat and loot tier, valid carried
+ * items, and every stat of the monster finite.
+ */
+registerInvariant('combat.overlay', (state) => {
+  const problems: string[] = [];
+  for (const e of Object.values(state.entities)) {
+    const overlay = e.monster?.overlay;
+    if (overlay === undefined) continue;
+    for (const p of overlayProblems(overlay, e.def)) problems.push(`monster ${e.id} (${e.def}) ${p}`);
+    for (const stat of STAT_IDS) {
+      const value = statValue(state, e, stat);
+      if (!Number.isFinite(value)) problems.push(`monster ${e.id} (${e.def}) has ${stat} ${value}`);
+    }
   }
   return problems;
 });
@@ -466,10 +517,22 @@ export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
   ruleActions: [...COMBAT_RULE_ACTIONS, ...ROLE_RULE_ACTIONS],
   genSteps: [GEN_MONSTERS],
   triggers: [TRIGGER_HIT, TRIGGER_STRUCK],
+  statProviders: [PROVIDER_OVERLAY],
+  bundleSources: [SOURCE_TEMPLATES],
   turnStart: combatTurnStart,
   turnEnd: combatTurnEnd,
   discoveries: {
-    monsterSighted: (e) => (MONSTERS.has(e.def) ? [{ id: e.def, mark: 'seen' }] : []),
+    // A templated monster also discovers its templates, and which of them were met on this kind (ETH-117).
+    monsterSighted: (e) =>
+      MONSTERS.has(e.def)
+        ? [
+            { id: e.def, mark: 'seen' },
+            ...(e.templates ?? []).flatMap((t) => [
+              { id: t, mark: 'seen' as const },
+              { id: templateMetKey(e.def, t), mark: 'seen' as const },
+            ]),
+          ]
+        : [],
     killed: (e) => (MONSTERS.has(e.victimDef) ? [{ id: e.victimDef, mark: 'killed' }] : []),
   },
   chronicle: COMBAT_CHRONICLE,

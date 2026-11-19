@@ -590,3 +590,11 @@ describe('MapRenderer', () => {
     expect(elapsed / 101).toBeLessThan(8);
   });
 });
+
+describe('monster tints (ETH-117)', () => {
+  it('draws a tinted monster in its template color, keeping its glyph', () => {
+    const plain = glyphStyle('monster.gloam_rat');
+    expect(glyphStyle('monster.gloam_rat@#a6e22e')).toEqual({ ...plain, color: '#a6e22e' });
+    expect(glyphStyle('monster.gloam_rat@nonsense')).toEqual(plain);
+  });
+});

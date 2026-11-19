@@ -2,6 +2,7 @@
 import { MONSTERS, monsterRules, ROLE_INFO, STATUSES } from '../../../content';
 import type { MonsterDef } from '../../../content';
 import { defineCodexRenderer } from '../types';
+import { VariantsMet } from '../VariantsMet';
 import type { CodexField } from '../types';
 
 /** How a monster's rule set reads, from the rule actions it can take. */
@@ -78,5 +79,6 @@ export default defineCodexRenderer({
       hint: 'Small folk and swarms can share a tile with others of their sort; everyone else needs a tile of their own.',
     },
     { label: 'Behavior', value: behaviorText(def), hint: 'The rules it follows each turn.' },
+    { label: 'Variants met', value: <VariantsMet monster={def.id} />, hint: 'Monster variants (Venomous, Swift, …) seen on this kind so far.' },
   ],
 });
