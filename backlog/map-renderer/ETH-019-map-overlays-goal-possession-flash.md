@@ -2,7 +2,7 @@
 id: ETH-019
 title: "Map overlays: goal line, possession frame and hit flash"
 type: feature
-status: pending-review
+status: done
 priority: P2
 milestone: M1
 epic: map-renderer
@@ -39,3 +39,4 @@ flash is running.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
 - 2026-11-19: Assigned to Antigravity as a low-risk item; acceptance criteria already written, so status ready.
 - 2026-11-19: Implemented by Gemini (Antigravity); marked pending-review. `Intent.goal` / `Resolved.goal` added (STATE_VERSION 26), set by `followMap`, attack, flee, fall back, bolt, mend, bolster and wander. (default) Goal line is a `[2, 3]`-line dash in `--accent`, center to center; hit flash is a 45% `--danger` wash; the possession frame is a 2-line solid `--accent` frame; the `core.aiMemory` invariant only checks that a goal has non-negative whole coordinates, since an intent can outlive a floor change.
+- 2026-11-19: Reviewed by Claude and merged as PR #75. Done.
