@@ -11,7 +11,8 @@
  * the arrows and the numpad move it, and a few more keys act. They are free otherwise.
  *
  * `Tab` is deliberately not bound: it moves keyboard focus, and taking it would strand keyboard
- * users (docs/VISUAL-DESIGN.md §7). `]` and `[` cycle the selected adventurer instead.
+ * users (docs/VISUAL-DESIGN.md §7). `Q` / `E` (when nobody is possessed) and `[` / `]` cycle the
+ * selected adventurer instead.
  */
 import type { ActionRequest } from '../../sim';
 import type { RunningSpeed } from '../stores/simStore';
@@ -31,8 +32,8 @@ export type KeyAction =
    */
   | { type: 'act'; action: ActionRequest };
 
-/** When a binding applies: always, or only while an adventurer is possessed. */
-export type KeyContext = 'always' | 'possessed';
+/** When a binding applies: always, only while an adventurer is possessed, or only while unpossessed. */
+export type KeyContext = 'always' | 'possessed' | 'unpossessed';
 
 export interface KeyBinding {
   /** `KeyboardEvent.code` of the key. */
@@ -43,8 +44,9 @@ export interface KeyBinding {
   /** Set when Shift must be held (`true`) or must not be (`false`); left out, Shift doesn't matter. */
   shift?: boolean;
   /**
-   * `possessed`: only while an adventurer is possessed, so these keys stay free otherwise (Q and E
-   * are to cycle adventurers then, ETH-090). Default `always`.
+   * `possessed`: only while an adventurer is possessed; `unpossessed`: only while nobody is
+   * possessed (Q and E cycle adventurers unpossessed and move diagonally while possessed, ETH-090).
+   * Default `always`.
    */
   when?: KeyContext;
   /** Holding the key down repeats the action (walking). Default: it acts once. */
@@ -115,8 +117,10 @@ export const KEYMAP: readonly KeyBinding[] = [
   { code: 'Digit3', label: '3', action: { type: 'setSpeed', speed: 4 } },
   { code: 'Digit4', label: '4', action: { type: 'setSpeed', speed: 8 } },
   { code: 'Digit5', label: '5', action: { type: 'setSpeed', speed: 'max' } },
-  { code: 'BracketRight', label: ']', action: { type: 'cycleSelection', step: 1 } },
+  { code: 'KeyQ', label: 'Q', action: { type: 'cycleSelection', step: -1 }, when: 'unpossessed' },
+  { code: 'KeyE', label: 'E', action: { type: 'cycleSelection', step: 1 }, when: 'unpossessed' },
   { code: 'BracketLeft', label: '[', action: { type: 'cycleSelection', step: -1 } },
+  { code: 'BracketRight', label: ']', action: { type: 'cycleSelection', step: 1 } },
   { code: 'KeyP', label: 'P', action: { type: 'togglePossession' } },
   ...POSSESSED_KEYS,
 ];
@@ -201,8 +205,9 @@ function spaceTogglesIt(target: EventTarget | null): boolean {
  * Space on a button pauses rather than pressing the button, so pausing works wherever focus was
  * left by a click. Enter still presses a focused button.
  *
- * `possessed` says whether an adventurer is possessed: the `possessed` bindings (movement and
- * the other player actions, ETH-066) only match then.
+ * `possessed` says whether an adventurer is possessed: `possessed` bindings (movement and the
+ * other player actions, ETH-066) only match then, and `unpossessed` bindings (Q and E to cycle,
+ * ETH-090) only match otherwise.
  */
 export function bindingFor(
   event: KeyPress,
@@ -215,7 +220,7 @@ export function bindingFor(
     (b) =>
       b.code === event.code &&
       (b.shift === undefined || b.shift === (event.shiftKey ?? false)) &&
-      ((b.when ?? 'always') === 'always' || possessed),
+      ((b.when ?? 'always') === 'always' || (b.when === 'possessed' ? possessed : !possessed)),
   );
   if (!binding) return undefined;
   if (takesText(event.target)) return undefined;

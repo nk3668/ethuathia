@@ -39,4 +39,4 @@ A consistent, readable dark interface: shared tokens and components, the in-run 
 - [ ] [ETH-077 Show attribute previews in the Prepare screen's class and race selects](ETH-077-prepare-attribute-previews.md)
 - [x] [ETH-078 Remove the unused empty texts from SidePanel TAB_INFO](ETH-078-remove-unused-tab-empty-texts.md)
 - [ ] [ETH-084 Rematch button on the run summary replays the same seed](ETH-084-rematch-same-seed.md)
-- [ ] [ETH-090 Q and E cycle adventurers; diagonals while possessed](ETH-090-qe-cycle-keys.md)
+- [x] [ETH-090 Q and E cycle adventurers; diagonals while possessed](ETH-090-qe-cycle-keys.md)

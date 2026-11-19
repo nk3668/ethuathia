@@ -2285,8 +2285,9 @@ As built (ETH-014), in `ui/input/`:
   event is composing or already `defaultPrevented`, focus is in a text field, textarea, select
   or editable content, or the key is Space on a checkbox, radio or switch.
   `keyHint(action)` gives a control its `aria-keyshortcuts` value and tooltip line.
-- **Cycling the selection (ETH-020):** `]` and `[` (`BracketRight` / `BracketLeft`) are
-  `cycleSelection(step: 1 | -1)`. It changes only `uiStore.selected`, using the pure
+- **Cycling the selection (ETH-020, ETH-090):** `Q` / `E` (when nobody is possessed,
+  `when: 'unpossessed'`) and `[` / `]` (`BracketLeft` / `BracketRight`, always) are
+  `cycleSelection(step: -1 | 1)`. It changes only `uiStore.selected`, using the pure
   `cycleSelection(party, selected, step)` in `uiStore.ts`: the next or previous living member in
   party order, wrapping, skipping the dead; with no selection it starts at the first (or last)
   living member, and with nobody alive it changes nothing. `Tab` is never bound, so focus
@@ -2294,15 +2295,15 @@ As built (ETH-014), in `ui/input/`:
 - **Possession (ETH-066):** `P` is `togglePossession`: it possesses the selected living
   adventurer (or the first living one, which it selects) or releases the possessed one; a
   double-click on an adventurer on the map and the card's Possess button do the same. Bindings
-  have optional `shift` (must or must not be held), `when: 'possessed'` and `repeat` (holding the
-  key repeats). `POSSESSED_KEYS` only match while a living adventurer is possessed
-  (`bindingFor(event, keymap, possessed)`): WASD with Q/E/Z/C diagonals, the arrows and numpad 1–9
-  send `act { bump }`; `.`, X and numpad 5 wait; G picks up; Shift+`.` (`>`) and Shift+`,` (`<`)
-  take the stairs; F drinks from the fountain underfoot. `act` sends any `ActionRequest` as a
-  `playerAction` through `simStore.send`, so a new player action (use, cast, pray) is one
-  binding or button. While someone is possessed the map leaves the arrows to the keymap instead
-  of moving its inspect cursor. The pack's Equip, Take off and Use buttons send `equip`,
-  `unequip` and `use` the same way.
+  have optional `shift` (must or must not be held), `when: 'possessed' | 'unpossessed'` and
+  `repeat` (holding the key repeats). `POSSESSED_KEYS` only match while a living adventurer is
+  possessed (`bindingFor(event, keymap, possessed)`): WASD with Q/E/Z/C diagonals, the arrows and
+  numpad 1–9 send `act { bump }`; `.`, X and numpad 5 wait; G picks up; Shift+`.` (`>`) and
+  Shift+`,` (`<`) take the stairs; F drinks from the fountain underfoot. `act` sends any
+  `ActionRequest` as a `playerAction` through `simStore.send`, so a new player action (use, cast,
+  pray) is one binding or button. While someone is possessed the map leaves the arrows to the
+  keymap instead of moving its inspect cursor. The pack's Equip, Take off and Use buttons send
+  `equip`, `unequip` and `use` the same way.
 - **`useKeymap()`:** listens on `window` while the in-run screen (`AppShell`) is mounted. Focused
   widgets handle keys first (the map's arrows, Enter and Escape, the tabs' and log edge's
   arrows), so a key they mark with `preventDefault` never reaches the keymap. A key the keymap
