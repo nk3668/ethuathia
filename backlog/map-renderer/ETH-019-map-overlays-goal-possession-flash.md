@@ -2,7 +2,7 @@
 id: ETH-019
 title: "Map overlays: goal line, possession frame and hit flash"
 type: feature
-status: ready
+status: done
 priority: P2
 milestone: M1
 epic: map-renderer
@@ -24,9 +24,9 @@ snapshot doesn't carry yet: the goal tile (the AI `Intent` has the rule and reas
 target), possession (no possession command yet) and hits (no combat yet).
 
 ## Acceptance criteria
-- [ ] The snapshot carries each party member's goal tile, and the selected adventurer has a dotted line to it
-- [ ] A possessed adventurer's cell has a solid accent frame instead of the ring
-- [ ] A hit flashes the cell for 120ms, with no flash under reduced motion
+- [x] The snapshot carries each party member's goal tile, and the selected adventurer has a dotted line to it
+- [x] A possessed adventurer's cell has a solid accent frame instead of the ring
+- [x] A hit flashes the cell for 120ms, with no flash under reduced motion
 
 ## Notes
 The goal line crosses many cells, so it can't be part of a tile's scene code like the other
@@ -38,3 +38,5 @@ flash is running.
 - 2026-11-16: Created while building ETH-013.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
 - 2026-11-19: Assigned to Antigravity as a low-risk item; acceptance criteria already written, so status ready.
+- 2026-11-19: Implemented by Gemini (Antigravity); marked pending-review. `Intent.goal` / `Resolved.goal` added (STATE_VERSION 26), set by `followMap`, attack, flee, fall back, bolt, mend, bolster and wander. (default) Goal line is a `[2, 3]`-line dash in `--accent`, center to center; hit flash is a 45% `--danger` wash; the possession frame is a 2-line solid `--accent` frame; the `core.aiMemory` invariant only checks that a goal has non-negative whole coordinates, since an intent can outlive a floor change.
+- 2026-11-19: Reviewed by Claude and merged as PR #75. Done.

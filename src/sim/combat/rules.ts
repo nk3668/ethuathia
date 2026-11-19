@@ -10,7 +10,7 @@ import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, RuleActionDef } from '../ai/types';
 import { stepBlocker } from '../coreActions';
 import { blockerAt, featureAt, getEntity, getFloor, mayShareTile } from '../entities';
-import { buildFleeMap, buildGoalMap, floorPathGrid, OPEN_DOOR_COST, stepToward, UNREACHABLE } from '../goalMap';
+import { buildFleeMap, buildGoalMap, floorPathGrid, OPEN_DOOR_COST, pathAlong, stepToward, UNREACHABLE } from '../goalMap';
 import type { PathGrid } from '../goalMap';
 import { fieldOfView, sightRadius } from '../perception';
 import type { ActorEntity, Entity, RunState } from '../state';
@@ -167,7 +167,7 @@ export const ACT_ATTACK_ADJACENT = defineRuleAction({
     if (enemies.length === 0) return null;
     const target = [...enemies].sort((a, b) => a.actor.hp - b.actor.hp || a.id - b.id)[0] as ActorEntity;
     const dir = { x: target.pos.x - actor.pos.x, y: target.pos.y - actor.pos.y };
-    return { request: { id: 'attack', dir }, detail: `attacking ${nameOf(target)}` };
+    return { request: { id: 'attack', dir }, detail: `attacking ${nameOf(target)}`, goal: { x: target.pos.x, y: target.pos.y } };
   },
   describe: () => 'attack the weakest adjacent enemy',
 });
@@ -215,11 +215,19 @@ export const ACT_FLEE = defineRuleAction({
     const to = { x: actor.pos.x + dir.x, y: actor.pos.y + dir.y };
     const near = Math.min(...enemies.map((e) => distance(e.pos, to)));
     if (near <= 1 || blockerAt(state, actor, actor.floor, to) !== undefined) return null;
+    const goal = pathAlong(paths, flee, actor.pos).at(-1);
+    const withGoal = goal === undefined ? {} : { goal };
     const door = featureAt(state, actor.floor, to)?.feature;
-    if (door?.kind === 'door' && !door.open) return { request: { id: 'openDoor', dir }, detail: `escaping ${listNames(enemies)}; opening a door` };
+    if (door?.kind === 'door' && !door.open) {
+      return { request: { id: 'openDoor', dir }, detail: `escaping ${listNames(enemies)}; opening a door`, ...withGoal };
+    }
     // `flee`, not `move`: with an enemy adjacent it takes a Flee check (ETH-081, `flee.ts`).
     const adjacent = enemies.some((e) => distance(e.pos, actor.pos) <= 1);
-    return { request: { id: 'flee', dir }, detail: `${adjacent ? 'breaking away from' : 'running from'} ${listNames(enemies)}` };
+    return {
+      request: { id: 'flee', dir },
+      detail: `${adjacent ? 'breaking away from' : 'running from'} ${listNames(enemies)}`,
+      ...withGoal,
+    };
   },
   describe: () => 'flee from the enemies in sight',
 });
@@ -253,7 +261,7 @@ export const ACT_WANDER = defineRuleAction({
       if (stepBlocker(state, actor.floor, actor.pos, dir) !== null) continue;
       const to = { x: actor.pos.x + dir.x, y: actor.pos.y + dir.y };
       if (blockerAt(state, actor, actor.floor, to) !== undefined) continue;
-      return { request: { id: 'move', dir: { x: dir.x, y: dir.y } }, detail: 'wandering' };
+      return { request: { id: 'move', dir: { x: dir.x, y: dir.y } }, detail: 'wandering', goal: to };
     }
     return null;
   },

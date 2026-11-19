@@ -90,7 +90,8 @@ describe('snapshot', () => {
       },
     ]);
     step(state, []);
-    expect(snapshot(state).party[0]?.intent).toMatchObject({ rule: { set: 'baseline' }, action: 'act.explore' });
+    const snap = snapshot(state);
+    expect(snap.party[0]?.intent).toMatchObject({ rule: { set: 'baseline' }, action: 'act.explore', goal: { x: 5, y: 1 } });
   });
 
   it('keeps remembered tiles but takes them out of view once the party leaves', () => {

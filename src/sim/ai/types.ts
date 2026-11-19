@@ -47,6 +47,8 @@ export interface Intent {
   action: string;
   /** The readable reason, as in the `ruleFired` event. */
   detail: string;
+  /** The tile the actor is heading for or targeting on its floor, if any (ETH-019). */
+  goal?: Pos;
 }
 
 /** Where an actor stood, and how much of its floor the party had seen, at a decision. */
@@ -162,6 +164,8 @@ export interface Resolved {
   detail: string;
   /** Set when the action is waiting for this actor to get out of the way (`AiMemory.waitingFor`). */
   waitingFor?: EntityId;
+  /** The tile the action is heading for or targeting, if any (`Intent.goal`, ETH-019). */
+  goal?: Pos;
 }
 
 /**

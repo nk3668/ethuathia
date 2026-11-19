@@ -14,6 +14,7 @@
  * nobody in the party moves, that rule is dropped the same way, so a blocker nobody deals with
  * can't hang a run without a trace.
  */
+import type { Pos } from '../../core';
 import { validateAction } from '../actions';
 import type { ActionRequest } from '../actions';
 import type { Emit } from '../events';
@@ -99,6 +100,8 @@ export interface Choice {
   detail: string;
   /** Who the action waits on to get out of the way, if anyone (`AiMemory.waitingFor`). */
   waitingFor: EntityId | null;
+  /** The tile the action is heading for or targeting, if any (`Intent.goal`, ETH-019). */
+  goal?: Pos;
 }
 
 /**
@@ -124,7 +127,12 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
     memory.intent = null;
     return { id: 'wait' };
   }
-  memory.intent = { rule: { ...choice.rule }, action: choice.action, detail: choice.detail };
+  memory.intent = {
+    rule: { ...choice.rule },
+    action: choice.action,
+    detail: choice.detail,
+    ...(choice.goal === undefined ? {} : { goal: { x: choice.goal.x, y: choice.goal.y } }),
+  };
   if (!traced) return choice.request;
   emit({
     type: 'ruleFired',
@@ -161,6 +169,7 @@ export function chooseRule(ctx: AiCtx): Choice | null {
       request: resolved.request,
       detail: `${action.name}: ${resolved.detail}${because}`,
       waitingFor: resolved.waitingFor ?? null,
+      ...(resolved.goal === undefined ? {} : { goal: { x: resolved.goal.x, y: resolved.goal.y } }),
     };
   }
   return null;
@@ -254,14 +263,27 @@ function partyKey(state: RunState): string {
 }
 
 /**
- * AI memory holds sane values: `still` is a count, `waited` a count below `WAIT_STUCK_TURNS`, and `waitingFor` is `null` or another entity's
- * id that was handed out (the entity itself may have left the run since).
+ * AI memory holds sane values: `intent.goal` (when set) has non-negative safe integers, `still` is a count, `waited` a count below
+ * `WAIT_STUCK_TURNS`, and `waitingFor` is `null` or another entity's id that was handed out (the entity itself may have left the run since).
  */
 registerInvariant('core.aiMemory', (state) => {
   const problems: string[] = [];
   for (const entity of Object.values(state.entities)) {
     const memory = entity.ai?.memory;
     if (memory === undefined) continue;
+    const goal = memory.intent?.goal;
+    if (goal !== undefined) {
+      if (
+        typeof goal !== 'object' ||
+        goal === null ||
+        !Number.isSafeInteger(goal.x) ||
+        goal.x < 0 ||
+        !Number.isSafeInteger(goal.y) ||
+        goal.y < 0
+      ) {
+        problems.push(`actor ${entity.id} has invalid intent goal`);
+      }
+    }
     if (!Number.isSafeInteger(memory.still) || memory.still < 0) problems.push(`actor ${entity.id} has still ${memory.still}`);
     if (!Number.isSafeInteger(memory.waited) || memory.waited < 0 || memory.waited >= WAIT_STUCK_TURNS) {
       problems.push(`actor ${entity.id} has waited ${memory.waited}`);

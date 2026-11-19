@@ -26,4 +26,4 @@ A sharp, fast glyph map with fog of war that the player can follow, inspect and 
 
 ## Items
 - [x] [ETH-013 Canvas map renderer: glyph atlas, fog and camera follow](ETH-013-canvas-map-renderer.md)
-- [ ] [ETH-019 Map overlays: goal line, possession frame and hit flash](ETH-019-map-overlays-goal-possession-flash.md)
+- [x] [ETH-019 Map overlays: goal line, possession frame and hit flash](ETH-019-map-overlays-goal-possession-flash.md)

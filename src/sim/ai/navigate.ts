@@ -5,7 +5,7 @@
 import type { Grid, Pos } from '../../core';
 import { isProperName, monsterDisplayName, MONSTERS } from '../../content';
 import { blockerAt, featureAt, getEntity, getFloor } from '../entities';
-import { memoryPathGrid, OPEN_DOOR_COST, stepToward } from '../goalMap';
+import { memoryPathGrid, OPEN_DOOR_COST, pathAlong, stepToward } from '../goalMap';
 import type { PathGrid } from '../goalMap';
 import { getMemory } from '../perception';
 import { RULE_ACTIONS } from '../registries';
@@ -83,21 +83,24 @@ export function followMap(ctx: AiCtx, paths: PathGrid, map: Grid, detail: string
   const { state, actor } = ctx;
   const dir = stepToward(paths, map, actor.pos);
   if (dir === null) return null;
+  const goal = pathAlong(paths, map, actor.pos).at(-1);
+  const withGoal = goal === undefined ? {} : { goal };
   const to = { x: actor.pos.x + dir.x, y: actor.pos.y + dir.y };
   const other = blockerAt(state, actor, actor.floor, to);
   if (other !== undefined) {
     if (willingToSwap(ctx, other)) {
-      return { request: { id: 'swap', dir }, detail: `${detail}; squeezing past ${nameOf(other)}` };
+      return { request: { id: 'swap', dir }, detail: `${detail}; squeezing past ${nameOf(other)}`, ...withGoal };
     }
     return {
       request: { id: 'wait' },
       detail: `${detail}; waiting for ${nameOf(other)} to get out of the way`,
       waitingFor: other.id,
+      ...withGoal,
     };
   }
   const door = featureAt(state, actor.floor, to)?.feature;
-  if (door?.kind === 'door' && !door.open) return { request: { id: 'openDoor', dir }, detail: `${detail}; opening a door` };
-  return { request: { id: 'move', dir }, detail };
+  if (door?.kind === 'door' && !door.open) return { request: { id: 'openDoor', dir }, detail: `${detail}; opening a door`, ...withGoal };
+  return { request: { id: 'move', dir }, detail, ...withGoal };
 }
 
 /**

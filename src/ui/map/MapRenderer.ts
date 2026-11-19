@@ -22,6 +22,7 @@ import {
 import type { CameraMode, View, Viewport } from './camera';
 import { buildScene, cellFog, cellGlyph, cellOverlay, changedTiles, Fog, GlyphTable, Overlay } from './scene';
 import type { Scene } from './scene';
+import { parseHex } from './color';
 import type { GlyphTheme, MapContext } from './theme';
 
 /** Colors the renderer draws itself, outside the theme: from the design tokens. */
@@ -32,6 +33,8 @@ export interface MapPalette {
   selection: string;
   /** The hover outline (`--text`). */
   hover: string;
+  /** Hit flash wash (`--danger`). */
+  danger: string;
 }
 
 /** What to draw besides the snapshot. */
@@ -51,6 +54,8 @@ export interface MapView {
    * motion, or a focus the run isn't paused on). Each new phase redraws the marker.
    */
   pulse?: number | null;
+  /** Tiles on the shown floor currently flashing from a hit (ETH-019). */
+  flashes?: readonly Pos[];
 }
 
 /** How far out the focus brackets sit, in cells from the focus tile, at rest and at the pulse's tightest. */
@@ -88,6 +93,9 @@ export class MapRenderer {
   private dirty = true;
   /** The focus tile the last frame marked, so its brackets can be cleared when it goes. */
   private lastFocus: Pos | null = null;
+  /** Tiles crossed by the goal line drawn on the last frame, so trails can be cleared. */
+  private lastGoalLine: readonly Pos[] = [];
+  private readonly dangerWash: string;
 
   constructor(
     private readonly canvas: MapCanvasLike | HTMLCanvasElement,
@@ -97,6 +105,8 @@ export class MapRenderer {
     const ctx = (canvas as MapCanvasLike).getContext('2d', { alpha: false });
     if (!ctx) throw new Error('The map canvas has no 2D context');
     this.ctx = ctx;
+    const [r, g, b] = parseHex(palette.danger);
+    this.dangerWash = `rgba(${r}, ${g}, ${b}, 0.45)`;
   }
 
   /**
@@ -126,7 +136,11 @@ export class MapRenderer {
     const floor = snap.floor;
 
     const next = this.nextView(snap, view);
-    const scene = buildScene(snap, { selected: view.selected, hover: view.hover, focus: view.focus ?? null }, this.glyphs);
+    const scene = buildScene(
+      snap,
+      { selected: view.selected, hover: view.hover, focus: view.focus ?? null, flashes: view.flashes },
+      this.glyphs,
+    );
     const changed = this.dirty || !sameView(this.view, next) ? null : changedTiles(this.scene, scene);
     if (!sameView(this.view, next)) this.theme.setCellSize(next.cellW, next.cellH);
     this.view = next;
@@ -138,6 +152,10 @@ export class MapRenderer {
     const focus = view.focus && inFloor(floor, view.focus) ? view.focus : null;
     const lastFocus = this.lastFocus;
     this.lastFocus = focus;
+    const goal = goalTarget(snap, view.selected);
+    const nextGoalLine = goal ? lineTiles(goal.from, goal.to, floor) : [];
+    const lastGoalLine = this.lastGoalLine;
+    this.lastGoalLine = nextGoalLine;
     let tiles = 0;
     if (changed === null) {
       ctx.fillStyle = this.palette.background;
@@ -148,12 +166,15 @@ export class MapRenderer {
           tiles++;
         }
       }
+      if (goal) this.drawGoalLine(goal.from, goal.to);
       if (focus) this.drawFocus(focus, floor, view.pulse);
       return { full: true, tiles };
     }
-    // The focus brackets reach into the 3×3 block around the focus tile, so that block is drawn
-    // again whenever the focus is on screen or has just gone, to clear the old brackets.
+    // The goal line and focus brackets cross tile boundaries, so their old and new cells are
+    // redrawn whenever present or just cleared to prevent trails and double-stroking.
     const redraw = new Set(changed);
+    for (const p of lastGoalLine) redraw.add(p.y * floor.width + p.x);
+    for (const p of nextGoalLine) redraw.add(p.y * floor.width + p.x);
     if (focus) for (const i of neighborhood(floor, focus)) redraw.add(i);
     if (lastFocus) for (const i of neighborhood(floor, lastFocus)) redraw.add(i);
     for (const i of redraw) {
@@ -163,8 +184,26 @@ export class MapRenderer {
       this.drawTile(x, y, scene.codes[i] as number, false);
       tiles++;
     }
+    if (goal) this.drawGoalLine(goal.from, goal.to);
     if (focus) this.drawFocus(focus, floor, view.pulse);
     return { full: false, tiles };
+  }
+
+  /** Dotted accent line from the selected adventurer's tile center to its current goal tile center. */
+  private drawGoalLine(from: Pos, to: Pos): void {
+    const view = this.view as View;
+    const ctx = this.ctx;
+    const line = Math.max(1, Math.round(this.dpr));
+    ctx.save();
+    ctx.strokeStyle = this.palette.selection;
+    ctx.lineWidth = line;
+    ctx.setLineDash([line * 2, line * 3]);
+    ctx.beginPath();
+    ctx.moveTo(view.originX + (from.x + 0.5) * view.cellW, view.originY + (from.y + 0.5) * view.cellH);
+    ctx.lineTo(view.originX + (to.x + 0.5) * view.cellW, view.originY + (to.y + 0.5) * view.cellH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
   }
 
   /**
@@ -256,11 +295,20 @@ export class MapRenderer {
 
     const overlay = cellOverlay(code);
     if (overlay === Overlay.None) return;
+    if (overlay & Overlay.HitFlash) {
+      ctx.fillStyle = this.dangerWash;
+      ctx.fillRect(px, py, view.cellW, view.cellH);
+    }
     // Rings sit inside the cell so a tile never draws over its neighbors.
     const line = Math.max(1, Math.round(this.dpr));
     const inset = line / 2;
     ctx.lineWidth = line;
-    if (overlay & Overlay.Selected) {
+    if (overlay & Overlay.Possessed) {
+      ctx.setLineDash([]);
+      ctx.lineWidth = line * 2;
+      ctx.strokeStyle = this.palette.selection;
+      ctx.strokeRect(px + line, py + line, view.cellW - line * 2, view.cellH - line * 2);
+    } else if (overlay & Overlay.Selected) {
       ctx.setLineDash([]);
       ctx.strokeStyle = this.palette.selection;
       ctx.strokeRect(px + inset, py + inset, view.cellW - line, view.cellH - line);
@@ -268,14 +316,65 @@ export class MapRenderer {
     // `Overlay.Focus` is drawn once per frame by `drawFocus`, after every tile, since it reaches
     // into the neighboring cells.
     if (overlay & Overlay.Hover) {
-      // Dashed when it shares the cell with the selection ring, so both stay visible.
-      ctx.setLineDash(overlay & Overlay.Selected ? [line * 2, line * 2] : []);
+      const framed = (overlay & (Overlay.Selected | Overlay.Possessed)) !== 0;
+      // Dashed when it shares the cell with the selection ring or possession frame, so both stay visible.
+      ctx.lineWidth = line;
+      ctx.setLineDash(framed ? [line * 2, line * 2] : []);
       ctx.strokeStyle = this.palette.hover;
-      const extra = overlay & Overlay.Selected ? line : 0;
+      const extra = overlay & Overlay.Possessed ? line * 2 : overlay & Overlay.Selected ? line : 0;
       ctx.strokeRect(px + inset + extra, py + inset + extra, view.cellW - line - 2 * extra, view.cellH - line - 2 * extra);
       ctx.setLineDash([]);
     }
   }
+}
+
+const LINE_PAD = 0.15;
+
+/**
+ * Every floor tile crossed by (or grazed within `LINE_PAD` cells of) the center-to-center segment
+ * between `from` and `to`. Padding includes corner-touching tiles so incremental redraws never
+ * leave stray dash pixels at vertices or edges.
+ */
+export function lineTiles(from: Pos, to: Pos, floor: { width: number; height: number }): Pos[] {
+  if (floor.width <= 0 || floor.height <= 0) return [];
+  const x0 = from.x + 0.5;
+  const y0 = from.y + 0.5;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const minX = Math.max(0, Math.min(from.x, to.x));
+  const maxX = Math.min(floor.width - 1, Math.max(from.x, to.x));
+  const minY = Math.max(0, Math.min(from.y, to.y));
+  const maxY = Math.min(floor.height - 1, Math.max(from.y, to.y));
+  const tiles: Pos[] = [];
+  for (let x = minX; x <= maxX; x++) {
+    let tMin = 0;
+    let tMax = 1;
+    if (dx !== 0) {
+      const tA = (x - LINE_PAD - x0) / dx;
+      const tB = (x + 1 + LINE_PAD - x0) / dx;
+      tMin = Math.max(0, Math.min(tA, tB));
+      tMax = Math.min(1, Math.max(tA, tB));
+      if (tMin > tMax) continue;
+    }
+    const ya = y0 + tMin * dy;
+    const yb = y0 + tMax * dy;
+    const yLo = Math.min(ya, yb);
+    const yHi = Math.max(ya, yb);
+    const yStart = Math.max(minY, Math.ceil(yLo - 1 - LINE_PAD));
+    const yEnd = Math.min(maxY, Math.floor(yHi + LINE_PAD));
+    for (let y = yStart; y <= yEnd; y++) tiles.push({ x, y });
+  }
+  return tiles;
+}
+
+function goalTarget(snap: Snapshot, selectedId: EntityId | null): { from: Pos; to: Pos } | null {
+  if (selectedId === null) return null;
+  const actor = snap.party.find((m) => m.id === selectedId);
+  if (!actor || !actor.alive || actor.possessed || actor.floor !== snap.floor.id) return null;
+  const goal = actor.intent?.goal;
+  if (!goal || !inFloor(snap.floor, actor.pos) || !inFloor(snap.floor, goal)) return null;
+  if (goal.x === actor.pos.x && goal.y === actor.pos.y) return null;
+  return { from: actor.pos, to: goal };
 }
 
 function inFloor(floor: { width: number; height: number }, pos: Pos): boolean {

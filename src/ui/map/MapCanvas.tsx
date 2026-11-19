@@ -19,6 +19,9 @@ import { AsciiTheme } from './theme';
 /** One focus-marker pulse, in milliseconds. */
 export const FOCUS_PULSE_MS = 1200;
 
+/** How long a hit flash tints a struck tile, in milliseconds (`--duration-fast`). */
+export const HIT_FLASH_MS = 120;
+
 export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 const NO_LINES: readonly string[] = [];
@@ -39,6 +42,18 @@ function useTileLines(hover: Pos | null): readonly string[] {
 
 function samePos(a: Pos | null, b: Pos | null): boolean {
   return a === b || (a !== null && b !== null && a.x === b.x && a.y === b.y);
+}
+
+interface HitFlash {
+  floor: string;
+  pos: Pos;
+  until: number;
+}
+
+function pushFlash(flashes: HitFlash[], floor: string, pos: Pos, until: number): void {
+  const existing = flashes.find((f) => f.floor === floor && f.pos.x === pos.x && f.pos.y === pos.y);
+  if (existing) existing.until = Math.max(existing.until, until);
+  else flashes.push({ floor, pos: { x: pos.x, y: pos.y }, until });
 }
 
 const ARROWS: Readonly<Record<string, Pos>> = {
@@ -71,8 +86,12 @@ export function MapCanvas() {
   const autoPaused = useUiStore((s) => s.autoPaused !== null);
   const paused = useSimStore((s) => s.speed === 0);
   const reducedMotion = useMediaQuery(REDUCED_MOTION_QUERY);
+  const reducedMotionRef = useRef(reducedMotion);
   /** The focus marker's pulse phase, or `null` while it is still. Read by `draw`. */
   const pulseRef = useRef<number | null>(null);
+  const flashesRef = useRef<HitFlash[]>([]);
+  const lastSeqRef = useRef(0);
+  const clearFlashTimerRef = useRef<() => void>(() => undefined);
   const depth = useSimStore((s) => s.snapshot?.floor.depth ?? null);
   const [hover, setHover] = useState<Pos | null>(null);
   const viewRef = useRef<Omit<MapView, 'focus'> & { focus: MapFocus | null }>({ mode, selected, hover, focus });
@@ -85,6 +104,15 @@ export function MapCanvas() {
     viewRef.current = { mode, selected, hover, focus };
     scheduleRef.current();
   }, [mode, selected, hover, focus]);
+
+  // Clear active hit flashes immediately if reduced motion is enabled.
+  useEffect(() => {
+    reducedMotionRef.current = reducedMotion;
+    if (!reducedMotion) return;
+    flashesRef.current = [];
+    clearFlashTimerRef.current();
+    scheduleRef.current();
+  }, [reducedMotion]);
 
   // Pulse the focus marker while the run is auto-paused on it: one redraw per animation frame.
   const pulsing = focus !== null && autoPaused && paused && !reducedMotion;
@@ -155,25 +183,58 @@ export function MapCanvas() {
       renderer = new MapRenderer(
         canvas,
         new AsciiTheme({ fontFamily, background, badgeColor: token('--text', '#e3e8ee') }),
-        { background, selection: token('--accent', '#e8a33d'), hover: token('--text', '#e3e8ee') },
+        {
+          background,
+          selection: token('--accent', '#e8a33d'),
+          hover: token('--text', '#e3e8ee'),
+          danger: token('--danger', '#e3706b'),
+        },
       );
     } catch {
       return; // No 2D canvas (e.g. a test DOM): nothing to draw on.
     }
     rendererRef.current = renderer;
+    lastSeqRef.current = useSimStore.getState().nextSeq;
 
     let frame = 0;
+    let flashTimer: ReturnType<typeof setTimeout> | undefined;
+    const clearFlashTimer = () => {
+      if (flashTimer !== undefined) {
+        clearTimeout(flashTimer);
+        flashTimer = undefined;
+      }
+    };
+    clearFlashTimerRef.current = clearFlashTimer;
+
+    const schedule = () => {
+      if (frame === 0) frame = requestAnimationFrame(draw);
+    };
+    scheduleRef.current = schedule;
+
     const draw = () => {
       frame = 0;
       const snap = useSimStore.getState().snapshot;
       if (!snap) return;
       const start = performance.now();
+      const activeFlashes = reducedMotionRef.current ? [] : flashesRef.current.filter((f) => f.until > start);
+      flashesRef.current = activeFlashes;
+      const floorFlashes = activeFlashes.filter((f) => f.floor === snap.floor.id).map((f) => f.pos);
+      clearFlashTimer();
+      if (activeFlashes.length > 0) {
+        let earliestUntil = Infinity;
+        for (const f of activeFlashes) if (f.until < earliestUntil) earliestUntil = f.until;
+        flashTimer = setTimeout(() => {
+          flashTimer = undefined;
+          schedule();
+        }, Math.max(1, earliestUntil - start));
+      }
       const { focus: place, ...view } = viewRef.current;
       // A focus on another floor can't be shown; the camera follows as usual.
       renderer.draw(snap, {
         ...view,
         focus: place && place.floor === snap.floor.id ? place.pos : null,
         pulse: pulseRef.current,
+        flashes: floorFlashes,
       });
       if (import.meta.env.DEV) canvas.dataset.frameMs = (performance.now() - start).toFixed(2);
       // The floor may have moved under a resting pointer.
@@ -184,10 +245,6 @@ export function MapCanvas() {
       }
       if (viewRef.current.hover) void updateRef.current();
     };
-    const schedule = () => {
-      if (frame === 0) frame = requestAnimationFrame(draw);
-    };
-    scheduleRef.current = schedule;
 
     const dpr = () => window.devicePixelRatio || 1;
     const measure = (deviceSize?: { inlineSize: number; blockSize: number }) => {
@@ -243,11 +300,35 @@ export function MapCanvas() {
     }
 
     const unsubscribe = useSimStore.subscribe((s, prev) => {
-      if (s.snapshot !== prev.snapshot) schedule();
+      let shouldSchedule = s.snapshot !== prev.snapshot;
+      if (s.nextSeq < lastSeqRef.current) {
+        lastSeqRef.current = 0;
+        if (flashesRef.current.length > 0) {
+          flashesRef.current = [];
+          clearFlashTimer();
+          shouldSchedule = true;
+        }
+      }
+      if (s.nextSeq > lastSeqRef.current) {
+        const fromSeq = lastSeqRef.current;
+        lastSeqRef.current = s.nextSeq;
+        if (!reducedMotionRef.current) {
+          const until = performance.now() + HIT_FLASH_MS;
+          for (const item of s.events) {
+            if (item.seq < fromSeq || item.event.type !== 'attacked') continue;
+            pushFlash(flashesRef.current, item.event.floor, item.event.pos, until);
+            shouldSchedule = true;
+          }
+        }
+      }
+      if (shouldSchedule) schedule();
     });
     return () => {
       disposed = true;
       unsubscribe();
+      clearFlashTimer();
+      clearFlashTimerRef.current = () => undefined;
+      flashesRef.current = [];
       observer?.disconnect();
       ratioQuery?.removeEventListener('change', onRatioChange);
       if (frame !== 0) cancelAnimationFrame(frame);

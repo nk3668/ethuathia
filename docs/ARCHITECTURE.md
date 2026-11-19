@@ -619,7 +619,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state) and ETH-117 25 (`monster.overlay`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`) and ETH-019 26 (`intent.goal`).
 
 ### Contracts in the run (ETH-024)
 
@@ -1740,7 +1740,9 @@ As built in `src/sim/ai/` (ETH-009):
 - **Trace:** `ruleFired { actor, rule: RuleRef, condition, action, detail }`, where `RuleRef` is
   `{ set: 'own' | 'baseline', index }` and `detail` reads "Explore: heading for unexplored ground
   6 turns away", with the condition's detail in brackets when it has one. The same is kept as
-  `ai.memory.intent` for the party card.
+  `ai.memory.intent` for the party card, along with optional `goal?: Pos` (ETH-019) for the tile
+  the actor is heading for or targeting (`pathAlong` endpoint for map-following/flee rules, or
+  the target tile for adjacent/ranged rules; omitted when untargeted).
 - **Baseline rules**, in order (0-based indices, as of ETH-061):
   0 `cond.wounded { percent: 35 } → act.quaff_healing`, 1 `cond.overloaded → act.drop_lowest`,
   2 `cond.stuck → act.back_off`, 3 `cond.heading_out → act.retreat_run`,
@@ -2240,11 +2242,13 @@ A tileset later is a second `GlyphTheme`.
 As built (ETH-013), in `ui/map/`. Only `MapCanvas` and `MapControls` use React; everything
 else is plain TypeScript, and all but `MapRenderer` and `AsciiTheme` run without a canvas:
 
-- **Scene** (`scene.ts`): `buildScene(snapshot, { selected, hover }, glyphs)` packs each tile
-  into one integer: an interned glyph id (`GlyphTable`), the fog state (unknown, remembered,
-  visible) and overlay bits (hover, selected). Layers resolve topmost-wins: terrain, then a
-  feature, then an actor, with party members over anything else and dead ones not drawn.
-  `changedTiles` diffs two scenes; `describeTile` gives the hover tooltip's text.
+- **Scene** (`scene.ts`): `buildScene(snapshot, { selected, hover, focus, flashes }, glyphs)` packs
+  each tile into one integer: an interned glyph id (`GlyphTable`), the fog state (unknown,
+  remembered, visible) and overlay bits (hover, selected, focus, possessed, hit flash). Layers
+  resolve topmost-wins: terrain, then a feature, then an actor, with party members over anything
+  else and dead ones not drawn. Living possessed party members get `Overlay.Possessed` without
+  `Overlay.Selected`. `changedTiles` diffs two scenes; `describeTile` gives the hover tooltip's
+  text.
 - **Camera** (`camera.ts`): all in whole device pixels, so glyphs stay on the pixel grid.
   `fitView` picks the largest whole cell size that shows the floor and centers it.
   `followView` uses `FOLLOW_CELL_HEIGHT` (20 CSS px) cells and keeps its scroll until the
@@ -2258,13 +2262,18 @@ else is plain TypeScript, and all but `MapRenderer` and `AsciiTheme` run without
 - **`AsciiTheme`** draws `glyphStyle(id)` (`glyphs.ts`) into a `GlyphAtlas` (`atlas.ts`): one
   slot per glyph and fog state, painted the first time it is needed, in a canvas that doubles
   when full and is dropped when the cell size changes or the font loads.
-- **`MapRenderer`**: `resize(deviceW, deviceH, dpr)`, `draw(snapshot, { mode, selected, hover })`,
+- **`MapRenderer`**: `resize(deviceW, deviceH, dpr)`, `draw(snapshot, { mode, selected, hover, focus, pulse, flashes })`,
   `tileAt` and `tileRect` (CSS pixels) for hit-testing, and `invalidate()`. When the view
-  (cell size and scroll) is unchanged it redraws only the tiles whose code changed; otherwise it
-  redraws every tile in view. The selection ring and hover outline are drawn inside the cell,
-  so a tile never draws over its neighbors and the diff stays exact.
+  (cell size and scroll) is unchanged it redraws only the tiles whose code changed (plus old and
+  new goal-line cells from `lineTiles` and focus 3×3 blocks); otherwise it redraws every tile
+  in view. Cell overlays (hit flash wash, selection ring, solid possession frame, hover outline)
+  are drawn inside the cell, so a tile never draws over its neighbors and the diff stays exact;
+  the dotted goal line (for a selected, living, non-possessed party member on the shown floor)
+  is drawn after tiles and before `drawFocus`.
 - **`MapCanvas`** subscribes to `simStore` outside React's render and draws at most once per
-  animation frame, so a fast sim never re-renders it. It sizes the backing store from a
+  animation frame, so a fast sim never re-renders it. It also tracks new `attacked` events to
+  render `HIT_FLASH_MS` (120ms) hit flashes (skipped under `prefers-reduced-motion`) and
+  schedules their expiry redraw. It sizes the backing store from a
   `ResizeObserver` (`device-pixel-content-box` where supported) plus a `resolution` media
   query for pixel-ratio changes, and reads its colors and font from the design tokens.
 - The camera mode lives in `uiStore` (`mapCamera`) and is remembered like the log height.

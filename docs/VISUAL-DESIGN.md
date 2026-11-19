@@ -367,9 +367,13 @@ ratio so glyphs stay sharp.
   `#e3706b`; anything unknown is a `?`.
 - **Party badges:** the slot number in bold at the cell's bottom-right, outlined in the
   background color, in cells at least 14 device px high.
-- **Overlays:** the selection ring is a 1-device-px `--accent` square inside the cell; the hover
-  outline is the same in `--text`, dashed and inset when it shares the selected cell. The goal
-  line, possession frame and hit flash need data the snapshot doesn't carry yet (ETH-019).
+- **Overlays:** the selection ring is a 1-device-px `--accent` square inside the cell, with a
+  dotted `--accent` line (`2·line` dash, `3·line` gap) from the selected adventurer's center to
+  their `intent.goal` tile when moving or targeting on the shown floor; the possession frame
+  (ETH-019) replaces the ring with a solid `2·line` `--accent` square inset inside the cell (no
+  goal line while possessed); the hover outline is 1-device-px `--text`, dashed and inset when
+  it shares a selected or possessed cell; and a hit flash (ETH-019) tints the cell with a 45%
+  `--danger` wash for 120ms (`HIT_FLASH_MS`), skipped under `prefers-reduced-motion`.
 - **Tooltip:** what is on the tile (adventurers as "Mira (party 1)", then the feature, then the
   terrain), then a muted fog line; unknown tiles say "Unexplored". It is styled like the kit
   `Tooltip` and placed beside the tile.
