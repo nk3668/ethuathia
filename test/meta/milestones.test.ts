@@ -33,7 +33,7 @@ function run(overrides: Partial<RunResult> = {}): RunResult {
 const SMITHY = BUILDING_SMITHY.id;
 
 describe('milestone content', () => {
-  const progress = { deepestDepth: 2, runs: 3, victories: 0, metInRun: [] };
+  const progress = { deepestDepth: 2, runs: 3, victories: 0, metInRun: [], objectivesDone: [] };
 
   it('checks each kind against lifetime totals', () => {
     expect(milestoneMet({ kind: 'reachDepth', depth: 2 }, progress)).toBe(true);

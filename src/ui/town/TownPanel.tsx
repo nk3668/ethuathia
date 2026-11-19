@@ -1,4 +1,4 @@
-import { BUILDINGS, describeMilestone, describeProgress } from '../../content';
+import { BUILDINGS, defName, describeMilestone, describeProgress } from '../../content';
 import type { BuildingDef, Milestone } from '../../content';
 import { formatNumber } from '../../core';
 import { lockingMilestone, milestoneProgress, unlockOf } from '../../meta';
@@ -24,7 +24,7 @@ export function TownPanel() {
       return {
         id: building.id,
         label: (
-          <Tooltip content={`${building.description} Locked: ${describeMilestone(shut, describeRequirement)}.`}>
+          <Tooltip content={`${building.description} Locked: ${describeMilestone(shut, describeRequirement, defName)}.`}>
             <span>
               {building.name}{' '}
               <span aria-hidden="true" className={styles.padlock}>
@@ -88,7 +88,7 @@ function LockedBuilding({ building, milestone }: { building: BuildingDef; milest
       </p>
       <p>{building.description}</p>
       <p>
-        Unlocks when you: <strong>{describeMilestone(milestone, describeRequirement)}</strong>
+        Unlocks when you: <strong>{describeMilestone(milestone, describeRequirement, defName)}</strong>
       </p>
       <p className={styles.progress}>{describeProgress(milestone, progress)}</p>
     </div>

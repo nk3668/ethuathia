@@ -25,6 +25,7 @@ import type {
   RunTracker,
   SimDomain,
   SnapshotCtx,
+  StepCtx,
   TurnCtx,
 } from './domain';
 import { FLOORS_DOMAIN } from './floors';
@@ -128,6 +129,11 @@ export function runTurnStart(ctx: TurnCtx): void {
 /** Runs every domain's `turnEnd` hook for `ctx.actor`, in domain order (`step.ts`). */
 export function runTurnEnd(ctx: TurnCtx): void {
   for (const d of ALL) d.turnEnd?.(ctx);
+}
+
+/** Runs every domain's `stepEnd` hook, in domain order, before the step's trackers (`step.ts`, ETH-114). */
+export function runStepEnd(ctx: StepCtx): void {
+  for (const d of ALL) d.stepEnd?.(ctx);
 }
 
 /**

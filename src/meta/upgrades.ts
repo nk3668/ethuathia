@@ -12,7 +12,7 @@
  * - `capacity(profile, key, base)`: a limit such as `partySize` or `contractSlots` (ETH-028).
  * - `isUnlocked(profile, id)`: whether an upgrade unlocked a content id (ETH-036 class unlocks).
  */
-import { BUILDINGS, CAPACITY_INFO, describeMilestone, findDef, groupNodes, UPGRADES } from '../content';
+import { BUILDINGS, CAPACITY_INFO, defName, describeMilestone, findDef, groupNodes, UPGRADES } from '../content';
 import type { CapacityKey, UpgradeGrant, UpgradeNodeDef } from '../content';
 import { formatNumber } from '../core';
 import { describeRequirement } from '../sim';
@@ -125,7 +125,7 @@ export function canPurchase(profile: Profile, nodeId: string): PurchaseCheck {
   const shut = lockingMilestone(profile, node.building);
   if (shut !== null) {
     const building = BUILDINGS.get(node.building).name;
-    return { ok: false, status: 'locked', missing: [], reason: `The ${building} opens when you ${describeMilestone(shut, describeRequirement).toLowerCase()}.` };
+    return { ok: false, status: 'locked', missing: [], reason: `The ${building} opens when you ${describeMilestone(shut, describeRequirement, defName).toLowerCase()}.` };
   }
 
   if (node.exclusiveGroup !== undefined) {

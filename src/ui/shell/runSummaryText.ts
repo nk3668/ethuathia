@@ -4,7 +4,7 @@
  */
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets, RUN_RECORD_MOMENTS } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
-import { DEITIES, describeMilestoneMet } from '../../content';
+import { defName, DEITIES, describeMilestoneMet } from '../../content';
 import { CHRONICLE_TRACKER, describeRequirement, favorDeity, favorKey, RENOWN, topMoments, TROPHIES, WIPE_LOSS_SHARE } from '../../sim';
 import type { ChronicleEntry, ContractRecord, FallenRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
 
@@ -81,7 +81,7 @@ export function unlockLines(profile: Profile, run?: number): UnlockLine[] {
   const unlocks = run === undefined ? latestUnlocks(profile) : profile.milestones.unlocked.filter((u) => u.run === run);
   return unlocks.flatMap((u) => {
     const target = targets.find((t) => t.id === u.id);
-    return target === undefined ? [] : [{ id: u.id, name: target.name, why: describeMilestoneMet(target.unlock, describeRequirement) }];
+    return target === undefined ? [] : [{ id: u.id, name: target.name, why: describeMilestoneMet(target.unlock, describeRequirement, defName) }];
   });
 }
 

@@ -3,10 +3,12 @@
  * relic a `recover` contract places on the bottom floor, the victory check and the tracker that
  * pays each completed contract's reward into the run's at-risk total.
  *
- * - **Progress** is recomputed from the run state (`contractProgress`), never counted from events,
- *   so it is always true to the state: a `recover` contract is complete while a living party
- *   member carries its item. `syncContracts` (the domain's `turnEnd` hook) stores the result in
- *   the slice and emits `contractCompleted`, `contractProgress` and `contractLost` as it changes.
+ * - **Progress** comes from the objective engine (ETH-114, `objectives.ts`): each contract is a
+ *   tracked objective with owner `contract`, and `contractProgress` measures it. A `recover`
+ *   contract is recomputed from the run state, so it is complete while a living party member
+ *   carries its item. `syncContracts` (the domain's turn and step hooks) syncs the objectives,
+ *   mirrors each contract's into the slice and emits `contractCompleted`, `contractProgress` and
+ *   `contractLost` as it changes.
  * - **Victory:** `victory.contracts` applies once the run has a contract, and is met when every
  *   one is complete as the party walks out.
  * - **Rewards:** `track.contracts` keeps each contract's reward and whether it is complete; its
@@ -14,17 +16,20 @@
  *   and the run history.
  */
 import { CONTRACTS, ITEMS } from '../../content';
-import type { ContractDef } from '../../content';
+import { objectiveOwnerKey } from '../../content';
+import type { ContractDef, ObjectiveOwner } from '../../content';
 import { DIRS_8, Grid, Rng } from '../../core';
 import type { Pos } from '../../core';
 import type { FloorPlanHook, RunTracker, VictoryCheck } from '../domain';
-import type { Emit } from '../events';
+import type { Emit, SimEvent } from '../events';
 import type { FloorPlan } from '../floorText';
 import { dungeonDepth, floorIdAt, isBottomFloor } from '../floors/dungeon';
 import { inventoryOf } from '../items/inventory';
 import type { RewardAmounts } from '../run/result';
 import { Terrain } from '../state';
-import type { ActorEntity, EntityId, FloorId, RunConfig, RunState } from '../state';
+import type { EntityId, FloorId, RunConfig, RunState } from '../state';
+import { findObjective, finishObjectivesStep, measureObjective, newObjective, syncObjectives } from './objectives';
+import type { ObjectiveProgress, TrackedObjective } from './objectives';
 
 /** One selected contract in the run: `state.domains.quests.contracts[i]`. */
 export interface ContractState {
@@ -60,25 +65,23 @@ export function contractDef(id: string): ContractDef {
   return CONTRACTS.get(id);
 }
 
-/** The party member carrying `item`, alive, in party order; `undefined` if nobody is. */
-export function carrierOf(state: RunState, item: string): ActorEntity | undefined {
-  for (const id of state.party) {
-    const e = state.entities[id];
-    if (e?.actor === undefined || e.actor.hp <= 0) continue;
-    if (inventoryOf(e).some((i) => i.def === item)) return e as ActorEntity;
-  }
-  return undefined;
+/** A contract's objective owner. */
+export function contractOwner(id: string): ObjectiveOwner {
+  return { kind: 'contract', id };
 }
 
-/** How far along a contract is right now, and who (if anyone) made it so. Changes nothing. */
-export function contractProgress(state: RunState, id: string): { current: number; target: number; by: ActorEntity | undefined } {
-  const { objective } = contractDef(id);
-  switch (objective.kind) {
-    case 'recover': {
-      const by = carrierOf(state, objective.item);
-      return { current: by === undefined ? 0 : 1, target: 1, by };
-    }
-  }
+/**
+ * How far along a contract is right now, and who (if anyone) made it so: its objective measured by
+ * the engine (with its tracked counter, for an `events` kind). Changes nothing.
+ */
+export function contractProgress(state: RunState, id: string): ObjectiveProgress {
+  const tracked = findObjective(state, objectiveOwnerKey(contractOwner(id)));
+  return measureObjective(state, contractDef(id).objective, tracked?.counter ?? 0);
+}
+
+/** The tracked objectives for a run's contracts, in contract order: nothing done yet. */
+export function initContractObjectives(contracts: readonly ContractState[]): TrackedObjective[] {
+  return contracts.map((c) => newObjective(contractOwner(c.contract), contractDef(c.contract).objective));
 }
 
 /** The state of each contract a run starts with: nothing done yet. */
@@ -104,20 +107,27 @@ export function announceContracts(state: RunState, emit: Emit): void {
 }
 
 /**
- * Recomputes every contract's progress and stores it, emitting `contractCompleted` when one
+ * Syncs the run's objectives (`syncObjectives`, folding `events`, the step so far) and, for each
+ * contract whose objective changed, stores its progress and emits `contractCompleted` when it
  * becomes complete, `contractLost` when a complete one no longer is (its relic's bearer fell),
- * and `contractProgress` when it moves without either.
+ * and `contractProgress` when it moves without either. `finish` ends the step for the engine
+ * (`stepEnd`). Nothing is emitted for changes the run end makes.
  */
-export function syncContracts(state: RunState, emit: Emit): void {
-  for (const c of state.domains.quests.contracts) {
-    const now = contractProgress(state, c.contract);
-    const complete = now.current >= now.target;
-    const moved = now.current !== c.progress.current || now.target !== c.progress.target;
+export function syncContracts(state: RunState, emit: Emit, events: readonly SimEvent[] = [], finish = false): void {
+  const changes = finish ? finishObjectivesStep(state, events) : syncObjectives(state, events);
+  for (const change of changes) {
+    const o = change.objective;
+    if (o.owner.kind !== 'contract') continue;
+    const c = state.domains.quests.contracts.find((x) => x.contract === o.owner.id);
+    if (c === undefined) continue;
+    const complete = o.status === 'complete';
+    const moved = o.current !== c.progress.current || o.target !== c.progress.target;
     const was = c.complete;
-    c.progress = { current: now.current, target: now.target };
+    c.progress = { current: o.current, target: o.target };
     c.complete = complete;
+    if (change.atRunEnd) continue;
     if (complete && !was) {
-      const by = now.by;
+      const by = change.by;
       emit({
         type: 'contractCompleted',
         contract: c.contract,
@@ -129,7 +139,7 @@ export function syncContracts(state: RunState, emit: Emit): void {
     } else if (!complete && was) {
       emit({ type: 'contractLost', contract: c.contract });
     } else if (moved) {
-      emit({ type: 'contractProgress', contract: c.contract, current: now.current, target: now.target });
+      emit({ type: 'contractProgress', contract: c.contract, current: o.current, target: o.target });
     }
   }
 }

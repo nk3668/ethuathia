@@ -150,6 +150,7 @@ export interface FloorPlanHook {
  * - `chronicle` and `chronicleKinds` say which of its events are run chronicle moments.
  * - `statProviders`, `bundleSources` and `triggers` feed the stats tables (§2.2), in domain order.
  * - `turnStart` and `turnEnd` run around every actor's turn (`step.ts`), in domain order.
+ * - `stepEnd` runs once at the end of every step, before the run trackers (ETH-114).
  * - `victoryChecks` are the domain's victory conditions (`VictoryCheck`).
  * - `floorPlanHooks` change floor plans before floors are built (`FloorPlanHook`).
  */
@@ -190,6 +191,13 @@ export interface SimDomain<T extends DomainShape> {
   turnStart?(ctx: TurnCtx): void;
   /** Runs at the end of every actor's turn, after its action, in domain order. */
   turnEnd?(ctx: TurnCtx): void;
+  /**
+   * Runs once at the end of every step that ran (ETH-114), after the run end is settled and
+   * before the run trackers fold the step's events, in domain order. It may change the state and
+   * emit events (which the trackers then see); `ctx.events` is the whole step, a finished run's
+   * `runEnded` included. The quests domain folds the step's last events into its objectives here.
+   */
+  stepEnd?(ctx: StepCtx): void;
 }
 
 /** What a domain's turn hooks get. */
@@ -197,4 +205,14 @@ export interface TurnCtx {
   readonly state: RunState;
   readonly actor: ActorEntity;
   readonly emit: Emit;
+  /** The step's events so far, oldest first (ETH-114). Read only: emit through `emit`. */
+  readonly events: readonly SimEvent[];
+}
+
+/** What a domain's `stepEnd` hook gets (ETH-114). */
+export interface StepCtx {
+  readonly state: RunState;
+  readonly emit: Emit;
+  /** Every event of the step, oldest first. Read only: emit through `emit`. */
+  readonly events: readonly SimEvent[];
 }
