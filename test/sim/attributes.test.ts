@@ -30,7 +30,7 @@ const PLAIN = defineClass({
   description: 'A test class with every attribute at 10.',
   tags: [],
   attributes: { brawn: 10, finesse: 10, wits: 10, grit: 10 },
-  growth: { grit: 1 },
+  growth: { grit: { min: 1, max: 1 } },
 });
 const ODD = defineClass({
   id: 'class.test_odd',
@@ -38,7 +38,7 @@ const ODD = defineClass({
   description: 'A test class with uneven attributes.',
   tags: [],
   attributes: { brawn: 5, finesse: 15, wits: 20, grit: 7 },
-  growth: { wits: 1 },
+  growth: { wits: { min: 1, max: 1 } },
 });
 
 const ROOM = ['#######', '#@....#', '#.....#', '#######'];

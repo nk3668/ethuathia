@@ -38,3 +38,4 @@ Adventurers have attributes, grow by class when they level, have race aptitudes 
 - [ ] [ETH-087 Class Mastery: a shared level per class that earns tree points](ETH-087-class-mastery-levels.md)
 - [ ] [ETH-088 Class Mastery trees with class-specific nodes](ETH-088-class-mastery-trees.md)
 - [ ] [ETH-104 Personality quirks](ETH-104-personality-quirks.md)
+- [x] [ETH-110 Rolled growth, shared kill XP and uncapped levels](ETH-110-leveling-followup.md)

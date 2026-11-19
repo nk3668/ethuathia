@@ -30,7 +30,7 @@ function withDefs<T extends Def>(kind: ContentKind<T>, defs: unknown[]): Content
   return { ...kind, registry };
 }
 
-const vanguard: ClassDef = { id: 'class.test', name: 'Test', description: 'A test class.', tags: [], attributes: { brawn: 10, finesse: 10, wits: 10, grit: 10 }, growth: { grit: 1 } };
+const vanguard: ClassDef = { id: 'class.test', name: 'Test', description: 'A test class.', tags: [], attributes: { brawn: 10, finesse: 10, wits: 10, grit: 10 }, growth: { grit: { min: 1, max: 1 } } };
 const generationSteps = { kind: 'generation step', has: (id: string) => id === 'gen.rooms' };
 
 describe('shipped content', () => {

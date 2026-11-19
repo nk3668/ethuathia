@@ -362,17 +362,24 @@ only current `hp` and `mp` (plus energy, faction, queued).
   subtracts). An entity with no adventurer part and no `stats.attributes` gets no attribute parts,
   so monsters built from `stats.base` alone are unaffected. The snapshot's
   `domains.stats.members[id].attributes` carries each `AttributeResult`.
-- **XP and levels (ETH-034, `src/sim/stats/leveling.ts`).** An adventurer's `growth` part is
-  `{ level, xp }` (absent: level 1, 0 XP; only adventurers have one; `level` always equals
-  `levelForXp(xp)`, invariant `stats.growth`). Each class has `growth` in content
-  (`ClassDef.growth`, points per level, fractions allowed): at level L an attribute has gained
-  `floor(rate × (L − 1))`, an attribute part credited to the class and labeled "Level L". Level
-  L → L + 1 costs `XP_STEP` (15) × L; `MAX_LEVEL` 20 (XP keeps accruing past it). XP comes from
+- **XP and levels (ETH-034, ETH-110, `src/sim/stats/leveling.ts`).** An adventurer's `growth`
+  part is `{ level, xp, gained }` (absent: level 1, 0 XP; only adventurers have one; `level`
+  always equals `levelForXp(xp)`; `gained` is whole points ≥ 0 per attribute; invariant
+  `stats.growth`). Each class has `growth` in content (`ClassDef.growth`: per attribute a
+  `GrowthRoll { min, max, chance? }`). Every level-up rolls each attribute (with `chance`, a
+  whole number from min to max) from `growthRng(state, actor, level)`, a seed derived from the
+  run seed, the actor id and the level (`seedState(seed, 'growth/<actor>/<level>')`), so the
+  roll never shifts a shared stream. The result is added to `gained`, so a save and load never
+  changes it. `gained` shows as an attribute part credited to the class and labeled
+  "Level L". Level L → L + 1 costs `XP_STEP` (8) × L, with **no level cap**. XP comes from
   `grantXp(state, entity, amount, reason, source, emit)`; living adventurers only. Combat's
-  `killActor` calls `grantKillXp` (`XP_PER_THREAT` 4 × the victim's threat, to the killer), and
-  the floors domain's stairs call `grantDepthXp` on reaching a new deepest floor
-  (`XP_PER_DEPTH` 5 × depth, to every living member). A level-up raises current HP and MP by
-  as much as their maxima rose. No randomness. Events: `xpGained { actor, classId, amount, xp,
+  `killActor` calls `grantKillXp(state, killer, victim, threat, emit)`: `XP_PER_THREAT` 4 ×
+  threat, shared (when a party member struck the blow) by every living member on the victim's
+  floor within `KILL_SHARE_RADIUS` 6 of the killer or the victim, each getting
+  `killShare(base, n)` = ceil(base × (1 + `KILL_GROUP_BONUS` 0.25 × (n − 1)) / n). The floors
+  domain's stairs call `grantDepthXp` on reaching a new deepest floor (`XP_PER_DEPTH` 5 ×
+  depth, to every living member). A level-up raises current HP and MP by as much as their
+  maxima rose. Events: `xpGained { actor, classId, amount, xp,
   reason: 'kill' | 'depth', source }` (quiet in the log) and `leveledUp { actor, name, classId,
   level, gains, floor, pos }` (a log highlight, `leveledUp`). **For class Mastery (ETH-087) and
   the roster (ETH-068):** the `track.xp` tracker (stats domain) keeps `{ byActor: { [id]:
@@ -514,8 +521,8 @@ then 5 on main, ETH-058 (the floors slice) 6, ETH-057 7 (the `stats` part; `spee
 `maxHp` and `maxMp` left `ActorPart`), ETH-033 8 (`stats.attributes`), ETH-062 9 (the run
 slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061 11
 (the `item` and `inventory` parts and the items slice), 12 on main after that, ETH-034 13
-(the `growth` part and the `track.xp` tracker state), ETH-024 14 (the quests slice's contracts), and ETH-043 15
-(`inventory.equipped`).
+(the `growth` part and the `track.xp` tracker state), ETH-024 14 (the quests slice's contracts), ETH-043 15
+(`inventory.equipped`), and ETH-110 16 (`growth.gained`, the rolled level-up gains).
 
 ### Contracts in the run (ETH-024)
 

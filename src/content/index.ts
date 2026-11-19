@@ -3,8 +3,8 @@
  * May import: core. See docs/ARCHITECTURE.md §1 and §5.
  */
 export * from './attributes';
-export { CLASS_KIND, CLASS_VANGUARD, CLASSES, defineClass, MAX_GROWTH_RATE } from './classes';
-export type { AttributeGrowth, ClassDef } from './classes';
+export { CLASS_KIND, CLASS_VANGUARD, CLASSES, defineClass, expectedGrowth, MAX_GROWTH_RATE } from './classes';
+export type { AttributeGrowth, ClassDef, GrowthRoll } from './classes';
 export {
   defineFeature,
   FEATURE_DOOR,
