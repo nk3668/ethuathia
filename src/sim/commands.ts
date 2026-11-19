@@ -8,7 +8,8 @@
  * This file holds the shapes and the pipeline. The definitions live with their domain: the core
  * commands in `coreCommands.ts`, the rest in `src/sim/<domain>/`, joined into `COMMANDS` by
  * `domains.ts`. More arrive with the features that need them: `setRules` and `setDoctrine` with
- * behavior rules (M3), `possess` and `release` with possession, and `retreat` with run endings.
+ * behavior rules (M3) and `retreat` with run endings. `possess` and `release` came with possession
+ * (ETH-066, `ai/possession.ts`).
  */
 import type { CoreCommand } from './coreCommands';
 import type { DomainKey, DomainTypes } from './domain';
@@ -32,9 +33,10 @@ export interface CommandDef<C extends BaseCommand> {
   /**
    * Applies the command and returns `null`, or returns why it can't be applied. `raw` is
    * untyped (it may come from a worker or a file), so check every field. Every check must come
-   * before the first change, so a rejected command changes nothing.
+   * before the first change, so a rejected command changes nothing. `emit` records events
+   * (possessing an adventurer is logged, ETH-066); emit only once the command is accepted.
    */
-  apply(state: RunState, raw: Readonly<Record<string, unknown>>): string | null;
+  apply(state: RunState, raw: Readonly<Record<string, unknown>>, emit: Emit): string | null;
 }
 
 /**
@@ -49,15 +51,15 @@ export { COMMANDS };
 export function applyCommand(state: RunState, command: Command, emit: Emit): void {
   const raw: unknown = command;
   const type = isRecord(raw) && typeof raw.type === 'string' ? raw.type : '?';
-  const reason = isRecord(raw) ? run(state, raw) : 'Not a command object';
+  const reason = isRecord(raw) ? run(state, raw, emit) : 'Not a command object';
   if (reason !== null) emit({ type: 'commandRejected', command: type, reason });
 }
 
 /** Applies `raw` and returns `null`, or returns why it can't be applied. */
-function run(state: RunState, raw: Readonly<Record<string, unknown>>): string | null {
+function run(state: RunState, raw: Readonly<Record<string, unknown>>, emit: Emit): string | null {
   const type = raw.type;
   if (typeof type !== 'string' || !Object.hasOwn(COMMANDS, type)) return `Unknown command type "${String(type)}"`;
-  return COMMANDS[type as CommandType].apply(state, raw);
+  return COMMANDS[type as CommandType].apply(state, raw, emit);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

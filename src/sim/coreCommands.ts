@@ -3,13 +3,15 @@
  * their own `src/sim/<domain>/` files; `domains.ts` joins every record into `COMMANDS`.
  */
 import type { ActionRequest } from './actions';
+import { POSSESSION_COMMANDS } from './ai/possession';
+import type { PossessionCommand } from './ai/possession';
 import { parseRequest } from './actions';
 import type { CommandRecord } from './commands';
 import type { EntityId } from './state';
 
 /**
- * Overrides `actor`'s next decision with `action`. Possession will send one of these per key
- * press; the AI resumes after it.
+ * Overrides `actor`'s next decision with `action`. Possession sends one of these per key press
+ * (ETH-066); a possessed adventurer waits for it, any other resumes the AI after it.
  */
 export interface PlayerActionCommand {
   type: 'playerAction';
@@ -17,8 +19,8 @@ export interface PlayerActionCommand {
   action: ActionRequest;
 }
 
-/** The core domain's commands. */
-export type CoreCommand = PlayerActionCommand;
+/** The core domain's commands: player actions, and possession (`ai/possession.ts`, ETH-066). */
+export type CoreCommand = PlayerActionCommand | PossessionCommand;
 
 export const CORE_COMMANDS: CommandRecord<CoreCommand> = {
   playerAction: {
@@ -34,4 +36,5 @@ export const CORE_COMMANDS: CommandRecord<CoreCommand> = {
       return null;
     },
   },
+  ...POSSESSION_COMMANDS,
 };

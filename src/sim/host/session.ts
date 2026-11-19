@@ -6,13 +6,14 @@
 import { clonePlain } from '../../core';
 import type { Command } from '../commands';
 import type { SimEvent } from '../events';
+import { possessedMember } from '../ai/possession';
 import { createRun } from '../createRun';
 import { runOver, runReport } from '../run/end';
 import type { RunReport } from '../run/end';
 import { stateHash } from '../serialize';
 import { snapshot } from '../snapshot';
 import type { Snapshot, ViewOptions } from '../snapshot';
-import type { RunConfig, RunState } from '../state';
+import type { EntityId, RunConfig, RunState } from '../state';
 import { step } from '../step';
 
 export class SimSession {
@@ -47,6 +48,16 @@ export class SimSession {
     const events = step(this.state, commands);
     const ended = !wasOver && runOver(this.state) ? runReport(this.state) : null;
     return { events, progressed: events.length > 0 || this.state.turn !== turn, ended };
+  }
+
+  /**
+   * The living party member the player possesses (ETH-066), or `null`. The run holds at its turn
+   * until a `playerAction` for it arrives.
+   */
+  possessed(): EntityId | null {
+    const id = possessedMember(this.state);
+    const hp = id === null ? 0 : (this.state.entities[id]?.actor?.hp ?? 0);
+    return hp > 0 ? id : null;
   }
 
   /** True once the run has ended; later steps do nothing. */

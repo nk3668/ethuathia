@@ -6,7 +6,7 @@
  */
 import { create } from 'zustand';
 import { CODEX_TRACKER } from '../../sim';
-import type { CodexDiscoveries, SimEvent, SimHost, Snapshot, Speed, Unsubscribe } from '../../sim';
+import type { CodexDiscoveries, Command, SimEvent, SimHost, Snapshot, Speed, Unsubscribe } from '../../sim';
 
 /** How many recent events the store keeps. Older ones drop off the front. */
 export const EVENT_BUFFER_SIZE = 500;
@@ -56,6 +56,11 @@ export interface SimStoreState {
   setSpeed(speed: Speed): void;
   /** Pauses a running sim, or resumes a paused one at `resumeSpeed`. */
   togglePause(): void;
+  /**
+   * Sends a command to the bound host (possession and the possessed adventurer's actions,
+   * ETH-066). Nothing is sent without a host or after a host error.
+   */
+  send(command: Command): void;
   /** Records that the host stopped the run on an error and paused it. Sends nothing. */
   hostFailed(message: string): void;
   /** Forgets the snapshot, events, discoveries and error, e.g. when a new run starts. The speed is kept. */
@@ -89,6 +94,9 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
   togglePause: () => {
     const { speed, resumeSpeed, setSpeed } = get();
     setSpeed(speed === 0 ? resumeSpeed : 0);
+  },
+  send: (command) => {
+    if (get().error === null) boundHost?.send(command);
   },
   hostFailed: (message) => set({ speed: 0, error: message }),
   reset: () => set({ snapshot: null, events: [], nextSeq: 0, discoveries: CODEX_TRACKER.init(), error: null }),

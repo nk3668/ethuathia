@@ -38,8 +38,8 @@ export type {
 } from './domain';
 export { isActionId, parseRequest, performAction, validateAction } from './actions';
 export type { ActionCtx, ActionDef, ActionId, ActionRecord, ActionRequest, ActorCtx, BaseRequest, RequestOf } from './actions';
-export { CORE_ACTIONS, isStep, stepBlocker } from './coreActions';
-export type { CoreRequest, MoveRequest, OpenDoorRequest, WaitRequest } from './coreActions';
+export { bumpTarget, CORE_ACTIONS, isStep, stepBlocker } from './coreActions';
+export type { BumpRequest, CoreRequest, MoveRequest, OpenDoorRequest, WaitRequest } from './coreActions';
 export { CORE_COMMANDS } from './coreCommands';
 export type { CoreCommand, PlayerActionCommand } from './coreCommands';
 export { CORE_DISCOVERIES } from './coreEvents';
@@ -73,6 +73,14 @@ export {
   ruleDecide,
   STUCK_TURNS,
   WAIT_STUCK_TURNS,
+  awaitsPlayer,
+  compassName,
+  describePlayerAction,
+  isPossessed,
+  PLAYER_RULE,
+  POSSESSION_COMMANDS,
+  possessedMember,
+  tracePlayerAction,
 } from './ai';
 export type {
   AiActor,
@@ -91,6 +99,9 @@ export type {
   RuleActionDef,
   RulePart,
   RuleRef,
+  PossessCommand,
+  PossessionCommand,
+  ReleaseCommand,
 } from './ai';
 export { applyCommand } from './commands';
 export type { BaseCommand, Command, CommandDef, CommandRecord, CommandType } from './commands';

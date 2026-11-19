@@ -257,6 +257,15 @@ and compact cards leave them out.
 The selected card has an accent border. A possessed adventurer's card shows a filled accent
 header reading "Possessed", so the state is clear without relying on the border color.
 
+As built (ETH-066): the banner is `◉ Possessed · your move` (in `--on-accent` on `--accent`)
+while the run waits for a command, and the intent line reads "Waiting for your command ·
+player"; the player's commands show as "Your command: attack north · player". Living members'
+full cards have a small ghost Possess / Release toggle (`aria-pressed`, key `P` in its tooltip
+with the movement keys). While possessed, the pack's worn gear has Take off buttons, wearable
+items Equip and usable ones Use, each with a tooltip saying it spends the turn. The top bar shows
+a primary button `◉ Mira · your move` left of the speed control while someone is possessed; it
+releases them.
+
 ### 3.3 Log
 
 Monospace, newest at the bottom, prefix icon and color by category. Entity and item names in a

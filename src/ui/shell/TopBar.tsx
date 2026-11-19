@@ -4,6 +4,7 @@ import { DEITIES } from '../../content';
 import { formatNumber } from '../../core';
 import { CURRENCY_INFO } from '../../meta';
 import type { CurrencyId } from '../../meta';
+import { keyHint } from '../input/keymap';
 import { Button, Tooltip } from '../kit';
 import { favorDeity, RENOWN, TROPHIES } from '../../sim';
 import type { RewardAmounts } from '../../sim';
@@ -34,6 +35,7 @@ export function TopBar({ narrow, drawerOpen, drawerId, onToggleDrawer, drawerBut
       <Currencies />
       <RunPosition />
       <div className={styles.end}>
+        <Possession />
         <SpeedControls />
         {narrow && (
           <Button
@@ -155,6 +157,55 @@ function Currency({ icon, id, tone, value, atRisk, detail }: CurrencyProps) {
         </span>
       </Tooltip>
     </li>
+  );
+}
+
+/**
+ * Who the player possesses (ETH-066), as a filled accent button that releases them: "◉ Mira ·
+ * your move" while the run waits for a command. Nothing while the AI runs everyone.
+ */
+function Possession() {
+  const member = useSimStore(
+    useShallow((s) => {
+      const m = s.snapshot?.party.find((p) => p.possessed && p.alive);
+      return m === undefined ? null : { id: m.id, name: m.name, waiting: m.awaitingInput };
+    }),
+  );
+  if (member === null) return null;
+  const keys = keyHint({ type: 'togglePossession' });
+  return (
+    <Tooltip
+      placement="bottom"
+      content={
+        <>
+          <strong>Possessing {member.name}</strong>
+          <br />
+          {member.waiting ? 'The run waits for your command.' : 'Carrying out your command.'} Move or attack with WASD (Q/E/Z/C
+          diagonals), the arrows or the numpad; G picks up, &gt; and &lt; take the stairs, F drinks from a fountain underfoot,
+          . or X waits. Gear and items are in the pack on the party card.
+          <br />
+          Click to release {member.name} to the AI.
+          {keys.hint && (
+            <>
+              <br />
+              {keys.hint}
+            </>
+          )}
+        </>
+      }
+    >
+      <Button
+        variant="primary"
+        className={styles.possession}
+        aria-keyshortcuts={keys.keys || undefined}
+        onClick={() => useSimStore.getState().send({ type: 'release', actor: member.id })}
+      >
+        <span aria-hidden="true">◉ </span>
+        {member.name}
+        {member.waiting && <span className={styles.waiting}> · your move</span>}
+        <span className="sr-only">, possessed. Release</span>
+      </Button>
+    </Tooltip>
   );
 }
 

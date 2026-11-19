@@ -32,10 +32,11 @@ export interface Rule {
 /**
  * Which rule an event or memory entry is about: `own` rules are the actor's (the player's, for
  * an adventurer), indexed into `AiPart.rules`; `baseline` rules are the built-in ones checked
- * after them, indexed into `BASELINE_RULES`.
+ * after them, indexed into `BASELINE_RULES`. `player` (index 0) is no rule at all: the player
+ * chose the action, by possessing the adventurer or with a `playerAction` command (ETH-066).
  */
 export interface RuleRef {
-  set: 'own' | 'baseline';
+  set: 'own' | 'baseline' | 'player';
   index: number;
 }
 
@@ -105,6 +106,11 @@ export interface AiMemory {
 export interface AiPart {
   rules: Rule[];
   memory: AiMemory;
+  /**
+   * Set while the player possesses this adventurer (ETH-066): its turns wait for the player's
+   * `playerAction` instead of running the rules. Absent when the AI is in control.
+   */
+  possessed?: true;
 }
 
 /** A fresh AI part with no rules and an empty memory. */

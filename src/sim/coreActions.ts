@@ -9,7 +9,8 @@
 import { Grid } from '../core';
 import { MONSTERS } from '../content';
 import type { Pos } from '../core';
-import type { ActionRecord } from './actions';
+import { performAction, validateAction } from './actions';
+import type { ActionRecord, ActionRequest, ActorCtx } from './actions';
 import { actorAt, blockerAt, featureAt, getFloor, inFloorBounds, moveEntity } from './entities';
 import { Terrain } from './state';
 import type { Entity, FloorId, RunState } from './state';
@@ -43,8 +44,18 @@ export interface SwapRequest {
   dir: Pos;
 }
 
+/**
+ * Step toward `dir` and do whatever that means (ETH-066): attack an enemy there, open a closed
+ * door, swap places with a party member, or move. What a possessed adventurer's movement keys
+ * send; `bumpTarget` says which it would be.
+ */
+export interface BumpRequest {
+  id: 'bump';
+  dir: Pos;
+}
+
 /** The core domain's action requests. */
-export type CoreRequest = WaitRequest | MoveRequest | OpenDoorRequest | SwapRequest;
+export type CoreRequest = WaitRequest | MoveRequest | OpenDoorRequest | SwapRequest | BumpRequest;
 
 // ---------------------------------------------------------------------------------------------
 // Definitions
@@ -143,7 +154,44 @@ export const CORE_ACTIONS: ActionRecord<CoreRequest> = {
       emit({ type: 'swapped', actor: actor.id, other: other.id, from: { ...from }, to: { ...to } });
     },
   },
+
+  bump: {
+    id: 'bump',
+    name: 'Step or strike',
+    description:
+      'Head one tile toward a direction and do what that takes: attack an enemy standing there, open a closed door, ' +
+      'swap places with a party member, or step onto the tile. The movement keys of a possessed adventurer do this.',
+    tags: [],
+    cost: 100,
+    parse: (raw) => (isStep(raw.dir) ? { id: 'bump', dir: { x: raw.dir.x, y: raw.dir.y } } : BAD_DIR),
+    validate: (ctx, { dir }) => {
+      const target = bumpTarget(ctx, dir);
+      return typeof target === 'string' ? target : null;
+    },
+    execute: ({ state, actor, emit }, { dir }) => {
+      const target = bumpTarget({ state, actor }, dir);
+      if (typeof target !== 'string') performAction(state, actor, target, emit);
+    },
+  },
 };
+
+/** What a bump toward `dir` tries, in order: the first the actor can do is taken. */
+const BUMP_ORDER = ['attack', 'openDoor', 'swap', 'move'] as const;
+
+/**
+ * The action a bump toward `dir` comes to (attack, open the door, swap places or move), or why
+ * none can be done: the reason a plain move would fail. Changes nothing.
+ */
+export function bumpTarget({ state, actor }: ActorCtx, dir: Pos): ActionRequest | string {
+  let reason = 'Nothing can be done there';
+  for (const id of BUMP_ORDER) {
+    const request = { id, dir: { x: dir.x, y: dir.y } } as ActionRequest;
+    const why = validateAction(state, actor, request);
+    if (why === null) return request;
+    if (id === 'move') reason = why;
+  }
+  return reason;
+}
 
 // ---------------------------------------------------------------------------------------------
 // Movement rules

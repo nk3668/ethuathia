@@ -10,6 +10,7 @@
  */
 import { performAction } from './actions';
 import { ruleDecide } from './ai/engine';
+import { awaitsPlayer, tracePlayerAction } from './ai/possession';
 import type { ActionRequest } from './actions';
 import { applyCommand } from './commands';
 import type { Command } from './commands';
@@ -56,6 +57,10 @@ export interface StepOptions {
  * has enough energy, which ends the tick. The step stops right after the last party member's
  * action, so actors later in the order act at the start of the next step. A party with nobody
  * able to act (none left, or every speed 0) returns after the commands.
+ *
+ * A possessed adventurer (ETH-066) whose turn comes with no `playerAction` queued holds the
+ * step: it returns right there, before that adventurer (or anyone after it) acts, and the next
+ * step carries on from the same place once the player has chosen. Nothing else changes.
  */
 export function step(state: RunState, commands: readonly Command[], options: StepOptions = {}): SimEvent[] {
   const events: SimEvent[] = [];
@@ -69,11 +74,18 @@ export function step(state: RunState, commands: readonly Command[], options: Ste
   let over = settleRun(state, events, 0, emit);
 
   const due = new Set(over ? [] : state.party.filter((id) => canActIn(state, state.entities[id])));
-  while (due.size > 0 && !over) {
+  let held = false;
+  while (due.size > 0 && !over && !held) {
     let acted = false;
     for (const actor of scheduledActors(state)) {
       // An earlier action this pass may have removed or disabled it.
       if (!canActIn(state, state.entities[actor.id]) || actor.actor.energy < ENERGY_THRESHOLD) continue;
+      if (awaitsPlayer(actor)) {
+        // Wait for the player's command; what the adventurer sees now is what they decide on.
+        perceive(state, actor.id);
+        held = true;
+        break;
+      }
       const from = events.length;
       takeTurn(state, actor, decide, emit);
       acted = true;
@@ -84,7 +96,7 @@ export function step(state: RunState, commands: readonly Command[], options: Ste
       for (const id of due) if (!canActIn(state, state.entities[id])) due.delete(id);
       if (due.size === 0) break;
     }
-    if (!acted) tick(state);
+    if (!acted && !held) tick(state);
   }
   // Run trackers see the whole step's events, `runEnded` included (docs/ARCHITECTURE.md, "Rewards").
   reduceTrackers(state, events);
@@ -110,6 +122,8 @@ function takeTurn(state: RunState, actor: ActorEntity, decide: Decide, emit: Emi
     request = decide({ state, actor, emit });
   } else {
     delete actor.actor.queued;
+    // The player chose this one: the trace says so (ETH-066).
+    if (inParty) tracePlayerAction(state, actor, request, emit);
   }
   actor.actor.energy -= performAction(state, actor, request, emit);
   if (state.entities[actor.id] === undefined) return;

@@ -68,3 +68,12 @@
   margin: 0;
   padding-left: var(--space-4);
 }
+
+/* The possessed adventurer (ETH-066): accent-filled, with its name in words. */
+.possession {
+  white-space: nowrap;
+}
+
+.waiting {
+  font-weight: var(--font-weight-regular);
+}
