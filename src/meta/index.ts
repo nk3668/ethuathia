@@ -42,7 +42,7 @@ export type { RunChoiceKey, RunChoices } from './prepare';
 export { defineRunChoice } from './prepare/choice';
 export type { BuildCtx, ChoiceOf, RunChoiceSection } from './prepare/choice';
 export { availableClasses, availableDungeons, availableRaces, isAvailable, lockedByUpgrade } from './prepare/available';
-export { BASE_PARTY_SIZE, MAX_PARTY_SIZE, partySize, RANDOM_PICK } from './prepare/party';
+export { BASE_PARTY_SIZE, MAX_PARTY_SIZE, partySize, RANDOM_PICK, recruitName } from './prepare/party';
 export type { PartyChoice, RecruitPick } from './prepare/party';
 export { chosenDungeon } from './prepare/dungeon';
 export type { DungeonChoice } from './prepare/dungeon';

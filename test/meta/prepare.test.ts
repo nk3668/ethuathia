@@ -10,6 +10,7 @@ import {
   encodeSave,
   newProfile,
   partySize,
+  recruitName,
   upgradePartyBundles,
 } from '../../src/meta';
 import type { Profile, RunChoices } from '../../src/meta';
@@ -59,6 +60,10 @@ describe('buildRunConfig', () => {
     const config = buildRunConfig(profile, defaultRunChoices(), 9);
     expect(config.party).toHaveLength(4);
     expect(new Set(config.party.map((m) => m.name)).size).toBe(4);
+    // Retries when a slot's first name is already taken in the party.
+    const first = recruitName(9, 0, []);
+    const second = recruitName(9, 0, [first]);
+    expect(second).not.toBe(first);
   });
 
   it('keeps the picks the profile allows and replaces the others with random recruits', () => {

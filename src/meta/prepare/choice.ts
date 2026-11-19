@@ -13,6 +13,8 @@ import type { Profile } from '../profile';
 /** What a section's `apply` works with while `buildRunConfig` builds a config. */
 export interface BuildCtx {
   readonly profile: Profile;
+  /** The run's seed, for text-generator streams (`textRng`) that stay off `rng`. */
+  readonly seed: number;
   /**
    * Seeded from the run's seed, for anything random about the setup (recruits). Sections draw
    * in `RUN_CHOICES` order, so a new section never changes an earlier one's draws.

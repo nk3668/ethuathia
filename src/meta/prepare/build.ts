@@ -50,7 +50,7 @@ export function upgradeRunModifiers(profile: Profile): RunModifierConfig[] {
  */
 export function buildRunConfig(profile: Profile, choices: RunChoices, seed: number): RunConfig {
   const config: RunConfig = { party: [] };
-  const ctx = { profile, rng: Rng.seeded(seed, PREPARE_STREAM), config };
+  const ctx = { profile, seed, rng: Rng.seeded(seed, PREPARE_STREAM), config };
   for (const [key, section] of CHOICE_ENTRIES) section.apply(ctx, choices[key]);
   const bundles = upgradePartyBundles(profile);
   if (bundles.length > 0) config.partyBundles = [...(config.partyBundles ?? []), ...bundles];
