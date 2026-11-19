@@ -9,7 +9,7 @@ epic: characters
 size: M
 depends_on: [ETH-033, ETH-060]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ Growth within a run and across runs for roster adventurers. See `CLAUDE.md` §7.
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
+- 2026-11-18: Adventurer XP also feeds the guild-wide class Mastery level (ETH-087).

@@ -9,7 +9,7 @@ epic: dungeon-gen
 size: M
 depends_on: [ETH-057, ETH-058, ETH-060]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ More dungeon risk the player can plan around. See `CLAUDE.md` §4 (Cartographer)
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
+- 2026-11-18: Trap spotting reads Wits and disarming reads Finesse (ETH-081).

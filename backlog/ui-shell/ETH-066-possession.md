@@ -9,7 +9,7 @@ epic: ui-shell
 size: M
 depends_on: [ETH-058, ETH-060]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 ## Summary
@@ -27,3 +27,4 @@ See `CLAUDE.md` §5.4 and `docs/ARCHITECTURE.md` §4 (possession input is first 
 
 ## Log
 - 2026-11-17: Created as part of the backlog fan-out plan.
+- 2026-11-18: While possessed, Q/E/Z/C are diagonals with WASD, and `[`/`]` still cycle adventurers (ETH-090).

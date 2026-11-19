@@ -189,7 +189,8 @@ As built (ETH-012), in `src/ui/shell/`:
   (Previous adventurer) and `›` (Next adventurer), shown once the party has members (ETH-020).
   They select the previous or next living member, wrapping and skipping the dead, so the
   selected card and the map's follow camera move with them. Their keys, `[` and `]`, come from
-  the keymap and are in their tooltips and `aria-keyshortcuts`. `Tab` is not used for this: it
+  the keymap and are in their tooltips and `aria-keyshortcuts`. ETH-090 adds `Q` / `E`, which
+  are diagonals instead while an adventurer is possessed. `Tab` is not used for this: it
   stays the key that moves focus (§7).
 - The map area's `map-canvas` and `map-controls` slots hold the map and its camera toggle
   (ETH-013, §4). The top bar's speed control filled its slot in ETH-014 (§3.1).
@@ -435,6 +436,10 @@ is a disclosure row (glyph in its map color, name, and how it was met: `Seen · 
 that opens to the description and stat table. An undiscovered one shows a faint `?`, `???` and
 its hint. Search matches only discovered entries. `Explain` links are underlined with a dotted
 `--text-faint` line, the same as the kit tooltip trigger.
+
+**Planned.** ETH-092 moves the Codex into a wide two-pane modal, as designed above. ETH-091 makes
+undiscovered entries show only their glyph and a hint (also in Explain tooltips), and reveals
+monster entries in tiers at 1, 10 and 50 kills.
 
 ### 5.4 Graveyard
 

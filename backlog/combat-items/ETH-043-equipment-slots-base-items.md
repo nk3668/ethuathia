@@ -9,7 +9,7 @@ epic: combat-items
 size: M
 depends_on: [ETH-033, ETH-061]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ The base of the gear model: roguelike base items plus light affixes. See `CLAUDE
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
+- 2026-11-18: Each base weapon type will name the attribute its damage scales with (ETH-082); leave room for a `scalesWith` field.

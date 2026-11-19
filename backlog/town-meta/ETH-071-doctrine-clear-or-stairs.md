@@ -27,3 +27,4 @@ The player asked (2026-11-18) that full exploration vs. stairs-first be the play
 
 ## Log
 - 2026-11-18: Created from the player's answer to the ETH-058 question.
+- 2026-11-18: Doctrine becomes a free-to-redo Tactics choice (ETH-086).

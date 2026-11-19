@@ -63,8 +63,8 @@ Roguathia's gaps, and our answers to them:
 ### Ending a run
 - **Victory:** complete **every** selected contract (§6), then walk back up and out of the dungeon. Each contract pays its own reward.
 - **Retreat:** a rule or a manual command sends the party back up. The party keeps everything earned this run, and every survivor returns to the roster.
-- **Wipe:** the whole party dies. Each death leaves a gravestone (§7), and **25% (default)** of the currency earned this run is lost (§3).
-- **Run summary screen:** cause of death, conducts kept, currency breakdown with the Omen multiplier, heirlooms dropped, and an epitaph.
+- **Wipe:** the whole party dies. Each death leaves a gravestone (§7), and **25%** of the currency earned this run is lost (§3).
+- **Run summary screen:** cause of death, conducts kept, currency breakdown with the Omen multiplier, heirlooms dropped, and an epitaph. Its buttons are **Continue** (to town), **Start next run** and **Rematch**, which replays the same seed with the same Prepare settings. Auto-restart always rolls a new seed.
 
 ---
 
@@ -74,13 +74,15 @@ Each currency rewards a different playstyle. No currency only buys "make it hard
 
 | Currency | Earned by | Spent on |
 |---|---|---|
-| **Renown** | Depth reached and turns survived | Guild Hall (classes, races, party size, rule slots), Library |
+| **Renown** | Depth reached (each floor deeper is worth more) and turns survived | Guild Hall (classes, races, party size, rule slots), Library |
 | **Trophies** | Kills, weighted by monster difficulty | Smithy (starting gear, enchantments), Bestiary unlocks |
 | **Favor** (per deity) | Victories, kept conducts, honoring your patron | Temple / devotion trees; the prestige layer |
 
 The Omen multiplier applies to all three.
 
-**Banked vs. at-risk currency.** Currency earned during a run is tracked separately, as the run's *at-risk* total, and moves into the player's *banked* total only when the run ends. Banked currency is never at risk. On a victory or a retreat the whole at-risk total is banked. On a wipe, **25% (default)** of each currency's at-risk total is lost and the rest is banked. The HUD shows banked and at-risk amounts separately, and the run summary shows the amount lost as its own line.
+**Banked vs. at-risk currency.** Currency earned during a run is tracked separately, as the run's *at-risk* total, and moves into the player's *banked* total only when the run ends. Banked currency is never at risk. On a victory or a retreat the whole at-risk total is banked. On a wipe, **25%** of each currency's at-risk total is lost and the rest is banked. The HUD shows banked and at-risk amounts separately, and the run summary shows the amount lost as its own line.
+
+**Gold** is a fourth, in-run-only currency, spent at dungeon merchants. It is not at-risk currency. When the party leaves the dungeon, leftover gold converts into Trophies; on a wipe all gold is lost.
 
 Numbers should stay readable: use suffixes (1.2k, 3.4M), not scientific notation.
 
@@ -88,7 +90,7 @@ Numbers should stay readable: use suffixes (1.2k, 3.4M), not scientific notation
 
 ## 4. Upgrades between runs: the Town
 
-The town is a set of buildings. Each building has its own upgrade tree, and buildings are unlocked by milestones.
+The town is a set of buildings. Each building has its own upgrade tree, and each building is unlocked by finishing its own small quest (e.g. the Smithy opens once a run brings an anvil back from floor 3).
 
 | Building | Tree contents |
 |---|---|
@@ -101,7 +103,11 @@ The town is a set of buildings. Each building has its own upgrade tree, and buil
 | **Tavern** | Retired veterans assigned to jobs; recruit quality |
 
 ### Upgrade tree rules
-- Nodes branch. At least some tiers are **pick one of two**, and switching costs a respec fee.
+- There are two kinds of tree:
+  - **Foundations** are permanent: Guild Hall, Smithy, Cartographer, Temple, Ossuary and Tavern. Switching a pick costs a respec fee.
+  - **Tactics** can be redone for free between runs (never during one): the Library, doctrine, and the class Mastery trees.
+- **Class Mastery:** each class has one guild-wide Mastery level. Every adventurer of that class earns Mastery XP for it, the fallen included, and each level gives about one point for that class's tree (spell damage, healing, spell unlocks, techniques). Simple classes get fewer, bigger nodes; complex classes get more, smaller ones.
+- Nodes branch. At least some tiers are **pick one of two**.
 - A numeric upgrade (e.g. +10% HP) shares its tier with an option that unlocks a capability (e.g. a new rule action).
 - Show costs, effects and prerequisites in the tooltip. Locked nodes show what they need.
 
@@ -141,7 +147,7 @@ Roguathia's wandering was its biggest complaint, so the baseline must not wander
 ### 5.5 Time-away progress
 "Offline progress" in this doc means progress made while the game is **closed**. It is
 unrelated to the offline-only constraint.
-- On load, simulate the time away headlessly at max speed, capped at **8h (default)**, which Tavern upgrades raise.
+- On load, simulate the time away headlessly at max speed, capped at **8h**, which Tavern upgrades raise.
 - If full simulation is too slow, fall back to a statistical estimate from the player's recent run averages, and say so in the summary.
 - Show a "While you were away" summary.
 - If auto-restart (§2) is off, the time-away simulation finishes only the current run and then stops, the same way the game does while open.
@@ -194,6 +200,7 @@ Floor types include caves, mines, flooded floors, fortresses, swamps, lava field
 - **Gravestones:** a fallen adventurer leaves a grave on the floor where they died, holding one **heirloom** (their best item). Later runs can find it. Some graves raise a **ghost**, either hostile or an ally if the Ossuary is upgraded. The party can **pay respects** at a grave: read the epitaph, take minor loot from that adventurer's last run, and receive a short boon from the fallen adventurer's patron deity.
 - **Retirement:** veterans can retire to a Tavern job for a permanent passive bonus (smith → better starting gear, cartographer → map knowledge, and so on).
 - **Descendants:** new recruits can be kin of a fallen adventurer and inherit one trait.
+- **Found in the dungeon:** very rarely the party meets a lost adventurer who joins them at a lower level than the party's best, even beyond the party cap. If they survive the run they join the roster permanently, with a line of backstory.
 - **Graveyard tab:** a memorial list with epitaphs. It is cosmetic, but it gives the game personality.
 
 ---
@@ -227,7 +234,8 @@ A desktop app (§9) with a dark theme. The dungeon uses colored monospace ASCII 
 - **Town:** one panel per building, with its upgrade tree drawn as a node graph.
 - **Codex:** every class, race, monster, item and Omen, filled in as it is discovered.
 - **Run summary** modal and **While you were away** modal.
-- **Keyboard:** `Space` pause, `1–5` speed, `P` possess or release, `[` / `]` cycle adventurers (not `Tab`, which moves focus), WASD/numpad while possessed.
+- **Keyboard:** `Space` pause, `1–5` speed, `P` possess or release, `Q` / `E` or `[` / `]` cycle adventurers (not `Tab`, which moves focus). While possessed, WASD plus Q/E/Z/C (or the numpad) move, so Q/E become diagonals and only `[` / `]` cycle.
+- **Codex:** a wide two-pane modal (list and search on the left, the entry on the right). Undiscovered entries show their glyph and a hint; monster entries reveal more at 1, 10 and 50 kills.
 - Every number and icon has a tooltip. Respect `prefers-reduced-motion`, and never use color alone to convey meaning.
 
 ---
