@@ -53,12 +53,13 @@ describe('runRecord', () => {
         { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human', fell: { depth: 3, turn: 812 } },
       ],
       met: ['class.vanguard', 'feature.door'],
+      contracts: [],
     });
   });
 
   it('leaves out parts the extras do not carry', () => {
     const record = runRecord(1, emptyRunResult('retreat'));
-    expect(record).toMatchObject({ cause: '', party: [], met: [] });
+    expect(record).toMatchObject({ cause: '', party: [], met: [], contracts: [] });
   });
 });
 
@@ -111,7 +112,7 @@ describe('the history slice', () => {
     const decoded = decodeSave(text);
     if (!decoded.ok) throw new Error(decoded.error);
     expect(decoded.profile.history.recent.map((r) => r.run)).toEqual([2, 1]);
-    expect(decoded.profile.history.recent[0]).toMatchObject({ cause: '', party: [], met: [], turns: 20 });
+    expect(decoded.profile.history.recent[0]).toMatchObject({ cause: '', party: [], met: [], contracts: [], turns: 20 });
   });
 
   it('keeps the lifetime totals through the migration, so milestones (ETH-074) still unlock from them', () => {

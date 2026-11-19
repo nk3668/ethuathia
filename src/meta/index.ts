@@ -24,7 +24,7 @@ export type { ProfileSlice, SliceMigration, SliceState } from './slice';
 export { discoveriesSchema } from './slices/codex';
 export type { Codex } from './slices/codex';
 export { HISTORY_LIMIT, runRecord } from './slices/history';
-export type { History, RunRecord, RunRecordMember } from './slices/history';
+export type { History, RunRecord, RunRecordContract, RunRecordMember } from './slices/history';
 export type { Upgrades } from './slices/upgrades';
 export type { Settings } from './slices/settings';
 export type { Prepare } from './slices/prepare';
@@ -37,6 +37,8 @@ export { BASE_PARTY_SIZE, MAX_PARTY_SIZE, partySize, RANDOM_PICK } from './prepa
 export type { PartyChoice, RecruitPick } from './prepare/party';
 export { chosenDungeon } from './prepare/dungeon';
 export type { DungeonChoice } from './prepare/dungeon';
+export { availableContracts, BASE_CONTRACT_SLOTS, chosenContracts, contractSlots } from './prepare/contracts';
+export type { ContractsChoice } from './prepare/contracts';
 export { buildRunConfig, checkRunConfig, PREPARE_STREAM, upgradePartyBundles } from './prepare/build';
 export {
   canAfford,

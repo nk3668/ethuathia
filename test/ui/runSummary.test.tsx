@@ -264,11 +264,14 @@ describe('App', () => {
     act(() => {
       started.run(6000);
     });
-    const dialog = screen.getByRole('dialog', { name: /Retreat/ });
+    // The baseline brings the relic up: Recover the relic is done, so walking out wins (ETH-024).
+    const dialog = screen.getByRole('dialog', { name: /Victory/ });
     expect(dialog.textContent).toContain('walked out of the dungeon');
+    expect(within(dialog).getByRole('region', { name: 'Contracts' }).textContent).toContain('Recover the relic');
     const { profile } = useProfileStore.getState();
     expect(profile.history.totals.runs).toBe(1);
-    expect(profile.history.totals.retreats).toBe(1);
+    expect(profile.history.totals.victories).toBe(1);
+    expect(profile.history.recent[0]?.contracts).toEqual([{ id: 'contract.recover_relic', complete: true, reward: { renown: 100, trophies: 0, favor: {} } }]);
     expect(profile.currencies.renown).toBeGreaterThan(0);
     // The Codex slice merged what the run met (ETH-065), the party's class among it.
     expect(profile.codex.entries['class.vanguard']).toEqual(['seen']);

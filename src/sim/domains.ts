@@ -36,6 +36,7 @@ import {
   BUNDLE_SOURCES,
   CONDITIONS,
   DISCOVERY_RULES,
+  FLOOR_PLAN_HOOKS,
   GEN_STEPS,
   RULE_ACTIONS,
   STAT_PROVIDERS,
@@ -143,6 +144,9 @@ for (const check of ALL.flatMap((d) => d.victoryChecks ?? [])) {
   if (VICTORY_CHECKS.some((c) => c.id === check.id)) throw new Error(`Two domains define the victory check "${check.id}"`);
   VICTORY_CHECKS.push(check);
 }
+
+/** Every domain's floor plan hooks, in domain order (`FLOOR_PLAN_HOOKS` in `registries.ts`). */
+FLOOR_PLAN_HOOKS.push(...unique('floor plan hook', ALL.flatMap((d) => d.floorPlanHooks ?? [])));
 
 for (const rules of [CORE_DISCOVERIES, ...ALL.map((d) => d.discoveries ?? {})]) {
   for (const [type, rule] of Object.entries(rules) as [string, DiscoveryRule][]) {

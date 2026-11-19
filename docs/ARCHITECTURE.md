@@ -132,6 +132,7 @@ Rules:
 | UI data | the domain's `<Domain>Snapshot` and its builder |
 | A rule condition / rule action | `defineCondition` / `defineRuleAction` in the domain, listed in its `conditions` / `ruleActions` (§4) |
 | A generation step | `defineGenStep` in the domain, listed in `genSteps`; a floor type names it in content (§3.6) |
+| A change to every floor plan (a contract's relic) | a `FloorPlanHook` in the domain's `floorPlanHooks` ("Contracts in the run") |
 | A run tracker | a `RunTracker<S>` listed in the domain's `trackers` |
 | A Codex discovery | one line in the domain's `discoveries` map: event type → content ids and marks (see "Codex discoveries") |
 | A Codex view of a content kind | a renderer file `src/ui/codex/renderers/<kind>.tsx` (§8.5) |
@@ -236,7 +237,8 @@ All in `src/sim/run/`:
   else a **retreat**) and nobody alive (a **wipe**).
 - **Victory checks** are a registry like the rule registries: `SimDomain.victoryChecks`, joined
   into `VICTORY_CHECKS`. A `VictoryCheck` is `{ id, check(state) → { applies, met, detail } }`.
-  Contracts (ETH-024) add theirs; with none registered (now), walking out is a retreat.
+  Contracts add `victory.contracts` (ETH-024, "Contracts in the run"); a run without contracts
+  has no check that applies, so walking out is a retreat.
 - **Result:** `runResult(state)` builds the `RunResult` (a fresh copy), with
   `extras['run.end']` (the `RunEnd`) and `extras['run.party']` (`PartyMemberRecord[]`:
   `{ actor, name, classId, raceId }` in party order, ETH-048); `runReport(state)` is
@@ -496,8 +498,61 @@ main moved past your version while your PR waited, rebase and bump again. ETH-05
 then 5 on main, ETH-058 (the floors slice) 6, ETH-057 7 (the `stats` part; `speed`,
 `maxHp` and `maxMp` left `ActorPart`), ETH-033 8 (`stats.attributes`), ETH-062 9 (the run
 slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061 11
-(the `item` and `inventory` parts and the items slice), 12 on main after that, and ETH-034 13
-(the `growth` part and the `track.xp` tracker state).
+(the `item` and `inventory` parts and the items slice), 12 on main after that, ETH-034 13
+(the `growth` part and the `track.xp` tracker state), and ETH-024 14 (the quests slice's contracts).
+
+### Contracts in the run (ETH-024)
+
+Content in `src/content/contracts.ts`; sim in `src/sim/quests/`; Prepare section in
+`src/meta/prepare/contracts.ts`.
+
+- **Content:** `ContractDef` = `{ objective, reward }`. `objective` is a union by `kind` (so far
+  `{ kind: 'recover', item }`); `reward` is currency id → amount (`renown`, `trophies`,
+  `favor:deity.<id>`). A later contract type (ETH-026 slay, ETH-027 gather and delve, ETH-032
+  rescue) adds a member to `ContractObjective` and `objectiveSchema`, a case in
+  `contractProgress` (`quests/contracts.ts`) and, if it places something, a floor plan hook.
+  The first def is `contract.recover_relic` (reward 100 Renown) with its relic
+  `item.ember_reliquary` (category `relic`, `&`, never dropped, no `loot`).
+- **Config:** `RunConfig.contracts?: string[]` (contract ids, each at most once; `initQuests`
+  throws a `RangeError` on an unknown or repeated id). Left out, the run has none, and walking
+  out is always a retreat (tests and older configs). The Prepare section `contracts`
+  (`{ contractIds }`) fills one per slot (`contractSlots(profile)` = `capacity(profile,
+  'contractSlots', BASE_CONTRACT_SLOTS)`, 1 to start) and never none: an empty or stale choice
+  falls back to the first available contract.
+- **State:** `state.domains.quests` = `{ contracts: ContractState[], announced }`, each
+  `{ contract, progress: { current, target }, complete }`. Progress is **recomputed from the run
+  state** (`contractProgress`), never counted from events: a `recover` contract is 1/1 while a
+  living party member carries its item. `syncContracts` runs in the domain's `turnStart` and
+  `turnEnd` hooks and stores it.
+- **Events** (log text in `logText/quests.ts`): `contractsTaken { contracts: { contract, reward }[] }`
+  on the run's first turn (none without contracts); `contractProgress { contract, current,
+  target }` when a contract moves without completing; `contractCompleted { contract, actor,
+  reward, floor, pos }` (the `contractComplete` highlight); `contractLost { contract }` when a
+  complete contract no longer is (the relic's bearer fell).
+- **Relic placement:** the floor plan hook `quests.relic` (`FloorPlanHook`, below) puts each
+  `recover` contract's item on the bottom floor, generated or hand-built: a free tile in the
+  farthest quarter by walking distance from the stairs up, picked with
+  `contractRng(seed, floorId)`.
+- **Victory:** `victory.contracts` applies once the run has a contract and is met when every one
+  is complete as the party walks out; its detail ("The contract was done: Recover the relic.")
+  leads the run's cause.
+- **Rewards:** `track.contracts` reduces `contractsTaken` / `contractCompleted` /
+  `contractLost` into `{ contracts: ContractRecord[] }` (`{ contract, reward, complete }`) and pays
+  the completed ones' rewards into the at-risk total (a lost one is taken back; a wipe's share is
+  ETH-023's). Its extras, `RunResult.extras['track.contracts']`, are the `ContractRecord[]`: the
+  run summary lists them and the `history` slice (v3) keeps them as `RunRecord.contracts`.
+- **Baseline:** `QUESTS_BASELINE` (spliced into `BASELINE_RULES` after the heading-out rules):
+  `cond.contracts_complete` → `act.retreat_run`, then `act.recover_contract_item` (walk to a
+  contract item the party has seen on this floor, however far, and pick it up). The floors rules
+  already descend, so the party goes down to the relic, takes it and walks out. Respawns on the
+  way back are ETH-025; quest weighting is ETH-031.
+- **Floor plan hooks** (`SimDomain.floorPlanHooks`, `FLOOR_PLAN_HOOKS`): `{ id, apply(state,
+  floorId, plan) }`, run by `planFloor` on every plan after its own changes, in domain order.
+  `apply` changes the plan only and must be deterministic from the seed, the config and the
+  floor id (its own seeded RNG).
+- **Invariants:** `quests.contracts` (the slice matches the config; progress whole numbers;
+  `complete` agrees with progress) and `quests.relics` (exactly one relic once the bottom floor
+  is built, none before; only party members carry it).
 
 ### Floors and arrival (ETH-058)
 
@@ -587,9 +642,10 @@ All in `src/sim/items/`; content in `src/content/items.ts`.
 Besides terrain, features, classes, races and floor types, these kinds exist as placeholders
 with a registry, a minimal schema (the `Def` fields only), a `KIND` in `CONTENT_KINDS` and a
 `define*` helper, but no defs: `monster` (`src/content/monsters.ts`),
-`contract` (`contracts.ts`), `bounty` (`bounties.ts`), `omen` (`omens.ts`) and `deity`
+`bounty` (`bounties.ts`), `omen` (`omens.ts`) and `deity`
 (`deities.ts`). The owning item extends the def type and the schema together and adds the
-defs. `src/content/index.ts` re-exports them with `export *`.
+defs. `src/content/index.ts` re-exports them with `export *`. `contract` (`contracts.ts`) became a
+full kind with ETH-024 ("Contracts in the run").
 
 `dungeon` (`src/content/dungeons.ts`, ETH-064) is a full kind: a dungeon variant the Prepare
 screen offers (`depth`, `floorType`), first def `dungeon.old_delve`. A variant some upgrade
@@ -887,9 +943,8 @@ As built in `src/sim/state.ts` (ETH-003):
   (`state.domains.quests`), built by `initDomains(config)` in `createRun` (`createRun.ts`,
   formerly `run.ts`, renamed because `src/sim/run/` is now the run domain). `STATE_VERSION`
   went to 4. See Contracts for where state goes and the version-bump rule.
-- **Planned: quest state.** Contracts and bounties (CLAUDE.md §6, Quests) will add quest
-  state in the quests domain's slice: the selected contracts and accepted bounties with
-  per-quest progress, stored as ids and plain data. The shape is decided in ETH-024.
+- **Quest state.** The quests domain's slice holds the selected contracts with their progress
+  (ETH-024, Contracts, "Contracts in the run"); accepted bounties join it with the bounty board.
 
 ### 3.2 Entities
 
@@ -1272,7 +1327,7 @@ As built (ETH-015):
   interface, its `Registry`, a `ContentKind` (`{ registry, schema, refs? }`), a `define*` helper
   that registers a def with type checking, and the defs themselves. `CONTENT_KINDS` in
   `registries.ts` lists every kind. Monster, item, contract, bounty, omen and deity are
-  placeholder kinds with no defs yet (Contracts, "Content kinds").
+  placeholder kinds with no defs yet (item and contract have since been filled in) (Contracts, "Content kinds").
 - **Schemas are Zod 4** (`zod`, bundled), built from shared pieces in `schema.ts`: `defShape(prefix)`
   (an id in the kind's namespace, a non-empty name and description, lowercase tags),
   `glyphSchema` (one character, a lowercase `#rrggbb` color, optional `bold`) and number

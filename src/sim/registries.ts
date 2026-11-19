@@ -10,7 +10,7 @@
  */
 import { Registry } from '../core';
 import type { ConditionDef, RuleActionDef } from './ai/types';
-import type { RunTracker, VictoryCheck } from './domain';
+import type { FloorPlanHook, RunTracker, VictoryCheck } from './domain';
 import type { GenStepDef } from './gen/types';
 import type { DiscoveryRule } from './run/codex';
 import type { BundleSource, StatProvider, TriggerKindDef } from './stats/types';
@@ -47,3 +47,6 @@ export const TRACKER_LIST: RunTracker<unknown>[] = [];
 
 /** Every victory check, in domain order (ETH-062). Read at run time only. */
 export const VICTORY_CHECKS: VictoryCheck[] = [];
+
+/** Every floor plan hook, in domain order (ETH-024). `planFloor` runs them; read at run time only. */
+export const FLOOR_PLAN_HOOKS: FloorPlanHook[] = [];

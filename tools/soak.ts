@@ -7,7 +7,7 @@
  */
 import { checkInvariants, createRun, deserialize, serialize, stateHash, step } from '../src/sim';
 import type { RunState, SimEvent } from '../src/sim';
-import { headlessParty, MAX_PARTY } from './headless';
+import { HEADLESS_CONTRACTS, headlessParty, MAX_PARTY } from './headless';
 
 /**
  * The most `stuck` events one run may have before the soak calls it a stuck storm. When it was
@@ -92,7 +92,7 @@ export function soakSeed(seed: number, options: SoakOptions): SoakResult {
   let twin: RunState | null = null;
 
   try {
-    state = createRun({ party: headlessParty(party) }, seed);
+    state = createRun({ party: headlessParty(party), contracts: [...HEADLESS_CONTRACTS] }, seed);
     const initial = checkInvariants(state);
     if (initial.length > 0) failures.push(...initial.map((p) => `after createRun: ${p}`));
 

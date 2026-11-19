@@ -6,7 +6,8 @@ import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
 import { useSimStore } from '../stores/simStore';
 import styles from './RunSummary.module.css';
-import { currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, lossNote, OUTCOME_LOOK, partyOf, reportFromRecord, unlockLines } from './runSummaryText';
+import { contractsOf, currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, lossNote, OUTCOME_LOOK, partyOf, reportFromRecord, unlockLines } from './runSummaryText';
+import { rewardText } from './logText/quests';
 import { contentName } from './text';
 
 /** Turn counts in full, as in the top bar. */
@@ -44,6 +45,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const look = OUTCOME_LOOK[report.end.outcome];
   const fallen = fallenOf(report);
   const found = discoveriesOf(report);
+  const contracts = contractsOf(report);
 
   useEffect(() => next.current?.focus(), []);
 
@@ -86,6 +88,24 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
                   </li>
                 );
               })}
+            </ul>
+          </section>
+        )}
+
+        {contracts.length > 0 && (
+          <section aria-label="Contracts">
+            <h3 className={styles.heading}>Contracts</h3>
+            <ul className={styles.list}>
+              {contracts.map((c) => (
+                <li key={c.contract}>
+                  <span className={styles.name}>{contentName(c.contract)}</span>{' '}
+                  {c.complete ? (
+                    <span>✔ complete · paid {rewardText(c.reward)}</span>
+                  ) : (
+                    <span className={styles.fell}>✘ not complete · {rewardText(c.reward)} unpaid</span>
+                  )}
+                </li>
+              ))}
             </ul>
           </section>
         )}

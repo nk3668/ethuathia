@@ -34,8 +34,9 @@ describe('tools/headless', () => {
     expect(results.map((r) => r.seed)).toEqual([1, 2, 3]);
     for (const r of results) {
       expect(r.outcome, `seed ${r.seed}`).toBe('done');
-      // The baseline turns back on the bottom floor and walks out: a retreat (ETH-062).
-      expect(r.end, `seed ${r.seed}`).toBe('retreat');
+      // The baseline fetches the relic on the bottom floor and walks out with it: a victory (ETH-024).
+      expect(r.end, `seed ${r.seed}`).toBe('victory');
+      expect(r.contracts, `seed ${r.seed}`).toBe(1);
       expect(r.runTurns, `seed ${r.seed}`).toBeGreaterThan(r.turns);
       expect(r.atRisk?.renown, `seed ${r.seed}`).toBeGreaterThan(0);
       expect(r.depth, `seed ${r.seed}`).toBe(2);
@@ -43,7 +44,9 @@ describe('tools/headless', () => {
       expect(r.floors?.map((f) => f.depth)).toEqual([1, 2]);
       for (const f of r.floors ?? []) {
         expect(f.turns, `seed ${r.seed} floor ${f.depth}`).toBeGreaterThan(50);
-        expect(f.explored, `seed ${r.seed} floor ${f.depth}`).toBe(1);
+        // Floors above the bottom are explored fully; on the bottom the party leaves once it has the relic.
+        if (f.depth < 2) expect(f.explored, `seed ${r.seed} floor ${f.depth}`).toBe(1);
+        else expect(f.explored, `seed ${r.seed} floor ${f.depth}`).toBeGreaterThan(0);
       }
       expect(r.floors?.reduce((n, f) => n + f.turns, 0)).toBe(r.turns);
       expect(r.explored.fraction, `seed ${r.seed}`).toBe(1);

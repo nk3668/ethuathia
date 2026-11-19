@@ -15,6 +15,7 @@ import { parseFloorText } from '../floorText';
 import type { FloorPlan } from '../floorText';
 import { generateFloor } from '../gen/generate';
 import { capFountains, configMaxFountains } from './fountains';
+import { FLOOR_PLAN_HOOKS } from '../registries';
 import { Terrain } from '../state';
 import type { DungeonGraph, Entity, Floor, FloorId, FloorNode, RunConfig, RunState } from '../state';
 
@@ -118,7 +119,8 @@ export function lootRngState(seed: number, floorId: FloorId): RngState {
  * The plan for floor `floorId`, before it is built: the config's hand-built text for that depth
  * (`floorText` for the first floor, else `floorTexts[depth - 1]`), or a generated
  * `DEFAULT_FLOOR_TYPE` floor. The bottom floor never has stairs down, and fountains beyond
- * `RunConfig.maxFountains` are left out (`capFountains`). Changes nothing in `state`.
+ * `RunConfig.maxFountains` are left out (`capFountains`), then every `FLOOR_PLAN_HOOKS` hook runs.
+ * Changes nothing in `state`.
  */
 export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
   const node = floorNode(state, floorId);
@@ -137,6 +139,8 @@ export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
   capFountains(plan, configMaxFountains(config.maxFountains));
   // `RunConfig.monsters: false` (the combat domain's config) builds floors without creatures.
   if (config.monsters === false) delete plan.spawns;
+  // Other domains' changes (ETH-024: a contract's relic on the bottom floor), in domain order.
+  for (const hook of FLOOR_PLAN_HOOKS) hook.apply(state, floorId, plan);
   return plan;
 }
 

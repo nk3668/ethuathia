@@ -8,12 +8,14 @@
  * follow. The order of the record is the order sections apply in (and draw from the RNG).
  */
 import type { ChoiceOf, RunChoiceSection } from './choice';
+import { CONTRACTS_CHOICE } from './contracts';
 import { DUNGEON_CHOICE } from './dungeon';
 import { PARTY_CHOICE } from './party';
 
 export const RUN_CHOICES = {
   party: PARTY_CHOICE,
   dungeon: DUNGEON_CHOICE,
+  contracts: CONTRACTS_CHOICE,
 } as const;
 
 type Sections = typeof RUN_CHOICES;

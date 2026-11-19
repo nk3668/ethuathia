@@ -6,7 +6,7 @@
  * (`npm run sim -- --seeds N`); `test/tools/headless.test.ts` runs it in the test suite.
  */
 import { parseArgs } from 'node:util';
-import { CLASS_VANGUARD, RACE_HUMAN } from '../src/content';
+import { CLASS_VANGUARD, CONTRACT_RECOVER_RELIC, RACE_HUMAN } from '../src/content';
 import { ACT_WAIT, DROP_TURNS, floorIdAt, RUN_OUTCOMES, SimSession } from '../src/sim';
 import type { AdventurerConfig, Explored, RewardAmounts, RunConfig, RunOutcome, Snapshot } from '../src/sim';
 
@@ -33,7 +33,12 @@ export interface HeadlessOptions {
   party?: AdventurerConfig[];
   /** Floors in the dungeon. Default: the run config's default (`DEFAULT_DEPTH`). */
   depth?: number;
+  /** The contracts the run takes on. Default `HEADLESS_CONTRACTS`, what a new player's Prepare screen picks. */
+  contracts?: string[];
 }
+
+/** The contracts a headless run takes on by default (ETH-024): Recover the relic, the Prepare default. */
+export const HEADLESS_CONTRACTS: readonly string[] = [CONTRACT_RECOVER_RELIC.id];
 
 /**
  * How one seed's run went.
@@ -101,6 +106,8 @@ export interface SeedResult {
   drinks?: number;
   /** The party's highest level where the run stopped (ETH-034). Missing from older reports. */
   level?: number;
+  /** Contracts complete when the run stopped (ETH-024). Missing from reports before it. */
+  contracts?: number;
   /** `stateHash` of where the run stopped, to tell whether a change altered behavior. */
   hash: string;
 }
@@ -119,7 +126,11 @@ function idle(snap: Snapshot): boolean {
 /** Runs one seed until the party settles, the cap is hit or the run stalls. */
 export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult {
   const cap = options.cap ?? DEFAULT_TURN_CAP;
-  const config: RunConfig = { party: options.party ?? headlessParty(1), ...(options.depth === undefined ? {} : { depth: options.depth }) };
+  const config: RunConfig = {
+    party: options.party ?? headlessParty(1),
+    contracts: [...(options.contracts ?? HEADLESS_CONTRACTS)],
+    ...(options.depth === undefined ? {} : { depth: options.depth }),
+  };
   const session = new SimSession(config, seed);
   const stuck: SeedResult['stuck'] = { count: 0, firstTurn: null };
   /** The game turn each depth was first reached on. */
@@ -211,6 +222,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     deathCauses,
     drinks,
     level: Math.max(1, ...Object.values(snap.domains.stats.members).map((m) => m.level.level)),
+    contracts: snap.domains.quests.contracts.filter((c) => c.complete).length,
     hash: session.stateHash(),
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
     atRisk: { ...snap.domains.run.atRisk },
