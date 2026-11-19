@@ -660,10 +660,9 @@ All in `src/sim/items/`; content in `src/content/items.ts`.
   has `effects`) and `healAmount(def)` read a def. `bundle.effects` run on use; `bundle.modifiers`
   and `triggers` apply while gear is worn (ETH-043). `bundleOf(itemId)`
   works, since the field is called `bundle`.
-- **Instances:** `ItemInstance = { def, qty }`, plain data. Later features **add optional
-  fields** (equipped slot, enchantment, identified, affixes, heirloom history): no migration, and
-  `canStack(a, b)` compares every field but `qty`, so a new field keeps items apart by itself.
-  `addToStacks` merges up to the def's `stack`.
+- **Instances:** `ItemInstance = { def, qty, origin? }`, plain data. Every field but `def` and
+  `qty` is an **item property** (below, ETH-118): optional, so no migration, and `canStack(a, b)`
+  goes by each property's `stacks` rule. `addToStacks` merges up to the def's `stack`.
 - **Where items are:** on a floor, an entity whose `def` is the item id with an `item` part (the
   instance); `placeItem(state, floor, pos, item)` adds one (merging), `itemsAt` / `floorItems`
   find them. Carried, an entry of the actor's `inventory: { items: ItemInstance[] }`
@@ -673,7 +672,8 @@ All in `src/sim/items/`; content in `src/content/items.ts`.
   attributes); `isOverloaded`.
 - **Value:** `itemValue(state, item)` (whole stack) and `unitValue` (one) are the only scoring
   function. They start from the def's `value` and apply `ITEM_VALUE_HOOKS` (`value.ts`) in
-  order: enchantment, affixes and identification add a hook there.
+  order. The first, `value.properties`, applies each item property's `value`; worth that belongs
+  to one property goes there, not in a new hook.
 - **Wanting and dropping:** `wantsItem(state, actor, item)`: never junk; always gold and relics;
   otherwise only if it would survive dropping the least valuable things (`lowestValueIndex`: the
   lowest unit value, the latest entry on a tie) until the pack is within `carry`. So the AI never
@@ -713,19 +713,21 @@ Content in `src/content/items.ts`, sim in `src/sim/items/equipment.ts` and `acti
   field is left out while nothing is worn). They are not pack entries and don't count in
   `carryWeight` (Carry limits the pack; counting worn armor crowded out potions in the sim
   compare), so pack indices, dropping and `lowestValueIndex` never see them.
-- **Stats:** the `items.equipped` `BundleSource` visits `gearBundles(item)` for each worn item,
-  credited to the item's def id (tooltip "Iron hatchet +2"); triggers fire through it too.
-  **ETH-044/045 add enchantment and affix bundles in `gearBundles`**, which reaches stats, triggers
-  and the AI's comparison at once (and an `ITEM_VALUE_HOOKS` entry for worth).
+- **Stats:** the `items.equipped` `BundleSource` visits `gearBundles(state, wearer, item)` for
+  each worn item: the def's bundle, then each item property's bundles, every one credited to the
+  item's def id (tooltip "Iron hatchet +2", one part per bundle); triggers fire through it too.
+  Enchantment, affixes and scaling are item properties with `bundles` (ETH-118), which reach
+  stats, triggers and the AI's comparison at once.
 - **Actions:** `equip { index, slot? }` (`slot` defaults to `slotFor`: the first empty slot the
   item fits, else its first; the old item there goes back into the pack) and
   `unequip { slot }`; both call `clampVitals`. Events `equipped { actor, item, slot, replaced,
   floor, pos }` and `unequipped { actor, item, slot, floor, pos }`. ETH-044's curses refuse
   `unequip` (and replacing) in `validate`.
-- **AI:** `compareGear(a, b)` → `better | worse | same | mixed`, stat by stat (every stat higher is
-  better; any triggers make it `mixed`). `upgradeSlot(entity, item)` is where a piece would be an
+- **AI:** `compareGear(state, wearer, a, b)` → `better | worse | same | mixed`, stat by stat over
+  `gearBundles` (every stat higher is better; any triggers make it `mixed`).
+  `upgradeSlot(state, entity, item)` is where a piece would be an
   upgrade: an empty slot it fits first (if it beats nothing), else a worn item it beats, the weaker
-  of the two rings when one beats the other. `bestUpgrade(entity)` picks a pack item for the first
+  of the two rings when one beats the other. `bestUpgrade(state, entity)` picks a pack item for the first
   such slot in `EQUIP_SLOTS` order, never one another candidate beats, so equipping never
   flip-flops (a replaced ring never beats the one left on). The rule action passes the slot, and
   its trace names it for rings ("… (left ring), nothing worn there yet"). A clear upgrade is
@@ -733,12 +735,69 @@ Content in `src/content/items.ts`, sim in `src/sim/items/equipment.ts` and `acti
   anything (`ITEMS_BASELINE_URGENT`), since worn gear frees the pack.
   `act.equip_upgrade` (baseline, first of `ITEMS_BASELINE_LOOT`, so not next to an enemy) puts it
   on with a trace line ("equipping the Arming sword (Damage +2, Accuracy +1) in place of …").
-  Tradeoffs are left to player rules or possession. `modifierText` / `gearStatsText` word stats.
-- **Snapshot / UI:** `InventoryView.equipped: WornView[]` (`{ slot, def, weight, value }`); the
+  Tradeoffs are left to player rules or possession. `modifierText`, `gearStatsText(state,
+  wearer, item)` and `bundleStatsText(bundles)` (the Codex, on a def's bundle) word stats.
+- **Snapshot / UI:** `InventoryView.equipped: WornView[]` (`{ slot, def, name, weight, value }`); the
   party card lists worn gear above the pack. The item Codex renderer adds `Worn` (slot · type) and
   `Stats` key fields, so every `Explain` (pack, map hover, log) shows them.
 - **Invariants:** `items.parts` checks worn items: known slot, valid instance, qty 1, one of the
   def's slots.
+
+### Item properties (ETH-118)
+
+All in `src/sim/items/properties.ts` (kinds, registry, problems) and `name.ts` (`itemName`).
+The one extension point for "this particular item is different": **a feature that adds
+per-instance item data adds an `ItemPropertyKind`, not its own edits to `gearBundles`,
+`canStack`, value or naming.**
+
+- **Kind:** `ItemPropertyKind<T> = { id ('prop.*'), field, schema (zod), bundles?(ctx, value),
+  value?(ctx, value, base), name?(value) → { prefix?, suffix? }, hidden?(value, known),
+  known?(ctx, value | undefined), stacks: 'never' | 'equal' }`, with `ctx = { state, item,
+  wearer? }` (`ItemPropertyCtx`; `value` gets no wearer). `field` is a top-level optional field
+  of `ItemInstance` that the kind owns; add the field to the interface (with a doc comment) in the
+  same change. Values are plain data.
+- **Registry:** `ITEM_PROPERTIES`, in a fixed order: `ITEM_PROPERTY_LIST` in `properties.ts`
+  (items-domain kinds) is registered at load. That order is the order of bundles, value
+  adjustments and name parts, so the planned order is `enchant`, `blessing`, affixes (prefixes
+  and suffixes), then the rest. A kind owned by another domain would get a
+  `SimDomain.itemProperties` list (not added yet). `registerItemProperty(kind)` returns an
+  unregister function, for tests (a test adds its field to `ItemInstance` with
+  `declare module`, see `test/sim/itemProperties.test.ts`).
+- **Bundles:** `gearBundles(state, wearer, item)` = the def's bundle, then each present
+  property's `bundles(ctx, value)` in registry order. `SOURCE_EQUIPPED`, `compareGear`,
+  `upgradeSlot`, `bestUpgrade` and `gearStatsText` all go through it, so getStat (a part per
+  bundle, credited to the item's def), triggers and the AI's upgrade check see properties at once.
+  `wearer` is who wears it or would; a wearer-dependent property (ETH-082 scaling, reading
+  `GEAR_TYPE_INFO.scalesWith` and `ctx.wearer`'s attribute) adds nothing without one.
+- **Value:** `value.properties`, the first `ITEM_VALUE_HOOKS` entry, folds each present
+  property's `value(ctx, value, base)` in registry order.
+- **Name:** `itemName(state, item, viewer?)` = prefixes, the def's name, suffixes ("+2 cursed
+  Iron hatchet of Embers"). The item is *known* to the viewer unless some kind's `known(ctx,
+  value)` returns false (called for every kind, `undefined` when the field is absent: ETH-044's
+  `identified`); a part whose `hidden(value, known)` is true is left out. No viewer counts as
+  known. `nameField(state, item, viewer)` is `{ name }` only when the name differs from the def's.
+- **Where names show:** item events (`pickedUp`, `dropped`, `used`, `equipped` (+ `replacedName`),
+  `unequipped`) carry an optional `name` from `nameField` with the actor as viewer, so plain items'
+  events are unchanged; log text passes it as the mention label. `ItemView.name` and
+  `WornView.name` (viewer = the member) feed the party card, whose `Explain` takes `name` for the
+  link text and the card heading. The AI's trace lines use `itemName`. Floor memory (`KnownItem`)
+  and `itemSighted` stay def-only.
+- **Stacking:** `canStack` needs the same stackable def, then for each field but `def` / `qty`:
+  absent on both is fine; a `never` kind present on either keeps them apart; anything else must
+  be deep-equal (keys sorted).
+- **Validation:** `propertyProblems(item)` (a field no kind owns, a value its schema rejects);
+  invariant `items.properties` runs it on every floor item, pack entry and worn item.
+  `instanceProblem` still checks only `def` and `qty`.
+- **`origin`** (`prop.origin`, field `origin: ItemOrigin = { by?, run?, note? }`: adventurer record
+  id, the run's number in the profile history, flavor text): no bundles, value or name;
+  `stacks: 'never'`, so an heirloom never merges with a plain item. Kept through pickup, drop and
+  equip like any field. ETH-069 sets it on heirlooms, ETH-109 uses `note`.
+- **State version:** a new optional field changes no existing save, so adding a kind needs no
+  `STATE_VERSION` bump unless it also changes existing data.
+- **Planned kinds:** ETH-044 `enchant` (bundle scaled by the number, value up), `blessing`
+  (`blessed` / `cursed`; a cursed item refuses `unequip` in `validate`), `identified` (drives
+  `known`); ETH-045 `affixes` (a bundle and a prefix or suffix each; artifacts are fixed affixes);
+  ETH-082 scaling (a derived kind that reads `ctx.wearer`); ETH-096 `charges { n, max }`.
 
 ### Content kinds
 
@@ -778,7 +837,7 @@ the features that use it.
 | Run-wide modifiers | ETH-115 | planned | Run modifiers with a source, scope (party / monsters / all), bundle, flags and reward bonus; one `stats.run` `BundleSource`, the reward multiplier and the consumer of `run`-scope upgrade grants: Omens, blessings, curses, dungeon events, doctrine, veterans |
 | Dungeon encounters | ETH-116 | planned | An `encounter` kind and feature part placed by a `FLOOR_PLAN_HOOKS` entry, one `interact { choice? }` action, data outcomes, log and Codex text; fountains folded in: altars, graves, merchants, bounty encounters, recruits, cursed wells, vaults |
 | Monster templates | ETH-117 | planned | `MonsterOverlay` (templates, name, title, stats, bundles, threat, loot tier) layered on a `MonsterDef` at `spawnMonster`: uniques, elites, mini-bosses, nemeses, heirloom carriers, families |
-| Item properties | ETH-118 | planned | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling |
+| Item properties | ETH-118 | built | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling. See "Item properties (ETH-118)" |
 | Adventurer records | ETH-119 | planned | The `adventurers` profile slice: a stable id carried through the run, level, XP, traits, history, status and cause of death: roster, graveyard, recruits, quirks, Mastery, lineage |
 | Run chronicle | ETH-120 | planned | `track.chronicle`: the run's notable moments, durable for the whole run (unlike `simStore`'s `EVENT_BUFFER_SIZE` buffer): Highlights, run summary, epitaphs, ballads, history, time-away |
 | Shared conditions | ETH-121 | planned | Run-scope `CONDITIONS` and a data `Requirement` (all / any / not) checked outside rules, plus the `metInRun` milestone: unlocks, taboos, quirk triggers, building quests |

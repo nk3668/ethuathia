@@ -11,6 +11,7 @@ import { runEffects } from '../stats/effects';
 import { clampVitals } from '../stats/getStat';
 import { equippedIn, slotFor } from './equipment';
 import { itemDef } from './instance';
+import { nameField } from './name';
 import { addToInventory, ensureInventory, inventoryOf, itemsAt, placeItem, rememberTile, takeFromInventory } from './inventory';
 import { itemValue } from './value';
 
@@ -90,7 +91,7 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       } else {
         const value = itemValue(state, instance);
         addToInventory(actor, instance);
-        emit({ type: 'pickedUp', actor: actor.id, item: def.id, qty: instance.qty, value, floor, pos });
+        emit({ type: 'pickedUp', actor: actor.id, item: def.id, ...nameField(state, instance, actor), qty: instance.qty, value, floor, pos });
       }
       rememberTile(state, floor, pos);
     },
@@ -119,7 +120,7 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       const pos = { x: actor.pos.x, y: actor.pos.y };
       placeItem(state, actor.floor, pos, taken);
       rememberTile(state, actor.floor, pos);
-      emit({ type: 'dropped', actor: actor.id, item: taken.def, qty: taken.qty, floor: actor.floor, pos });
+      emit({ type: 'dropped', actor: actor.id, item: taken.def, ...nameField(state, taken, actor), qty: taken.qty, floor: actor.floor, pos });
     },
   },
   use: {
@@ -138,8 +139,9 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       const entry = inventoryOf(actor)[index];
       if (entry === undefined) return;
       const def = itemDef(entry);
+      const named = nameField(state, entry, actor);
       takeFromInventory(actor, index, 1);
-      emit({ type: 'used', actor: actor.id, item: def.id, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
+      emit({ type: 'used', actor: actor.id, item: def.id, ...named, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
       runEffects({ state, emit, self: actor.id, source: def.id, potency: 1 }, def.bundle?.effects ?? []);
     },
   },
@@ -174,7 +176,18 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       if (old !== undefined) addToInventory(actor, old);
       clampVitals(state, actor);
       const pos = { x: actor.pos.x, y: actor.pos.y };
-      emit({ type: 'equipped', actor: actor.id, item: item.def, slot, replaced: old?.def ?? null, floor: actor.floor, pos });
+      const replacedName = old === undefined ? {} : nameField(state, old, actor);
+      emit({
+        type: 'equipped',
+        actor: actor.id,
+        item: item.def,
+        ...nameField(state, item, actor),
+        slot,
+        replaced: old?.def ?? null,
+        ...(replacedName.name === undefined ? {} : { replacedName: replacedName.name }),
+        floor: actor.floor,
+        pos,
+      });
     },
   },
   unequip: {
@@ -193,7 +206,7 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       if (Object.keys(equipped).length === 0) Reflect.deleteProperty(ensureInventory(actor), 'equipped');
       addToInventory(actor, item);
       clampVitals(state, actor);
-      emit({ type: 'unequipped', actor: actor.id, item: item.def, slot, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
+      emit({ type: 'unequipped', actor: actor.id, item: item.def, ...nameField(state, item, actor), slot, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
     },
   },
 };

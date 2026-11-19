@@ -1,11 +1,11 @@
 /**
  * Item instances (ETH-061): one item, or a stack of identical ones, as plain data.
  *
- * An `ItemInstance` names its def and a quantity. Later features add optional fields to it
- * (ETH-043 where it is equipped, ETH-044 enchantment and identification, ETH-045 affixes, ETH-069
- * heirloom history); an instance without them is a plain one, so no save needs a migration when
- * a field arrives. Two instances stack only when every field but `qty` matches (`canStack`), so a
- * new field automatically keeps different items apart.
+ * An `ItemInstance` names its def and a quantity. Every other field is an item property
+ * (ETH-118, `properties.ts`): optional, owned by one `ItemPropertyKind` that says how it changes
+ * the item's bundles, worth, name and stacking. An instance without them is a plain one, so no
+ * save needs a migration when a field arrives. Two instances stack only when each property field
+ * allows it (`canStack`: `never` kinds keep the item apart, `equal` kinds compare the values).
  *
  * The same shape is used everywhere an item can be: the `item` part of an entity lying on a
  * floor, an entry of an actor's `inventory`, a planned item in a floor plan.
@@ -13,6 +13,7 @@
 import { ITEMS } from '../../content';
 import { clonePlain } from '../../core';
 import type { EquipSlot, ItemDef } from '../../content';
+import { propertyKindFor } from './properties';
 
 /** One item or a stack of identical ones. Plain data; leave optional fields out rather than `undefined`. */
 export interface ItemInstance {
@@ -20,6 +21,18 @@ export interface ItemInstance {
   def: string;
   /** How many, from 1 to the def's `stack` (default 1). */
   qty: number;
+  /** Heirloom history and flavor (ETH-118 `prop.origin`; ETH-069, ETH-109). Never stacks. */
+  origin?: ItemOrigin;
+}
+
+/** Where an item came from (`prop.origin`). Every field is optional; leave absent ones out. */
+export interface ItemOrigin {
+  /** The adventurer record id of who carried it (ETH-119). */
+  by?: string;
+  /** The run it came from: its number in the profile's history. */
+  run?: number;
+  /** Flavor text shown with the item. */
+  note?: string;
 }
 
 /** What an actor carries and wears. */
@@ -49,16 +62,33 @@ export function newItem(defId: string, qty = 1): ItemInstance {
   return { def: defId, qty };
 }
 
-/** Every field but `qty`, as a comparable string. Keys are sorted, so field order never matters. */
-function identity(item: ItemInstance): string {
-  const rest: Record<string, unknown> = { ...item };
-  delete rest.qty;
-  return JSON.stringify(Object.keys(rest).sort().map((k) => [k, rest[k]]));
+/** Plain data as a string with object keys sorted, so key order never matters. */
+function stableText(value: unknown): string {
+  return JSON.stringify(value, (_k, v: unknown) =>
+    typeof v === 'object' && v !== null && !Array.isArray(v)
+      ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, (v as Record<string, unknown>)[k]]))
+      : v,
+  );
 }
 
-/** True if `a` and `b` may share a stack: the same def, stackable, and equal in every field but `qty`. */
+/**
+ * True if `a` and `b` may share a stack: the same def, stackable, and every other field allows
+ * it. A field whose property kind `stacks: 'never'` keeps either item apart; any other field
+ * (an `equal` kind, or one no kind owns) must be equal on both, absent matching only absent.
+ */
 export function canStack(a: ItemInstance, b: ItemInstance): boolean {
-  return a.def === b.def && stackSize(itemDef(a)) > 1 && identity(a) === identity(b);
+  if (a.def !== b.def || stackSize(itemDef(a)) <= 1) return false;
+  const fa = a as unknown as Record<string, unknown>;
+  const fb = b as unknown as Record<string, unknown>;
+  for (const field of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (field === 'def' || field === 'qty') continue;
+    const va = fa[field];
+    const vb = fb[field];
+    if (va === undefined && vb === undefined) continue;
+    if (propertyKindFor(field)?.stacks === 'never') return false;
+    if (va === undefined || vb === undefined || stableText(va) !== stableText(vb)) return false;
+  }
+  return true;
 }
 
 /** Total weight of an instance: the def's weight times the quantity. */
@@ -87,7 +117,7 @@ export function addToStacks(stacks: ItemInstance[], item: ItemInstance): void {
   }
 }
 
-/** Why `item` is not a valid instance, or `null` if it is. */
+/** Why `item`'s def or quantity is wrong, or `null` if they are fine. Property fields: `propertyProblems`. */
 export function instanceProblem(item: ItemInstance): string | null {
   if (typeof item.def !== 'string' || !ITEMS.has(item.def)) return `unknown item "${String(item.def)}"`;
   const size = stackSize(ITEMS.get(item.def));

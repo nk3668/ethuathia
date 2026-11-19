@@ -4,6 +4,8 @@
  * ETH-044 (enchantment and identification).
  *
  * - `instance.ts`: `ItemInstance`, the plain-data item, and stacking.
+ * - `properties.ts`: item properties (ETH-118), the per-instance fields and their kinds.
+ * - `name.ts`: `itemName`, an item's display name with its properties' parts.
  * - `value.ts`: `itemValue` / `unitValue`, the one scoring function, extended by `ITEM_VALUE_HOOKS`.
  * - `inventory.ts`: floor items, packs, `carryWeight`, `wantsItem` and the party's item memory.
  * - `equipment.ts`: worn gear (ETH-043), its bundle source and the clear-upgrade comparison.
@@ -28,6 +30,8 @@ import { ITEMS_ACTIONS } from './actions';
 import type { ItemsRequest } from './actions';
 import { SOURCE_EQUIPPED, wornItems } from './equipment';
 import { instanceProblem, itemDef, itemWeight } from './instance';
+import { itemName } from './name';
+import { propertyProblems } from './properties';
 import type { InventoryPart, ItemInstance } from './instance';
 import { carryLimit, carryWeight, floorItems, inventoryOf, noticeItems } from './inventory';
 import type { KnownItems } from './inventory';
@@ -36,6 +40,8 @@ import { ITEMS_CONDITIONS, ITEMS_RULE_ACTIONS } from './rules';
 import { itemValue } from './value';
 
 export * from './instance';
+export * from './properties';
+export * from './name';
 export * from './equipment';
 export * from './value';
 export * from './inventory';
@@ -50,18 +56,32 @@ export const NOTABLE_ITEM_VALUE = 50;
 export type ItemsEvent =
   /** A party member saw `qty` of item `item` lying at `pos` for the first time there. */
   | { type: 'itemSighted'; actor: EntityId; item: string; qty: number; floor: FloorId; pos: Pos }
-  /** `actor` picked up `qty` of `item`, worth `value` in all (`itemValue`). */
-  | { type: 'pickedUp'; actor: EntityId; item: string; qty: number; value: number; floor: FloorId; pos: Pos }
+  /**
+   * `actor` picked up `qty` of `item`, worth `value` in all (`itemValue`). `name` (on this and
+   * the events below) is the item's `itemName` as the actor sees it, present only when it differs
+   * from the def's name (an item with properties, ETH-118).
+   */
+  | { type: 'pickedUp'; actor: EntityId; item: string; name?: string; qty: number; value: number; floor: FloorId; pos: Pos }
   /** `actor` picked up a pile of gold (item `item`), adding `amount` to the party's purse. */
   | { type: 'goldPickedUp'; actor: EntityId; item: string; amount: number; floor: FloorId; pos: Pos }
   /** `actor` dropped `qty` of `item` at `pos`. */
-  | { type: 'dropped'; actor: EntityId; item: string; qty: number; floor: FloorId; pos: Pos }
+  | { type: 'dropped'; actor: EntityId; item: string; name?: string; qty: number; floor: FloorId; pos: Pos }
   /** `actor` used one `item` (quaffed, read, ate). Its effects' events follow. */
-  | { type: 'used'; actor: EntityId; item: string; floor: FloorId; pos: Pos }
-  /** `actor` put on `item` in `slot`; `replaced` is the item it took off there (now in its pack), if any. */
-  | { type: 'equipped'; actor: EntityId; item: string; slot: EquipSlot; replaced: string | null; floor: FloorId; pos: Pos }
+  | { type: 'used'; actor: EntityId; item: string; name?: string; floor: FloorId; pos: Pos }
+  /** `actor` put on `item` in `slot`; `replaced` is the item it took off there (now in its pack), if any, and `replacedName` its name when it differs from the def's. */
+  | {
+      type: 'equipped';
+      actor: EntityId;
+      item: string;
+      name?: string;
+      slot: EquipSlot;
+      replaced: string | null;
+      replacedName?: string;
+      floor: FloorId;
+      pos: Pos;
+    }
   /** `actor` took off `item` from `slot` and put it in its pack. */
-  | { type: 'unequipped'; actor: EntityId; item: string; slot: EquipSlot; floor: FloorId; pos: Pos };
+  | { type: 'unequipped'; actor: EntityId; item: string; name?: string; slot: EquipSlot; floor: FloorId; pos: Pos };
 
 /** The commands this domain accepts. */
 export type ItemsCommand = never;
@@ -77,6 +97,8 @@ export interface ItemsState {
 /** One carried item, for the UI. */
 export interface ItemView {
   def: string;
+  /** `itemName` as the member sees it: the def's name with its properties' parts (ETH-118). */
+  name: string;
   qty: number;
   /** Weight of the whole stack. */
   weight: number;
@@ -89,6 +111,8 @@ export interface ItemView {
 export interface WornView {
   slot: EquipSlot;
   def: string;
+  /** `itemName` as the wearer sees it (ETH-118). */
+  name: string;
   weight: number;
   value: number;
 }
@@ -157,12 +181,19 @@ export function itemsSnapshot({ state, floor }: SnapshotCtx): ItemsSnapshot {
     members[id] = {
       items: inventoryOf(e).map((item) => ({
         def: item.def,
+        name: itemName(state, item, e),
         qty: item.qty,
         weight: itemWeight(item),
         value: itemValue(state, item),
         usable: isUsable(itemDef(item)),
       })),
-      equipped: wornItems(e).map(({ slot, item }) => ({ slot, def: item.def, weight: itemWeight(item), value: itemValue(state, item) })),
+      equipped: wornItems(e).map(({ slot, item }) => ({
+        slot,
+        def: item.def,
+        name: itemName(state, item, e),
+        weight: itemWeight(item),
+        value: itemValue(state, item),
+      })),
       weight: carryWeight(state, e),
       carry: carryLimit(state, e),
     };
@@ -223,6 +254,21 @@ registerInvariant('items.parts', (state) => {
         }
       }
     }
+  }
+  return problems;
+});
+
+/** Every item instance (on a floor, in a pack, worn) has only known property fields, each valid for its kind (ETH-118). */
+registerInvariant('items.properties', (state) => {
+  const problems: string[] = [];
+  const check = (where: string, item: ItemInstance) => {
+    for (const p of propertyProblems(item)) problems.push(`${where}: ${p}`);
+  };
+  for (const e of Object.values(state.entities)) {
+    if (e.item !== undefined) check(`floor item ${e.id}`, e.item);
+    if (e.inventory === undefined) continue;
+    e.inventory.items.forEach((item, i) => check(`entity ${e.id} pack entry ${i}`, item));
+    for (const [slot, item] of Object.entries(e.inventory.equipped ?? {})) check(`entity ${e.id} worn in ${slot}`, item);
   }
   return problems;
 });

@@ -2,7 +2,7 @@
 id: ETH-118
 title: Item properties: per-instance layers that feed gearBundles, value, names and stacking
 type: feature
-status: ready
+status: done
 priority: P1
 milestone: M1
 epic: combat-items
@@ -28,25 +28,25 @@ in `gearBundles`" and "an `ITEM_VALUE_HOOKS` entry for worth". Without one regis
 edit `gearBundles`, `canStack`, value and naming separately. See the "Shared systems" list.
 
 ## Acceptance criteria
-- [ ] `ItemPropertyKind` (`src/sim/items/properties.ts`): `{ id, field (a key of ItemInstance),
+- [x] `ItemPropertyKind` (`src/sim/items/properties.ts`): `{ id, field (a key of ItemInstance),
       schema, bundles?(ctx, value), value?(ctx, value, base), name?(value) → { prefix?, suffix? },
       hidden?(value, known) (shown only once identified), stacks: 'never' | 'equal' }` with
       `ctx = { state, item, wearer? }`. `ITEM_PROPERTIES` is filled in a fixed order (a list in
       the items domain, `SimDomain.itemProperties` if other domains need to add one).
-- [ ] `gearBundles(item)` becomes `gearBundles(state, wearer, item)`: the def's bundle, then each
+- [x] `gearBundles(item)` becomes `gearBundles(state, wearer, item)`: the def's bundle, then each
       property's bundles in registry order, every one credited to the item ("Iron hatchet +2"
       with a part per property). The `items.equipped` source, `compareGear` and `upgradeSlot`
       use it, so stats, triggers and the AI comparison see properties at once.
-- [ ] `ITEM_VALUE_HOOKS` gets one hook that applies each property's `value`; `itemName(state,
+- [x] `ITEM_VALUE_HOOKS` gets one hook that applies each property's `value`; `itemName(state,
       item, viewer?)` builds "+2 cursed Iron hatchet of Embers" from the property names (hidden
       parts omitted until known); log text, `ItemView` and the Codex `Explain` use it.
-- [ ] `canStack` compares property fields by their `stacks` rule; the instance schema validates
+- [x] `canStack` compares property fields by their `stacks` rule; the instance schema validates
       each present field with its kind's schema. Invariant `items.properties` (known fields,
       valid values). No `STATE_VERSION` change while no property is defined.
-- [ ] The first property kind, `origin` (`{ by?: adventurer record id, run?, note? }`, `stacks:
+- [x] The first property kind, `origin` (`{ by?: adventurer record id, run?, note? }`, `stacks:
       'never'`, no bundles), proves the path: an item with `origin` never stacks with a plain
       one and keeps it through pickup, drop and equip.
-- [ ] Tests: a test-only property with a modifier bundle changes `getStat` with the right part,
+- [x] Tests: a test-only property with a modifier bundle changes `getStat` with the right part,
       changes `compareGear`, value and name; save/load keeps it; the sim compare shows no
       behavior change.
 
@@ -74,3 +74,19 @@ Open decisions:
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-044, 045, 069, 082, 096, 109).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
+- 2026-11-19: Started (in-progress).
+- 2026-11-19: Done. `src/sim/items/properties.ts` (`ItemPropertyKind`, `ITEM_PROPERTIES`,
+  `registerItemProperty`, `propertyProblems`, `prop.origin`) and `name.ts` (`itemName`,
+  `nameField`); `gearBundles(state, wearer, item)`, `compareGear(state, wearer, a, b)`,
+  `upgradeSlot(state, …)`, `bestUpgrade(state, …)`, `gearStatsText(state, wearer, item)`;
+  `value.properties` hook; invariant `items.properties`; item events carry an optional `name`,
+  `ItemView` / `WornView` a `name`, `Explain` a `name` prop. Docs: ARCHITECTURE "Item properties".
+- 2026-11-19: (default) `known` is a per-kind hook `known?(ctx, value | undefined)` (the item is
+  known unless a kind says otherwise; no viewer = known) — alternative: one `itemKnown` function
+  that ETH-044 replaces.
+- 2026-11-19: (default) Item events carry `name` only when it differs from the def's name, so plain
+  items' events are unchanged — alternative: always carry it.
+- 2026-11-19: (default) No `STATE_VERSION` bump: `origin` is a new optional field nothing sets yet,
+  so no existing save changes — alternative: bump anyway.
+- 2026-11-19: (default) `origin.run` is the run's number in the profile history (positive integer)
+  — alternative: a seed or a separate run id from ETH-119.

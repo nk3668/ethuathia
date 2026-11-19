@@ -4,8 +4,9 @@
  *
  * - Worn items sit in `InventoryPart.equipped`, keyed by slot. They are not pack entries and
  *   don't count against the Carry limit.
- * - `SOURCE_EQUIPPED` is a `BundleSource`: every worn item's bundles (`gearBundles`) feed
- *   `getStat`, credited to the item's def (so a stat tooltip says "Iron hatchet +2"), and their
+ * - `SOURCE_EQUIPPED` is a `BundleSource`: every worn item's bundles (`gearBundles`: the def's,
+ *   then each item property's, ETH-118) feed `getStat`, each credited to the item's def (so a stat
+ *   tooltip says "Iron hatchet +2", one part per bundle), and their
  *   triggers fire with `fireTrigger`. Taking an item off removes them with nothing else to undo.
  * - `compareGear` and `bestUpgrade` decide what a clear upgrade is, for the baseline's
  *   `act.equip_upgrade`: one that is at least as good in every stat and better in one. Anything
@@ -14,17 +15,19 @@
  * - A gear type may fit several slots (a ring fits either ring slot, ETH-111): `slotFor` picks
  *   where a piece goes when put on, `upgradeSlot` where it would be an upgrade.
  *
- * Enchantment (ETH-044) and affixes (ETH-045) add their bundles in `gearBundles`, so stats,
- * triggers and the upgrade comparison all pick them up.
+ * Enchantment (ETH-044), affixes (ETH-045) and weapon scaling (ETH-082) are item properties
+ * (`properties.ts`) with `bundles`, so stats, triggers and the upgrade comparison all pick them up
+ * through `gearBundles` with no change here.
  */
 import { EQUIP_SLOTS, gearSlots } from '../../content';
 import type { Bundle, EquipSlot, Modifier } from '../../content';
-import type { Entity } from '../state';
+import type { Entity, RunState } from '../state';
 import type { BundleSource } from '../stats/types';
 import { isStatId, STAT_INFO } from '../stats/statIds';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
 import { inventoryOf } from './inventory';
+import { propertyBundles } from './properties';
 
 /** One worn item and its slot. */
 export interface WornItem {
@@ -50,20 +53,23 @@ export function wornItems(entity: Entity): WornItem[] {
 }
 
 /**
- * The bundles a worn item applies: its def's bundle, for now. ETH-044 (enchantment) and ETH-045
- * (affixes) add theirs here, which reaches stats, triggers and the AI's comparison at once.
+ * The bundles `item` applies while `wearer` wears it: its def's bundle, then each item property's
+ * `bundles` in `ITEM_PROPERTIES` order (ETH-118). `wearer` is who wears it or would (the AI
+ * comparing gear); leave it out where there is no one (a Codex entry), and a property that
+ * depends on the wearer (ETH-082 scaling) adds nothing.
  */
-export function gearBundles(item: ItemInstance): Bundle[] {
+export function gearBundles(state: RunState, wearer: Entity | undefined, item: ItemInstance): Bundle[] {
   const bundle = itemDef(item).bundle;
-  return bundle === undefined ? [] : [bundle];
+  const own = bundle === undefined ? [] : [bundle];
+  return [...own, ...propertyBundles(wearer === undefined ? { state, item } : { state, item, wearer })];
 }
 
 /** Every worn item's bundles, credited to the item's def id, in slot order. */
 export const SOURCE_EQUIPPED: BundleSource = {
   id: 'items.equipped',
-  visit(_state, entity, visit) {
+  visit(state, entity, visit) {
     for (const { item } of wornItems(entity)) {
-      for (const bundle of gearBundles(item)) visit(bundle, item.def, 1);
+      for (const bundle of gearBundles(state, entity, item)) visit(bundle, item.def, 1);
     }
   },
 };
@@ -79,10 +85,10 @@ export function modifierText(m: Pick<Modifier, 'stat' | 'op' | 'value'>): string
 }
 
 /** An item's stat changes, keyed `add:<stat>` / `mul:<stat>`; `null` if it has triggers or effects. */
-function statTotals(item: ItemInstance | null): Map<string, number> | null {
+function statTotals(state: RunState, wearer: Entity | undefined, item: ItemInstance | null): Map<string, number> | null {
   const totals = new Map<string, number>();
   if (item === null) return totals;
-  for (const bundle of gearBundles(item)) {
+  for (const bundle of gearBundles(state, wearer, item)) {
     if ((bundle.triggers?.length ?? 0) > 0 || (bundle.effects?.length ?? 0) > 0) return null;
     for (const m of bundle.modifiers ?? []) {
       const key = `${m.op}:${m.stat}`;
@@ -100,11 +106,12 @@ export type GearComparison = 'better' | 'worse' | 'same' | 'mixed';
  * Compares two pieces of gear stat by stat: `better` if `a` is at least as good in every stat
  * and better in one, `worse` the other way round, `same` if equal, `mixed` for a tradeoff. Gear
  * with triggers is always `mixed` (against anything but nothing at all on both sides): the AI
- * can't tell whether a trigger helps. Every stat counts higher as better.
+ * can't tell whether a trigger helps. Every stat counts higher as better. Both are weighed as
+ * `wearer` would wear them (`gearBundles`), item properties included.
  */
-export function compareGear(a: ItemInstance | null, b: ItemInstance | null): GearComparison {
-  const ta = statTotals(a);
-  const tb = statTotals(b);
+export function compareGear(state: RunState, wearer: Entity | undefined, a: ItemInstance | null, b: ItemInstance | null): GearComparison {
+  const ta = statTotals(state, wearer, a);
+  const tb = statTotals(state, wearer, b);
   if (ta === null || tb === null) return 'mixed';
   let up = false;
   let down = false;
@@ -135,12 +142,13 @@ export function slotFor(entity: Entity, item: ItemInstance): EquipSlot | null {
  * other, else the first. The replaced item never beats the one left in the other slot, so the AI
  * never swaps back and forth.
  */
-export function upgradeSlot(entity: Entity, item: ItemInstance): EquipSlot | null {
+export function upgradeSlot(state: RunState, entity: Entity, item: ItemInstance): EquipSlot | null {
   const slots = gearSlots(itemDef(item));
+  const cmp = (a: ItemInstance | null, b: ItemInstance | null) => compareGear(state, entity, a, b);
   const empty = slots.find((s) => equippedIn(entity, s) === null);
-  if (empty !== undefined) return compareGear(item, null) === 'better' ? empty : null;
-  const beaten = slots.filter((s) => compareGear(item, equippedIn(entity, s)) === 'better');
-  const weaker = beaten.find((s) => beaten.some((o) => o !== s && compareGear(equippedIn(entity, o), equippedIn(entity, s)) === 'better'));
+  if (empty !== undefined) return cmp(item, null) === 'better' ? empty : null;
+  const beaten = slots.filter((s) => cmp(item, equippedIn(entity, s)) === 'better');
+  const weaker = beaten.find((s) => beaten.some((o) => o !== s && cmp(equippedIn(entity, o), equippedIn(entity, s)) === 'better'));
   return weaker ?? beaten[0] ?? null;
 }
 
@@ -159,23 +167,28 @@ export interface GearUpgrade {
  * is none. Taking one never makes the item it replaced (or any other) an upgrade again, so the AI
  * never swaps back and forth.
  */
-export function bestUpgrade(entity: Entity): GearUpgrade | null {
+export function bestUpgrade(state: RunState, entity: Entity): GearUpgrade | null {
   const pack = inventoryOf(entity);
-  const targets = pack.map((item) => upgradeSlot(entity, item));
+  const targets = pack.map((item) => upgradeSlot(state, entity, item));
   for (const slot of EQUIP_SLOTS) {
     const worn = equippedIn(entity, slot);
     const candidates: number[] = [];
     targets.forEach((target, index) => {
       if (target === slot) candidates.push(index);
     });
-    const best = candidates.find((i) => !candidates.some((j) => compareGear(pack[j] as ItemInstance, pack[i] as ItemInstance) === 'better'));
+    const best = candidates.find((i) => !candidates.some((j) => compareGear(state, entity, pack[j] as ItemInstance, pack[i] as ItemInstance) === 'better'));
     if (best !== undefined) return { index: best, slot, item: pack[best] as ItemInstance, replaces: worn };
   }
   return null;
 }
 
-/** "Damage +2, Accuracy +1": an item's stat modifiers in words, or `null` if it has none. */
-export function gearStatsText(item: ItemInstance): string | null {
-  const parts = gearBundles(item).flatMap((b) => (b.modifiers ?? []).map(modifierText));
+/** "Damage +2, Accuracy +1": an item's stat modifiers (as `wearer` would wear it) in words, or `null` if it has none. */
+export function gearStatsText(state: RunState, wearer: Entity | undefined, item: ItemInstance): string | null {
+  return bundleStatsText(gearBundles(state, wearer, item));
+}
+
+/** "Damage +2, Accuracy +1": the stat modifiers of `bundles` in words, or `null` if there are none. The Codex uses it on a def's bundle. */
+export function bundleStatsText(bundles: readonly Bundle[]): string | null {
+  const parts = bundles.flatMap((b) => (b.modifiers ?? []).map(modifierText));
   return parts.length === 0 ? null : parts.join(', ');
 }
