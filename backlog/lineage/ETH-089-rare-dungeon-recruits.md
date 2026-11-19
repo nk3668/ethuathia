@@ -7,9 +7,9 @@ priority: P3
 milestone: M5
 epic: lineage
 size: M
-depends_on: [ETH-068]
+depends_on: [ETH-068, ETH-116, ETH-119, ETH-122, ETH-123]
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ Spec gate.
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-19: Added ETH-116 (dungeon encounters), ETH-119 (adventurer records), ETH-122 (seeded text generator), ETH-123 (allied creatures) to `depends_on`: build on the shared system instead of a parallel version.

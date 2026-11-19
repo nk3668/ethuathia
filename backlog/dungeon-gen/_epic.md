@@ -30,3 +30,4 @@ Varied, always-connected floors built from reusable generation steps, linked int
 - [ ] [ETH-098 Hand-made room vaults](ETH-098-hand-made-vaults.md)
 - [ ] [ETH-102 A rival guild party in the dungeon](ETH-102-rival-guild.md)
 - [ ] [ETH-107 Rare floor-wide dungeon events](ETH-107-dungeon-events.md)
+- [ ] [ETH-116 Dungeon encounters: placed interactive features with an interact action, choices and outcomes](ETH-116-dungeon-encounters.md)

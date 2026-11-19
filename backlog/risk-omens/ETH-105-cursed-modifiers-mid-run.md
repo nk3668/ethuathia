@@ -7,9 +7,9 @@ priority: P3
 milestone: M4
 epic: risk-omens
 size: M
-depends_on: [ETH-067]
+depends_on: [ETH-067, ETH-115, ETH-116]
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -24,3 +24,4 @@ Idea accepted in Nate's interview answers (2026-11-18).
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-19: Added ETH-115 (run-wide modifiers), ETH-116 (dungeon encounters) to `depends_on`: build on the shared system instead of a parallel version.

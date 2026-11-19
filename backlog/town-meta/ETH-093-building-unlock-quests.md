@@ -7,9 +7,9 @@ priority: P2
 milestone: M2
 epic: town-meta
 size: M
-depends_on: [ETH-074, ETH-024]
+depends_on: [ETH-074, ETH-024, ETH-114, ETH-121]
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -26,3 +26,4 @@ Unlocks become story beats. Decided in Nate's interview answers (2026-11-18). Re
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-19: Added ETH-114 (objective engine), ETH-121 (shared conditions) to `depends_on`: build on the shared system instead of a parallel version.

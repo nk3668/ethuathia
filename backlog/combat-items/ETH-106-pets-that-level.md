@@ -7,9 +7,9 @@ priority: P3
 milestone: later
 epic: combat-items
 size: M
-depends_on: [ETH-050]
+depends_on: [ETH-050, ETH-123]
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -23,3 +23,4 @@ Idea accepted in Nate's interview answers (2026-11-18).
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-19: Added ETH-123 (allied creatures) to `depends_on`: build on the shared system instead of a parallel version.

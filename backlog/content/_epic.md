@@ -25,3 +25,4 @@ Classes, races, monsters, items and the rest exist as validated data that the si
 
 ## Items
 - [x] [ETH-015 Content registry with validation and first definitions](ETH-015-content-registry-first-defs.md)
+- [ ] [ETH-122 Seeded text generator: grammar templates for names, titles, epitaphs, ballads and backstories](ETH-122-seeded-text-generator.md)

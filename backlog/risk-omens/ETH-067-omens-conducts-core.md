@@ -7,9 +7,9 @@ priority: P2
 milestone: M4
 epic: risk-omens
 size: M
-depends_on: [ETH-023, ETH-044, ETH-064, ETH-072]
+depends_on: [ETH-023, ETH-044, ETH-064, ETH-072, ETH-114, ETH-115]
 created: 2026-11-17
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -31,3 +31,4 @@ Acceptance criteria to be refined against the real code before starting (plannin
 ## Log
 - 2026-11-17: Created as part of the backlog fan-out plan.
 - 2026-11-18: Cursed modifiers taken mid-run (ETH-105) build on Omens.
+- 2026-11-19: Added ETH-114 (objective engine), ETH-115 (run-wide modifiers) to `depends_on`: build on the shared system instead of a parallel version.

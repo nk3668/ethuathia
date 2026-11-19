@@ -7,9 +7,9 @@ priority: P2
 milestone: M2
 epic: quests
 size: M
-depends_on: [ETH-024, ETH-041]
+depends_on: [ETH-024, ETH-041, ETH-114]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -29,3 +29,4 @@ A combat-focused goal with a memorable target. See `CLAUDE.md` §6 (Quests).
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-19: Added ETH-114 (objective engine) to `depends_on`: build on the shared system instead of a parallel version.
