@@ -85,7 +85,24 @@ describe('derived stats', () => {
   it('give a starting Human Vanguard the same HP and MP as before attributes, plus damage and carry', () => {
     const { state, hero: h } = hero();
     const values = Object.fromEntries(STAT_IDS.map((s) => [s, statValue(state, h, s)]));
-    expect(values).toEqual({ hp: 20, mp: 5, accuracy: 0, evasion: 0, damage: 1, armor: 0, speed: 100, sight: 8, carry: 24 });
+    expect(values).toEqual({
+      hp: 20,
+      mp: 5,
+      accuracy: 0,
+      evasion: 0,
+      damage: 1,
+      armor: 0,
+      speed: 100,
+      sight: 8,
+      carry: 24,
+      // Skills (ETH-081): Wits 5, Grit 14, Finesse 10, Brawn 12.
+      identify: 15,
+      trapSpot: 25,
+      statusResist: 28,
+      disarm: 50,
+      flee: 70,
+      forceDoor: 48,
+    });
     expect(h.actor).toMatchObject({ hp: 20, mp: 5 });
   });
 

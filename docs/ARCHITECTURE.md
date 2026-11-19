@@ -259,7 +259,8 @@ All in `src/sim/run/`:
   with stats, an `ai` part holding the def's rules and a `monster` part. Monsters run the same
   decision engine as adventurers, on their own rules only (no baseline); combat registers
   `cond.enemy_adjacent`, `cond.enemy_visible`, `cond.hp_below`, `act.attack_adjacent`,
-  `act.approach_enemy`, `act.flee` and `act.wander`.
+  `act.approach_enemy`, `act.flee` (through the `flee` action and its Flee check, ETH-081,
+  "Stats") and `act.wander`.
 - **Spawning:** the `gen.monsters` step (after `gen.fountains`, so no monster stands on a feature)
   puts `spawns` in the floor plan from the dungeon stream, away from the stairs; building the
   floor makes them. `RunConfig.monsters: false` leaves them out (tests of other systems).
@@ -311,11 +312,30 @@ The Codex (ETH-065) fills in from sim events. `src/sim/run/codex.ts` defines it:
 ### Stats
 
 `StatId` is fixed in `src/sim/stats/statIds.ts`: `hp`, `mp` (the maxima; current HP and MP
-stay on the actor part), `accuracy`, `evasion`, `damage`, `armor`, `speed`, `sight`, `carry`.
-`STAT_IDS` lists them and `isStatId` checks one.
+stay on the actor part), `accuracy`, `evasion`, `damage`, `armor`, `speed`, `sight`, `carry`,
+then the six **skills** (ETH-081, `SKILL_STAT_IDS`): `identify`, `trapSpot`, `statusResist`,
+`disarm`, `flee`, `forceDoor`. `STAT_IDS` lists them and `isStatId` checks one.
 
-`STAT_INFO` gives each one a label, tooltip text, a `base` (sight 8, all others 0) and a `min`
-(max HP 1, all others 0).
+`STAT_INFO` gives each one a label, tooltip text, a `base` (sight 8, trap spotting 10, disarm
+20, flee 40, all others 0), a `min` (max HP 1, all others 0), and for the skills a `max`
+(`SKILL_CAP` 95; status resistance `STATUS_RESIST_CAP` 75) and `percent: true`.
+
+**Skills (ETH-081): each attribute's second job.** Percent chances, base + attribute × per point
+(rows in `ATTRIBUTE_FORMULAS`, after the original seven, which are unchanged): Identify 3 × Wits,
+Trap spotting 3 × Wits, Status resistance 2 × Grit, Disarm 3 × Finesse, Flee 3 × Finesse, Force
+doors 4 × Brawn. Like any stat, gear and statuses can modify them (`modifiers: [{ stat: 'disarm', … }]`).
+Consumers read them with `statValue` and roll `chance(value / 100)` on their own stream:
+
+- `statusResist` (wired): `applyStatus` shortens a **harmful** status by `resistedTurns(turns,
+  resist)` = round(turns × resist / 100), leaving at least 1 turn; no roll. `statusApplied`
+  carries `resisted` (turns shrugged off) when any were. Pass `resistible = false` for a status
+  that is not an affliction (the config's `partyStatuses` do).
+- `flee` (wired): the combat `flee { dir }` action (`combat/flee.ts`), which `act.flee` uses.
+  With an enemy adjacent and attributes to test, one combat-stream draw; a failure leaves the
+  actor in place and spends the turn (`fleeFailed { actor, enemy, enemyDef, chance, floor, pos }`).
+  Otherwise it is a plain move, so monsters flee as before.
+- `identify` (ETH-044), `trapSpot` and `disarm` (ETH-046), `forceDoor` (stuck or locked doors,
+  once they exist): no consumer yet.
 
 **Reading a stat (ETH-057).** Never read a maximum, speed or sight from a field: `ActorPart` holds
 only current `hp` and `mp` (plus energy, faction, queued).

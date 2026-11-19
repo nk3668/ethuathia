@@ -143,6 +143,9 @@ export const METRICS: Metric[] = [
   { name: 'kills, mean', value: (rs) => mean(rs.map((r) => r.kills ?? 0)), digits: 1 },
   { name: 'deaths, total', value: (rs) => rs.reduce((n, r) => n + (r.deaths ?? 0), 0), digits: 0 },
   { name: 'fountain drinks, mean', value: (rs) => mean(rs.map((r) => r.drinks ?? 0)), digits: 1 },
+  // Skills (ETH-081).
+  { name: 'failed flee checks, mean', value: (rs) => mean(rs.map((r) => r.fleeFails ?? 0)), digits: 1 },
+  { name: 'status turns resisted, mean', value: (rs) => mean(rs.map((r) => r.resisted ?? 0)), digits: 1 },
   // Leveling (ETH-034). Reports from before it read '-'.
   { name: 'party level, mean', value: (rs) => mean(present(rs.map((r) => r.level))), digits: 2 },
   // Contracts (ETH-024). Reports from before it took none, so this reads 0.

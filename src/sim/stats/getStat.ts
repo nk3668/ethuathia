@@ -7,7 +7,7 @@
  * 2. Every active bundle (`BUNDLE_SOURCES`: attached bundles, statuses, later gear and Omens)
  *    contributes its modifiers for the stat, scaled by its potency.
  * 3. value = (sum of `add` parts) × (product of `mul` parts), rounded to a whole number
- *    (`Math.round`) and clamped to the stat's `min` (`STAT_INFO`).
+ *    (`Math.round`) and clamped to the stat's `min` and `max`, if any (`STAT_INFO`).
  *
  * A leaf module: it imports no sim values except the registries, so core files (perception,
  * the step loop, snapshots, invariants) can call it without an import cycle.
@@ -81,7 +81,9 @@ function collect(state: RunState, entity: Entity, stat: StatId, sink: StatSink):
 }
 
 function finish(stat: StatId, add: number, mul: number): number {
-  return Math.max(STAT_INFO[stat].min, Math.round(add * mul));
+  const info = STAT_INFO[stat];
+  const value = Math.max(info.min, Math.round(add * mul));
+  return info.max === undefined ? value : Math.min(info.max, value);
 }
 
 /** The final value of `stat` on `entity`, without the parts. Use it wherever no tooltip is built. */

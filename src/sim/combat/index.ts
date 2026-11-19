@@ -28,12 +28,15 @@ import { applyStatus } from '../stats/statuses';
 import { statValue } from '../stats/getStat';
 import type { TriggerKindDef } from '../stats/types';
 import { actorName, killActor, reapDead } from './death';
+import { FLEE_ACTION } from './flee';
+import type { FleeRequest } from './flee';
 import { GEN_MONSTERS } from './monsters';
 import type { MonsterPart } from './monsters';
 import { boltable, canSee, isAlly, rolePowers, ROLE_CONDITIONS, ROLE_RULE_ACTIONS } from './roles';
 import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, hpPercent, isHostile } from './rules';
 
 export * from './death';
+export * from './flee';
 export * from './monsters';
 export * from './roles';
 export * from './rules';
@@ -108,7 +111,12 @@ export type CombatEvent =
   /** A party member (`actor`) saw `monster` (def `def`) for the first time, at `pos`. */
   | { type: 'monsterSighted'; actor: EntityId; monster: EntityId; def: string; floor: FloorId; pos: Pos }
   /** An adventurer caught their breath and got back `amount` HP (natural recovery). */
-  | { type: 'recovered'; actor: EntityId; amount: number };
+  | { type: 'recovered'; actor: EntityId; amount: number }
+  /**
+   * `actor` tried to flee but `enemy` (def `enemyDef`), next to it, held it back: it failed its
+   * `chance`% Flee check (ETH-081, Finesse) and lost the turn at `pos`.
+   */
+  | { type: 'fleeFailed'; actor: EntityId; enemy: EntityId; enemyDef: string; chance: number; floor: FloorId; pos: Pos };
 
 /** Strike the creature one step away in `dir`. */
 export interface AttackRequest {
@@ -133,7 +141,7 @@ export interface AidRequest {
 }
 
 /** The action requests this domain defines. */
-export type CombatRequest = AttackRequest | BoltRequest | AidRequest;
+export type CombatRequest = AttackRequest | BoltRequest | AidRequest | FleeRequest;
 
 /** The commands this domain accepts. */
 export type CombatCommand = never;
@@ -288,6 +296,7 @@ export const COMBAT_ACTIONS: ActionRecord<CombatRequest> = {
       }
     },
   },
+  flee: FLEE_ACTION,
 };
 
 function isEntityId(value: unknown): value is EntityId {

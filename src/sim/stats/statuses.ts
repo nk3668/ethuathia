@@ -11,7 +11,7 @@
 import { DEFAULT_MAX_STACKS, STATUSES, statusGroup } from '../../content';
 import type { Emit } from '../events';
 import type { Entity, RunState } from '../state';
-import { clampVitals, newStatsPart } from './getStat';
+import { clampVitals, newStatsPart, statValue } from './getStat';
 import type { ActiveStatus, StatsPart } from './types';
 
 /** How an application landed: a new status, or merged into one of its group per its stacking rule. */
@@ -24,9 +24,21 @@ export function ensureStats(entity: Entity): StatsPart {
 }
 
 /**
+ * How many of `turns` a holder with `resist` percent status resistance (ETH-081, the
+ * `statusResist` stat, from Grit) shrugs off: `turns × resist / 100`, rounded, leaving at least
+ * one turn. Deterministic, so resisting draws nothing from the RNG.
+ */
+export function resistedTurns(turns: number, resist: number): number {
+  if (resist <= 0 || turns <= 1) return 0;
+  return Math.min(turns - 1, Math.round((turns * resist) / 100));
+}
+
+/**
  * Applies status `statusId` to `entity` for `turns` of its turns at `potency`, following the
- * def's stacking rule, and emits `statusApplied`. Does nothing to an entity without a living
- * actor part, and returns whether it applied. Throws on an unknown status id or bad numbers.
+ * def's stacking rule, and emits `statusApplied`. A harmful status is shortened first by the
+ * holder's status resistance (`resistedTurns`) unless `resistible` is false (a run's starting
+ * statuses). Does nothing to an entity without a living actor part, and returns whether it
+ * applied. Throws on an unknown status id or bad numbers.
  */
 export function applyStatus(
   state: RunState,
@@ -35,11 +47,15 @@ export function applyStatus(
   turns: number,
   emit: Emit,
   potency = 1,
+  resistible = true,
 ): boolean {
   const def = STATUSES.get(statusId);
   if (!Number.isInteger(turns) || turns <= 0) throw new Error(`Status "${statusId}" needs whole turns above 0, got ${turns}`);
   if (!Number.isFinite(potency) || potency <= 0) throw new Error(`Status "${statusId}" needs a potency above 0, got ${potency}`);
   if (entity.actor === undefined || entity.actor.hp <= 0) return false;
+
+  const resisted = def.harmful && resistible ? resistedTurns(turns, statValue(state, entity, 'statusResist')) : 0;
+  turns -= resisted;
 
   const statuses = ensureStats(entity).statuses;
   const group = statusGroup(def);
@@ -73,7 +89,15 @@ export function applyStatus(
     result = first;
   }
 
-  emit({ type: 'statusApplied', actor: entity.id, status: result.status, turns: result.remaining, potency: result.potency, mode });
+  emit({
+    type: 'statusApplied',
+    actor: entity.id,
+    status: result.status,
+    turns: result.remaining,
+    potency: result.potency,
+    mode,
+    ...(resisted > 0 ? { resisted } : {}),
+  });
   clampVitals(state, entity);
   return true;
 }

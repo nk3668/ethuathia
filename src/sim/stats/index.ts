@@ -28,7 +28,7 @@ import { applyStatus, tickStatuses } from './statuses';
 import type { StatusApplyMode } from './statuses';
 import type { BundleSource, StatProvider, StatResult, StatsPart, TriggerKindDef } from './types';
 
-export { BASE_SIGHT_RADIUS, isStatId, STAT_IDS, STAT_INFO, STAT_REFS } from './statIds';
+export { BASE_SIGHT_RADIUS, isStatId, SKILL_CAP, SKILL_STAT_IDS, STAT_IDS, STAT_INFO, STAT_REFS, STATUS_RESIST_CAP } from './statIds';
 export type { StatId, StatInfo } from './statIds';
 export * from './types';
 export {
@@ -44,7 +44,7 @@ export {
   sourceLabel,
   statValue,
 } from './getStat';
-export { applyStatus, ensureStats, removeStatus, tickStatuses } from './statuses';
+export { applyStatus, ensureStats, removeStatus, resistedTurns, tickStatuses } from './statuses';
 export type { StatusApplyMode } from './statuses';
 export { fireTrigger, MAX_TRIGGER_DEPTH, runEffect, runEffects } from './effects';
 export { attachBundle, detachBundles } from './bundles';
@@ -88,7 +88,16 @@ export type StatsEvent =
    * A status landed on `actor`. `turns` and `potency` are the status's values after stacking,
    * and `mode` says how it merged with one already active of its group.
    */
-  | { type: 'statusApplied'; actor: EntityId; status: string; turns: number; potency: number; mode: StatusApplyMode }
+  | {
+      type: 'statusApplied';
+      actor: EntityId;
+      status: string;
+      turns: number;
+      potency: number;
+      mode: StatusApplyMode;
+      /** Turns of a harmful status shrugged off by status resistance (ETH-081); left out when none. */
+      resisted?: number;
+    }
   /** A status ran out of turns. */
   | { type: 'statusExpired'; actor: EntityId; status: string }
   /** A status was taken off early (a cure). */
@@ -191,7 +200,8 @@ export function startPartyStats(state: RunState, emit: Emit): void {
     const entity = state.entities[id];
     if (entity?.actor === undefined) continue;
     for (const bundle of partyBundles) attachBundle(state, entity, bundle);
-    for (const s of partyStatuses) applyStatus(state, entity, s.status, s.turns, emit, s.potency ?? 1);
+    // A starting condition, not an affliction: Grit doesn't shorten it.
+    for (const s of partyStatuses) applyStatus(state, entity, s.status, s.turns, emit, s.potency ?? 1, false);
     fillVitals(state, entity);
   }
 }

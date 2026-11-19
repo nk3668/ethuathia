@@ -104,6 +104,10 @@ export interface SeedResult {
   deathCauses?: Record<string, number>;
   /** Draughts drunk from fountains (ETH-072). */
   drinks?: number;
+  /** Failed Flee checks: a party member held back by an adjacent enemy (ETH-081). */
+  fleeFails?: number;
+  /** Turns of harmful statuses the party shrugged off with status resistance (ETH-081). */
+  resisted?: number;
   /** The party's highest level where the run stopped (ETH-034). Missing from older reports. */
   level?: number;
   /** Contracts complete when the run stopped (ETH-024). Missing from reports before it. */
@@ -148,7 +152,10 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
   let kills = 0;
   let deaths = 0;
   let drinks = 0;
+  let fleeFails = 0;
+  let resisted = 0;
   let equips = 0;
+  const party = new Set(snap.party.map((m) => m.id));
   const deathCauses: Record<string, number> = {};
   /** Who killed each party member struck down, until their `fell` event. */
   const slain = new Map<number, string>();
@@ -165,6 +172,8 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
         else slain.set(e.victim, e.killerDef);
       }
       if (e.type === 'drankFountain') drinks++;
+      if (e.type === 'fleeFailed' && party.has(e.actor)) fleeFails++;
+      if (e.type === 'statusApplied' && party.has(e.actor)) resisted += e.resisted ?? 0;
       if (e.type === 'equipped') equips++;
       if (e.type === 'fell') {
         deaths++;
@@ -225,6 +234,8 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     deaths,
     deathCauses,
     drinks,
+    fleeFails,
+    resisted,
     level: Math.max(1, ...Object.values(snap.domains.stats.members).map((m) => m.level.level)),
     contracts: snap.domains.quests.contracts.filter((c) => c.complete).length,
     equips,

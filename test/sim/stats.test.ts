@@ -213,14 +213,15 @@ describe('timed statuses', () => {
 
   it('extend: adds the turns', () => {
     const { state, hero, emit } = setup();
-    applyStatus(state, hero, 'status.dazzled', 4, emit);
-    applyStatus(state, hero, 'status.dazzled', 3, emit);
+    // Not resistible: these tests are about stacking, not Grit (ETH-081).
+    applyStatus(state, hero, 'status.dazzled', 4, emit, 1, false);
+    applyStatus(state, hero, 'status.dazzled', 3, emit, 1, false);
     expect(statusesOf(hero)).toEqual([['status.dazzled', 7, 1]]);
   });
 
   it('stack: separate instances up to maxStacks, then the shortest is replaced', () => {
     const { state, hero, emit } = setup();
-    for (const turns of [5, 2, 7, 4]) applyStatus(state, hero, 'status.poisoned', turns, emit);
+    for (const turns of [5, 2, 7, 4]) applyStatus(state, hero, 'status.poisoned', turns, emit, 1, false);
     expect(statusesOf(hero)).toEqual([
       ['status.poisoned', 5, 1],
       ['status.poisoned', 4, 1],

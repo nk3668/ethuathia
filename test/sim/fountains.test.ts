@@ -166,7 +166,7 @@ describe('drink', () => {
 
     expect(drink(state, hero, fountain)[1]).toMatchObject({ type: 'statusApplied', status: 'status.keen_eyed', turns: 40 });
     expect(statValue(state, hero, 'sight')).toBe(sight + 2);
-    expect(drink(state, hero, fountain)[1]).toMatchObject({ type: 'statusApplied', status: 'status.queasy', turns: 20 });
+    expect(drink(state, hero, fountain)[1]).toMatchObject({ type: 'statusApplied', status: 'status.queasy', turns: 14, resisted: 6 }); // Grit 14: 28% of 20 shrugged off
     expect(statValue(state, hero, 'speed')).toBeLessThan(speed);
     expect(drink(state, hero, fountain).map((e) => e.type)).toEqual(['drankFountain', 'fountainRanDry']);
   });

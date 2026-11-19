@@ -86,4 +86,8 @@ export const COMBAT_LOG_TEXT: LogTextRecord<CombatEvent> = {
     text: (e, nameOf) => [`${nameOf(e.actor)} spots `, ...who(e.monster, e.def, nameOf), '.'],
   },
   recovered: { category: 'combat', quiet: true, text: (e, nameOf) => `${nameOf(e.actor)} catches their breath (+${e.amount} HP).` },
+  fleeFailed: {
+    category: 'combat',
+    text: (e, nameOf) => [`${nameOf(e.actor)} tries to break away, but `, ...who(e.enemy, e.enemyDef, nameOf), ` holds them back (Flee ${e.chance}%).`],
+  },
 };
