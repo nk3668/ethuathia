@@ -1001,6 +1001,7 @@ store or reward math.**
   and/or a flag, and a `rewardBonus`; a blessing a `party` modifier credited to the deity; a curse
   `addRunModifier` from an encounter outcome; a dungeon event a modifier with `until: { floor }`;
   doctrine a flag-only modifier read with `runFlag`; a veteran a `party` modifier.
+
 ### Objective engine (ETH-114)
 
 "A goal with progress toward a target, complete or failed", shared by contracts, bounties,
@@ -1066,10 +1067,8 @@ the features that use it.
 
 | System | Item | Status | Purpose |
 |---|---|---|---|
-| Objective engine | ETH-114 | planned | One `Objective` union, progress kinds (`OBJECTIVE_KINDS`) and tracked objectives with an owner, lifted from ETH-024's `contractProgress`: contracts, bounties, conducts, taboos, building quests, achievements |
+| Objective engine | ETH-114 | built | One `Objective` union, progress kinds (`OBJECTIVE_KINDS`) and tracked objectives with an owner, lifted from ETH-024's `contractProgress`: contracts, bounties, conducts, taboos, building quests, achievements. See "Objective engine (ETH-114)" above |
 | Run-wide modifiers | ETH-115 | built | Run modifiers with a source, scope (party / monsters / all), bundle, flags and reward bonus; one `stats.run` `BundleSource`, the reward multiplier and the consumer of `run`-scope upgrade grants: Omens, blessings, curses, dungeon events, doctrine, veterans. See "Run-wide modifiers (ETH-115)" above |
-| Objective engine | ETH-114 | built | One `Objective` union, progress kinds (`OBJECTIVE_KINDS`) and tracked objectives with an owner, lifted from ETH-024's `contractProgress`: contracts, bounties, conducts, taboos, building quests, achievements. See "Objective engine (ETH-114)" |
-| Run-wide modifiers | ETH-115 | planned | Run modifiers with a source, scope (party / monsters / all), bundle, flags and reward bonus; one `stats.run` `BundleSource`, the reward multiplier and the consumer of `run`-scope upgrade grants: Omens, blessings, curses, dungeon events, doctrine, veterans |
 | Dungeon encounters | ETH-116 | planned | An `encounter` kind and feature part placed by a `FLOOR_PLAN_HOOKS` entry, one `interact { choice? }` action, data outcomes, log and Codex text; fountains folded in: altars, graves, merchants, bounty encounters, recruits, cursed wells, vaults |
 | Monster templates | ETH-117 | planned | `MonsterOverlay` (templates, name, title, stats, bundles, threat, loot tier) layered on a `MonsterDef` at `spawnMonster`: uniques, elites, mini-bosses, nemeses, heirloom carriers, families |
 | Item properties | ETH-118 | built | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling. See "Item properties (ETH-118)" |
