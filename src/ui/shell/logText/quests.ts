@@ -3,7 +3,8 @@ import { formatNumber } from '../../../core';
 import type { QuestsEvent, RewardAmounts } from '../../../sim';
 import { currencyName } from '../runSummaryText';
 import { defineHighlight, mention } from './types';
-import type { LogPart, LogTextRecord } from './types';
+import { onFloor } from './types';
+import type { LogPart, LogTextRecord, MomentTextRecord } from './types';
 
 /** A contract is complete. */
 export const HIGHLIGHT_CONTRACT_COMPLETE = defineHighlight({
@@ -50,5 +51,19 @@ export const QUESTS_LOG_TEXT: LogTextRecord<QuestsEvent> = {
   contractLost: {
     category: 'combat',
     text: (e) => [mention(e.contract), ' is no longer complete: its bearer has fallen.'],
+  },
+};
+
+/** How the quests domain's chronicle moments read (ETH-120). */
+export const QUESTS_MOMENT_TEXT: MomentTextRecord = {
+  contractComplete: {
+    kind: HIGHLIGHT_CONTRACT_COMPLETE,
+    category: 'loot',
+    text: (m, nameOf) => [
+      'Contract complete: ',
+      mention(m.ids[0] ?? ''),
+      m.actors[0] === undefined ? '' : ` (${nameOf(m.actors[0])})`,
+      `${onFloor(m.depth)}.`,
+    ],
   },
 };

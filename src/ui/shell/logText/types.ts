@@ -4,7 +4,7 @@
  * into one record over every event type, so an event without wording fails to compile.
  */
 import type { Pos } from '../../../core';
-import type { EntityId, FloorId } from '../../../sim';
+import type { ChronicleEntry, EntityId, FloorId } from '../../../sim';
 
 /** Log categories (docs/VISUAL-DESIGN.md §2.3). */
 export type LogCategory = 'combat' | 'loot' | 'discovery' | 'ai' | 'system';
@@ -82,3 +82,29 @@ export function mention(ref: string, label?: string): Mention {
 export type LogTextRecord<E extends { type: string }> = {
   readonly [K in E['type']]: LogText<Extract<E, { type: K }> & { turn: number }>;
 };
+
+/**
+ * How one run chronicle moment kind reads (ETH-120): the Highlights feed, the run summary's
+ * "Moments" and the run history word chronicle entries with it. Each domain's log-text file
+ * exports a `MomentTextRecord` keyed by its chronicle kind ids; `../text.ts` joins them into
+ * `MOMENT_TEXT`, and a test fails on a sim chronicle kind with no wording.
+ */
+export interface MomentText {
+  /**
+   * The kind's label and description: the same constant as the log highlight when the moment is
+   * one (it is for every kind but the wipe's loss).
+   */
+  readonly kind: HighlightKind;
+  /** The log category it shows under. */
+  readonly category: LogCategory;
+  /** The sentence, in the past tense: "Mira reached level 3." */
+  text(entry: ChronicleEntry, nameOf: NameOf): string | readonly LogPart[];
+}
+
+/** Moment wording keyed by chronicle kind id. */
+export type MomentTextRecord = Readonly<Record<string, MomentText>>;
+
+/** " on floor 4", or nothing when the depth is unknown (0). */
+export function onFloor(depth: number): string {
+  return depth > 0 ? ` on floor ${depth}` : '';
+}

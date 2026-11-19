@@ -3,7 +3,8 @@ import { EQUIP_SLOT_INFO, ITEM_CATEGORY_INFO, ITEMS } from '../../../content';
 import { NOTABLE_ITEM_VALUE } from '../../../sim';
 import type { ItemsEvent } from '../../../sim';
 import { defineHighlight, mention } from './types';
-import type { LogPart, LogTextRecord } from './types';
+import { onFloor } from './types';
+import type { LogPart, LogTextRecord, MomentTextRecord } from './types';
 
 /** A party member picked up something valuable. */
 export const HIGHLIGHT_VALUABLE_FIND = defineHighlight({
@@ -58,5 +59,18 @@ export const ITEMS_LOG_TEXT: LogTextRecord<ItemsEvent> = {
   unequipped: {
     category: 'loot',
     text: (e, nameOf) => [`${nameOf(e.actor)} takes off `, mention(e.item, e.name), ` (${EQUIP_SLOT_INFO[e.slot].label.toLowerCase()}).`],
+  },
+};
+
+/** How the items domain's chronicle moments read (ETH-120). */
+export const ITEMS_MOMENT_TEXT: MomentTextRecord = {
+  valuableFind: {
+    kind: HIGHLIGHT_VALUABLE_FIND,
+    category: 'loot',
+    text: (m, nameOf) => [
+      `${nameOf(m.actors[0] ?? 0)} found `,
+      mention(m.ids[0] ?? ''),
+      `${m.amount === undefined ? '' : ` (worth ${m.amount})`}${onFloor(m.depth)}.`,
+    ],
   },
 };

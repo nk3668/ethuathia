@@ -2,7 +2,7 @@
  * The composition hub (docs/ARCHITECTURE.md, Contracts): the one module whose top-level code
  * reads every domain. It lists the domains in a fixed order, builds `ACTIONS` and `COMMANDS`
  * from the core records and every domain's, and fills the code registries (`CONDITIONS`,
- * `RULE_ACTIONS`, `GEN_STEPS`, `DISCOVERY_RULES`) and `RUN_TRACKERS`, core first and then domain
+ * `RULE_ACTIONS`, `GEN_STEPS`, `DISCOVERY_RULES`, `CHRONICLE_KINDS`, `CHRONICLE_RULES`) and `RUN_TRACKERS`, core first and then domain
  * by domain.
  *
  * `src/sim/index.ts` loads this module before anything else, so the domains are always read
@@ -31,9 +31,11 @@ import { FLOORS_DOMAIN } from './floors';
 import { ROOM_STEPS } from './gen/steps';
 import { ITEMS_DOMAIN } from './items';
 import { QUESTS_DOMAIN } from './quests';
-import { CORE_DISCOVERIES } from './coreEvents';
+import { CORE_CHRONICLE, CORE_CHRONICLE_KINDS, CORE_DISCOVERIES } from './coreEvents';
 import {
   BUNDLE_SOURCES,
+  CHRONICLE_KINDS,
+  CHRONICLE_RULES,
   CONDITIONS,
   DISCOVERY_RULES,
   FLOOR_PLAN_HOOKS,
@@ -45,7 +47,7 @@ import {
   VICTORY_CHECKS,
 } from './registries';
 import { RUN_DOMAIN } from './run';
-import type { DiscoveryRule } from './run';
+import type { ChronicleRule, DiscoveryRule } from './run';
 import type { RunConfig } from './state';
 import { STATS_DOMAIN } from './stats';
 
@@ -156,6 +158,18 @@ for (const rules of [CORE_DISCOVERIES, ...ALL.map((d) => d.discoveries ?? {})]) 
   }
 }
 
+for (const kind of [...CORE_CHRONICLE_KINDS, ...ALL.flatMap((d) => d.chronicleKinds ?? [])]) {
+  if (CHRONICLE_KINDS.has(kind.id)) throw new Error(`Two domains define the chronicle kind "${kind.id}"`);
+  CHRONICLE_KINDS.set(kind.id, kind);
+}
+for (const rules of [CORE_CHRONICLE, ...ALL.map((d) => d.chronicle ?? {})]) {
+  for (const [type, rule] of Object.entries(rules) as [string, ChronicleRule][]) {
+    const list = CHRONICLE_RULES.get(type);
+    if (list === undefined) CHRONICLE_RULES.set(type, [rule]);
+    else list.push(rule);
+  }
+}
+
 /** Every domain's state slice for a new run: `RunState.domains`. */
 export function initDomains(config: RunConfig): DomainStates {
   const out: Partial<Record<DomainKey, object>> = {};
@@ -170,4 +184,4 @@ export function domainSnapshots(ctx: SnapshotCtx): DomainSnapshots {
   return out as DomainSnapshots;
 }
 
-export { BUNDLE_SOURCES, CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS, STAT_PROVIDERS, TRIGGERS, VICTORY_CHECKS };
+export { BUNDLE_SOURCES, CHRONICLE_KINDS, CHRONICLE_RULES, CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS, STAT_PROVIDERS, TRIGGERS, VICTORY_CHECKS };

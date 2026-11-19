@@ -19,6 +19,7 @@ import type { GenStepDef } from './gen/types';
 import type { ItemsTypes } from './items';
 import type { QuestsTypes } from './quests';
 import type { DiscoveryRules, RunDomainTypes } from './run';
+import type { ChronicleKind, ChronicleRules } from './run/chronicle';
 import type { Emit, SimEvent } from './events';
 import type { FloorPlan } from './floorText';
 import type { RewardAmounts } from './run/result';
@@ -146,6 +147,7 @@ export interface FloorPlanHook {
  *   `GEN_STEPS`; ids must be unique across domains (`cond.*`, `act.*`, `gen.*`).
  * - `trackers` are the domain's run trackers, in the order they should run.
  * - `discoveries` maps the domain's event types to the content they discover for the Codex.
+ * - `chronicle` and `chronicleKinds` say which of its events are run chronicle moments.
  * - `statProviders`, `bundleSources` and `triggers` feed the stats tables (§2.2), in domain order.
  * - `turnStart` and `turnEnd` run around every actor's turn (`step.ts`), in domain order.
  * - `victoryChecks` are the domain's victory conditions (`VictoryCheck`).
@@ -165,6 +167,13 @@ export interface SimDomain<T extends DomainShape> {
    * `DISCOVERY_RULES`, which `CODEX_TRACKER` reads.
    */
   readonly discoveries?: DiscoveryRules;
+  /**
+   * Which of the domain's events are run chronicle moments, by event type (`run/chronicle.ts`,
+   * ETH-120). Goes into `CHRONICLE_RULES`, which `CHRONICLE_TRACKER` reads.
+   */
+  readonly chronicle?: ChronicleRules;
+  /** The moment kinds the domain's chronicle rules make (`CHRONICLE_KINDS`), with their priority. */
+  readonly chronicleKinds?: readonly ChronicleKind[];
   readonly victoryChecks?: readonly VictoryCheck[];
   /** Changes to floor plans before floors are built (`FLOOR_PLAN_HOOKS`), in domain order. */
   readonly floorPlanHooks?: readonly FloorPlanHook[];

@@ -3,7 +3,8 @@ import { ATTRIBUTE_IDS, attributeDef, findDef } from '../../../content';
 import type { AttributeId } from '../../../content';
 import type { StatsEvent } from '../../../sim';
 import { defineHighlight } from './types';
-import type { LogTextRecord } from './types';
+import { onFloor } from './types';
+import type { LogTextRecord, MomentTextRecord } from './types';
 
 /** An adventurer gains a level (ETH-034). */
 export const HIGHLIGHT_LEVEL_UP = defineHighlight({
@@ -65,5 +66,14 @@ export const STATS_LOG_TEXT: LogTextRecord<StatsEvent> = {
     category: 'combat',
     highlight: HIGHLIGHT_LEVEL_UP,
     text: (e) => `${e.name} reaches level ${e.level}${gainsText(e.gains)}.`,
+  },
+};
+
+/** How the stats domain's chronicle moments read (ETH-120). */
+export const STATS_MOMENT_TEXT: MomentTextRecord = {
+  leveledUp: {
+    kind: HIGHLIGHT_LEVEL_UP,
+    category: 'combat',
+    text: (m, nameOf) => `${nameOf(m.actors[0] ?? 0)} reached level ${m.amount ?? '?'}${onFloor(m.depth)}.`,
   },
 };

@@ -135,6 +135,7 @@ Rules:
 | A change to every floor plan (a contract's relic) | a `FloorPlanHook` in the domain's `floorPlanHooks` ("Contracts in the run") |
 | A run tracker | a `RunTracker<S>` listed in the domain's `trackers` |
 | A Codex discovery | one line in the domain's `discoveries` map: event type → content ids and marks (see "Codex discoveries") |
+| A notable moment (a log highlight, a run summary moment) | a `defineChronicleKind` in the domain's `chronicleKinds` and one line in its `chronicle` map, plus wording in the domain's `<DOMAIN>_MOMENT_TEXT` (see "Run chronicle") |
 | A Codex view of a content kind | a renderer file `src/ui/codex/renderers/<kind>.tsx` (§8.5) |
 | Data kept between runs | a profile slice in `src/meta/slices/`, one line in `PROFILE_SLICES` (see "Profile slices") |
 | An invariant | `registerInvariant('<domain>.name', …)` in the domain module (§11.1) |
@@ -173,8 +174,10 @@ contract complete, a level-up) is tagged on its log-text entry, not in a central
 3. The event must say where it happened: it carries `floor: FloorId` and `pos: Pos`. `highlight`
    is a type error on an event without them. Clicking the line centers the map there.
 
-`HIGHLIGHT_KINDS` (`ui/shell/text.ts`) is collected from `LOG_TEXT`, so the log's Highlights
-filter and the Options auto-pause list pick up a new kind with no other edit. Auto-pause choices
+`HIGHLIGHT_KINDS` (`ui/shell/text.ts`) is collected from `LOG_TEXT`, so the Options auto-pause
+list picks up a new kind with no other edit. Since ETH-120 the log's Highlights filter shows the
+**run chronicle** (below), not the rolling event buffer, so a new highlight also needs a
+chronicle rule and moment wording; a test fails on a highlighted event type with no rule. Auto-pause choices
 are all off by default and live in `uiStore.autoPause` for now. The profile has had a
 `settings` slice since ETH-062; moving them there is a follow-up.
 
@@ -254,7 +257,7 @@ All in `src/sim/run/`:
   mire toad", "fell") and `deathLine(name, killer, depth, tense)` makes the whole clause, used by
   the log line ("Mira is slain by a slate hound on floor 4."), the wipe's cause and the run
   summary. `track.deaths`' `FallenRecord` carries `killer` and `how` (the past predicate); the
-  history keeps `fell.how`. The run chronicle (ETH-120) should read `killer` from `fell`.
+  history keeps `fell.how`. The run chronicle (ETH-120) reads `killer` from `fell`.
 - **Result:** `runResult(state)` builds the `RunResult` (a fresh copy), with
   `extras['run.end']` (the `RunEnd`) and `extras['run.party']` (`PartyMemberRecord[]`:
   `{ actor, name, classId, raceId }` in party order, ETH-048); `runReport(state)` is
@@ -324,6 +327,48 @@ The Codex (ETH-065) fills in from sim events. `src/sim/run/codex.ts` defines it:
 - `CODEX_TRACKER` (`track.codex`, in the run domain's `trackers`) reduces events with those
   rules. The UI also runs it over every event it receives (`simStore.discoveries`), so the Codex
   shows the current run's finds before the run ends.
+
+### Run chronicle (ETH-120)
+
+The run's notable moments, kept for the whole run. `src/sim/run/chronicle.ts` defines it; it
+works like the Codex discoveries:
+
+- **Entry:** `ChronicleEntry = { kind, turn, floor, pos, depth, actors: EntityId[], ids: string[],
+  amount? }`, plain data with no wording. `kind` is a `ChronicleKind` id, the same as the log
+  highlight id when the moment is one. `floor` and `pos` are `null` only for a moment with no one
+  place (the wipe's loss). `actors` puts the main entity first (the fallen, then the killer);
+  `ids` are content ids (the killer's def, the item, the contract); `amount` is the number the
+  moment is about (level reached, HP left, item value, share lost in percent).
+- **Declaring moments:** a domain lists its kinds in `SimDomain.chronicleKinds`
+  (`defineChronicleKind({ id, priority })`) and its rules in `SimDomain.chronicle`, a
+  `ChronicleRules` map typed per event type (`event → ChronicleEntry | null`; build entries with
+  `momentAt(kind, event, actors, ids, { depth?, amount? })`). Core's are `CORE_CHRONICLE` /
+  `CORE_CHRONICLE_KINDS` (`coreEvents.ts`). The hub joins them into `CHRONICLE_KINDS` and
+  `CHRONICLE_RULES` (`registries.ts`), in domain order. `chronicleEntriesOf(event)` applies them.
+- **Kinds so far** (priority): `adventurerFell` 100 (`fell`, with the killer), `contractComplete`
+  90, `earningsLost` 80 (chronicle only, not a log highlight: `earningsLost` now carries `depth`),
+  `leveledUp` 60, `valuableFind` 40 (a pickup worth `NOTABLE_ITEM_VALUE`), `nearDeath` 30
+  (`isNearDeathBlow`, `NEAR_DEATH_FRACTION` 0.25, both in `sim/combat`), `stuck` 10.
+- **Tracker:** `CHRONICLE_TRACKER` (`track.chronicle`, run domain) reduces events into
+  `Chronicle = { entries }`, capped at `CHRONICLE_LIMIT` (200) by `addChronicleEntry`: past the
+  cap it drops the earliest entry of the lowest priority, never the run's first entry nor the
+  newest. Its extras, `RunResult.extras['track.chronicle']`, are the entries. Invariant
+  `run.chronicle`: known kinds, in turn order, within the cap.
+- **Reading it:** `topMoments(entries, n)` picks the `n` most notable, in turn order.
+  `simStore.chronicle` runs the tracker over every event the UI receives (as it does
+  `discoveries`), and the log's Highlights filter shows it (`momentLines`). The run summary lists
+  `momentsOf(report)` as "Moments" (`SUMMARY_MOMENTS` = `RUN_RECORD_MOMENTS` = 5), and the
+  `history` slice (v4) keeps the same top entries per run as `RunRecord.moments`, with party
+  members renumbered by party place (`recordMoments`).
+- **Wording:** each domain's log-text file exports `<DOMAIN>_MOMENT_TEXT: MomentTextRecord`
+  (`{ kind: HighlightKind, category, text(entry, nameOf) }` per kind id), joined into
+  `MOMENT_TEXT` (`ui/shell/text.ts`); `momentLine(entry, seq, nameOf)` makes a `LogLine`. Tests
+  fail on a chronicle kind with no wording, a highlight kind that is not a chronicle kind, or a
+  highlighted log-text event type with no chronicle rule.
+- **Later users:** epitaphs (ETH-068) read the fallen's last entries, ballads (ETH-103) a run's
+  entries, the nemesis (ETH-101) the `adventurerFell` entry's killer, run history (ETH-048) the
+  kept moments, and the time-away summary the simulated runs' entries. Add kinds rather than a
+  parallel list.
 
 ### Stats
 
@@ -563,8 +608,9 @@ slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061
 (the `growth` part and the `track.xp` tracker state), ETH-024 14 (the quests slice's contracts), ETH-043 15
 (`inventory.equipped`), ETH-110 16 (`growth.gained`, the rolled level-up gains), ETH-111
 17 (the ring and neck slots), ETH-113 18 (`AiMemory.waited`), ETH-066 19 (`ai.possessed`) and
-ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`) and ETH-121 21
-(`RunConfig.watchRequirements` and the `track.requirements` tracker state).
+ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
+(`RunConfig.watchRequirements` and the `track.requirements` tracker state) and ETH-120 22 (the
+`track.chronicle` tracker state).
 
 ### Contracts in the run (ETH-024)
 
@@ -894,7 +940,7 @@ the features that use it.
 | Monster templates | ETH-117 | planned | `MonsterOverlay` (templates, name, title, stats, bundles, threat, loot tier) layered on a `MonsterDef` at `spawnMonster`: uniques, elites, mini-bosses, nemeses, heirloom carriers, families |
 | Item properties | ETH-118 | built | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling. See "Item properties (ETH-118)" |
 | Adventurer records | ETH-119 | planned | The `adventurers` profile slice: a stable id carried through the run, level, XP, traits, history, status and cause of death: roster, graveyard, recruits, quirks, Mastery, lineage |
-| Run chronicle | ETH-120 | planned | `track.chronicle`: the run's notable moments, durable for the whole run (unlike `simStore`'s `EVENT_BUFFER_SIZE` buffer): Highlights, run summary, epitaphs, ballads, history, time-away |
+| Run chronicle | ETH-120 | built | `track.chronicle`: the run's notable moments, durable for the whole run (unlike `simStore`'s `EVENT_BUFFER_SIZE` buffer): Highlights, run summary, epitaphs, ballads, history, time-away. API in "Run chronicle (ETH-120)" above |
 | Shared conditions | ETH-121 | built | Run-scope `CONDITIONS` and a data `Requirement` (all / any / not) checked outside rules, plus the `metInRun` milestone: unlocks, taboos, quirk triggers, building quests. See "Shared conditions (ETH-121)" above |
 | Seeded text generator | ETH-122 | planned | Grammar content expanded with a per-purpose seeded RNG that never touches sim streams: names, titles, epitaphs, ballads, backstories |
 | Allied creatures | ETH-123 | planned | A `companion` part for `party`-faction actors outside `state.party`, with follow rules and stairs handling: summons, pets, ghost allies, over-cap recruits, a helped rival party |
@@ -1893,7 +1939,8 @@ As built (ETH-010):
 As built (ETH-012), the stores are in `ui/stores/`:
 
 - `simStore`: `snapshot` and `events`, a ring buffer of the last `EVENT_BUFFER_SIZE` (500)
-  events, each with a sequence number for list keys. `bindHost(host)` feeds a `SimHost`'s
+  events, each with a sequence number for list keys (the full log); `discoveries` and, since
+  ETH-120, `chronicle` are reduced from every event received, so they keep the whole run. `bindHost(host)` feeds a `SimHost`'s
   snapshots and events into it and returns an unsubscribe. `App` creates the host (a
   `WorkerHost`; tests pass an `InlineHost`) and binds it; since ETH-064 the app opens on the
   Prepare screen and starts no run until Descend. Since ETH-014 it also holds `speed` (0 is paused) and `resumeSpeed` (the last

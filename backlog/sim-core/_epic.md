@@ -36,5 +36,5 @@ A deterministic, serializable turn-based simulation that runs the same in a work
 - [x] [ETH-058 Multiple floors: stairs, lazily generated floors and a baseline descend rule](ETH-058-multi-floor-descent.md)
 - [x] [ETH-062 Run end (victory, retreat, wipe), run trackers, run summary and auto-restart](ETH-062-run-end-summary.md)
 - [ ] [ETH-079 runStarted carries the first floor's type](ETH-079-run-started-floor-type.md)
-- [ ] [ETH-120 Run chronicle: a durable list of a run's notable events, kept apart from the event buffer](ETH-120-run-chronicle.md)
+- [x] [ETH-120 Run chronicle: a durable list of a run's notable events, kept apart from the event buffer](ETH-120-run-chronicle.md)
 - [x] [ETH-113 A creature that never moves on the stairs soft-locks the run](ETH-113-stairs-blocker-softlock.md)

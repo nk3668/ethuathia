@@ -6,9 +6,9 @@ import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
 import { useSimStore } from '../stores/simStore';
 import styles from './RunSummary.module.css';
-import { contractsOf, currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, lossNote, OUTCOME_LOOK, partyOf, reportFromRecord, unlockLines } from './runSummaryText';
+import { contractsOf, currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, lossNote, momentsOf, OUTCOME_LOOK, partyOf, reportFromRecord, unlockLines } from './runSummaryText';
 import { rewardText } from './logText/quests';
-import { contentName } from './text';
+import { contentName, momentLine } from './text';
 
 /** Turn counts in full, as in the top bar. */
 const TURN_FORMAT = new Intl.NumberFormat('en-US');
@@ -46,6 +46,8 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const fallen = fallenOf(report);
   const found = discoveriesOf(report);
   const contracts = contractsOf(report);
+  const moments = momentsOf(report);
+  const nameOf = (id: number) => party?.find((m) => m.id === id)?.name ?? 'Someone';
 
   useEffect(() => next.current?.focus(), []);
 
@@ -104,6 +106,19 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
                   ) : (
                     <span className={styles.fell}>✘ not complete · {rewardText(c.reward)} unpaid</span>
                   )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {moments.length > 0 && (
+          <section aria-label="Moments">
+            <h3 className={styles.heading}>Moments</h3>
+            <ul className={styles.list}>
+              {moments.map((m, i) => (
+                <li key={i}>
+                  <span className={styles.momentTurn}>Turn {TURN_FORMAT.format(m.turn)}</span> {momentLine(m, i, nameOf).text}
                 </li>
               ))}
             </ul>

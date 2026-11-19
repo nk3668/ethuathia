@@ -2,11 +2,11 @@
  * Wording and figures for the run summary (`RunSummary.tsx`), kept apart from the components so
  * they can be tested on their own.
  */
-import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets } from '../../meta';
+import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets, RUN_RECORD_MOMENTS } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
 import { DEITIES, describeMilestoneMet } from '../../content';
-import { describeRequirement, favorDeity, favorKey, RENOWN, TROPHIES, WIPE_LOSS_SHARE } from '../../sim';
-import type { ContractRecord, FallenRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
+import { CHRONICLE_TRACKER, describeRequirement, favorDeity, favorKey, RENOWN, topMoments, TROPHIES, WIPE_LOSS_SHARE } from '../../sim';
+import type { ChronicleEntry, ContractRecord, FallenRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
 
 /** Each outcome's heading and icon, so it never rests on color alone. */
 export const OUTCOME_LOOK: Readonly<Record<RunOutcome, { title: string; icon: string }>> = {
@@ -97,6 +97,21 @@ export function contractsOf(report: RunReport): readonly ContractRecord[] {
   return Array.isArray(contracts) ? (contracts as ContractRecord[]) : [];
 }
 
+/**
+ * How many moments the run summary lists: as many as the run history keeps, so a past run's
+ * summary shows the same list as when it ended.
+ */
+export const SUMMARY_MOMENTS = RUN_RECORD_MOMENTS;
+
+/**
+ * The run's most notable chronicle moments (`extras['track.chronicle']`, ETH-120), at most
+ * `SUMMARY_MOMENTS`, in the order they happened; empty if the result doesn't say.
+ */
+export function momentsOf(report: RunReport): ChronicleEntry[] {
+  const entries = report.result.extras[CHRONICLE_TRACKER.id];
+  return Array.isArray(entries) ? topMoments(entries as ChronicleEntry[], SUMMARY_MOMENTS) : [];
+}
+
 /** The cause shown for a past run recorded before causes were kept. */
 export const NO_CAUSE = 'No details were kept for this run.';
 
@@ -124,6 +139,8 @@ export function reportFromRecord(record: RunRecord): RunReport {
         'run.party': party,
         'track.deaths': { fallen },
         'track.codex': Object.fromEntries(record.met.map((id) => [id, []])),
+        // Party members in the kept moments are numbered by party place, like `party` above.
+        [CHRONICLE_TRACKER.id]: record.moments.map((m) => ({ ...m, actors: [...m.actors], ids: [...m.ids] })),
         'track.contracts': record.contracts.map((c) => ({ contract: c.id, complete: c.complete, reward: rewardsFromCurrencies(c.reward) })),
       },
     },

@@ -11,14 +11,14 @@ import type { SimEvent, Unsubscribe } from '../../sim';
 import { useSimStore } from '../stores/simStore';
 import { useUiStore } from '../stores/uiStore';
 import { highlightOf } from './text';
-import type { Highlight } from './text';
+import type { PlacedHighlight } from './text';
 
 /** The first highlight among the events numbered `fromSeq` or later whose kind is in `kinds`. */
 export function autoPauseHighlight(
   events: readonly { seq: number; event: SimEvent }[],
   fromSeq: number,
   kinds: readonly string[],
-): Highlight | undefined {
+): PlacedHighlight | undefined {
   if (kinds.length === 0) return undefined;
   for (const { seq, event } of events) {
     if (seq < fromSeq) continue;

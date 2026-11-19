@@ -8,8 +8,8 @@
 import { z } from 'zod';
 import { currenciesSchema, subtractCurrencies } from '../currencies';
 import type { Currencies } from '../currencies';
-import { CODEX_TRACKER, CONTRACTS_TRACKER } from '../../sim';
-import type { RunOutcome, RunResult } from '../../sim';
+import { CHRONICLE_TRACKER, CODEX_TRACKER, CONTRACTS_TRACKER, topMoments } from '../../sim';
+import type { ChronicleEntry, RunOutcome, RunResult } from '../../sim';
 import { currenciesFromRewards } from '../runResult';
 import { defineSlice } from '../slice';
 
@@ -18,6 +18,9 @@ import { defineSlice } from '../slice';
  * totals still count them. Lowering it trims saved lists on load.
  */
 export const HISTORY_LIMIT = 50;
+
+/** How many of a run's chronicle moments its record keeps (ETH-120): the most notable ones. */
+export const RUN_RECORD_MOMENTS = 5;
 
 /** One adventurer in a recorded run. */
 export interface RunRecordMember {
@@ -59,6 +62,12 @@ export interface RunRecord {
   readonly met: readonly string[];
   /** The contracts it took on; empty for runs recorded before ETH-024. */
   readonly contracts: readonly RunRecordContract[];
+  /**
+   * Its most notable chronicle moments (ETH-120, `RUN_RECORD_MOMENTS` at most, in turn order).
+   * Party members in `actors` are numbered by their place in `party`; other actors are left out.
+   * Empty for runs recorded before ETH-120.
+   */
+  readonly moments: readonly ChronicleEntry[];
 }
 
 export interface History {
@@ -89,6 +98,19 @@ const memberSchema = z.object({
   fell: z.object({ depth: count, turn: count, how: z.string().max(MAX_HOW).optional() }).nullable(),
 });
 
+const posSchema = z.object({ x: z.number().int(), y: z.number().int() });
+
+const momentSchema = z.object({
+  kind: z.string().max(80),
+  turn: count,
+  floor: z.string().max(80).nullable(),
+  pos: posSchema.nullable(),
+  depth: count,
+  actors: z.array(count).max(16),
+  ids: z.array(z.string().max(80)).max(16),
+  amount: z.number().finite().optional(),
+});
+
 const recordSchema = z.object({
   run: z.number().int().positive(),
   outcome: z.enum(['victory', 'retreat', 'wipe']),
@@ -100,6 +122,7 @@ const recordSchema = z.object({
   party: z.array(memberSchema).max(16),
   met: z.array(z.string().max(80)).max(1000),
   contracts: z.array(z.object({ id: z.string().max(80), complete: z.boolean(), reward: currenciesSchema })).max(16),
+  moments: z.array(momentSchema).transform((moments) => moments.slice(0, RUN_RECORD_MOMENTS)),
 });
 
 const historySchema = z.object({
@@ -122,6 +145,20 @@ const partyExtras = z.array(z.object({ actor: z.number(), name: z.string(), clas
 const deathsExtras = z.object({ fallen: z.array(z.object({ actor: z.number(), depth: count, turn: count, how: z.string().optional() })) });
 const endExtras = z.object({ cause: z.string() });
 const contractsExtras = z.array(z.object({ contract: z.string(), complete: z.boolean(), reward: z.record(z.string(), z.number()) }));
+const chronicleExtras = z.array(momentSchema.extend({ actors: z.array(z.number()), ids: z.array(z.string()) }));
+
+/**
+ * A run's most notable chronicle moments, as a record keeps them: party members renumbered by
+ * their place in `party` (actor ids mean nothing once the run is over), other actors left out.
+ */
+export function recordMoments(entries: readonly ChronicleEntry[], party: readonly number[]): ChronicleEntry[] {
+  return topMoments(entries, RUN_RECORD_MOMENTS).map((m) => ({
+    ...m,
+    pos: m.pos === null ? null : { ...m.pos },
+    actors: m.actors.flatMap((a) => (party.includes(a) ? [party.indexOf(a)] : [])),
+    ids: m.ids.slice(0, 16),
+  }));
+}
 
 /** The compact record of a finished run, numbered `run`. */
 export function runRecord(run: number, result: RunResult): RunRecord {
@@ -130,6 +167,7 @@ export function runRecord(run: number, result: RunResult): RunRecord {
   const end = endExtras.safeParse(result.extras['run.end']);
   const codex = result.extras[CODEX_TRACKER.id];
   const contracts = contractsExtras.safeParse(result.extras[CONTRACTS_TRACKER.id]);
+  const chronicle = chronicleExtras.safeParse(result.extras[CHRONICLE_TRACKER.id]);
   const fallen = deaths.success ? deaths.data.fallen : [];
   return {
     run,
@@ -150,11 +188,12 @@ export function runRecord(run: number, result: RunResult): RunRecord {
     contracts: contracts.success
       ? contracts.data.map((c) => ({ id: c.contract, complete: c.complete, reward: currenciesFromRewards(c.reward) }))
       : [],
+    moments: chronicle.success ? recordMoments(chronicle.data as ChronicleEntry[], party.success ? party.data.map((m) => m.actor) : []) : [],
   };
 }
 
 export const historySlice = defineSlice<History>({
-  version: 3,
+  version: 4,
   schema: historySchema,
   init: () => ({
     totals: { runs: 0, victories: 0, retreats: 0, wipes: 0, turns: 0, deepestDepth: 0 },
@@ -173,6 +212,11 @@ export const historySlice = defineSlice<History>({
     3: (old) => {
       const v2 = old as { totals: unknown; recent: Record<string, unknown>[] };
       return { totals: v2.totals, recent: v2.recent.map((r) => ({ ...r, contracts: [] })) };
+    },
+    // v4 (ETH-120): each run keeps its most notable chronicle moments.
+    4: (old) => {
+      const v3 = old as { totals: unknown; recent: Record<string, unknown>[] };
+      return { totals: v3.totals, recent: v3.recent.map((r) => ({ ...r, moments: [] })) };
     },
   },
   onRunResult: (history, result) => {

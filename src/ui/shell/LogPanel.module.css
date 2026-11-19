@@ -30,6 +30,12 @@
   text-decoration: underline;
 }
 
+/* A highlight with no one place (the wipe's loss): marked, but nothing to click. */
+.moment {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
 /* The panel body: fill the strip and let the list scroll. */
 .log > :last-child {
   flex: 1;

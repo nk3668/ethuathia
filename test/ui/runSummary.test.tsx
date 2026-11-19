@@ -70,7 +70,7 @@ describe('run summary text', () => {
   });
 
   it('logs the wipe loss with each currency named (ETH-023)', () => {
-    const lost = { type: 'earningsLost', lost: { renown: 30, trophies: 1 }, atRisk: { renown: 120, trophies: 4 }, share: 0.25, turn: 812 } as const;
+    const lost = { type: 'earningsLost', lost: { renown: 30, trophies: 1 }, atRisk: { renown: 120, trophies: 4 }, share: 0.25, depth: 3, turn: 812 } as const;
     expect(describe_(lost, () => '?').text).toBe('The wipe costs 25% of this run’s earnings: 30 Renown and 1 Trophies lost. The rest is banked.');
   });
 });

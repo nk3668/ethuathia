@@ -24,6 +24,8 @@ import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx, TurnCtx } from '../domain';
 import { getFloor } from '../entities';
 import { registerInvariant } from '../invariants';
+import { defineChronicleKind, momentAt } from '../run/chronicle';
+import type { ChronicleRules } from '../run/chronicle';
 import { partyVisible } from '../perception';
 import type { EntityId, FloorId, RunConfig } from '../state';
 import { ITEMS_ACTIONS } from './actions';
@@ -298,6 +300,14 @@ registerInvariant('items.state', (state) => {
   return problems;
 });
 
+/** A run chronicle moment (ETH-120): a valuable find. `ids` is the item, `amount` its value. */
+export const CHRONICLE_VALUABLE_FIND = defineChronicleKind({ id: 'valuableFind', priority: 40 });
+
+/** Which of this domain's events are run chronicle moments: a pickup worth `NOTABLE_ITEM_VALUE` or more. */
+export const ITEMS_CHRONICLE: ChronicleRules = {
+  pickedUp: (e) => (e.value >= NOTABLE_ITEM_VALUE ? momentAt(CHRONICLE_VALUABLE_FIND, e, [e.actor], [e.item], { amount: e.value }) : null),
+};
+
 /** What this domain registers with the shared code, in this order. */
 export const ITEMS_DOMAIN: SimDomain<ItemsTypes> = {
   actions: ITEMS_ACTIONS,
@@ -316,4 +326,6 @@ export const ITEMS_DOMAIN: SimDomain<ItemsTypes> = {
     used: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'used' }] : []),
     equipped: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'used' }] : []),
   },
+  chronicle: ITEMS_CHRONICLE,
+  chronicleKinds: [CHRONICLE_VALUABLE_FIND],
 };

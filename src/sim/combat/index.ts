@@ -20,6 +20,8 @@ import { isStep } from '../coreActions';
 import type { SimDomain, SnapshotCtx, TurnCtx } from '../domain';
 import { actorsAt, getFloor } from '../entities';
 import { registerInvariant } from '../invariants';
+import { defineChronicleKind, momentAt } from '../run/chronicle';
+import type { ChronicleRules } from '../run/chronicle';
 import { fieldOfView, sightRadius } from '../perception';
 import type { ActorEntity, EntityId, FloorId, RunConfig, RunState } from '../state';
 import type { Emit } from '../events';
@@ -435,6 +437,25 @@ registerInvariant('combat.monsters', (state) => {
   return problems;
 });
 
+/** The share of max HP under which a blow on an adventurer leaves them near death (a highlight, ETH-047). */
+export const NEAR_DEATH_FRACTION = 0.25;
+
+/** True when an `attacked` blow left an adventurer (not a monster) alive with under `NEAR_DEATH_FRACTION` of their HP. */
+export function isNearDeathBlow(e: { targetDef: string; hp: number; maxHp: number }): boolean {
+  return !MONSTERS.has(e.targetDef) && e.hp > 0 && e.hp < e.maxHp * NEAR_DEATH_FRACTION;
+}
+
+/**
+ * A run chronicle moment (ETH-120): a blow left an adventurer near death. `actors` are the
+ * adventurer and the attacker, `ids` the attacker's def, `amount` the HP left.
+ */
+export const CHRONICLE_NEAR_DEATH = defineChronicleKind({ id: 'nearDeath', priority: 30 });
+
+/** Which of this domain's events are run chronicle moments. */
+export const COMBAT_CHRONICLE: ChronicleRules = {
+  attacked: (e) => (isNearDeathBlow(e) ? momentAt(CHRONICLE_NEAR_DEATH, e, [e.target, e.actor], [e.actorDef], { amount: e.hp }) : null),
+};
+
 /** What this domain registers with the shared code, in this order. */
 export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
   actions: COMBAT_ACTIONS,
@@ -451,5 +472,7 @@ export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
     monsterSighted: (e) => (MONSTERS.has(e.def) ? [{ id: e.def, mark: 'seen' }] : []),
     killed: (e) => (MONSTERS.has(e.victimDef) ? [{ id: e.victimDef, mark: 'killed' }] : []),
   },
+  chronicle: COMBAT_CHRONICLE,
+  chronicleKinds: [CHRONICLE_NEAR_DEATH],
 };
 

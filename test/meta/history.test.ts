@@ -55,12 +55,13 @@ describe('runRecord', () => {
       ],
       met: ['class.vanguard', 'feature.door'],
       contracts: [],
+      moments: [],
     });
   });
 
   it('leaves out parts the extras do not carry', () => {
     const record = runRecord(1, emptyRunResult('retreat'));
-    expect(record).toMatchObject({ cause: '', party: [], met: [], contracts: [] });
+    expect(record).toMatchObject({ cause: '', party: [], met: [], contracts: [], moments: [] });
   });
 });
 
@@ -113,7 +114,7 @@ describe('the history slice', () => {
     const decoded = decodeSave(text);
     if (!decoded.ok) throw new Error(decoded.error);
     expect(decoded.profile.history.recent.map((r) => r.run)).toEqual([2, 1]);
-    expect(decoded.profile.history.recent[0]).toMatchObject({ cause: '', party: [], met: [], contracts: [], turns: 20 });
+    expect(decoded.profile.history.recent[0]).toMatchObject({ cause: '', party: [], met: [], contracts: [], moments: [], turns: 20 });
   });
 
   it('keeps the lifetime totals through the migration, so milestones (ETH-074) still unlock from them', () => {
