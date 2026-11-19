@@ -9,7 +9,7 @@ epic: town-meta
 size: M
 depends_on: [ETH-059, ETH-060, ETH-062]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 ## Summary
@@ -41,3 +41,4 @@ part of the haul. It only puts this run's earnings at stake, never past progress
 ## Log
 - 2026-11-17: Created from a design discussion. The player chose a 25% wipe loss on run earnings only.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
+- 2026-11-18: Gold stays outside at-risk currency; leftover gold converts to Trophies on exit and is lost on a wipe (ETH-083).

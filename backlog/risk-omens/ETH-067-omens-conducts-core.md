@@ -9,7 +9,7 @@ epic: risk-omens
 size: M
 depends_on: [ETH-023, ETH-044, ETH-064, ETH-072]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ Acceptance criteria to be refined against the real code before starting (plannin
 
 ## Log
 - 2026-11-17: Created as part of the backlog fan-out plan.
+- 2026-11-18: Cursed modifiers taken mid-run (ETH-105) build on Omens.

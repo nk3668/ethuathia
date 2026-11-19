@@ -9,7 +9,7 @@ epic: bestiary
 size: M
 depends_on: [ETH-040, ETH-065]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 ## Summary
@@ -29,3 +29,4 @@ Memorable foes for the Slay contract and mini-bosses. See `CLAUDE.md` §6.
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
+- 2026-11-18: Ethan, an extremely rare and very weak boss, is filed as ETH-109.
