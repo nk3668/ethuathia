@@ -3,7 +3,7 @@
  * `RunConfig` out. The app's Descend, auto-restart and every later way of starting a run go
  * through it, so what the town bought always reaches the run.
  */
-import { CLASSES, RACES, upgradeBundle } from '../../content';
+import { CLASSES, CONTRACTS, RACES, upgradeBundle } from '../../content';
 import { Rng } from '../../core';
 import { configDepth, hasBundle } from '../../sim';
 import type { RunConfig } from '../../sim';
@@ -56,6 +56,9 @@ export function checkRunConfig(config: RunConfig): string[] {
     if (!RACES.has(m.raceId)) problems.push(`party[${i}] has unknown race "${m.raceId}"`);
   });
   for (const id of config.partyBundles ?? []) if (!hasBundle(id)) problems.push(`unknown party bundle "${id}"`);
+  const contracts = config.contracts ?? [];
+  for (const id of contracts) if (!CONTRACTS.has(id)) problems.push(`unknown contract "${id}"`);
+  if (new Set(contracts).size !== contracts.length) problems.push('a contract is taken twice');
   try {
     configDepth(config);
   } catch (error) {

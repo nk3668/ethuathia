@@ -15,6 +15,8 @@ const CONFIG: RunConfig = {
   // mid-run and the party sometimes splits across them.
   depth: 3,
   floorTurnCap: 30,
+  // Recover the relic (ETH-024): the relic placed on the bottom floor, its pickup and the contract state.
+  contracts: ['contract.recover_relic'],
   // Timed statuses with triggers, stacking and a speed change, so their ticking, expiry and
   // effects are covered by the hash and save checks (ETH-057).
   partyStatuses: [

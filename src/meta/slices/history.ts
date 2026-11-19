@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import { currenciesSchema, subtractCurrencies } from '../currencies';
 import type { Currencies } from '../currencies';
-import { CODEX_TRACKER } from '../../sim';
+import { CODEX_TRACKER, CONTRACTS_TRACKER } from '../../sim';
 import type { RunOutcome, RunResult } from '../../sim';
 import { currenciesFromRewards } from '../runResult';
 import { defineSlice } from '../slice';
@@ -28,6 +28,15 @@ export interface RunRecordMember {
   readonly fell: { readonly depth: number; readonly turn: number } | null;
 }
 
+/** One contract of a recorded run (ETH-024). */
+export interface RunRecordContract {
+  /** The contract def id. */
+  readonly id: string;
+  readonly complete: boolean;
+  /** What it paid (or would have paid) into the run's at-risk total. */
+  readonly reward: Currencies;
+}
+
 /** One finished run, as the history keeps it. */
 export interface RunRecord {
   /** 1 for the player's first run, counting every run ever finished. */
@@ -45,6 +54,8 @@ export interface RunRecord {
   readonly party: readonly RunRecordMember[];
   /** The content ids the Codex met this run. */
   readonly met: readonly string[];
+  /** The contracts it took on; empty for runs recorded before ETH-024. */
+  readonly contracts: readonly RunRecordContract[];
 }
 
 export interface History {
@@ -82,6 +93,7 @@ const recordSchema = z.object({
   cause: z.string().max(MAX_CAUSE),
   party: z.array(memberSchema).max(16),
   met: z.array(z.string().max(80)).max(1000),
+  contracts: z.array(z.object({ id: z.string().max(80), complete: z.boolean(), reward: currenciesSchema })).max(16),
 });
 
 const historySchema = z.object({
@@ -103,6 +115,7 @@ const OUTCOME_TOTAL = { victory: 'victories', retreat: 'retreats', wipe: 'wipes'
 const partyExtras = z.array(z.object({ actor: z.number(), name: z.string(), classId: z.string(), raceId: z.string() }));
 const deathsExtras = z.object({ fallen: z.array(z.object({ actor: z.number(), depth: count, turn: count })) });
 const endExtras = z.object({ cause: z.string() });
+const contractsExtras = z.array(z.object({ contract: z.string(), complete: z.boolean(), reward: z.record(z.string(), z.number()) }));
 
 /** The compact record of a finished run, numbered `run`. */
 export function runRecord(run: number, result: RunResult): RunRecord {
@@ -110,6 +123,7 @@ export function runRecord(run: number, result: RunResult): RunRecord {
   const deaths = deathsExtras.safeParse(result.extras['track.deaths']);
   const end = endExtras.safeParse(result.extras['run.end']);
   const codex = result.extras[CODEX_TRACKER.id];
+  const contracts = contractsExtras.safeParse(result.extras[CONTRACTS_TRACKER.id]);
   const fallen = deaths.success ? deaths.data.fallen : [];
   return {
     run,
@@ -126,11 +140,14 @@ export function runRecord(run: number, result: RunResult): RunRecord {
         })
       : [],
     met: typeof codex === 'object' && codex !== null ? Object.keys(codex) : [],
+    contracts: contracts.success
+      ? contracts.data.map((c) => ({ id: c.contract, complete: c.complete, reward: currenciesFromRewards(c.reward) }))
+      : [],
   };
 }
 
 export const historySlice = defineSlice<History>({
-  version: 2,
+  version: 3,
   schema: historySchema,
   init: () => ({
     totals: { runs: 0, victories: 0, retreats: 0, wipes: 0, turns: 0, deepestDepth: 0 },
@@ -144,6 +161,11 @@ export const historySlice = defineSlice<History>({
         totals: v1.totals,
         recent: [...v1.recent].reverse().map((r) => ({ ...r, cause: '', party: [], met: [] })),
       };
+    },
+    // v3 (ETH-024): each run keeps its contracts.
+    3: (old) => {
+      const v2 = old as { totals: unknown; recent: Record<string, unknown>[] };
+      return { totals: v2.totals, recent: v2.recent.map((r) => ({ ...r, contracts: [] })) };
     },
   },
   onRunResult: (history, result) => {

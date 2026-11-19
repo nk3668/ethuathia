@@ -25,7 +25,7 @@ Every run has a clear goal. The player picks contracts (main quests) that define
 - `CLAUDE.md` §6: Quests
 
 ## Items
-- [ ] [ETH-024 Contract model and the Recover-relic contract; victory needs every contract plus the exit](ETH-024-contracts-recover-relic.md)
+- [x] [ETH-024 Contract model and the Recover-relic contract; victory needs every contract plus the exit](ETH-024-contracts-recover-relic.md)
 - [ ] [ETH-025 Return trip: walk back up through explored floors, with light respawns](ETH-025-return-trip.md)
 - [ ] [ETH-026 Slay-named-foe contract](ETH-026-slay-named-foe-contract.md)
 - [ ] [ETH-027 Gather and Delve contracts](ETH-027-gather-delve-contracts.md)

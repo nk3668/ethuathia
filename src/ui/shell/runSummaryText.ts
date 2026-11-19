@@ -6,7 +6,7 @@ import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets } from '.
 import type { Currencies, Profile, RunRecord } from '../../meta';
 import { DEITIES, describeMilestoneMet } from '../../content';
 import { favorDeity, favorKey, RENOWN, TROPHIES, WIPE_LOSS_SHARE } from '../../sim';
-import type { FallenRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
+import type { ContractRecord, FallenRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
 
 /** Each outcome's heading and icon, so it never rests on color alone. */
 export const OUTCOME_LOOK: Readonly<Record<RunOutcome, { title: string; icon: string }>> = {
@@ -91,6 +91,12 @@ export function partyOf(report: RunReport): readonly PartyMemberRecord[] {
   return Array.isArray(party) ? (party as PartyMemberRecord[]) : [];
 }
 
+/** The run's contracts (`extras['track.contracts']`, ETH-024), or an empty list if the result doesn't say. */
+export function contractsOf(report: RunReport): readonly ContractRecord[] {
+  const contracts = report.result.extras['track.contracts'];
+  return Array.isArray(contracts) ? (contracts as ContractRecord[]) : [];
+}
+
 /** The cause shown for a past run recorded before causes were kept. */
 export const NO_CAUSE = 'No details were kept for this run.';
 
@@ -115,6 +121,7 @@ export function reportFromRecord(record: RunRecord): RunReport {
         'run.party': party,
         'track.deaths': { fallen },
         'track.codex': Object.fromEntries(record.met.map((id) => [id, []])),
+        'track.contracts': record.contracts.map((c) => ({ contract: c.id, complete: c.complete, reward: rewardsFromCurrencies(c.reward) })),
       },
     },
     end,

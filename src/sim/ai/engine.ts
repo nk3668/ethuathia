@@ -17,6 +17,7 @@ import type { Emit } from '../events';
 import { ITEMS_BASELINE_LOOT, ITEMS_BASELINE_URGENT } from '../items/rules';
 import { registerInvariant } from '../invariants';
 import { explored } from '../perception';
+import { QUESTS_BASELINE } from '../quests/rules';
 import { CONDITIONS, RULE_ACTIONS } from '../registries';
 import type { Decide } from '../step';
 import type { EntityId, RunState } from '../state';
@@ -37,12 +38,14 @@ export const BASELINE_FLEE_PERCENT = 35;
  * back off after getting stuck; below `BASELINE_FLEE_PERCENT`% HP with an enemy in sight, flee
  * if there is an escape route (`act.flee` can't be done otherwise, so a cornered adventurer
  * fights on); attack an adjacent enemy (combat, ETH-060); once the party has turned back, climb
- * out with it (waiting at the stairs up for the others); head down without waiting once the
+ * out with it (waiting at the stairs up for the others); once every contract is complete, turn
+ * back and leave, and fetch a contract's item (the relic) once the party has seen it, however far
+ * (quests, ETH-024, `src/sim/quests/rules.ts`); head down without waiting once the
  * floor's turn cap is spent; below half HP with no healing potion, drink from a known fountain
  * (ETH-072); pick up wanted items a few steps away (items, ETH-061); explore the frontier; once
  * nothing is left to explore, go down the stairs with the party, waiting at them until everyone
  * on the floor has gathered; on the bottom floor with nothing left to do, turn back and leave (a
- * retreat until contracts make it a victory); otherwise wait. The floors conditions and rule
+ * retreat, since the contracts are not done); otherwise wait. The floors conditions and rule
  * actions are in `src/sim/floors/rules.ts` (fountains in `src/sim/floors/fountains.ts`), the
  * heading-out ones in `src/sim/run/rules.ts`, the items ones in `src/sim/items/rules.ts`, the
  * combat ones in `src/sim/combat/rules.ts`. Only adventurers use the baseline: monsters follow
@@ -56,6 +59,8 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.enemy_adjacent' }, action: { id: 'act.attack_adjacent' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
+  // Quests (ETH-024): once every contract is complete, head out; fetch a contract item once seen.
+  ...QUESTS_BASELINE,
   { condition: { id: 'cond.floor_overstayed' }, action: { id: 'act.descend', params: { regroup: false } }, enabled: true },
   { condition: { id: 'cond.hurt_no_healing', params: { below: 50 } }, action: { id: 'act.drink_fountain' }, enabled: true },
   // Items (ETH-061): pick up wanted items a short detour away.

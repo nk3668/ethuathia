@@ -300,7 +300,7 @@ marker.
 | Altar | `_` | Patron's color, or grey when unaligned |
 | Grave | `†` | `#a886e0` |
 | Fountain | `{` | `#4f8fd9`; `#5b6573` once it has run dry |
-| Item | by category: `!` potion, `?` scroll, `%` food, `)` weapon, `[` armor, `$` gold (bold), `,` junk | Per item: Mending draught `#e3706b`, Quickstep tonic `#8fd16a`, Scroll of renewal `#d9c58a`, Trail biscuit `#c9a36b`, Iron hatchet `#b8c4cf`, Quilted jerkin `#9c8f7a`, gold `#f2c14e`, Bent nail `#8a8f96`. Items are drawn over features and under actors; remembered items are dimmed like terrain |
+| Item | by category: `!` potion, `?` scroll, `%` food, `)` weapon, `[` armor, `$` gold (bold), `,` junk, `&` relic (bold) | Per item: Mending draught `#e3706b`, Quickstep tonic `#8fd16a`, Scroll of renewal `#d9c58a`, Trail biscuit `#c9a36b`, Iron hatchet `#b8c4cf`, Quilted jerkin `#9c8f7a`, gold `#f2c14e`, Bent nail `#8a8f96`, Ember Reliquary `#ffb347`. Items are drawn over features and under actors; remembered items are dimmed like terrain |
 
 The glyph and color for each content entry live on its definition, so the Codex shows exactly
 what the map shows.

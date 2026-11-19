@@ -20,6 +20,7 @@ import type { ItemsTypes } from './items';
 import type { QuestsTypes } from './quests';
 import type { DiscoveryRules, RunDomainTypes } from './run';
 import type { Emit, SimEvent } from './events';
+import type { FloorPlan } from './floorText';
 import type { RewardAmounts } from './run/result';
 import type { ActorEntity, FloorId, RunConfig, RunState } from './state';
 import type { StatsTypes } from './stats';
@@ -113,6 +114,21 @@ export interface VictoryCheck {
 }
 
 /**
+ * A change a domain makes to a floor's plan before the floor is built (ETH-024): the quests
+ * domain puts a contract's relic on the bottom floor. `planFloor` runs every hook, in domain
+ * order, on every floor plan, generated or hand-built.
+ *
+ * `apply` changes `plan` in place and must not change `state`. It must be deterministic from
+ * `state.seed`, `state.config` and `floorId` alone (draw from an RNG seeded with them, never a
+ * shared stream), so a floor never depends on when or in which order floors are reached.
+ */
+export interface FloorPlanHook {
+  /** Unique, e.g. `quests.relic`. */
+  readonly id: string;
+  apply(state: RunState, floorId: FloorId, plan: FloorPlan): void;
+}
+
+/**
  * The runtime half of a domain: what it registers with the shared code. `domains.ts` lists one
  * per domain and registers every list in domain order, so registration order is fixed.
  *
@@ -126,6 +142,7 @@ export interface VictoryCheck {
  * - `statProviders`, `bundleSources` and `triggers` feed the stats tables (§2.2), in domain order.
  * - `turnStart` and `turnEnd` run around every actor's turn (`step.ts`), in domain order.
  * - `victoryChecks` are the domain's victory conditions (`VictoryCheck`).
+ * - `floorPlanHooks` change floor plans before floors are built (`FloorPlanHook`).
  */
 export interface SimDomain<T extends DomainShape> {
   readonly actions: ActionRecord<T['request']>;
@@ -142,6 +159,8 @@ export interface SimDomain<T extends DomainShape> {
    */
   readonly discoveries?: DiscoveryRules;
   readonly victoryChecks?: readonly VictoryCheck[];
+  /** Changes to floor plans before floors are built (`FLOOR_PLAN_HOOKS`), in domain order. */
+  readonly floorPlanHooks?: readonly FloorPlanHook[];
   /** Stat derivation steps (`STAT_PROVIDERS`), run core first, then in domain order (§2.2). */
   readonly statProviders?: readonly StatProvider[];
   /** Where active bundles come from (`BUNDLE_SOURCES`), for `getStat` and `fireTrigger`. */
