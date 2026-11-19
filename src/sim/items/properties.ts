@@ -18,6 +18,11 @@
  *   (it stacks with items whose field is deep-equal; absent only matches absent).
  * - `schema`: what a present value must look like (the `items.properties` invariant checks it).
  *
+ * A *derived* property (`ItemDerivedProperty`, ETH-082 weapon scaling) owns no field: it reads
+ * the item's def and the wearer, and adds bundles to every item it applies to. Derived properties
+ * come after the field kinds in `propertyBundleParts`. Their bundles may be credited to another
+ * source than the item and carry a tooltip label (`ItemBundle`).
+ *
  * `ITEM_PROPERTIES` lists the kinds in a fixed order: that order is the order of bundles, value
  * adjustments and name parts. New kinds from the items domain go in `ITEM_PROPERTY_LIST` below;
  * add the field to `ItemInstance` (optional, so no save needs a migration) at the same time. A
@@ -32,6 +37,7 @@ import { z } from 'zod';
 import type { Bundle } from '../../content';
 import type { Entity, RunState } from '../state';
 import type { ItemInstance, ItemOrigin } from './instance';
+import { PROP_WEAPON_SCALING } from './scaling';
 
 /** The fields of `ItemInstance` a property may own: every one but `def` and `qty`. */
 export type ItemPropertyField = Exclude<keyof ItemInstance, 'def' | 'qty'>;
@@ -76,6 +82,27 @@ export interface ItemPropertyKind<T = unknown> {
 }
 
 /**
+ * One bundle an item applies while worn, as `getStat` credits it: to `source` (a content id;
+ * default the item's def) under `label` (default the source's name).
+ */
+export interface ItemBundle {
+  readonly bundle: Bundle;
+  readonly source?: string;
+  readonly label?: string;
+}
+
+/**
+ * A property that owns no field (ETH-082): it is worked out from the item's def and the wearer,
+ * so it never affects stacking, value, naming or validation, only bundles.
+ */
+export interface ItemDerivedProperty {
+  /** Unique, e.g. `prop.weapon_scaling`. */
+  readonly id: string;
+  /** Extra bundles while `ctx.wearer` wears `ctx.item`, after every field kind's. Must not change anything. */
+  bundles(ctx: ItemPropertyCtx): readonly ItemBundle[];
+}
+
+/**
  * Heirloom history (ETH-069) and flavor (ETH-109): who carried the item, in which run, and a
  * note. Changes nothing about the item but its identity: it never stacks.
  */
@@ -99,6 +126,12 @@ const kinds: ItemPropertyKind[] = [];
 
 /** Every property kind, in a fixed order. Read at run time only. */
 export const ITEM_PROPERTIES: readonly ItemPropertyKind[] = kinds;
+
+/** The items domain's derived properties, in order. */
+const derived: ItemDerivedProperty[] = [PROP_WEAPON_SCALING];
+
+/** Every derived property, in order. Read at run time only. */
+export const ITEM_DERIVED_PROPERTIES: readonly ItemDerivedProperty[] = derived;
 
 /** Adds a kind at the end of `ITEM_PROPERTIES`; returns a function that removes it (for tests). */
 export function registerItemProperty<T>(kind: ItemPropertyKind<T>): () => void {
@@ -130,13 +163,22 @@ export function itemProperties(item: ItemInstance): { kind: ItemPropertyKind; va
   return out;
 }
 
-/** The bundles `item`'s properties add, in registry order (`gearBundles` puts the def's first). */
-export function propertyBundles(ctx: ItemPropertyCtx): Bundle[] {
-  const out: Bundle[] = [];
+/**
+ * The bundles `item`'s properties add, with how each is credited: each present field kind's in
+ * registry order, then each derived property's (`gearBundleParts` puts the def's first).
+ */
+export function propertyBundleParts(ctx: ItemPropertyCtx): ItemBundle[] {
+  const out: ItemBundle[] = [];
   for (const { kind, value } of itemProperties(ctx.item)) {
-    if (kind.bundles !== undefined) out.push(...kind.bundles(ctx, value));
+    if (kind.bundles !== undefined) for (const bundle of kind.bundles(ctx, value)) out.push({ bundle });
   }
+  for (const prop of derived) out.push(...prop.bundles(ctx));
   return out;
+}
+
+/** The bundles `item`'s properties add, in `propertyBundleParts` order, without their credit. */
+export function propertyBundles(ctx: ItemPropertyCtx): Bundle[] {
+  return propertyBundleParts(ctx).map((p) => p.bundle);
 }
 
 /** Whether a viewer knows `item`: no kind's `known` says otherwise. */

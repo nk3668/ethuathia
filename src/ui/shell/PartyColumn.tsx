@@ -193,9 +193,13 @@ function attributeChips(view: MemberStatsView | undefined): AttributeChip[] {
     const source = attributeDefId(attribute);
     const adds: string[] = [];
     for (const stat of STAT_IDS) {
+      // Summed per stat: a wielded weapon's scaling (ETH-082) credits its attribute's damage to it
+      // and takes the unarmed attribute's back off, which nets to nothing on that chip.
+      let total = 0;
       for (const part of view.stats[stat].parts) {
-        if (part.source.id === source && part.op === 'add') adds.push(`${STAT_INFO[stat].label} ${signed(part.value)}${STAT_INFO[stat].percent === true ? '%' : ''}`);
+        if (part.source.id === source && part.op === 'add') total += part.value;
       }
+      if (total !== 0) adds.push(`${STAT_INFO[stat].label} ${signed(total)}${STAT_INFO[stat].percent === true ? '%' : ''}`);
     }
     return {
       attribute,
@@ -366,7 +370,7 @@ function Pack({ id, possessed }: { id: EntityId; possessed: boolean }) {
             <li key={worn.slot} className={styles.packRow}>
               <span>
                 <span className={styles.packSlot}>{EQUIP_SLOT_INFO[worn.slot].label}: </span>
-                <Explain id={worn.def} name={worn.name} />
+                <Explain id={worn.def} name={worn.name} note={worn.scaling} />
               </span>
               {possessed && (
                 <PackAction
@@ -386,7 +390,7 @@ function Pack({ id, possessed }: { id: EntityId; possessed: boolean }) {
           {pack.items.map((item, i) => (
             <li key={`${item.def}-${i}`} className={styles.packRow}>
               <span>
-                <Explain id={item.def} name={item.name} />
+                <Explain id={item.def} name={item.name} note={item.scaling} />
                 {item.qty > 1 && <span className={styles.packQty}> ×{item.qty}</span>}
               </span>
               {possessed && wearable(item.def) && (

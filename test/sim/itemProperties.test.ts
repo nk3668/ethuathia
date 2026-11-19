@@ -106,6 +106,8 @@ describe('a property with a bundle', () => {
 
   it('changes the gear comparison', () => {
     const { state, hero } = setup();
+    // Finesse up to Brawn's 12, so the sword's scaling (ETH-082) changes nothing here.
+    if (hero.stats !== undefined) hero.stats.attributes = { finesse: 2 };
     expect(compareGear(state, hero, edged, { def: HATCHET, qty: 1 })).toBe('better');
     // Plain, the sword beats the hatchet; edged, the hatchet trades accuracy for damage.
     expect(compareGear(state, hero, { def: SWORD, qty: 1 }, { def: HATCHET, qty: 1 })).toBe('better');

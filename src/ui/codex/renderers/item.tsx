@@ -2,9 +2,9 @@
  * Codex view of items (ETH-061): grouped by category, with weight, value and what using one does;
  * for weapons and armor (ETH-043) the slot, base type and stats while worn.
  */
-import { EQUIP_SLOT_INFO, GEAR_TYPE_INFO, isJunk, ITEM_CATEGORIES, ITEM_CATEGORY_INFO, ITEMS, STATUSES } from '../../../content';
+import { attributeDef, EQUIP_SLOT_INFO, GEAR_TYPE_INFO, isJunk, ITEM_CATEGORIES, ITEM_CATEGORY_INFO, ITEMS, STATUSES, UNARMED_ATTRIBUTE } from '../../../content';
 import type { Effect, ItemDef } from '../../../content';
-import { bundleStatsText } from '../../../sim';
+import { bundleStatsText, DAMAGE_FORMULA } from '../../../sim';
 import type { CodexField } from '../types';
 import { defineCodexRenderer } from '../types';
 
@@ -23,6 +23,26 @@ function effectText(effect: Effect): string {
 function usedText(def: ItemDef): string | null {
   const effects = def.bundle?.effects ?? [];
   return effects.length === 0 ? null : effects.map(effectText).join(', ');
+}
+
+/** The attribute a weapon's damage scales with (ETH-082), as a Codex field; nothing for other gear. */
+function scalingFields(def: ItemDef): CodexField[] {
+  const attribute = def.gear === undefined ? undefined : GEAR_TYPE_INFO[def.gear.type].scalesWith;
+  if (attribute === undefined) return [];
+  const name = attributeDef(attribute).name;
+  const unarmed = attributeDef(UNARMED_ATTRIBUTE).name;
+  const rule = `Damage +${DAMAGE_FORMULA.perPoint} per point of ${name} above ${DAMAGE_FORMULA.from}`;
+  return [
+    {
+      label: 'Scales with',
+      value: name,
+      hint:
+        attribute === UNARMED_ATTRIBUTE
+          ? `${rule}, the same as fighting bare-handed.`
+          : `${rule}, in place of ${unarmed}, which bare hands use. Adventurers weigh it by their own ${name} when choosing a weapon.`,
+      key: true,
+    },
+  ];
 }
 
 /** Slot, base type and stats of a weapon, piece of armor or jewelry; nothing for other items. */
@@ -45,6 +65,7 @@ function gearFields(def: ItemDef): CodexField[] {
       hint: 'What it adds to the wearer’s stats while worn. Adventurers put on gear that is at least as good in every stat and better in one.',
       key: true,
     },
+    ...scalingFields(def),
   ];
 }
 

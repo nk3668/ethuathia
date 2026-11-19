@@ -52,12 +52,14 @@ function EntryCard({
   heading,
   fields,
   name,
+  note,
   className,
 }: {
   entry: CodexEntry;
   heading: boolean;
   fields: 'key' | 'all';
   name?: string | undefined;
+  note?: string | undefined;
   className?: string | undefined;
 }) {
   const { def, renderer } = entry;
@@ -83,6 +85,7 @@ function EntryCard({
           ))}
         </dl>
       )}
+      {note !== undefined && <p className={styles.note}>{note}</p>}
     </div>
   );
 }
@@ -95,6 +98,11 @@ export interface ExplainProps {
    * hatchet", ETH-118). Shown as the text (unless `children` is given) and as the card's heading.
    */
   name?: string;
+  /**
+   * A line about this particular thing for this viewer, after the fields: how a weapon's
+   * attribute changes its wielder's damage (ETH-082).
+   */
+  note?: string;
   /** The text shown; defaults to `name`, else the def's name. */
   children?: ReactNode;
 }
@@ -103,12 +111,12 @@ export interface ExplainProps {
  * A content mention with a hover and focus tooltip explaining it. An id no kind knows renders
  * its text (or the id) plainly.
  */
-export function Explain({ id, name, children }: ExplainProps) {
+export function Explain({ id, name, note, children }: ExplainProps) {
   const entry = codexEntry(id);
   const text = children ?? name ?? entry?.def.name ?? id;
   if (entry === undefined) return <>{text}</>;
   return (
-    <Tooltip content={<EntryCard entry={entry} heading fields="key" name={name} />}>
+    <Tooltip content={<EntryCard entry={entry} heading fields="key" name={name} note={note} />}>
       <span tabIndex={0} className={styles.link} data-explain={id}>
         {text}
       </span>

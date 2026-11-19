@@ -36,7 +36,7 @@ More items are added when M1 becomes the current milestone.
 - [x] [ETH-060 Monsters, melee combat and death](ETH-060-monsters-melee-combat.md)
 - [x] [ETH-061 Items on the floor, inventory, pickup and drop, and in-run gold](ETH-061-items-inventory-core.md)
 - [x] [ETH-075 Name the killer in the death log line and the wipe summary](ETH-075-killer-named-death-line.md)
-- [ ] [ETH-082 Each weapon type scales damage off its own attribute](ETH-082-weapon-attribute-scaling.md)
+- [x] [ETH-082 Each weapon type scales damage off its own attribute](ETH-082-weapon-attribute-scaling.md)
 - [ ] [ETH-096 Wands that recharge on each new floor](ETH-096-rechargeable-wands.md)
 - [ ] [ETH-106 Pets that persist and level up](ETH-106-pets-that-level.md)
 - [x] [ETH-111 Ring and neck equipment slots](ETH-111-ring-neck-slots.md)
