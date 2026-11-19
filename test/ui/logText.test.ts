@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SimEventType } from '../../src/sim';
+import type { SimEvent, SimEventType } from '../../src/sim';
 import { COMBAT_LOG_TEXT } from '../../src/ui/shell/logText/combat';
 import { CORE_LOG_TEXT } from '../../src/ui/shell/logText/core';
 import { FLOORS_LOG_TEXT } from '../../src/ui/shell/logText/floors';
@@ -8,7 +8,7 @@ import { QUESTS_LOG_TEXT } from '../../src/ui/shell/logText/quests';
 import { RUN_DOMAIN_LOG_TEXT } from '../../src/ui/shell/logText/run';
 import { STATS_LOG_TEXT } from '../../src/ui/shell/logText/stats';
 import type { LogTextRecord } from '../../src/ui/shell/logText/types';
-import { LOG_TEXT } from '../../src/ui/shell/text';
+import { describe as describeEvent, LOG_TEXT } from '../../src/ui/shell/text';
 
 const DOMAIN_TEXT = [
   CORE_LOG_TEXT,
@@ -97,5 +97,23 @@ describe('log text', () => {
       ' ×2',
       '.',
     ]);
+  });
+
+  it('mentions the first floor type in runStarted when present and omits it for hand-built floors (ETH-079)', () => {
+    type RunStartedEvent = Extract<SimEvent, { type: 'runStarted' }>;
+    const party = [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }];
+    const generated: RunStartedEvent = { type: 'runStarted', turn: 0, party, depth: 10, floorType: 'floor.halls' };
+    expect(RUN_DOMAIN_LOG_TEXT.runStarted.text(generated, () => 'Mira')).toEqual([
+      'Mira enters the dungeon (',
+      { ref: 'floor.halls' },
+      ', 10 floors deep).',
+    ]);
+    expect(describeEvent(generated, () => 'Mira').text).toBe('Mira enters the dungeon (Hewn Halls, 10 floors deep).');
+
+    const handBuilt: RunStartedEvent = { type: 'runStarted', turn: 0, party, depth: 3, floorType: null };
+    expect(RUN_DOMAIN_LOG_TEXT.runStarted.text(handBuilt, () => 'Mira')).toBe('Mira enters the dungeon, 3 floors deep.');
+
+    const singleFloor: RunStartedEvent = { type: 'runStarted', turn: 0, party, depth: 1, floorType: null };
+    expect(RUN_DOMAIN_LOG_TEXT.runStarted.text(singleFloor, () => 'Mira')).toBe('Mira enters the dungeon, 1 floor deep.');
   });
 });

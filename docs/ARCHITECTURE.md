@@ -233,8 +233,9 @@ All in `src/sim/run/`:
   (party ids in the order they fell) and `end` (`null` while running, then
   `RunEnd { outcome, turn, cause, depth }`). Once `end` is set, `step` returns `[]` and changes
   nothing.
-- **Events:** `runStarted { party: { actor, name, classId, raceId }[], depth }` is the first
-  event of the first step (the Codex discovers the party's classes and races from it);
+- **Events:** `runStarted { party: { actor, name, classId, raceId }[], depth, floorType }` is the
+  first event of the first step (the Codex discovers the party's classes, races and first floor
+  type from it, ETH-079);
   `turnedBack { actor | null, reason }`; `fell { actor, name, floor, pos, depth, killer }` when a
   party member's HP reaches 0 by any cause (a highlight; `killer` below); `runEnded { outcome,
   cause, depth }`, always
@@ -690,7 +691,8 @@ What later items build on, all exported from `src/sim/floors/`:
 - **Arrival hook:** the `stairs` action emits `tookStairs` then `floorEntered { actor, floor,
   depth, firstVisit, floorType }`. React to arrivals (depth rewards, contracts, run end at the
   exit) with a run tracker or trigger on `floorEntered`, not by editing the stairs action. The
-  run's first floor gets no `floorEntered`. `floorType` (ETH-064) is the floor type id the floor
+  run's first floor gets no `floorEntered` (the Codex marks its `floorType` `seen` from
+  `runStarted`, ETH-079). `floorType` (ETH-064) is the floor type id the floor
   is built from (`floorTypeOf(state, floor)`), or `null` for a hand-built floor; the Codex marks
   it `seen` from this event.
 - **State:** `state.domains.floors` holds `deepest` and `arrived` (the turn the party first

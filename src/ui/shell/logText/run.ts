@@ -56,7 +56,11 @@ function fellText(e: Extract<RunDomainEvent, { type: 'fell' }>): LogPart[] {
 export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
   runStarted: {
     category: 'system',
-    text: (e) => `${list(e.party.map((m) => m.name))} ${e.party.length === 1 ? 'enters' : 'enter'} the dungeon, ${e.depth} floors deep.`,
+    text: (e) => {
+      const lead = `${list(e.party.map((m) => m.name))} ${e.party.length === 1 ? 'enters' : 'enter'} the dungeon`;
+      const floors = `${e.depth} ${e.depth === 1 ? 'floor' : 'floors'} deep`;
+      return e.floorType === null ? `${lead}, ${floors}.` : [`${lead} (`, mention(e.floorType), `, ${floors}).`];
+    },
   },
   turnedBack: {
     category: 'ai',

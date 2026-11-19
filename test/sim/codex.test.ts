@@ -55,6 +55,22 @@ describe('discovery rules', () => {
     const entered = { type: 'floorEntered', actor: 1, floor: 'd2', depth: 2, firstVisit: true, turn: 9 } as const;
     expect(discoveriesOf({ ...entered, floorType: 'floor.halls' })).toEqual([{ id: 'floor.halls', mark: 'seen' }]);
     expect(discoveriesOf({ ...entered, floorType: null })).toEqual([]);
+    // Starting a run discovers the first floor's type too (ETH-079).
+    const started = {
+      type: 'runStarted' as const,
+      party: [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }],
+      depth: 2,
+      turn: 0,
+    };
+    expect(discoveriesOf({ ...started, floorType: 'floor.halls' })).toEqual([
+      { id: 'class.vanguard', mark: 'seen' },
+      { id: 'race.human', mark: 'seen' },
+      { id: 'floor.halls', mark: 'seen' },
+    ]);
+    expect(discoveriesOf({ ...started, floorType: null })).toEqual([
+      { id: 'class.vanguard', mark: 'seen' },
+      { id: 'race.human', mark: 'seen' },
+    ]);
   });
 });
 
@@ -97,5 +113,12 @@ describe('CODEX_TRACKER', () => {
     for (let i = 0; i < 30; i++) for (const event of step(state, [])) codex = CODEX_TRACKER.reduce(codex, event);
     // The party's class and race are met at the start (`runStarted`), the door when it is opened.
     expect(codex).toEqual({ 'class.vanguard': ['seen'], 'race.human': ['seen'], 'feature.door': ['used'] });
+  });
+
+  it('discovers the first floor type on step 1 for a generated run (ETH-079)', () => {
+    const state = createRun({ party: [{ name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }], depth: 2 }, 3);
+    let codex = CODEX_TRACKER.init();
+    for (const event of step(state, [])) codex = CODEX_TRACKER.reduce(codex, event);
+    expect(codex).toMatchObject({ 'class.vanguard': ['seen'], 'race.human': ['seen'], 'floor.halls': ['seen'] });
   });
 });

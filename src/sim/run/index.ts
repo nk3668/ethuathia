@@ -48,9 +48,9 @@ export * from './requirements';
 export type RunDomainEvent =
   /**
    * The run's first event: who set out (with class and race ids, which the Codex discovers) into
-   * a dungeon `depth` floors deep.
+   * a dungeon `depth` floors deep, starting on a floor of `floorType` (or `null` if hand-built).
    */
-  | { type: 'runStarted'; party: { actor: EntityId; name: string; classId: string; raceId: string }[]; depth: number }
+  | { type: 'runStarted'; party: { actor: EntityId; name: string; classId: string; raceId: string }[]; depth: number; floorType: string | null }
   /** The party turned back for the surface: ordered (`actor` null) or by `actor`'s retreat rule. */
   | { type: 'turnedBack'; actor: EntityId | null; reason: LeavingReason }
   /**
@@ -261,9 +261,12 @@ export const RUN_DOMAIN: SimDomain<RunDomainTypes> = {
   conditions: RUN_DOMAIN_CONDITIONS,
   ruleActions: RUN_DOMAIN_RULE_ACTIONS,
   trackers: [...RUN_DOMAIN_TRACKERS, CODEX_TRACKER, REQUIREMENTS_TRACKER as RunTracker<unknown>, CHRONICLE_TRACKER as RunTracker<unknown>],
-  // The party's classes and races are met when the run starts.
+  // The party's classes and races, and the first floor's type (ETH-079), are met when the run starts.
   discoveries: {
-    runStarted: (e) => e.party.flatMap((m) => [{ id: m.classId, mark: 'seen' as const }, { id: m.raceId, mark: 'seen' as const }]),
+    runStarted: (e) => [
+      ...e.party.flatMap((m) => [{ id: m.classId, mark: 'seen' as const }, { id: m.raceId, mark: 'seen' as const }]),
+      ...(e.floorType === null ? [] : [{ id: e.floorType, mark: 'seen' as const }]),
+    ],
   },
   chronicle: RUN_DOMAIN_CHRONICLE,
   chronicleKinds: [CHRONICLE_FELL, CHRONICLE_EARNINGS_LOST],

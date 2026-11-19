@@ -54,16 +54,22 @@ function runToEnd(state: RunState, cap = 300, commands: (i: number) => Command[]
 const types = (events: SimEvent[]) => events.map((e) => e.type);
 
 describe('run end', () => {
-  it('starts with runStarted, which carries the party for the log and the Codex', () => {
+  it('starts with runStarted, which carries the party and first floor type for the log and the Codex', () => {
     const { state, hero } = setup();
     const events = step(state, []);
     expect(events[0]).toEqual({
       type: 'runStarted',
       party: [{ actor: hero.id, name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' }],
       depth: 3,
+      floorType: null,
       turn: 0,
     });
     expect(types(step(state, []))).not.toContain('runStarted');
+
+    const gen = createRun({ party: [HERO], depth: 2 }, 1);
+    const genEvents = step(gen, []);
+    expect(genEvents[0]).toMatchObject({ type: 'runStarted', depth: 2, floorType: 'floor.halls', turn: 0 });
+    expect(gen.domains.run.trackers['track.codex']).toMatchObject({ 'floor.halls': ['seen'] });
   });
 
   it('goes to the bottom, turns back, climbs out and ends as a retreat when nothing makes it a victory', () => {
