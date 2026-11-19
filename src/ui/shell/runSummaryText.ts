@@ -5,7 +5,7 @@
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
 import { DEITIES, describeMilestoneMet } from '../../content';
-import { favorDeity, favorKey, RENOWN, TROPHIES, WIPE_LOSS_SHARE } from '../../sim';
+import { describeRequirement, favorDeity, favorKey, RENOWN, TROPHIES, WIPE_LOSS_SHARE } from '../../sim';
 import type { ContractRecord, FallenRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
 
 /** Each outcome's heading and icon, so it never rests on color alone. */
@@ -81,7 +81,7 @@ export function unlockLines(profile: Profile, run?: number): UnlockLine[] {
   const unlocks = run === undefined ? latestUnlocks(profile) : profile.milestones.unlocked.filter((u) => u.run === run);
   return unlocks.flatMap((u) => {
     const target = targets.find((t) => t.id === u.id);
-    return target === undefined ? [] : [{ id: u.id, name: target.name, why: describeMilestoneMet(target.unlock) }];
+    return target === undefined ? [] : [{ id: u.id, name: target.name, why: describeMilestoneMet(target.unlock, describeRequirement) }];
   });
 }
 

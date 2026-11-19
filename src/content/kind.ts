@@ -15,12 +15,19 @@ export interface ContentRef {
   /** The `kind` of the registry the id belongs to. */
   readonly kind: string;
   readonly id: string;
+  /**
+   * How the def uses the id, for a target that checks more than existence (`RefTarget.checkRef`):
+   * a requirement's condition carries its params and the requirement's scope (ETH-121).
+   */
+  readonly use?: { readonly params?: unknown; readonly scope?: string };
 }
 
 /** Anything ids can be looked up in: a `Registry` of content or of sim code. */
 export interface RefTarget {
   readonly kind: string;
   has(id: string): boolean;
+  /** Why this use of an id that exists is wrong (bad params, wrong scope), or `null`. */
+  checkRef?(ref: ContentRef): string | null;
 }
 
 export interface ContentKind<T extends Def = Def> {
@@ -98,6 +105,9 @@ export function checkKinds(kinds: readonly ContentKind[], targets: readonly RefT
         problems.push(`${label}: ${ref.path} refers to a ${ref.kind}, but there is no ${ref.kind} registry to check it in`);
       } else if (!target.has(ref.id)) {
         problems.push(`${label}: ${ref.path} refers to unknown ${ref.kind} "${ref.id}"`);
+      } else {
+        const why = target.checkRef?.(ref) ?? null;
+        if (why !== null) problems.push(`${label}: ${ref.path}: ${why}`);
       }
     }
   }

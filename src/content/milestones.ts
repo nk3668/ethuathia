@@ -7,8 +7,15 @@
  * `MilestoneProgress` from the profile, checks milestones in `applyRunResult` and records each
  * unlock. A new milestone kind is one member of `Milestone`, one option in `milestoneSchema`
  * and one case in `milestoneMet` and `describeMilestone`.
+ *
+ * Lifetime totals are checked here against the profile. Anything that has to hold *during* a run
+ * ("carrying a spellbook on floor 10") is a `metInRun` milestone (ETH-121): its run-scope
+ * `Requirement` is watched by the sim's `track.requirements` and counts once some run met it.
  */
 import { z } from 'zod';
+import type { ContentRef } from './kind';
+import { requirementKey, requirementRefs, requirementSchema, wordRequirementByIds } from './requirements';
+import type { Requirement, RequirementWords } from './requirements';
 import { positiveInt } from './schema';
 
 export type Milestone =
@@ -17,7 +24,12 @@ export type Milestone =
   /** `count` runs have ended, however they ended. */
   | { readonly kind: 'finishRuns'; readonly count: number }
   /** `count` runs have ended in victory. */
-  | { readonly kind: 'winRuns'; readonly count: number };
+  | { readonly kind: 'winRuns'; readonly count: number }
+  /**
+   * `requirement` (run scope) held at the end of some step of a run (ETH-121), checked by the
+   * sim's `track.requirements`, which the run's `RunConfig.watchRequirements` asks for.
+   */
+  | { readonly kind: 'metInRun'; readonly requirement: Requirement };
 
 export type MilestoneKind = Milestone['kind'];
 
@@ -25,7 +37,16 @@ export const milestoneSchema: z.ZodType<Milestone> = z.discriminatedUnion('kind'
   z.strictObject({ kind: z.literal('reachDepth'), depth: positiveInt }),
   z.strictObject({ kind: z.literal('finishRuns'), count: positiveInt }),
   z.strictObject({ kind: z.literal('winRuns'), count: positiveInt }),
+  z.strictObject({ kind: z.literal('metInRun'), requirement: requirementSchema }),
 ]);
+
+/**
+ * The content refs a milestone makes, for `ContentKind.refs` of a kind that embeds one: a
+ * `metInRun` requirement's conditions, which must exist, take their params and be run-scope.
+ */
+export function milestoneRefs(path: string, milestone: Milestone): ContentRef[] {
+  return milestone.kind === 'metInRun' ? requirementRefs(`${path}.requirement`, milestone.requirement, 'run') : [];
+}
 
 /** What milestones are checked against: lifetime totals over every finished run. */
 export interface MilestoneProgress {
@@ -35,6 +56,12 @@ export interface MilestoneProgress {
   readonly runs: number;
   /** Runs won. */
   readonly victories: number;
+  /**
+   * The `requirementKey`s of the watched requirements the run being banked met (from its
+   * `RunResult.extras['track.requirements']`); empty between runs. A `metInRun` milestone met
+   * here is recorded as unlocked at once, so it never has to be met again.
+   */
+  readonly metInRun: readonly string[];
 }
 
 /** Whether `progress` meets `milestone`. */
@@ -46,12 +73,20 @@ export function milestoneMet(milestone: Milestone, progress: MilestoneProgress):
       return progress.runs >= milestone.count;
     case 'winRuns':
       return progress.victories >= milestone.count;
+    case 'metInRun':
+      return progress.metInRun.includes(requirementKey(milestone.requirement));
   }
 }
 
-/** The milestone as an instruction, for tooltips and locked panels: "Reach floor 3". */
-export function describeMilestone(milestone: Milestone): string {
+/**
+ * The milestone as an instruction, for tooltips and locked panels: "Reach floor 3". `words` words
+ * a `metInRun` requirement; pass the sim's `describeRequirement` (content can't see the
+ * conditions' own wording, so the default names them by id).
+ */
+export function describeMilestone(milestone: Milestone, words: RequirementWords = wordRequirementByIds): string {
   switch (milestone.kind) {
+    case 'metInRun':
+      return `Achieve in one run: ${words(milestone.requirement)}`;
     case 'reachDepth':
       return `Reach floor ${milestone.depth}`;
     case 'finishRuns':
@@ -61,9 +96,11 @@ export function describeMilestone(milestone: Milestone): string {
   }
 }
 
-/** The milestone as something done, for the run summary: "you reached floor 3". */
-export function describeMilestoneMet(milestone: Milestone): string {
+/** The milestone as something done, for the run summary: "you reached floor 3". `words` as for `describeMilestone`. */
+export function describeMilestoneMet(milestone: Milestone, words: RequirementWords = wordRequirementByIds): string {
   switch (milestone.kind) {
+    case 'metInRun':
+      return `you achieved in one run: ${words(milestone.requirement)}`;
     case 'reachDepth':
       return `you reached floor ${milestone.depth}`;
     case 'finishRuns':
@@ -76,6 +113,8 @@ export function describeMilestoneMet(milestone: Milestone): string {
 /** How far along the player is, in words: "Deepest so far: floor 2". */
 export function describeProgress(milestone: Milestone, progress: MilestoneProgress): string {
   switch (milestone.kind) {
+    case 'metInRun':
+      return milestoneMet(milestone, progress) ? 'Achieved in the last run' : 'Not achieved in a run yet';
     case 'reachDepth':
       return progress.deepestDepth === 0 ? 'No floor reached yet' : `Deepest so far: floor ${progress.deepestDepth}`;
     case 'finishRuns':

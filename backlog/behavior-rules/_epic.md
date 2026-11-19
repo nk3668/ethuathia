@@ -25,4 +25,4 @@ The player shapes how adventurers act by ordering if-then rules, and can see whi
 - `docs/VISUAL-DESIGN.md` §5.1
 
 ## Items
-- [ ] [ETH-121 Shared conditions: run-scope conditions and a Requirement type usable outside rules](ETH-121-shared-conditions-requirements.md)
+- [x] [ETH-121 Shared conditions: run-scope conditions and a Requirement type usable outside rules](ETH-121-shared-conditions-requirements.md)

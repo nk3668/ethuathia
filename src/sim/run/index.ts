@@ -8,15 +8,18 @@
  * - `end.ts`: noticing the end (`settleRun`), its cause, and building the `RunResult`.
  * - `wipeLoss.ts`: the share of the at-risk earnings a wipe loses (ETH-023).
  * - `rules.ts`: `cond.heading_out` and `act.retreat_run`.
+ * - `requirements.ts`: `track.requirements`, the watched run-scope requirements met (ETH-121).
  * - Here: the events, the `retreat` command, the state and snapshot slices and the invariants.
  *
  * Never import `domains.ts` or `index.ts` from this folder.
  */
 import type { Pos } from '../../core';
+import { requirementKey } from '../../content';
+import type { Requirement } from '../../content';
 import type { ActionRecord } from '../actions';
 import type { Killer } from '../combat/death';
 import type { CommandRecord } from '../commands';
-import type { SimDomain, SnapshotCtx } from '../domain';
+import type { RunTracker, SimDomain, SnapshotCtx } from '../domain';
 import { registerInvariant } from '../invariants';
 import { TRACKER_LIST } from '../registries';
 import type { EntityId, FloorId, RunConfig } from '../state';
@@ -26,6 +29,8 @@ import { RUN_OUTCOMES } from './result';
 import type { RewardAmounts, RunOutcome } from './result';
 import { RUN_DOMAIN_CONDITIONS, RUN_DOMAIN_RULE_ACTIONS } from './rules';
 import { CODEX_TRACKER } from './codex';
+import { REQUIREMENTS_TRACKER, REQUIREMENTS_TRACKER_ID, watchedRequirements } from './requirements';
+import type { RequirementsTrackerState } from './requirements';
 import { initTrackers, RUN_DOMAIN_TRACKERS, trackerRewards } from './trackers';
 
 export * from './codex';
@@ -34,6 +39,7 @@ export * from './trackers';
 export * from './end';
 export * from './rules';
 export * from './wipeLoss';
+export * from './requirements';
 
 /** The events this domain emits (bodies, without `turn`). Each has wording in `ui/shell/logText/run.ts`. */
 export type RunDomainEvent =
@@ -103,7 +109,14 @@ export interface RunDomainSnapshot {
 export interface RunDomainParts {}
 
 /** Fields this domain adds to `RunConfig`. */
-export interface RunDomainConfig {}
+export interface RunDomainConfig {
+  /**
+   * Run-scope requirements to watch (ETH-121): `track.requirements` records each one that holds
+   * at the end of some step. Meta's `buildRunConfig` fills it with the `metInRun` milestones
+   * still locked. Leave it out to watch none.
+   */
+  watchRequirements?: readonly Requirement[];
+}
 
 /** This domain's row in `DomainTypes` (`src/sim/domain.ts`). */
 export interface RunDomainTypes {
@@ -169,6 +182,17 @@ registerInvariant('run.trackers', (state) => {
   return problems;
 });
 
+registerInvariant('run.requirements', (state) => {
+  const s = state.domains.run.trackers[REQUIREMENTS_TRACKER_ID] as RequirementsTrackerState | undefined;
+  if (s === undefined) return [];
+  const problems: string[] = [];
+  if (!Array.isArray(s.met)) return ['the requirements tracker has no met list'];
+  const watched = new Set(watchedRequirements(state).map(requirementKey));
+  if (new Set(s.met).size !== s.met.length) problems.push('a requirement is recorded as met twice');
+  for (const key of s.met) if (!watched.has(key)) problems.push(`met requirement ${key} is not watched`);
+  return problems;
+});
+
 registerInvariant('run.end', (state) => {
   const problems: string[] = [];
   const { end, leaving, fallen } = state.domains.run;
@@ -197,7 +221,7 @@ export const RUN_DOMAIN: SimDomain<RunDomainTypes> = {
   snapshot: runDomainSnapshot,
   conditions: RUN_DOMAIN_CONDITIONS,
   ruleActions: RUN_DOMAIN_RULE_ACTIONS,
-  trackers: [...RUN_DOMAIN_TRACKERS, CODEX_TRACKER],
+  trackers: [...RUN_DOMAIN_TRACKERS, CODEX_TRACKER, REQUIREMENTS_TRACKER as RunTracker<unknown>],
   // The party's classes and races are met when the run starts.
   discoveries: {
     runStarted: (e) => e.party.flatMap((m) => [{ id: m.classId, mark: 'seen' as const }, { id: m.raceId, mark: 'seen' as const }]),

@@ -209,6 +209,11 @@ framework (ETH-062, `src/sim/run/trackers.ts`):
    state**, which is how profile slices read tracker output (the `codex` slice reads
    `extras['track.codex']`). The run domain adds `extras['run.end']`, the `RunEnd`.
 
+A tracker may also have `afterStep(s, run)` (ETH-121): run once per step after every tracker
+has folded the step's events, it derives the next state from the run itself, for trackers that
+watch state rather than events (`track.requirements`). It is pure like `reduce`, and
+`projectedRewards` skips it, so currency should be earned from events.
+
 A tracker's state is plain data, part of the run state (saved with it) and must not keep
 references to event objects. The base trackers are `track.depth` (Renown per floor reached below
 the first, `RENOWN_PER_FLOOR` 10), `track.turns` (one Renown per `TURNS_PER_RENOWN` 50 game
@@ -558,7 +563,8 @@ slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061
 (the `growth` part and the `track.xp` tracker state), ETH-024 14 (the quests slice's contracts), ETH-043 15
 (`inventory.equipped`), ETH-110 16 (`growth.gained`, the rolled level-up gains), ETH-111
 17 (the ring and neck slots), ETH-113 18 (`AiMemory.waited`), ETH-066 19 (`ai.possessed`) and
-ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`).
+ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`) and ETH-121 21
+(`RunConfig.watchRequirements` and the `track.requirements` tracker state).
 
 ### Contracts in the run (ETH-024)
 
@@ -824,6 +830,55 @@ a trait or blessing) and `status` (`statuses.ts`, `status.*`, with four first de
 Regenerating, Poisoned, Dazzled; ETH-072 added Keen-eyed and Queasy). ETH-072 added `draught`
 (`draughts.ts`, `draught.*`): the fountain table (Mending, Bright, Brackish and Still water).
 
+### Shared conditions (ETH-121)
+
+One predicate vocabulary for the whole game: the rule conditions in `CONDITIONS`. Data that
+needs "a check" (unlocks, taboos, quirk triggers, building quests) writes a `Requirement` against
+them instead of growing its own predicate language, so the rules editor and data checks share one
+vocabulary.
+
+- **Scope.** `ConditionDef.scope` is `'actor'` (the default: reads the deciding actor, needs an
+  `AiCtx`) or `'run'` (reads the run alone). `RunCtx = { state }`; `AiCtx extends RunCtx` with
+  `actor`. `defineCondition({ scope: 'run', evaluate(ctx: RunCtx, p) })` types the ctx by scope,
+  so a run condition can't read an actor by mistake; an actor condition given a ctx with no actor
+  doesn't hold ("needs an adventurer to check"; `hasActor(ctx)`). Run-scope so far: `cond.always`,
+  `cond.heading_out`, `cond.contracts_complete`, `cond.bottom_floor` (now "a living party member
+  stands on the bottom floor", not the deciding actor's floor) and `cond.at_depth { depth }` (a
+  living party member is on floor `depth` or deeper). A run-scope condition gives the same answer
+  in a rule and in a requirement.
+- **`Requirement`** (`src/content/requirements.ts`, plain data, `requirementSchema`):
+  `{ cond, params? } | { all: Requirement[] } | { any: Requirement[] } | { not: Requirement }`.
+  `RequirementScope` is `'actor' | 'run'`. Content helpers: `requirementLeaves(path, req)`,
+  `requirementRefs(path, req, scope)` (refs of kind `CONDITION_REF_KIND` carrying params and
+  scope in `ContentRef.use`), `requirementKey(req)` (stable JSON, key order ignored) and
+  `wordRequirement(req, words)` ("a, b and c", "a or b", "not a"; nested compounds bracketed).
+- **Sim** (`src/sim/ai/requirements.ts`): `checkRequirement(ctx: RunCtx, req)` returns
+  `{ ok, detail }` (`all` joins its parts' details or gives the first failing one, `any` the first
+  holding one, `not` none; unknown ids don't hold). `describeRequirement(req)` words it from each
+  condition's `describe` ("HP below 30% and not on the bottom floor"); also `describeCondition`,
+  `requirementScope(req)` and `requirementProblems(req, scope)` (unknown ids, bad params, an actor
+  condition in a run requirement, each with its path).
+- **Validation.** A kind that embeds a requirement lists `requirementRefs` in its `refs`.
+  `checkGame` passes `CONDITION_TARGET` (`CONDITIONS` as a `RefTarget` with `checkRef`), so
+  `checkKinds` reports unknown conditions, bad params and an actor condition in a run-scope
+  requirement as content problems. `RefTarget.checkRef(ref)` is the general hook for a target
+  that checks more than existence.
+- **Profile scope.** Lifetime checks stay in the `Milestone` vocabulary; run-level checks reach it
+  only through `{ kind: 'metInRun', requirement }` (run scope; `milestoneRefs` validates it and
+  buildings include it in their refs). `buildRunConfig` puts the locked `metInRun` requirements
+  (`milestoneRequirements(profile)`, one per key) into `RunConfig.watchRequirements`, and
+  `checkRunConfig` runs `requirementProblems(req, 'run')` on them. The run domain's
+  `track.requirements` checks each watched requirement not yet met at the end of every step
+  (`afterStep`) and records its key; its state and extras are `{ met: string[] }`, read with
+  `metRequirements(extras)`. `applyRunResult` calls `unlockMilestones(profile, result)`, whose
+  `MilestoneProgress.metInRun` holds those keys, so the milestone unlocks after that run.
+  `describeMilestone` / `describeMilestoneMet` take the sim's `describeRequirement` as `words`
+  ("Achieve in one run: on floor 3 or deeper"); the default names conditions by id.
+- **For later items:** ETH-114's `condition` objective wraps a `Requirement`; ETH-036 writes
+  unlocks as `metInRun` milestones; ETH-070 writes a taboo as a run requirement that must never
+  hold; ETH-104 checks an actor-scope requirement with an `AiCtx` on an event. A new run-level
+  check is a run-scope condition in its domain's `conditions`, never a new predicate type.
+
 ### Shared systems
 
 Foundations that many later features share. **New features must use or extend these, not build
@@ -840,7 +895,7 @@ the features that use it.
 | Item properties | ETH-118 | built | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling. See "Item properties (ETH-118)" |
 | Adventurer records | ETH-119 | planned | The `adventurers` profile slice: a stable id carried through the run, level, XP, traits, history, status and cause of death: roster, graveyard, recruits, quirks, Mastery, lineage |
 | Run chronicle | ETH-120 | planned | `track.chronicle`: the run's notable moments, durable for the whole run (unlike `simStore`'s `EVENT_BUFFER_SIZE` buffer): Highlights, run summary, epitaphs, ballads, history, time-away |
-| Shared conditions | ETH-121 | planned | Run-scope `CONDITIONS` and a data `Requirement` (all / any / not) checked outside rules, plus the `metInRun` milestone: unlocks, taboos, quirk triggers, building quests |
+| Shared conditions | ETH-121 | built | Run-scope `CONDITIONS` and a data `Requirement` (all / any / not) checked outside rules, plus the `metInRun` milestone: unlocks, taboos, quirk triggers, building quests. See "Shared conditions (ETH-121)" above |
 | Seeded text generator | ETH-122 | planned | Grammar content expanded with a per-purpose seeded RNG that never touches sim streams: names, titles, epitaphs, ballads, backstories |
 | Allied creatures | ETH-123 | planned | A `companion` part for `party`-faction actors outside `state.party`, with follow rules and stairs handling: summons, pets, ghost allies, over-cap recruits, a helped rival party |
 
@@ -1396,6 +1451,7 @@ interface Rule { condition: { id: string; params: unknown }
                  enabled: boolean }
 
 interface ConditionDef extends Def {
+  scope: 'actor' | 'run'                       // ETH-121: run = checkable with RunCtx { state }
   paramSchema: ParamSchema
   evaluate(ctx: AiCtx, params: unknown): { ok: boolean; detail: string }
   describe(params: unknown): string            // "HP below 30%"
@@ -1432,7 +1488,9 @@ As built in `src/sim/ai/` (ETH-009):
 - **Registries live in the sim, not content:** `CONDITIONS` and `RULE_ACTIONS` are `Registry`s
   of code (they read run state), built with `defineCondition` / `defineRuleAction`, which parse
   the rule's `params` before `evaluate`, `resolve` or `describe` see them (`noParams` for none).
-  Ids are `cond.*` and `act.*`. `paramSchema` arrives with the rules editor (M3). Since ETH-055
+  Ids are `cond.*` and `act.*`. Each condition has a `scope` (ETH-121): `actor` conditions read
+  the deciding actor; `run` conditions read only the run, so data `Requirement`s can check them
+  outside rules (Contracts, "Shared conditions"). `paramSchema` arrives with the rules editor (M3). Since ETH-055
   the registries live in `registries.ts` and the hub fills them: the core lists
   (`CORE_CONDITIONS`, `CORE_RULE_ACTIONS`) first, then each domain's (Contracts).
 - **Walking the rules:** the actor's own rules, then `BASELINE_RULES`. A rule is taken if it is
@@ -1472,7 +1530,8 @@ As built in `src/sim/ai/` (ETH-009):
   - `cond.floor_overstayed` holds once the party has been on the floor `floorTurnCap` game
     turns (default `FLOOR_TURN_CAP`, 1000), the safety net: the baseline then heads down
     without exploring further or waiting.
-  - `cond.bottom_floor` holds on the bottom floor, where the baseline, with nothing left to
+  - `cond.bottom_floor` holds while a living party member is on the bottom floor (run-scope since
+    ETH-121; see "Shared conditions"), where the baseline, with nothing left to
     explore, fires `act.retreat_run`: the party turns back, climbs out and the run ends as a
     retreat (ETH-062; a victory once contracts add victory checks).
   - `act.explore` is frontier-based: the goals are tiles the actor could enter (on the party
@@ -1643,15 +1702,16 @@ As built (ETH-063):
   placeholder `doctrine` kind exists so those ids validate. The doctrine item adds the defs
   and reads `isUnlocked(profile, 'doctrine.x')` to offer each one.
 - **Validation:** refs (building, prerequisites, Favor deities, stats against `STAT_REFS`, unlock
-  ids against the registry named by their prefix; `checkGame` also passes `CONDITIONS` and
+  ids against the registry named by their prefix; `checkGame` also passes `CONDITION_TARGET` and
   `RULE_ACTIONS` for Library unlocks), plus `ContentKind.check`, a new optional hook for rules
   spanning several defs: a prerequisite must be in the same building on an earlier tier (which
   rules out cycles), a pick-one group has 2+ nodes on one tier of one building, and no two
   nodes share a cell.
 - **Milestones (ETH-074).** A building may name an `unlock` milestone (`BuildingDef.unlock`);
   without one it is open from the start. The vocabulary is data in `src/content/milestones.ts`:
-  `{ kind: 'reachDepth', depth }`, `{ kind: 'finishRuns', count }`, `{ kind: 'winRuns', count }`,
-  checked by `milestoneMet(m, progress)` against `MilestoneProgress` (`deepestDepth`, `runs`,
+  `{ kind: 'reachDepth', depth }`, `{ kind: 'finishRuns', count }`, `{ kind: 'winRuns', count }`
+  and, since ETH-121, `{ kind: 'metInRun', requirement }` (Contracts, "Shared conditions"),
+  checked by `milestoneMet(m, progress)` against `MilestoneProgress` (`metInRun` keys, `deepestDepth`, `runs`,
   `victories`: lifetime totals from the `history` slice) and worded by `describeMilestone`
   ("Reach floor 3"), `describeMilestoneMet` and `describeProgress`. A new kind is one union
   member, one schema option and one case in each of those. `applyRunResult` ends with

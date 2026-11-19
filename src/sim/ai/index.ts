@@ -17,7 +17,15 @@ export {
 export type { PossessCommand, PossessionCommand, ReleaseCommand } from './possession';
 export { aiPathGrid, followMap, frontier, OCCUPIED_COST, willingToSwap } from './navigate';
 export { ACT_BACK_OFF, ACT_EXPLORE, ACT_WAIT, CORE_RULE_ACTIONS } from './ruleActions';
-export { defineCondition, defineRuleAction, newAiPart, noParams } from './types';
+export {
+  checkRequirement,
+  CONDITION_TARGET,
+  describeCondition,
+  describeRequirement,
+  requirementProblems,
+  requirementScope,
+} from './requirements';
+export { defineCondition, defineRuleAction, hasActor, newAiPart, noParams } from './types';
 export type {
   AiActor,
   AiCtx,
@@ -25,6 +33,7 @@ export type {
   AiPart,
   ConditionDef,
   ConditionResult,
+  ConditionScope,
   DroppedGoal,
   Intent,
   ParamParser,
@@ -34,4 +43,5 @@ export type {
   RuleActionDef,
   RulePart,
   RuleRef,
+  RunCtx,
 } from './types';

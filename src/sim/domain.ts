@@ -89,6 +89,13 @@ export interface RunTracker<S> {
   /** The tracker's next state after `event`. Must not change `state` in place or draw randomness. */
   reduce(state: S, event: SimEvent): S;
   /**
+   * The tracker's next state from the run itself, once the step's events are folded in (ETH-121):
+   * for trackers that watch state rather than events, such as `track.requirements`. Must not
+   * change either state in place or draw randomness. Not used for `projectedRewards`, so a
+   * tracker that earns currency should earn it from events.
+   */
+  afterStep?(state: S, run: RunState): S;
+  /**
    * The at-risk currency this state is worth now (currency id → amount, `RewardAmounts`). Pure.
    * Leave it out for a tracker that earns nothing, such as the Codex.
    */

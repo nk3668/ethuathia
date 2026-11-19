@@ -153,18 +153,63 @@ export const COND_FLOOR_OVERSTAYED = defineCondition({
   describe: () => 'overstayed the floor',
 });
 
-/** True on the bottom floor of the dungeon, which has no stairs down. The baseline turns back there. */
+/**
+ * True while a living party member stands on the bottom floor of the dungeon, which has no stairs
+ * down. The baseline turns back there. A run-scope condition (ETH-121): it reads the party, not
+ * the deciding actor, so a run requirement gives the same answer a rule does.
+ */
 export const COND_BOTTOM_FLOOR = defineCondition({
   id: 'cond.bottom_floor',
   name: 'On the bottom floor',
-  description: 'True on the deepest floor of the dungeon, where there are no stairs further down.',
+  scope: 'run',
+  description:
+    'True while anyone in the party stands on the deepest floor of the dungeon, where there are no stairs further down.',
   parse: noParams,
-  evaluate({ state, actor }) {
-    if (!isBottomFloor(state, actor.floor)) return { ok: false, detail: '' };
-    const depth = floorNode(state, actor.floor).depth;
-    return { ok: true, detail: `on the bottom floor, floor ${depth} of ${dungeonDepth(state)}` };
+  evaluate({ state }) {
+    for (const id of state.party) {
+      const e = state.entities[id];
+      if (e?.actor === undefined || e.actor.hp <= 0 || !isBottomFloor(state, e.floor)) continue;
+      const depth = floorNode(state, e.floor).depth;
+      return { ok: true, detail: `on the bottom floor, floor ${depth} of ${dungeonDepth(state)}` };
+    }
+    return { ok: false, detail: '' };
   },
   describe: () => 'on the bottom floor',
+});
+
+/** `cond.at_depth`'s params: the floor to be on or below (1 is the first floor). */
+export interface AtDepthParams {
+  depth: number;
+}
+
+const parseAtDepth: ParamParser<AtDepthParams> = (raw) => {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return 'Params must be an object with "depth"';
+  const { depth, ...rest } = raw as Record<string, unknown>;
+  if (Object.keys(rest).length > 0) return `Unknown parameter "${Object.keys(rest)[0] as string}"`;
+  if (typeof depth !== 'number' || !Number.isInteger(depth) || depth < 1) return '"depth" must be a whole number of 1 or more';
+  return { depth };
+};
+
+/**
+ * True while a living party member stands on floor `depth` or deeper (ETH-121). Run-scope, so
+ * unlocks can ask for it ("reach floor 10 carrying a spellbook").
+ */
+export const COND_AT_DEPTH = defineCondition({
+  id: 'cond.at_depth',
+  name: 'At depth',
+  scope: 'run',
+  description: 'True while anyone in the party stands on the given floor or a deeper one.',
+  parse: parseAtDepth,
+  evaluate({ state }, { depth }) {
+    let deepest = 0;
+    for (const id of state.party) {
+      const e = state.entities[id];
+      if (e?.actor === undefined || e.actor.hp <= 0) continue;
+      deepest = Math.max(deepest, floorNode(state, e.floor).depth);
+    }
+    return deepest >= depth ? { ok: true, detail: `the party is on floor ${deepest}` } : { ok: false, detail: '' };
+  },
+  describe: ({ depth }) => (depth === 1 ? 'in the dungeon' : `on floor ${depth} or deeper`),
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -274,7 +319,7 @@ export const ACT_GATHER = defineRuleAction({
 });
 
 /** The floors domain's conditions, in registration order. */
-export const FLOORS_CONDITIONS: readonly ConditionDef[] = [COND_FLOOR_OVERSTAYED, COND_BOTTOM_FLOOR];
+export const FLOORS_CONDITIONS: readonly ConditionDef[] = [COND_FLOOR_OVERSTAYED, COND_BOTTOM_FLOOR, COND_AT_DEPTH];
 
 /** The floors domain's rule actions, in registration order. */
 export const FLOORS_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_DESCEND, ACT_GATHER];

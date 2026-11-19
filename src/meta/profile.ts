@@ -39,7 +39,7 @@ export function applyRunResult(profile: Profile, result: RunResult): Profile {
   for (const [key, slice] of SLICE_ENTRIES) {
     if (slice.onRunResult) next[key] = slice.onRunResult(profile[key], result);
   }
-  return unlockMilestones(next as Profile);
+  return unlockMilestones(next as Profile, result);
 }
 
 /**

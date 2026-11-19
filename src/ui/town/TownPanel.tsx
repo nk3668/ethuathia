@@ -2,6 +2,7 @@ import { BUILDINGS, describeMilestone, describeProgress } from '../../content';
 import type { BuildingDef, Milestone } from '../../content';
 import { formatNumber } from '../../core';
 import { lockingMilestone, milestoneProgress, unlockOf } from '../../meta';
+import { describeRequirement } from '../../sim';
 import { Tabs, Tooltip } from '../kit';
 import type { TabItem } from '../kit';
 import { useProfileStore } from '../stores/profileStore';
@@ -23,7 +24,7 @@ export function TownPanel() {
       return {
         id: building.id,
         label: (
-          <Tooltip content={`${building.description} Locked: ${describeMilestone(shut)}.`}>
+          <Tooltip content={`${building.description} Locked: ${describeMilestone(shut, describeRequirement)}.`}>
             <span>
               {building.name}{' '}
               <span aria-hidden="true" className={styles.padlock}>
@@ -87,7 +88,7 @@ function LockedBuilding({ building, milestone }: { building: BuildingDef; milest
       </p>
       <p>{building.description}</p>
       <p>
-        Unlocks when you: <strong>{describeMilestone(milestone)}</strong>
+        Unlocks when you: <strong>{describeMilestone(milestone, describeRequirement)}</strong>
       </p>
       <p className={styles.progress}>{describeProgress(milestone, progress)}</p>
     </div>

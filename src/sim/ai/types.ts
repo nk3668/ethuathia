@@ -124,11 +124,31 @@ export function newAiPart(rules: Rule[] = []): AiPart {
 /** An actor the engine is deciding for. */
 export type AiActor = ActorEntity & { ai: AiPart };
 
-/** What conditions and rule actions get to look at. They must not change the run state. */
-export interface AiCtx {
+/**
+ * What a `run`-scope condition gets to look at (ETH-121): the run alone, with no deciding actor.
+ * The run, a tracker or the meta layer can check one, as well as a rule. Must not change the state.
+ */
+export interface RunCtx {
   readonly state: RunState;
+}
+
+/** What conditions and rule actions get to look at. They must not change the run state. */
+export interface AiCtx extends RunCtx {
   readonly actor: AiActor;
 }
+
+/** Whether `ctx` has a deciding actor, so `actor`-scope conditions can be checked with it. */
+export function hasActor(ctx: RunCtx): ctx is AiCtx {
+  return 'actor' in ctx && (ctx as Partial<AiCtx>).actor !== undefined;
+}
+
+/**
+ * What a condition needs to be checked (ETH-121). An `actor` condition reads the deciding actor
+ * (its HP, its floor), so only a rule or an actor-scope requirement can check it. A `run`
+ * condition reads the run alone (`RunCtx`), so it can also be checked by the run, a tracker or
+ * the meta layer, and gives the same answer whoever asks.
+ */
+export type ConditionScope = 'actor' | 'run';
 
 /** Whether a condition holds, and a readable reason (empty when there is nothing to say). */
 export interface ConditionResult {
@@ -149,10 +169,16 @@ export interface Resolved {
  * tooltip text. Build one with `defineCondition`, which checks the params before `evaluate` runs.
  */
 export interface ConditionDef extends Def {
+  /** What it needs to be checked: a deciding actor (`actor`, the default) or the run alone (`run`). */
+  readonly scope: ConditionScope;
   /** Why `params` are malformed, or `null` if they are fine. */
   check(params: unknown): string | null;
-  /** Whether the condition holds for the actor right now. Changes nothing. */
-  evaluate(ctx: AiCtx, params: unknown): ConditionResult;
+  /**
+   * Whether the condition holds right now: for the actor, or for the run when `scope` is `run`.
+   * An `actor` condition given a `RunCtx` with no actor doesn't hold (a requirement validated
+   * for its scope never does that). Changes nothing.
+   */
+  evaluate(ctx: RunCtx, params: unknown): ConditionResult;
   /** The rule row's text for these params, e.g. "HP below 30%". */
   describe(params: unknown): string;
 }
@@ -191,20 +217,37 @@ interface DefText {
   tags?: string[];
 }
 
-/** Builds a `ConditionDef` whose `evaluate` and `describe` only ever see parsed params. */
+interface ConditionText<P> extends DefText {
+  parse: ParamParser<P>;
+  describe(params: P): string;
+}
+
+/** What an `actor` condition says when checked without an actor. */
+const NEEDS_ACTOR = 'needs an adventurer to check';
+
+/**
+ * Builds a `ConditionDef` whose `evaluate` and `describe` only ever see parsed params. The ctx
+ * `evaluate` gets follows `scope`: a `run` condition sees only the run (`RunCtx`), so it can't
+ * read an actor by mistake; an `actor` condition (the default) sees the deciding actor (`AiCtx`).
+ */
 export function defineCondition<P>(
-  def: DefText & {
-    parse: ParamParser<P>;
-    evaluate(ctx: AiCtx, params: P): ConditionResult;
-    describe(params: P): string;
-  },
+  def: ConditionText<P> &
+    (
+      | { scope: 'run'; evaluate(ctx: RunCtx, params: P): ConditionResult }
+      | { scope?: 'actor'; evaluate(ctx: AiCtx, params: P): ConditionResult }
+    ),
 ): ConditionDef {
-  const { id, name, description, tags = ['condition'], parse, evaluate, describe } = def;
+  const { id, name, description, tags = ['condition'], parse, describe } = def;
+  const evaluate = (ctx: RunCtx, params: P): ConditionResult => {
+    if (def.scope === 'run') return def.evaluate(ctx, params);
+    return hasActor(ctx) ? def.evaluate(ctx, params) : { ok: false, detail: NEEDS_ACTOR };
+  };
   return {
     id,
     name,
     description,
     tags,
+    scope: def.scope ?? 'actor',
     check: (raw) => checkParams(parse, raw),
     evaluate(ctx, raw) {
       const params = parse(raw);

@@ -5,9 +5,15 @@
  * The milestone vocabulary is content (`src/content/milestones.ts`); this module checks it
  * against the profile. `applyRunResult` calls `unlockMilestones` once every slice has taken the
  * run, and the unlocks are recorded in the `milestones` slice with the run that opened them.
+ *
+ * A `metInRun` milestone (ETH-121) is met by something that held during one run: `buildRunConfig`
+ * asks the sim to watch its requirement (`milestoneRequirements`), and `unlockMilestones` reads
+ * which ones the run met from its `RunResult.extras['track.requirements']`.
  */
-import { BUILDINGS, milestoneMet } from '../content';
-import type { Milestone, MilestoneProgress } from '../content';
+import { BUILDINGS, milestoneMet, requirementKey } from '../content';
+import type { Milestone, MilestoneProgress, Requirement } from '../content';
+import { metRequirements } from '../sim';
+import type { RunResult } from '../sim';
 import type { Profile } from './profile';
 import type { MilestoneUnlock } from './slices/milestones';
 
@@ -27,10 +33,30 @@ export function milestoneTargets(): MilestoneTarget[] {
   return targets;
 }
 
-/** The player's lifetime totals that milestones are checked against. */
-export function milestoneProgress(profile: Profile): MilestoneProgress {
+/**
+ * What milestones are checked against: the player's lifetime totals and, while `result` is being
+ * banked, the watched requirements that run met (none without one).
+ */
+export function milestoneProgress(profile: Profile, result?: RunResult): MilestoneProgress {
   const { deepestDepth, runs, victories } = profile.history.totals;
-  return { deepestDepth, runs, victories };
+  return { deepestDepth, runs, victories, metInRun: result === undefined ? [] : metRequirements(result.extras) };
+}
+
+/**
+ * The run-scope requirements of the `metInRun` milestones still locked, once each (by
+ * `requirementKey`), in target order: what `buildRunConfig` asks the run to watch.
+ */
+export function milestoneRequirements(profile: Profile): Requirement[] {
+  const out: Requirement[] = [];
+  const keys = new Set<string>();
+  for (const target of milestoneTargets()) {
+    if (target.unlock.kind !== 'metInRun' || isMilestoneOpen(profile, target.id)) continue;
+    const key = requirementKey(target.unlock.requirement);
+    if (keys.has(key)) continue;
+    keys.add(key);
+    out.push(target.unlock.requirement);
+  }
+  return out;
 }
 
 /** Whether `id` is open: it names no milestone, or its unlock has been recorded. */
@@ -52,10 +78,11 @@ export function unlockOf(profile: Profile, id: string): MilestoneUnlock | undefi
 
 /**
  * Records every target whose milestone is now met and isn't recorded yet, under the run number
- * the history has reached. Returns `profile` itself when nothing new opened. Pure.
+ * the history has reached. `result` is the run just banked, which `metInRun` milestones are
+ * checked against. Returns `profile` itself when nothing new opened. Pure.
  */
-export function unlockMilestones(profile: Profile): Profile {
-  const progress = milestoneProgress(profile);
+export function unlockMilestones(profile: Profile, result?: RunResult): Profile {
+  const progress = milestoneProgress(profile, result);
   const run = Math.max(1, profile.history.totals.runs);
   const added: MilestoneUnlock[] = [];
   for (const target of milestoneTargets()) {
