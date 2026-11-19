@@ -17,6 +17,14 @@ export interface CodexField {
   readonly hint?: string;
   /** Also shown in `Explain` tooltips. Keep it to the two or three fields that matter most. */
   readonly key?: boolean;
+  /** Minimum kills of this entry required before the Codex or `Explain` reveals this row (ETH-091). */
+  readonly minKills?: number;
+}
+
+/** One kill-count threshold for tiered entries such as monsters (ETH-091). */
+export interface CodexKillTier {
+  readonly kills: number;
+  readonly label: string;
 }
 
 export interface CodexRenderer<T extends Def = Def> {
@@ -26,12 +34,16 @@ export interface CodexRenderer<T extends Def = Def> {
   readonly label: string;
   /** Where the section sits in the Codex: lower first. */
   readonly order: number;
-  /** Shown on an undiscovered entry: how one gets discovered. */
+  /** Fallback hint on an undiscovered entry when the def has none of its own. */
   readonly hint?: string;
   /** Every entry counts as discovered (terrain, which anyone sees on the first step). */
   readonly alwaysKnown?: boolean;
   /** Left out of the Codex (but still shown by `Explain`). */
   readonly hidden?: boolean;
+  /** Kill-count tiers for kinds that reveal more as the player slays more of them (ETH-091). */
+  readonly killTiers?: readonly CodexKillTier[];
+  /** Kills required before the entry's full `description` lore replaces its `hint` (ETH-091). */
+  readonly loreKills?: number;
   /** The entry's look. Defaults to the def's own `glyph` field, if it has one. */
   glyph?(def: T): Glyph | undefined;
   /** The subheading the entry is listed under, e.g. a monster's family. */

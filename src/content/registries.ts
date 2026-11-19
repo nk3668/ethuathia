@@ -54,11 +54,47 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
 ];
 
 /**
+ * Content kinds whose definitions can appear undiscovered in the Codex and must carry a non-empty
+ * `hint` (ETH-091). Checked at load time by `checkDefHints` / `checkContent`.
+ */
+export const HINT_REQUIRED_KINDS: ReadonlySet<string> = new Set([
+  'feature',
+  'class',
+  'race',
+  'floor type',
+  'dungeon',
+  'status',
+  'draught',
+  'monster',
+  'template',
+  'item',
+  'contract',
+  'bounty',
+  'omen',
+  'deity',
+  'doctrine',
+]);
+
+/** Checks that every def in `kinds` belonging to `HINT_REQUIRED_KINDS` has a non-empty `hint`. */
+export function checkDefHints(kinds: readonly ContentKind[] = CONTENT_KINDS): string[] {
+  const problems: string[] = [];
+  for (const kind of kinds) {
+    if (!HINT_REQUIRED_KINDS.has(kind.registry.kind)) continue;
+    for (const def of kind.registry.all()) {
+      if (def.hint === undefined || def.hint.trim() === '') {
+        problems.push(`${kind.registry.kind} "${def.id}": hint: must not be empty`);
+      }
+    }
+  }
+  return problems;
+}
+
+/**
  * Every problem with the registered content (see `checkKinds`). `targets` are registries outside
  * content that defs refer to, such as the sim's generation steps.
  */
 export function checkContent(targets: readonly RefTarget[] = []): string[] {
-  return checkKinds(CONTENT_KINDS, targets);
+  return [...checkKinds(CONTENT_KINDS, targets), ...checkDefHints(CONTENT_KINDS)];
 }
 
 /** Throws a `ContentError` listing every problem with the registered content. */

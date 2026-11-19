@@ -128,7 +128,11 @@ describe('attacks', () => {
     rat.actor = { ...(rat.actor as NonNullable<typeof rat.actor>), hp: 1 };
     run(state, 30, () => state.entities[rat.id] === undefined);
     expect(state.entities[rat.id]).toBeUndefined();
-    expect(state.domains.run.trackers['track.kills']).toEqual({ kills: 1, trophies: trophiesForKill(MONSTERS.get('monster.gloam_rat').threat) });
+    expect(state.domains.run.trackers['track.kills']).toEqual({
+      kills: 1,
+      trophies: trophiesForKill(MONSTERS.get('monster.gloam_rat').threat),
+      byMonster: { 'monster.gloam_rat': 1 },
+    });
     expect(state.domains.run.rewards.atRisk.trophies).toBe(trophiesForKill(MONSTERS.get('monster.gloam_rat').threat));
     void hero;
   });
