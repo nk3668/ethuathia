@@ -89,6 +89,10 @@ export interface PartyMemberView {
   maxMp: number;
   /** The rule behind its current goal, shown as its intent; `null` before its first decision. */
   intent: Intent | null;
+  /** True while the player possesses it (ETH-066). */
+  possessed: boolean;
+  /** True when it is possessed and its turn is waiting for the player's command. */
+  awaitingInput: boolean;
 }
 
 export interface Snapshot {
@@ -191,6 +195,8 @@ function memberView(state: RunState, id: EntityId): PartyMemberView[] {
     mp: actor.mp,
     maxMp: statValue(state, e, 'mp'),
     intent: intent ? clonePlain(intent) : null,
+    possessed: e.ai?.possessed === true,
+    awaitingInput: e.ai?.possessed === true && actor.hp > 0 && actor.queued === undefined,
   };
   return [view];
 }

@@ -4,6 +4,7 @@ import type { KeyboardEvent, MouseEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Pos } from '../../core';
 import { ExplainCard } from '../codex/Explain';
+import { possessedId, togglePossession } from '../input/useKeymap';
 import { useMediaQuery } from '../shell/useMediaQuery';
 import { useSimStore } from '../stores/simStore';
 import { useUiStore } from '../stores/uiStore';
@@ -271,9 +272,22 @@ export function MapCanvas() {
     if (member) select(member.id);
   };
 
-  const onKeyDown = (e: KeyboardEvent<HTMLCanvasElement>) => {
-    const step = ARROWS[e.key];
+  /** Possesses the living adventurer on `tile` (ETH-066), or releases them if already possessed. */
+  const possessAt = (tile: Pos | null) => {
     const snap = useSimStore.getState().snapshot;
+    if (!tile || !snap) return;
+    const member = snap.party.find(
+      (m) => m.alive && m.floor === snap.floor.id && m.pos.x === tile.x && m.pos.y === tile.y,
+    );
+    if (!member) return;
+    select(member.id);
+    togglePossession();
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLCanvasElement>) => {
+    const snap = useSimStore.getState().snapshot;
+    // While someone is possessed the arrows move them (the keymap), not the inspect cursor.
+    const step = possessedId(snap) === null ? ARROWS[e.key] : undefined;
     if (step && snap) {
       e.preventDefault();
       pointerRef.current = null;
@@ -299,7 +313,7 @@ export function MapCanvas() {
         tabIndex={0}
         role="application"
         aria-roledescription="map"
-        aria-label={`Dungeon map${depth === null ? '' : `, floor ${depth}`}. Arrow keys inspect tiles; Enter selects an adventurer.`}
+        aria-label={`Dungeon map${depth === null ? '' : `, floor ${depth}`}. Arrow keys inspect tiles; Enter selects an adventurer; double-click one to possess it.`}
         aria-describedby={tooltipOpen ? tooltipId : undefined}
         onPointerMove={(e) => {
           const tile = tileFromPointer(e);
@@ -310,6 +324,7 @@ export function MapCanvas() {
           setHover(null);
         }}
         onClick={(e) => selectAt(tileFromPointer(e))}
+        onDoubleClick={(e) => possessAt(tileFromPointer(e))}
         onKeyDown={onKeyDown}
         onBlur={() => {
           if (pointerRef.current === null) setHover(null);

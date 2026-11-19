@@ -110,6 +110,8 @@ export function followMap(ctx: AiCtx, paths: PathGrid, map: Grid, detail: string
  */
 export function willingToSwap({ actor }: AiCtx, other: Entity): boolean {
   if (actor.actor.faction !== 'party' || other.actor?.faction !== 'party' || other.ai === undefined) return false;
+  // The player moves a possessed adventurer; the AI never pushes it around (ETH-066).
+  if (other.ai.possessed === true) return false;
   const memory = other.ai.memory;
   if (memory.waitingFor === actor.id) return true;
   const intent = memory.intent;

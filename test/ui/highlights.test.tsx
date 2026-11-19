@@ -62,6 +62,8 @@ const SNAPSHOT: Snapshot = {
       mp: 0,
       maxMp: 0,
       intent: null,
+      possessed: false,
+      awaitingInput: false,
     },
   ],
   domains: fixtureDomains(),

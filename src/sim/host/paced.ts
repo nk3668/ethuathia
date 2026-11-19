@@ -7,6 +7,10 @@
  *   time. At `max` each pump steps for up to `MAX_SLICE_MS`, then yields so messages get in.
  * - Updates (a batch of events, then a snapshot) go out at most once per
  *   `SNAPSHOT_INTERVAL_MS`, however many steps ran, so about 30 a second at most.
+ * - While an adventurer is possessed (ETH-066) the run holds at its turn: the step gets nowhere,
+ *   so the runner stops until a message. A `playerAction` for it is answered at once, at any
+ *   speed and even paused: the runner steps until the run holds again (the adventurer has acted
+ *   and everyone before its next turn has too), then sends the update right away.
  */
 import { clonePlain } from '../../core';
 import type { Command } from '../commands';
@@ -25,6 +29,12 @@ export const SNAPSHOT_INTERVAL_MS = 1000 / 30;
 
 /** How long one pump steps for at `max` before yielding. */
 export const MAX_SLICE_MS = 12;
+
+/**
+ * The most steps one possessed adventurer's command runs before the update goes out. The run
+ * holds again within two or three steps; the cap only matters if something keeps it from holding.
+ */
+export const INPUT_STEP_LIMIT = 20;
 
 /** A cap on steps per pump at `max`, in case the clock is coarse or stopped. */
 export const MAX_STEPS_PER_PUMP = 10_000;
@@ -80,6 +90,17 @@ export class PacedRunner {
     if (this.session === null) throw new Error('No run has been started');
     this.session.send(command);
     this.stalled = false;
+    if (command.type === 'playerAction' && command.actor === this.session.possessed()) this.answer(this.session);
+  }
+
+  /**
+   * Runs a possessed adventurer's command now (ETH-066): steps until the run holds for the
+   * player again, the possessed adventurer falls or the run ends, then sends the update.
+   */
+  private answer(session: SimSession): void {
+    for (let n = 0; n < INPUT_STEP_LIMIT && !this.stalled && session.possessed() !== null; n++) this.advance(session);
+    this.resetAnchor();
+    if (this.dirty) this.flush(session);
   }
 
   /**

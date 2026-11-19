@@ -48,6 +48,10 @@ export type CoreEvent =
       floor: FloorId;
       pos: Pos;
     }
+  /** The player took direct control of party member `actor` (ETH-066). */
+  | { type: 'possessed'; actor: EntityId }
+  /** The player handed party member `actor` back to the AI. */
+  | { type: 'released'; actor: EntityId }
   /** A command was ignored. `command` is its `type`, or `"?"` if it had none. Nothing changed. */
   | { type: 'commandRejected'; command: string; reason: string };
 

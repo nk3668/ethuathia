@@ -62,8 +62,12 @@ const press = (overrides: Partial<KeyPress>): KeyPress => ({
 
 describe('keymap', () => {
   it('is one table with each key bound once, covering pause and every running speed', () => {
-    const codes = KEYMAP.map((b) => b.code);
-    expect(new Set(codes).size).toBe(codes.length);
+    // A key may be bound twice only with and without Shift (`.` waits, `>` takes the stairs down).
+    const keys = KEYMAP.map((b) => `${b.code}${b.shift === undefined ? '' : b.shift ? '+shift' : '-shift'}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const binding of KEYMAP.filter((b) => b.shift === undefined)) {
+      expect(KEYMAP.filter((b) => b.code === binding.code)).toHaveLength(1);
+    }
     expect(keysFor({ type: 'togglePause' })).toEqual(['Space']);
     const running = SPEEDS.filter((s) => s !== 0);
     expect(running.map((speed) => keysFor({ type: 'setSpeed', speed }))).toEqual([['1'], ['2'], ['3'], ['4'], ['5']]);

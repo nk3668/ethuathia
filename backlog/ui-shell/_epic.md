@@ -34,7 +34,7 @@ A consistent, readable dark interface: shared tokens and components, the in-run 
 - [x] [ETH-021 Tell the player when the sim stops on an error](ETH-021-show-sim-errors.md)
 - [x] [ETH-047 Highlights feed and optional auto-pause](ETH-047-highlights-auto-pause.md)
 - [x] [ETH-064 Prepare screen and building a run config from the profile](ETH-064-prepare-screen.md)
-- [ ] [ETH-066 Possess an adventurer and play them directly](ETH-066-possession.md)
+- [x] [ETH-066 Possess an adventurer and play them directly](ETH-066-possession.md)
 - [x] [ETH-073 Collapse repeated identical AI trace lines in the log](ETH-073-collapse-repeated-trace-lines.md)
 - [ ] [ETH-077 Show attribute previews in the Prepare screen's class and race selects](ETH-077-prepare-attribute-previews.md)
 - [ ] [ETH-078 Remove the unused empty texts from SidePanel TAB_INFO](ETH-078-remove-unused-tab-empty-texts.md)

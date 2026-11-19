@@ -85,6 +85,8 @@ describe('snapshot', () => {
         mp: 5,
         maxMp: 5,
         intent: null,
+        possessed: false,
+        awaitingInput: false,
       },
     ]);
     step(state, []);

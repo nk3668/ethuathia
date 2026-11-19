@@ -523,7 +523,7 @@ slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061
 (the `item` and `inventory` parts and the items slice), 12 on main after that, ETH-034 13
 (the `growth` part and the `track.xp` tracker state), ETH-024 14 (the quests slice's contracts), ETH-043 15
 (`inventory.equipped`), ETH-110 16 (`growth.gained`, the rolled level-up gains), and ETH-111
-17 (the ring and neck slots).
+17 (the ring and neck slots), ETH-113 18 (`AiMemory.waited`) and ETH-066 19 (`ai.possessed`).
 
 ### Contracts in the run (ETH-024)
 
@@ -1098,6 +1098,11 @@ As built in `src/sim/step.ts` (ETH-004):
   `Decide = (ctx: DecideCtx) => ActionRequest`, where the context holds the state, the actor and
   `emit`. The default is the decision engine, `ruleDecide` (§4); `waitDecide` always waits, for
   tests of the scheduler itself. A queued player action (below) takes the place of one decision.
+- **Possession holds the step (ETH-066):** when a possessed adventurer's turn comes with nothing
+  queued, `step` looks around for it and returns right there, before it or anyone after it acts,
+  and without ticking. The next step carries on from the same place, so the run waits for the
+  player's `playerAction`; nothing else is spent or counted meanwhile (stuck detection never sees
+  it, since the engine isn't asked).
 - **A decision that can't be done never stalls the loop:** it emits `actionFailed` and the
   actor waits, paying the wait cost.
 - **Party members perceive** before deciding and after acting (§3.7).
@@ -1156,7 +1161,10 @@ stamped with the `turn` it happened on; code inside a step records them through 
 function. Commands (`src/sim/commands.ts`) are applied in order before time advances. Because
 they can arrive from a worker or a file, each is checked at run time, and a bad one (unknown
 `type`, missing actor, unknown action) produces a `commandRejected` event and changes nothing; it
-never throws. The only command so far is `playerAction`, which stores the request in the actor's
+never throws. Possession (ETH-066, `ai/possession.ts`) added `possess` (a living adventurer in
+the party; anyone else possessed is released first) and `release`, which emit `possessed` /
+`released`; `CommandDef.apply` now gets `emit` as a third argument for such log events, and
+emits only once the command is accepted. The first command was `playerAction`, which stores the request in the actor's
 `queued` field to run in place of its next decision. The others are added with their features.
 Since ETH-055 each command is a `CommandDef` (`{ type, apply(state, raw) }`, which returns a
 reason or `null` and checks everything before changing anything) in its domain's exhaustive
@@ -1388,6 +1396,17 @@ As built in `src/sim/ai/` (ETH-009):
   - `act.back_off` follows a flee map away from where the actor got stuck, with occupied tiles
     blocked.
   - `act.wait` is marked `idle`.
+- **Possession (ETH-066)** is first in the decision order, ahead of the engine: `AiPart.possessed`
+  (`true` or absent; at most one, a party adventurer, invariant `core.possession`) makes `step`
+  hold at the adventurer's turn until a `playerAction` arrives (§3.3). Any queued player action of
+  a party member is traced as `ruleFired` with `rule: { set: 'player', index: 0 }`, condition
+  `player`, and detail "Your command: attack north" (`describePlayerAction`), which also becomes
+  the intent; the log labels it `player`. Possessing or releasing resets `still`, `waited`,
+  `last` and `waitingFor`, and releasing clears a player intent, so the AI decides afresh the same
+  turn. `willingToSwap` never offers to push a possessed member around. The movement keys send
+  the core `bump { dir }` action, which comes to the first of attack, open door, swap or move
+  that validates (`bumpTarget`); when none does, it fails with the move's reason. Snapshots carry
+  `possessed` and `awaitingInput` on each `PartyMemberView`.
 - **Stuck detection** runs before the walk. Each decision records the actor's floor, position and
   the party's seen-tile count (`memory.last`). After `STUCK_TURNS` (10) decisions in a row with
   none of them changing while the last rule fired was not `idle`, that rule becomes
@@ -1694,7 +1713,11 @@ As built (ETH-010):
   messages get through. Updates go out at most once per `SNAPSHOT_INTERVAL_MS` (1000/30 ms)
   at any speed, and pausing flushes at once. A timed speed that falls more than a second
   behind (throttled timers) starts counting again rather than running a burst. A step that
-  gets nowhere (nobody can act) stops the runner until the next message.
+  gets nowhere (nobody can act) stops the runner until the next message. That is also how a
+  possessed adventurer's hold stops it (ETH-066). A `playerAction` for the possessed adventurer
+  (`SimSession.possessed()`) is answered at once, at any speed and even paused: the runner steps
+  until the run holds again, the adventurer falls or the run ends (at most `INPUT_STEP_LIMIT`, 20
+  steps), then sends the update.
 - **Protocol:** `HostRequest` is `start`, `command`, `setSpeed` or `setView`. `HostMessage` is
   `update` (`{ events, snapshot }`) or `error`. The worker checks each request with
   `readHostRequest`. Commands and configs are checked again where they are used.
@@ -1870,7 +1893,19 @@ As built (ETH-014), in `ui/input/`:
   `cycleSelection(party, selected, step)` in `uiStore.ts`: the next or previous living member in
   party order, wrapping, skipping the dead; with no selection it starts at the first (or last)
   living member, and with nobody alive it changes nothing. `Tab` is never bound, so focus
-  navigation keeps working. Possession (`P`) joins the same table later.
+  navigation keeps working.
+- **Possession (ETH-066):** `P` is `togglePossession`: it possesses the selected living
+  adventurer (or the first living one, which it selects) or releases the possessed one; a
+  double-click on an adventurer on the map and the card's Possess button do the same. Bindings
+  have optional `shift` (must or must not be held), `when: 'possessed'` and `repeat` (holding the
+  key repeats). `POSSESSED_KEYS` only match while a living adventurer is possessed
+  (`bindingFor(event, keymap, possessed)`): WASD with Q/E/Z/C diagonals, the arrows and numpad 1–9
+  send `act { bump }`; `.`, X and numpad 5 wait; G picks up; Shift+`.` (`>`) and Shift+`,` (`<`)
+  take the stairs; F drinks from the fountain underfoot. `act` sends any `ActionRequest` as a
+  `playerAction` through `simStore.send`, so a new player action (use, cast, pray) is one
+  binding or button. While someone is possessed the map leaves the arrows to the keymap instead
+  of moving its inspect cursor. The pack's Equip, Take off and Use buttons send `equip`,
+  `unequip` and `use` the same way.
 - **`useKeymap()`:** listens on `window` while the in-run screen (`AppShell`) is mounted. Focused
   widgets handle keys first (the map's arrows, Enter and Escape, the tabs' and log edge's
   arrows), so a key they mark with `preventDefault` never reaches the keymap. A key the keymap

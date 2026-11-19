@@ -25,6 +25,8 @@ const member = (id: EntityId, name: string, alive: boolean): Snapshot['party'][n
   mp: 0,
   maxMp: 0,
   intent: null,
+  possessed: false,
+  awaitingInput: false,
 });
 
 function snapshotWith(party: Snapshot['party']): Snapshot {

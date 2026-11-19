@@ -1,12 +1,12 @@
 import { useShallow } from 'zustand/react/shallow';
-import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, EQUIP_SLOT_INFO, STATUSES } from '../../content';
+import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, EQUIP_SLOT_INFO, gearSlots, ITEMS, STATUSES } from '../../content';
 import type { AttributeId } from '../../content';
 import { STAT_IDS, STAT_INFO } from '../../sim';
-import type { EntityId, InventoryView, LevelView, MemberStatsView } from '../../sim';
+import type { ActionRequest, EntityId, InventoryView, LevelView, MemberStatsView } from '../../sim';
 import { Explain } from '../codex/Explain';
 import { attributeEffectText, growthLine, xpSourcesText } from '../codex/attributeText';
 import { keyHint } from '../input/keymap';
-import { runKeyAction } from '../input/useKeymap';
+import { runKeyAction, togglePossession } from '../input/useKeymap';
 import { Bar, Button, Card, Panel, Tooltip } from '../kit';
 import { useSimStore } from '../stores/simStore';
 import { useUiStore } from '../stores/uiStore';
@@ -124,6 +124,8 @@ function useMember(id: EntityId) {
         maxMp: m.maxMp,
         intent: m.intent?.detail ?? null,
         rule: m.intent ? ruleLabel(m.intent.rule) : null,
+        possessed: m.possessed,
+        awaitingInput: m.awaitingInput,
       };
     }),
   );
@@ -306,12 +308,34 @@ function XpBar({ id, name }: { id: EntityId; name: string }) {
   );
 }
 
+/** True if the item def `def` can be worn (ETH-043). */
+function wearable(def: string): boolean {
+  return ITEMS.has(def) && gearSlots(ITEMS.get(def)).length > 0;
+}
+
+/** Sends `action` as the possessed adventurer's next move (ETH-066). */
+function act(action: ActionRequest): void {
+  runKeyAction({ type: 'act', action });
+}
+
+/** A small pack button for a possessed adventurer's item actions, with a tooltip saying what it does. */
+function PackAction({ label, hint, onClick }: { label: string; hint: string; onClick(): void }) {
+  return (
+    <Tooltip content={hint}>
+      <Button variant="ghost" className={styles.packAction} onClick={onClick}>
+        {label}
+      </Button>
+    </Tooltip>
+  );
+}
+
 /**
  * The selected member's pack (ETH-061): weight carried against the Carry stat, the party's gold,
  * then one line per stack with an `Explain` tooltip. The selector returns one string, so the list
- * only re-renders when the pack or the gold changes.
+ * only re-renders when the pack or the gold changes. While the member is possessed (ETH-066),
+ * gear gets Equip and Take off buttons and usable items a Use button, each spending its turn.
  */
-function Pack({ id }: { id: EntityId }) {
+function Pack({ id, possessed }: { id: EntityId; possessed: boolean }) {
   const key = useSimStore((s) => {
     const items = s.snapshot?.domains.items;
     const pack = items?.members[id];
@@ -339,9 +363,18 @@ function Pack({ id }: { id: EntityId }) {
       {pack.equipped.length > 0 && (
         <ul className={styles.packList} aria-label="Worn">
           {pack.equipped.map((worn) => (
-            <li key={worn.slot}>
-              <span className={styles.packSlot}>{EQUIP_SLOT_INFO[worn.slot].label}: </span>
-              <Explain id={worn.def}>{contentName(worn.def)}</Explain>
+            <li key={worn.slot} className={styles.packRow}>
+              <span>
+                <span className={styles.packSlot}>{EQUIP_SLOT_INFO[worn.slot].label}: </span>
+                <Explain id={worn.def}>{contentName(worn.def)}</Explain>
+              </span>
+              {possessed && (
+                <PackAction
+                  label="Take off"
+                  hint={`Take off ${contentName(worn.def)} and put it in the pack. Spends the turn.`}
+                  onClick={() => act({ id: 'unequip', slot: worn.slot })}
+                />
+              )}
             </li>
           ))}
         </ul>
@@ -351,14 +384,70 @@ function Pack({ id }: { id: EntityId }) {
       ) : (
         <ul className={styles.packList}>
           {pack.items.map((item, i) => (
-            <li key={`${item.def}-${i}`}>
-              <Explain id={item.def}>{contentName(item.def)}</Explain>
-              {item.qty > 1 && <span className={styles.packQty}> ×{item.qty}</span>}
+            <li key={`${item.def}-${i}`} className={styles.packRow}>
+              <span>
+                <Explain id={item.def}>{contentName(item.def)}</Explain>
+                {item.qty > 1 && <span className={styles.packQty}> ×{item.qty}</span>}
+              </span>
+              {possessed && wearable(item.def) && (
+                <PackAction
+                  label="Equip"
+                  hint={`Put on ${contentName(item.def)}; whatever was worn there goes into the pack. Spends the turn.`}
+                  onClick={() => act({ id: 'equip', index: i })}
+                />
+              )}
+              {possessed && item.usable && (
+                <PackAction
+                  label="Use"
+                  hint={`Use one ${contentName(item.def)}. Spends the turn.`}
+                  onClick={() => act({ id: 'use', index: i })}
+                />
+              )}
             </li>
           ))}
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * Possess or release this adventurer (ETH-066), the same as `P` with it selected or a
+ * double-click on it on the map.
+ */
+function PossessButton({ id, name, possessed }: { id: EntityId; name: string; possessed: boolean }) {
+  const keys = keyHint({ type: 'togglePossession' });
+  return (
+    <Tooltip
+      content={
+        <>
+          <strong>{possessed ? `Release ${name}` : `Possess ${name}`}</strong>
+          <br />
+          {possessed
+            ? 'Hand them back to the AI, which decides their next turn.'
+            : 'Play them yourself: the run waits for your command at each of their turns. Move or attack with WASD (Q/E/Z/C diagonals), the arrows or the numpad; G picks up, > and < take the stairs, F drinks from a fountain underfoot, . or X waits.'}
+          {keys.hint && (
+            <>
+              <br />
+              {keys.hint}
+            </>
+          )}
+        </>
+      }
+    >
+      <Button
+        variant="ghost"
+        className={styles.possess}
+        pressed={possessed}
+        aria-keyshortcuts={keys.keys || undefined}
+        onClick={() => {
+          useUiStore.getState().select(id);
+          togglePossession();
+        }}
+      >
+        {possessed ? 'Release' : 'Possess'}
+      </Button>
+    </Tooltip>
   );
 }
 
@@ -403,7 +492,17 @@ function PartyCard({ id, slot, compact }: PartyCardProps) {
   }
 
   return (
-    <Card selected={selected} className={styles.card} data-dead={!member.alive || undefined}>
+    <Card
+      selected={selected}
+      className={styles.card}
+      data-dead={!member.alive || undefined}
+      data-possessed={(member.alive && member.possessed) || undefined}
+    >
+      {member.alive && member.possessed && (
+        <p className={styles.possessedBanner}>
+          <span aria-hidden="true">◉ </span>Possessed{member.awaitingInput && ' · your move'}
+        </p>
+      )}
       <div className={styles.header}>
         {nameButton}
         <LevelBadge id={id} classId={member.classId} />
@@ -418,11 +517,17 @@ function PartyCard({ id, slot, compact }: PartyCardProps) {
       {member.alive && <XpBar id={id} name={member.name} />}
       {member.alive && <AttributeChips id={id} />}
       {member.alive && <StatusBadges id={id} />}
-      {member.alive && selected && <Pack id={id} />}
+      {member.alive && selected && <Pack id={id} possessed={member.possessed} />}
+      {member.alive && <PossessButton id={id} name={member.name} possessed={member.possessed} />}
       {member.alive ? (
         <p className={styles.intent}>
           <span aria-hidden="true">➤ </span>
-          {member.intent === null ? (
+          {member.awaitingInput ? (
+            <>
+              Waiting for your command
+              <span className={styles.rule}> · player</span>
+            </>
+          ) : member.intent === null ? (
             'Getting ready'
           ) : (
             <>

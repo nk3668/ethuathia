@@ -36,6 +36,8 @@ const member = (id: EntityId, name: string, hp: number): Snapshot['party'][numbe
   mp: 3,
   maxMp: 5,
   intent: { rule: { set: 'baseline', index: 2 }, action: 'explore', detail: 'Explore: heading for unexplored ground' },
+  possessed: false,
+  awaitingInput: false,
 });
 
 const SNAPSHOT: Snapshot = {

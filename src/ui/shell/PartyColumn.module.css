@@ -212,3 +212,35 @@
 .packSlot {
   color: var(--text-muted);
 }
+
+/* A possessed adventurer (ETH-066): a filled accent header, so it never rests on the border color. */
+.card[data-possessed] {
+  border-color: var(--accent);
+}
+
+.possessedBanner {
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) 0;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+}
+
+.possess {
+  justify-self: start;
+  font-size: var(--font-size-label);
+}
+
+.packRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.packAction {
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-label);
+}
