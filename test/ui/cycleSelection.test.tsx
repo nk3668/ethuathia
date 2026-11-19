@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EntityId, Snapshot } from '../../src/sim';
 import { bindingFor, KEYMAP, keysFor } from '../../src/ui/input/keymap';
 import { AppShell } from '../../src/ui/shell/AppShell';
@@ -61,6 +61,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   localStorage.clear();
   delete (window as Partial<Window>).matchMedia;
 });
@@ -97,9 +98,9 @@ describe('cycleSelection', () => {
 });
 
 describe('cycle keys', () => {
-  it('binds ] to next and [ to previous, and leaves Tab to focus navigation', () => {
-    expect(keysFor({ type: 'cycleSelection', step: 1 })).toEqual([']']);
-    expect(keysFor({ type: 'cycleSelection', step: -1 })).toEqual(['[']);
+  it('binds E and ] to next and Q and [ to previous, and leaves Tab to focus navigation', () => {
+    expect(keysFor({ type: 'cycleSelection', step: 1 })).toEqual(['E', ']']);
+    expect(keysFor({ type: 'cycleSelection', step: -1 })).toEqual(['Q', '[']);
     expect(KEYMAP.some((b) => b.code === 'Tab')).toBe(false);
   });
 
@@ -120,6 +121,41 @@ describe('cycle keys', () => {
     expect(partyPanel().getByRole('button', { name: /Mira/ }).getAttribute('aria-pressed')).toBe('false');
   });
 
+  it('selects the next and previous living adventurer with E and Q when unpossessed', () => {
+    useSimStore.getState().receiveSnapshot(snapshotWith(PARTY));
+    render(<AppShell />);
+    key('KeyE');
+    expect(selected()).toBe(1);
+    key('KeyE');
+    expect(selected()).toBe(3);
+    key('KeyE');
+    key('KeyE');
+    expect(selected()).toBe(1);
+    key('KeyQ');
+    expect(selected()).toBe(4);
+    expect(partyPanel().getByRole('button', { name: /Wren/ }).getAttribute('aria-pressed')).toBe('true');
+    expect(partyPanel().getByRole('button', { name: /Mira/ }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('uses Q and E for diagonal bumps while possessed, while [ and ] still cycle', () => {
+    const party = PARTY.map((m) => (m.id === 1 ? { ...m, possessed: true } : m));
+    useSimStore.getState().receiveSnapshot(snapshotWith(party));
+    useUiStore.getState().select(1);
+    const send = vi.spyOn(useSimStore.getState(), 'send');
+    render(<AppShell />);
+
+    key('KeyQ');
+    key('KeyE');
+    expect(selected()).toBe(1);
+    expect(send).toHaveBeenNthCalledWith(1, { type: 'playerAction', actor: 1, action: { id: 'bump', dir: { x: -1, y: -1 } } });
+    expect(send).toHaveBeenNthCalledWith(2, { type: 'playerAction', actor: 1, action: { id: 'bump', dir: { x: 1, y: -1 } } });
+
+    key('BracketRight');
+    expect(selected()).toBe(3);
+    key('BracketLeft');
+    expect(selected()).toBe(1);
+  });
+
   it('does nothing with an empty party, and shows no cycle buttons', () => {
     useSimStore.getState().receiveSnapshot(snapshotWith([]));
     render(<AppShell />);
@@ -137,17 +173,19 @@ describe('cycle keys', () => {
 
   it('ignores the keys while typing in a text field', () => {
     const field = document.createElement('input');
-    expect(bindingFor({ code: 'BracketRight', target: field, ctrlKey: false, altKey: false, metaKey: false, isComposing: false, defaultPrevented: false })).toBeUndefined();
+    for (const code of ['BracketRight', 'BracketLeft', 'KeyQ', 'KeyE']) {
+      expect(bindingFor({ code, target: field, ctrlKey: false, altKey: false, metaKey: false, isComposing: false, defaultPrevented: false })).toBeUndefined();
+    }
   });
 
-  it('has buttons that cycle too, naming their key in aria-keyshortcuts and the tooltip', async () => {
+  it('has buttons that cycle too, naming both keys in aria-keyshortcuts and the tooltip', async () => {
     useSimStore.getState().receiveSnapshot(snapshotWith(PARTY));
     render(<AppShell />);
     const group = within(screen.getByRole('group', { name: 'Cycle adventurers' }));
     const next = group.getByRole('button', { name: 'Next adventurer' });
     const previous = group.getByRole('button', { name: 'Previous adventurer' });
-    expect(next.getAttribute('aria-keyshortcuts')).toBe(']');
-    expect(previous.getAttribute('aria-keyshortcuts')).toBe('[');
+    expect(next.getAttribute('aria-keyshortcuts')).toBe('E ]');
+    expect(previous.getAttribute('aria-keyshortcuts')).toBe('Q [');
 
     const user = userEvent.setup();
     await user.click(next);
@@ -156,7 +194,9 @@ describe('cycle keys', () => {
     expect(selected()).toBe(4);
 
     act(() => previous.focus());
-    expect((await screen.findByRole('tooltip')).textContent).toContain('Key: [');
+    expect((await screen.findByRole('tooltip')).textContent).toContain('Key: Q or [');
+    act(() => next.focus());
+    expect((await screen.findByRole('tooltip')).textContent).toContain('Key: E or ]');
   });
 
   it('keeps Tab for moving focus', async () => {

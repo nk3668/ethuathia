@@ -64,8 +64,8 @@ const CYCLE_TEXT = {
 } as const;
 
 /**
- * Selects the previous or next living adventurer, the same as its key in the keymap (`[` / `]`).
- * The map's follow camera and the selected card move with the selection.
+ * Selects the previous or next living adventurer, the same as its keys in the keymap (`Q`/`[` and
+ * `E`/`]`). The map's follow camera and the selected card move with the selection.
  */
 function CycleButton({ step }: { step: 1 | -1 }) {
   const { glyph, label } = CYCLE_TEXT[step];

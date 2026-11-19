@@ -61,18 +61,24 @@ const press = (code: string, shiftKey = false): KeyPress => ({
 });
 
 describe('possession keys', () => {
-  it('binds P, and WASD, Q/E/Z/C, the arrows and the numpad only while possessed', () => {
+  it('binds P, WASD/Z/C/arrows/numpad only while possessed, and switches Q/E between cycling and diagonals', () => {
     expect(keysFor({ type: 'togglePossession' })).toEqual(['P']);
-    for (const code of ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyZ', 'KeyC', 'ArrowUp', 'Numpad7', 'KeyG']) {
+    for (const code of ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyC', 'ArrowUp', 'Numpad7', 'KeyG']) {
       expect(bindingFor(press(code))).toBeUndefined();
       expect(bindingFor(press(code), undefined, true)?.action.type).toBe('act');
     }
+    expect(bindingFor(press('KeyQ'))?.action).toEqual({ type: 'cycleSelection', step: -1 });
+    expect(bindingFor(press('KeyE'))?.action).toEqual({ type: 'cycleSelection', step: 1 });
     expect(bindingFor(press('KeyQ'), undefined, true)?.action).toEqual({ type: 'act', action: { id: 'bump', dir: { x: -1, y: -1 } } });
+    expect(bindingFor(press('KeyE'), undefined, true)?.action).toEqual({ type: 'act', action: { id: 'bump', dir: { x: 1, y: -1 } } });
     expect(bindingFor(press('KeyC'), undefined, true)?.action).toEqual({ type: 'act', action: { id: 'bump', dir: { x: 1, y: 1 } } });
     expect(bindingFor(press('Period', true), undefined, true)?.action).toEqual({ type: 'act', action: { id: 'stairs', dir: 'down' } });
     expect(bindingFor(press('Comma', true), undefined, true)?.action).toEqual({ type: 'act', action: { id: 'stairs', dir: 'up' } });
     expect(bindingFor(press('Period'), undefined, true)?.action).toEqual({ type: 'act', action: { id: 'wait' } });
-    // The cycle keys keep working while possessed.
+    // `[` and `]` keep cycling in both states.
+    expect(bindingFor(press('BracketLeft'))?.action).toEqual({ type: 'cycleSelection', step: -1 });
+    expect(bindingFor(press('BracketRight'))?.action).toEqual({ type: 'cycleSelection', step: 1 });
+    expect(bindingFor(press('BracketLeft'), undefined, true)?.action).toEqual({ type: 'cycleSelection', step: -1 });
     expect(bindingFor(press('BracketRight'), undefined, true)?.action).toEqual({ type: 'cycleSelection', step: 1 });
   });
 

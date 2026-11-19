@@ -61,12 +61,21 @@ const press = (overrides: Partial<KeyPress>): KeyPress => ({
 });
 
 describe('keymap', () => {
-  it('is one table with each key bound once, covering pause and every running speed', () => {
-    // A key may be bound twice only with and without Shift (`.` waits, `>` takes the stairs down).
-    const keys = KEYMAP.map((b) => `${b.code}${b.shift === undefined ? '' : b.shift ? '+shift' : '-shift'}`);
+  it('is one table with each key bound once per state, covering pause and every running speed', () => {
+    // A key may be bound twice only with non-overlapping Shift or possession contexts (`.` vs `>`, Q/E cycle vs diagonals).
+    const keys = KEYMAP.map(
+      (b) => `${b.code}:${b.when ?? 'always'}${b.shift === undefined ? '' : b.shift ? '+shift' : '-shift'}`,
+    );
     expect(new Set(keys).size).toBe(keys.length);
-    for (const binding of KEYMAP.filter((b) => b.shift === undefined)) {
-      expect(KEYMAP.filter((b) => b.code === binding.code)).toHaveLength(1);
+    for (const possessed of [false, true]) {
+      for (const shiftKey of [false, true]) {
+        const activeCodes = KEYMAP.filter(
+          (b) =>
+            (b.shift === undefined || b.shift === shiftKey) &&
+            ((b.when ?? 'always') === 'always' || (b.when === 'possessed' ? possessed : !possessed)),
+        ).map((b) => b.code);
+        expect(new Set(activeCodes).size).toBe(activeCodes.length);
+      }
     }
     expect(keysFor({ type: 'togglePause' })).toEqual(['Space']);
     const running = SPEEDS.filter((s) => s !== 0);
@@ -75,7 +84,7 @@ describe('keymap', () => {
 
   it('finds the binding for a key press, but not with a modifier held or once another handler took it', () => {
     expect(bindingFor(press({ code: 'Digit3' }))?.action).toEqual({ type: 'setSpeed', speed: 4 });
-    expect(bindingFor(press({ code: 'KeyQ' }))).toBeUndefined();
+    expect(bindingFor(press({ code: 'KeyW' }))).toBeUndefined();
     expect(bindingFor(press({ code: 'Numpad1' }))).toBeUndefined();
     expect(bindingFor(press({ code: 'Digit1', ctrlKey: true }))).toBeUndefined();
     expect(bindingFor(press({ code: 'Digit1', altKey: true }))).toBeUndefined();
