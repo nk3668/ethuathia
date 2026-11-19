@@ -2,7 +2,7 @@
 id: ETH-079
 title: runStarted carries the first floor's type
 type: chore
-status: pending-review
+status: done
 priority: P3
 milestone: M1
 epic: sim-core
@@ -27,3 +27,4 @@ Follow-up from ETH-064: the Codex and the log can then treat the first floor lik
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-19: (default) `runStarted` log text names `floorType` as a Codex mention in parentheses (`"enters the dungeon (Hewn Halls, 10 floors deep)."`) and keeps the plain wording when `floorType` is `null` — alternative: `"enters Hewn Halls, 10 floors deep."` or omitting it from the log line.
 - 2026-11-19: Implemented by Gemini; marked pending-review (PR opened, not merged).
+- 2026-11-19: Reviewed by Claude and merged as PR #71. Done.
