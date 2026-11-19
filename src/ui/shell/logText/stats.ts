@@ -47,7 +47,8 @@ export const STATS_LOG_TEXT: LogTextRecord<StatsEvent> = {
   statusApplied: {
     category: 'combat',
     text: (e, nameOf) =>
-      `${nameOf(e.actor)} is ${nameOfDef(e.status)}${potencyText(e.potency)}${APPLIED_TAIL[e.mode]} (${turnsText(e.turns)}).`,
+      `${nameOf(e.actor)} is ${nameOfDef(e.status)}${potencyText(e.potency)}${APPLIED_TAIL[e.mode]} (${turnsText(e.turns)}` +
+      `${e.resisted === undefined ? '' : `; shrugged off ${turnsText(e.resisted)}`}).`,
   },
   statusExpired: { category: 'combat', text: (e, nameOf) => `${nameOf(e.actor)} is no longer ${nameOfDef(e.status)}.` },
   statusRemoved: { category: 'combat', text: (e, nameOf) => `${nameOf(e.actor)} is cured of ${nameOfDef(e.status)}.` },

@@ -41,6 +41,15 @@ export const ATTRIBUTE_FORMULAS: readonly AttributeFormula[] = [
   { stat: 'evasion', attribute: 'finesse', perPoint: 1, from: ATTRIBUTE_NEUTRAL },
   { stat: 'damage', attribute: 'brawn', perPoint: 0.5, from: ATTRIBUTE_NEUTRAL },
   { stat: 'carry', attribute: 'brawn', perPoint: 2, from: 0 },
+  // Second jobs (ETH-081): the skill chances, in percent, on top of their `STAT_INFO` bases. The
+  // same Vanguard has Identify 15%, Trap spotting 25%, Status resistance 28%, Disarm 50%,
+  // Flee 70% and Force doors 48%.
+  { stat: 'identify', attribute: 'wits', perPoint: 3, from: 0 },
+  { stat: 'trapSpot', attribute: 'wits', perPoint: 3, from: 0 },
+  { stat: 'statusResist', attribute: 'grit', perPoint: 2, from: 0 },
+  { stat: 'disarm', attribute: 'finesse', perPoint: 3, from: 0 },
+  { stat: 'flee', attribute: 'finesse', perPoint: 3, from: 0 },
+  { stat: 'forceDoor', attribute: 'brawn', perPoint: 4, from: 0 },
 ];
 
 /** One contribution to an attribute, for its tooltip: a class, a race, or the actor's own points. */

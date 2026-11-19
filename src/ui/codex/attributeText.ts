@@ -5,12 +5,31 @@
 import { ATTRIBUTE_IDS, attributeDef, expectedGrowth } from '../../content';
 import type { AttributeGrowth, AttributeId } from '../../content';
 import { formulasFor, KILL_SHARE_RADIUS, STAT_INFO, XP_PER_DEPTH, XP_PER_THREAT } from '../../sim';
-
-/** "Max HP +1 per point; Damage +0.5 per point above 10". */
-export function attributeEffectText(attribute: AttributeId): string {
+/** "Max HP +1 per point; Damage +0.5 per point above 10", for the core stats (`skills` false) or the skills. */
+function formulaText(attribute: AttributeId, skills: boolean): string {
   return formulasFor(attribute)
-    .map((f) => `${STAT_INFO[f.stat].label} +${f.perPoint} per point${f.from > 0 ? ` above ${f.from}` : ''}`)
+    .filter((f) => (STAT_INFO[f.stat].percent === true) === skills)
+    .map((f) => `${STAT_INFO[f.stat].label} +${f.perPoint}${skills ? '%' : ''} per point${f.from > 0 ? ` above ${f.from}` : ''}`)
     .join('; ');
+}
+
+/** Every stat an attribute raises, core stats then skills: "Max HP +1 per point; …; Status resistance +2% per point". */
+export function attributeEffectText(attribute: AttributeId): string {
+  return [formulaText(attribute, false), formulaText(attribute, true)].filter((t) => t !== '').join('; ');
+}
+
+/** The attribute's second job (ETH-081), the skill chances it raises: "Identify +3% per point; Trap spotting +3% per point". */
+export function attributeSkillText(attribute: AttributeId): string {
+  return formulaText(attribute, true);
+}
+
+/**
+ * What each skill an attribute raises does, for the Codex: "Identify (base 0%): Chance to work
+ * out …". Read from `STAT_INFO`, so it never drifts from the numbers.
+ */
+export function attributeSkillDetails(attribute: AttributeId): string {
+  const stats = [...new Set(formulasFor(attribute).map((f) => f.stat))].filter((s) => STAT_INFO[s].percent === true);
+  return stats.map((s) => `${STAT_INFO[s].label} (base ${STAT_INFO[s].base}%, at most ${STAT_INFO[s].max ?? 100}%): ${STAT_INFO[s].description}`).join(' ');
 }
 
 /** An attribute's tooltip: its description, then what it raises. */

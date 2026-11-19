@@ -229,7 +229,7 @@ describe('AppShell at desktop width', () => {
     await user.hover(within(chips).getByLabelText('Brawn 12'));
     const tip = await screen.findByRole('tooltip');
     expect(tip.textContent).toContain('From: Vanguard 11, Human +1.');
-    expect(tip.textContent).toContain('Adds: Max HP +6, Damage +1, Carry +24.');
+    expect(tip.textContent).toContain('Adds: Max HP +6, Damage +1, Carry +24, Force doors +48%.');
     // Race and class are Explain links.
     expect(party.querySelector('[data-explain="class.vanguard"]')).not.toBeNull();
     expect(party.querySelector('[data-explain="race.human"]')).not.toBeNull();

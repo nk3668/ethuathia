@@ -200,7 +200,8 @@ export const ACT_FLEE = defineRuleAction({
   name: 'Flee',
   description:
     'Run from the enemies in sight, toward open ground rather than into a corner. Only possible when there is an ' +
-    'escape route: a free step that leaves no enemy next to you. Cornered, the creature does something else.',
+    'escape route: a free step that leaves no enemy next to you. Cornered, the creature does something else. ' +
+    'Breaking away from an enemy next to you takes a Flee check (Finesse); failing it loses the turn.',
   parse: noParams,
   resolve(ctx): Resolved | null {
     const { state, actor } = ctx;
@@ -217,7 +218,9 @@ export const ACT_FLEE = defineRuleAction({
     if (near <= 1 || blockerAt(state, actor, actor.floor, to) !== undefined) return null;
     const door = featureAt(state, actor.floor, to)?.feature;
     if (door?.kind === 'door' && !door.open) return { request: { id: 'openDoor', dir }, detail: `escaping ${listNames(enemies)}; opening a door` };
-    return { request: { id: 'move', dir }, detail: `running from ${listNames(enemies)}` };
+    // `flee`, not `move`: with an enemy adjacent it takes a Flee check (ETH-081, `flee.ts`).
+    const adjacent = enemies.some((e) => distance(e.pos, actor.pos) <= 1);
+    return { request: { id: 'flee', dir }, detail: `${adjacent ? 'breaking away from' : 'running from'} ${listNames(enemies)}` };
   },
   describe: () => 'flee from the enemies in sight',
 });

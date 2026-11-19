@@ -194,7 +194,7 @@ function attributeChips(view: MemberStatsView | undefined): AttributeChip[] {
     const adds: string[] = [];
     for (const stat of STAT_IDS) {
       for (const part of view.stats[stat].parts) {
-        if (part.source.id === source && part.op === 'add') adds.push(`${STAT_INFO[stat].label} ${signed(part.value)}`);
+        if (part.source.id === source && part.op === 'add') adds.push(`${STAT_INFO[stat].label} ${signed(part.value)}${STAT_INFO[stat].percent === true ? '%' : ''}`);
       }
     }
     return {

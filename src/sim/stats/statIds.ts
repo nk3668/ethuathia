@@ -30,7 +30,29 @@ export const STAT_IDS = [
   'sight',
   /** How much can be carried before being overloaded. */
   'carry',
+  // Skills (ETH-081): each attribute's second job, a percent chance or share (`StatInfo.percent`).
+  /** Chance to work out what an unknown item is (Wits). Read by identification (ETH-044). */
+  'identify',
+  /** Chance to notice a hidden trap in view (Wits). Read by traps (ETH-046). */
+  'trapSpot',
+  /** Share of a harmful status's turns shrugged off when it lands (Grit). */
+  'statusResist',
+  /** Chance to disarm a found trap (Finesse). Read by traps (ETH-046). */
+  'disarm',
+  /** Chance to break away from an adjacent enemy when fleeing (Finesse). */
+  'flee',
+  /** Chance to force a stuck or locked door (Brawn). Read once such doors exist. */
+  'forceDoor',
 ] as const;
+
+/** The skill stats (ETH-081): percent chances derived from attributes, shown apart from the core stats. */
+export const SKILL_STAT_IDS = ['identify', 'trapSpot', 'statusResist', 'disarm', 'flee', 'forceDoor'] as const satisfies readonly StatId[];
+
+/** The highest a skill chance can be: some risk always remains. Status resistance caps lower. */
+export const SKILL_CAP = 95;
+
+/** The most of a harmful status's turns Grit can shrug off, in percent. */
+export const STATUS_RESIST_CAP = 75;
 
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -54,6 +76,10 @@ export interface StatInfo {
   readonly base: number;
   /** The lowest value the stat can end at; the final value is clamped to it. */
   readonly min: number;
+  /** The highest value the stat can end at, if it has a ceiling (the skill chances). */
+  readonly max?: number;
+  /** True for a percentage (the skills, ETH-081): displays add "%". */
+  readonly percent?: boolean;
 }
 
 /** How far an actor sees before any modifiers (docs/ARCHITECTURE.md §3.7). */
@@ -70,4 +96,53 @@ export const STAT_INFO: Readonly<Record<StatId, StatInfo>> = {
   speed: { label: 'Speed', description: 'Energy gained each turn: 100 acts once a turn, 200 twice.', base: 0, min: 0 },
   sight: { label: 'Sight', description: 'How many tiles away this actor can see.', base: BASE_SIGHT_RADIUS, min: 0 },
   carry: { label: 'Carry', description: 'How much can be carried before being overloaded.', base: 0, min: 0 },
+  identify: {
+    label: 'Identify',
+    description: 'Chance to work out what an unknown item is by studying it. Rises with Wits.',
+    base: 0,
+    min: 0,
+    max: SKILL_CAP,
+    percent: true,
+  },
+  trapSpot: {
+    label: 'Trap spotting',
+    description: 'Chance to notice a hidden trap in view before stepping on it. Rises with Wits.',
+    base: 10,
+    min: 0,
+    max: SKILL_CAP,
+    percent: true,
+  },
+  statusResist: {
+    label: 'Status resistance',
+    description: `Share of a harmful status's turns shrugged off when it lands (it always lasts at least 1 turn). Rises with Grit, up to ${STATUS_RESIST_CAP}%.`,
+    base: 0,
+    min: 0,
+    max: STATUS_RESIST_CAP,
+    percent: true,
+  },
+  disarm: {
+    label: 'Disarm',
+    description: 'Chance to make a found trap safe. Rises with Finesse.',
+    base: 20,
+    min: 0,
+    max: SKILL_CAP,
+    percent: true,
+  },
+  flee: {
+    label: 'Flee',
+    description:
+      'Chance to break away when fleeing from an enemy next to you. A failed attempt loses the turn. Fleeing from enemies further off always works. Rises with Finesse.',
+    base: 40,
+    min: 0,
+    max: SKILL_CAP,
+    percent: true,
+  },
+  forceDoor: {
+    label: 'Force doors',
+    description: 'Chance to force a stuck or locked door open with one shove. Rises with Brawn.',
+    base: 0,
+    min: 0,
+    max: SKILL_CAP,
+    percent: true,
+  },
 };

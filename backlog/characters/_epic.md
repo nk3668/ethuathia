@@ -34,7 +34,7 @@ Adventurers have attributes, grow by class when they level, have race aptitudes 
 - [ ] [ETH-037 A signature ability per class](ETH-037-class-signature-abilities.md)
 - [ ] [ETH-038 Class-aware AI roles](ETH-038-class-aware-ai-roles.md)
 - [x] [ETH-039 Survey ideas from DCSS and NetHack with clean-room notes](ETH-039-survey-roguelike-ideas.md)
-- [ ] [ETH-081 Give each attribute a second job](ETH-081-attribute-secondary-jobs.md)
+- [x] [ETH-081 Give each attribute a second job](ETH-081-attribute-secondary-jobs.md)
 - [ ] [ETH-087 Class Mastery: a shared level per class that earns tree points](ETH-087-class-mastery-levels.md)
 - [ ] [ETH-088 Class Mastery trees with class-specific nodes](ETH-088-class-mastery-trees.md)
 - [ ] [ETH-104 Personality quirks](ETH-104-personality-quirks.md)

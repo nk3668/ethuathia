@@ -78,7 +78,24 @@ describe('domain modules', () => {
 describe('stat ids', () => {
   it('are the fixed list ETH-057 builds on', () => {
     const ids: readonly StatId[] = STAT_IDS;
-    expect(ids).toEqual(['hp', 'mp', 'accuracy', 'evasion', 'damage', 'armor', 'speed', 'sight', 'carry']);
+    expect(ids).toEqual([
+      'hp',
+      'mp',
+      'accuracy',
+      'evasion',
+      'damage',
+      'armor',
+      'speed',
+      'sight',
+      'carry',
+      // Skills (ETH-081).
+      'identify',
+      'trapSpot',
+      'statusResist',
+      'disarm',
+      'flee',
+      'forceDoor',
+    ]);
     expect(isStatId('sight')).toBe(true);
     expect(isStatId('luck')).toBe(false);
     expect(isStatId(3)).toBe(false);
