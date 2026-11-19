@@ -9,7 +9,10 @@
  * Before walking the rules the engine checks for progress (stuck detection): if the actor has
  * neither moved nor seen anything new for `STUCK_TURNS` decisions while working toward a goal,
  * the rule behind that goal is dropped for `DROP_TURNS` turns, a `stuck` event says so, and the
- * walk picks something else.
+ * walk picks something else. Waiting counts too (ETH-113): if an adventurer spends
+ * `WAIT_STUCK_TURNS` decisions in a row waiting on a rule such as gathering at the stairs while
+ * nobody in the party moves, that rule is dropped the same way, so a blocker nobody deals with
+ * can't hang a run without a trace.
  */
 import { validateAction } from '../actions';
 import type { ActionRequest } from '../actions';
@@ -25,6 +28,16 @@ import type { AiActor, AiCtx, AiMemory, Rule, RuleRef } from './types';
 
 /** Decisions in a row without progress after which the current goal is dropped. */
 export const STUCK_TURNS = 10;
+
+/**
+ * Decisions in a row spent waiting (by an idle rule other than the plain `act.wait`) with nobody
+ * in the party moving, after which that rule is dropped like a goal (ETH-113). Far above
+ * `STUCK_TURNS`: waiting for the party to gather is normal, but not this long with nobody coming.
+ */
+export const WAIT_STUCK_TURNS = 50;
+
+/** The baseline's last resort, "nothing else to do": waiting on it never counts as stuck. */
+const PLAIN_WAIT = 'act.wait';
 
 /** How many turns a dropped goal's rule is skipped for. */
 export const DROP_TURNS = 20;
@@ -101,9 +114,11 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
   const ctx: AiCtx = { state, actor: actor as AiActor };
   const memory = ctx.actor.ai.memory;
   const traced = actor.actor.faction === 'party';
-  if (traced) checkProgress(ctx, emit);
+  const partyStill = traced && checkProgress(ctx, emit);
 
-  const choice = chooseRule(ctx);
+  let choice = chooseRule(ctx);
+  // Waiting too long with nobody moving drops the waiting rule; choose again without it.
+  if (traced && choice !== null && countWaiting(ctx, choice, partyStill, emit)) choice = chooseRule(ctx);
   memory.waitingFor = choice?.waitingFor ?? null;
   if (choice === null) {
     memory.intent = null;
@@ -168,51 +183,78 @@ function isDropped(state: RunState, memory: AiMemory, ref: RuleRef): boolean {
  * with the last decision. After `STUCK_TURNS` decisions in a row with no change while the last
  * rule fired was working toward something (not an idle action like waiting), that rule is
  * dropped for `DROP_TURNS` turns and a `stuck` event is emitted. Also forgets a dropped goal once
- * its time is up.
+ * its time is up. Returns whether nobody in the party has moved since the last decision, for
+ * `countWaiting`.
  */
-function checkProgress({ state, actor }: AiCtx, emit: Emit): void {
+function checkProgress(ctx: AiCtx, emit: Emit): boolean {
+  const { state, actor } = ctx;
   const memory = actor.ai.memory;
   if (memory.dropped !== null && state.turn >= memory.dropped.until) memory.dropped = null;
 
   const seen = explored(state, actor.floor).seen;
+  const party = partyKey(state);
   const last = memory.last;
+  const partyStill = last !== null && last.party === party;
   const same =
     last !== null && last.floor === actor.floor && last.pos.x === actor.pos.x && last.pos.y === actor.pos.y && last.seen === seen;
-  memory.last = { floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y }, seen };
+  memory.last = { floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y }, seen, party };
 
   const intent = memory.intent;
   const idle = intent === null || !RULE_ACTIONS.has(intent.action) || RULE_ACTIONS.get(intent.action).idle;
   if (!same || idle) {
     memory.still = 0;
-    return;
+    return partyStill;
   }
   memory.still++;
-  if (memory.still < STUCK_TURNS) return;
+  if (memory.still < STUCK_TURNS) return partyStill;
 
   memory.still = 0;
-  memory.dropped = {
-    rule: { ...intent.rule },
-    action: intent.action,
-    floor: actor.floor,
-    pos: { x: actor.pos.x, y: actor.pos.y },
-    since: state.turn,
-    until: state.turn + DROP_TURNS,
-  };
   const goal = RULE_ACTIONS.get(intent.action).name;
-  emit({
-    type: 'stuck',
-    actor: actor.id,
-    rule: { ...intent.rule },
-    action: intent.action,
-    turns: STUCK_TURNS,
-    detail: `No progress in ${STUCK_TURNS} turns (${intent.detail}). Giving up on ${goal} for ${DROP_TURNS} turns.`,
-    floor: actor.floor,
-    pos: { x: actor.pos.x, y: actor.pos.y },
-  });
+  const detail = `No progress in ${STUCK_TURNS} turns (${intent.detail}). Giving up on ${goal} for ${DROP_TURNS} turns.`;
+  dropGoal(ctx, intent.rule, intent.action, STUCK_TURNS, detail, emit);
+  return partyStill;
 }
 
 /**
- * AI memory holds sane values: `still` is a count, and `waitingFor` is `null` or another entity's
+ * Stuck detection for waiting (ETH-113). Counts decisions in a row where `choice` waits by an
+ * idle rule other than the plain `act.wait` while nobody in the party has moved since the last
+ * decision (`partyStill`). At `WAIT_STUCK_TURNS` the rule is dropped for `DROP_TURNS` turns, a
+ * `stuck` event says why, and this returns true so the caller chooses again.
+ */
+function countWaiting(ctx: AiCtx, choice: Choice, partyStill: boolean, emit: Emit): boolean {
+  const memory = ctx.actor.ai.memory;
+  const action = RULE_ACTIONS.get(choice.action);
+  const waiting = choice.request.id === 'wait' && action.idle && choice.action !== PLAIN_WAIT;
+  memory.waited = waiting && partyStill ? memory.waited + 1 : 0;
+  if (memory.waited < WAIT_STUCK_TURNS) return false;
+
+  memory.waited = 0;
+  const detail =
+    `Waited ${WAIT_STUCK_TURNS} turns with nobody in the party moving (${choice.detail}). ` +
+    `Giving up on ${action.name} for ${DROP_TURNS} turns.`;
+  dropGoal(ctx, choice.rule, choice.action, WAIT_STUCK_TURNS, detail, emit);
+  return true;
+}
+
+/** Drops `rule` for `DROP_TURNS` turns at the actor's spot and emits the `stuck` event. */
+function dropGoal({ state, actor }: AiCtx, rule: RuleRef, action: string, turns: number, detail: string, emit: Emit): void {
+  const pos = { x: actor.pos.x, y: actor.pos.y };
+  actor.ai.memory.dropped = { rule: { ...rule }, action, floor: actor.floor, pos, since: state.turn, until: state.turn + DROP_TURNS };
+  emit({ type: 'stuck', actor: actor.id, rule: { ...rule }, action, turns, detail, floor: actor.floor, pos: { ...pos } });
+}
+
+/** Where each living party member stands, as a key that changes whenever any of them moves. */
+function partyKey(state: RunState): string {
+  return state.party
+    .map((id) => {
+      const e = state.entities[id];
+      return e?.actor === undefined || e.actor.hp <= 0 ? '-' : `${e.floor}:${e.pos.x},${e.pos.y}`;
+    })
+    .join('|');
+}
+
+/**
+ * AI memory holds sane values: `still` is a count, `waited` a count below `WAIT_STUCK_TURNS`, and `waitingFor` is `null` or another entity's
  * id that was handed out (the entity itself may have left the run since).
  */
 registerInvariant('core.aiMemory', (state) => {
@@ -221,6 +263,9 @@ registerInvariant('core.aiMemory', (state) => {
     const memory = entity.ai?.memory;
     if (memory === undefined) continue;
     if (!Number.isSafeInteger(memory.still) || memory.still < 0) problems.push(`actor ${entity.id} has still ${memory.still}`);
+    if (!Number.isSafeInteger(memory.waited) || memory.waited < 0 || memory.waited >= WAIT_STUCK_TURNS) {
+      problems.push(`actor ${entity.id} has waited ${memory.waited}`);
+    }
     const waitingFor = memory.waitingFor;
     if (waitingFor === null) continue;
     if (!Number.isSafeInteger(waitingFor) || waitingFor < 1 || waitingFor >= state.nextEntityId || waitingFor === entity.id) {

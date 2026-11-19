@@ -10,9 +10,8 @@
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { ConditionDef, Resolved, RuleActionDef } from '../ai/types';
-import { actorAt } from '../entities';
 import { floorNode, stairsTarget } from '../floors/dungeon';
-import { knownStairs, stairsGathering } from '../floors/rules';
+import { knownStairs, partyMemberAt, stairsGathering } from '../floors/rules';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 
 /** True once the party has turned back for the surface. */
@@ -57,7 +56,8 @@ export const ACT_RETREAT_RUN = defineRuleAction({
       const others = gathered.length > 1 ? 'the party is gathered; ' : '';
       return { request: { id: 'stairs', dir: 'up' }, detail: `${others}taking the stairs ${where}` };
     }
-    const occupied = actorAt(state, actor.floor, stairs) !== undefined;
+    // Only a party member on the stairs is waited for (ETH-113): anyone else is walked up to.
+    const occupied = partyMemberAt(state, actor.floor, stairs);
     if (occupied && gathered.some((g) => g.id === actor.id)) return null;
 
     const paths = aiPathGrid(ctx);

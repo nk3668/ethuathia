@@ -72,6 +72,7 @@ export {
   CORE_RULE_ACTIONS,
   ruleDecide,
   STUCK_TURNS,
+  WAIT_STUCK_TURNS,
 } from './ai';
 export type {
   AiActor,
