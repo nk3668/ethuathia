@@ -240,7 +240,7 @@ All in `src/sim/run/`:
 - **Result:** `runResult(state)` builds the `RunResult` (a fresh copy), with
   `extras['run.end']` (the `RunEnd`) and `extras['run.party']` (`PartyMemberRecord[]`:
   `{ actor, name, classId, raceId }` in party order, ETH-048); `runReport(state)` is
-  `{ result, end }`, what the hosts hand the UI. `lost` stays empty until ETH-023.
+  `{ result, end }`, what the hosts hand the UI. `lost` is the wipe loss (ETH-023, "Rewards").
 - **Heading out:** `cond.heading_out` holds once `leaving` is set; `act.retreat_run` climbs to
   the remembered stairs up and takes them once the floor's living members are gathered (at the
   exit, the whole party); `act.gather { dir: 'up' }` waits. `act.descend` and the down
@@ -408,9 +408,25 @@ The reward flow, end to end. The sim never touches banked currency.
 
 ```
 sim events ──► RunTrackers ──► state.domains.run.rewards.atRisk ──► RunResult ──► meta applyRunResult
-(step)         (reduce)        (currency id → amount, this run)     (run end)     (banks it; a wipe loses 25%,
-                                                                                    then the Omen multiplier)
+(step)         (reduce)        (currency id → amount, this run;     (run end:     (banks atRisk − lost)
+                                ×Omen multiplier, ETH-067)           lost = wipe
+                                                                     share)
 ```
+
+**Order: base → ×Omen → −25%.** The Omen multiplier (ETH-067) belongs inside `rewards.atRisk`
+(applied in `reduceTrackers` when the sum is taken), so `RunResult.atRisk` is already
+multiplied and the wipe loss is taken from the multiplied amount. Until Omens exist the
+multiplier is 1.
+
+**The wipe loss (ETH-023, `src/sim/run/wipeLoss.ts`).** `WIPE_LOSS_SHARE` (0.25, final per
+Nate) is the one constant. `wipeLoss(atRisk, outcome)` is empty for a victory or a retreat; on a
+wipe each currency keeps `keptAfterWipe(n)` = ⌊0.75 n⌋ and loses the rest (so the loss rounds
+up, and a lone point is lost). `runResult` sets `RunResult.lost` from it. On a wipe the run end
+also emits `earningsLost { lost, atRisk, share }` just before `runEnded` (only if something is
+lost): since the step's trackers haven't run yet, `end.ts` uses `projectedRewards(state,
+stepEvents + runEnded)` (`trackers.ts`), which folds the step's events into copies of the tracker
+states, so the event's figures equal the `RunResult`'s. No new run state. In-run gold is not
+at-risk currency (ETH-083 converts it).
 
 - Trackers turn events (kills, depth reached, conducts kept) into at-risk amounts. Nothing else
   writes `rewards.atRisk`.
@@ -421,12 +437,12 @@ sim events ──► RunTrackers ──► state.domains.run.rewards.atRisk ─�
   `src/sim/run/result.ts` and is plain data:
   `{ outcome: 'victory' | 'retreat' | 'wipe', atRisk, lost, turns, deepestDepth, extras }`.
   `atRisk` and `lost` are `RewardAmounts` (currency id → amount); `lost` is what a wipe took
-  (ETH-023 fills it; empty otherwise) and is never more than `atRisk`. `extras` is an open
+  (`wipeLoss`; empty otherwise) and is never more than `atRisk`. `extras` is an open
   record that later trackers write under their own id (`'track.kills'`).
 - `applyRunResult` in meta (§6.4) checks the result (it throws a `RangeError` on a malformed
   one), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
   `atRisk - lost`, the `history` slice records the run. The Omen multiplier is not applied yet;
-  ETH-067 adds it, either as a field on `RunResult` or by multiplying in the trackers.
+  ETH-067 adds it inside `rewards.atRisk` (see the order above), so the loss follows it.
 - **Run end to profile (ETH-062):** the host calls `onRunEnded(report)` once, right after the
   update with the run's last events (`HostMessage` `runEnded` from the worker). `App` then calls
   `profileStore.applyRunResult(report.result)`, saves, and opens the run summary through

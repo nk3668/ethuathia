@@ -13,7 +13,8 @@ import type { RunReport } from '../../src/sim';
 import { App } from '../../src/ui/App';
 import { RunSummary } from '../../src/ui/shell/RunSummary';
 import { OptionsPanel } from '../../src/ui/shell/OptionsPanel';
-import { currencyName, currencyRows, epitaph, NO_CAUSE, reportFromRecord, unlockLines } from '../../src/ui/shell/runSummaryText';
+import { currencyName, currencyRows, epitaph, lossNote, NO_CAUSE, reportFromRecord, unlockLines } from '../../src/ui/shell/runSummaryText';
+import { describe as describe_ } from '../../src/ui/shell/text';
 import { StatsPanel } from '../../src/ui/stats/StatsPanel';
 import { resetProfileStore, useProfileStore } from '../../src/ui/stores/profileStore';
 import { AUTO_RESTART_MS, setRunStarter, useRunStore, watchAutoRestart } from '../../src/ui/stores/runStore';
@@ -65,6 +66,12 @@ describe('run summary text', () => {
     expect(currencyName('renown')).toBe('Renown');
     expect(currencyName('favor:deity.unknown')).toBe('Favor (deity.unknown)');
     expect(epitaph(WIPE)).toBe('Here lies Mira, who went no further than floor 3.');
+    expect(lossNote('retreat')).toBe('Everything earned this run is banked: only a wipe loses 25% of a run’s earnings.');
+  });
+
+  it('logs the wipe loss with each currency named (ETH-023)', () => {
+    const lost = { type: 'earningsLost', lost: { renown: 30, trophies: 1 }, atRisk: { renown: 120, trophies: 4 }, share: 0.25, turn: 812 } as const;
+    expect(describe_(lost, () => '?').text).toBe('The wipe costs 25% of this run’s earnings: 30 Renown and 1 Trophies lost. The rest is banked.');
   });
 });
 
@@ -82,6 +89,8 @@ describe('RunSummary', () => {
     expect(dialog.textContent).toContain('Floor 3 reached · 812 turns');
     const rows = within(dialog).getAllByRole('row').map((r) => r.textContent);
     expect(rows).toContain('Renown120−3090');
+    expect(within(dialog).getByRole('columnheader', { name: 'Lost in the wipe' })).toBeTruthy();
+    expect(dialog.textContent).toContain('The wipe took 25% of each currency earned this run');
     expect(within(dialog).getByRole('region', { name: 'Codex discoveries' }).textContent).toContain('Vanguard');
     expect(dialog.textContent).toContain('Here lies Mira');
     // Waiting is the default: no countdown.

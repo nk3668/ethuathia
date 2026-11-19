@@ -198,7 +198,14 @@ As built (ETH-012), in `src/ui/shell/`:
 ### 3.1 Top bar
 
 Currencies on the left, each an icon and a `NumberText` whose tooltip shows this run's earnings
-and the Omen multiplier. Run position in the centre. Pause and speed on the right as a
+and the Omen multiplier.
+
+As built (ETH-023): the list is named "Currencies". Each shows the banked total and, while a run
+goes on, this run's at-risk earnings beside it in `--text-muted` with a `+` (`♛ 156 +111`), so it
+never rests on color; screen readers hear ", at risk: +111". It disappears once the run ends (the
+profile has banked it). The tooltip reads "Renown: 156 banked, +111 at risk", the currency's
+blurb, then what banked and at-risk mean, including that a wipe loses 25% (rounded in the
+player's disfavor). Run position in the centre. Pause and speed on the right as a
 segmented control; the active speed is filled with `--accent` and also marked `aria-pressed`.
 
 As built (ETH-014): `SpeedControls`, a `group` named "Sim speed" of kit `Button`s with shared
@@ -500,8 +507,9 @@ cancelled.
 As built (ETH-062, `ui/shell/RunSummary.tsx`): a `role="dialog"` over a dimmed backdrop, with a
 3px top border in the outcome's color and the outcome icon (★ Victory, ⇡ Retreat, ✝ Wipe) next
 to the heading, so the outcome never rests on color. Then the cause, "Floor N reached · T turns",
-the party with each member's fate, a currency table (Earned, Lost, Banked; the Omen multiplier
-column arrives with ETH-067), "Met this run" (the Codex discoveries), a placeholder epitaph in
+the party with each member's fate, a currency table (Earned, Lost in the wipe, Banked; the Omen
+multiplier column arrives with ETH-067, between Earned and Lost, so it reads base → ×Omen → −25%)
+with a muted line under it saying how the outcome treated the earnings (ETH-023), "Met this run" (the Codex discoveries), a placeholder epitaph in
 italics, the Auto-restart checkbox with "Next run in N s" and Cancel while counting down, and
 the buttons **Review log** (ghost; closes it, Escape too), **Start next run** (secondary; the
 same choices again at once) and **Continue** (primary, focused; to the Prepare screen, ETH-064).

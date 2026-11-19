@@ -73,6 +73,8 @@ export interface SeedResult {
   runTurns?: number;
   /** The run's at-risk currency when it stopped (currency id → amount). */
   atRisk?: RewardAmounts;
+  /** What a wipe took from `atRisk` (ETH-023); empty otherwise. Missing from reports before ETH-023. */
+  lost?: RewardAmounts;
   /** Party turns (steps) run, including the ones spent confirming the party had settled. */
   steps: number;
   /** How much of the last floor reached the party saw. */
@@ -209,6 +211,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     hash: session.stateHash(),
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
     atRisk: { ...snap.domains.run.atRisk },
+    lost: { ...(session.report()?.result.lost ?? {}) },
   };
 }
 

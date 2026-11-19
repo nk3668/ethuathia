@@ -5,8 +5,11 @@ import { formatNumber } from '../../core';
 import { CURRENCY_INFO } from '../../meta';
 import type { CurrencyId } from '../../meta';
 import { Button, Tooltip } from '../kit';
+import { favorDeity, RENOWN, TROPHIES } from '../../sim';
+import type { RewardAmounts } from '../../sim';
 import { totalFavor, useProfileStore } from '../stores/profileStore';
 import { useSimStore } from '../stores/simStore';
+import { WIPE_LOSS_PERCENT } from './runSummaryText';
 import { SpeedControls } from './SpeedControls';
 import styles from './TopBar.module.css';
 
@@ -50,20 +53,36 @@ export function TopBar({ narrow, drawerOpen, drawerId, onToggleDrawer, drawerBut
 
 const BANKED_NOTE = 'Banked: kept safe in town, never at risk.';
 
-/** The profile's banked currencies (meta `Profile.currencies`). */
+const AT_RISK_NOTE =
+  `At risk: earned this run, not banked yet. A victory or a retreat banks all of it; ` +
+  `a wipe loses ${WIPE_LOSS_PERCENT} of it (rounded in your disfavor) and banks the rest.`;
+
+/** No at-risk amounts: before the first snapshot, or once the run has ended (the profile has banked it). */
+const NO_RISK: Readonly<RewardAmounts> = {};
+
+/**
+ * The profile's banked currencies (meta `Profile.currencies`), and beside each, while a run goes
+ * on, what this run has earned so far at risk (`snapshot.domains.run.atRisk`, ETH-023).
+ */
 function Currencies() {
   const renown = useProfileStore((s) => s.profile.currencies.renown);
   const trophies = useProfileStore((s) => s.profile.currencies.trophies);
   const favor = useProfileStore(useShallow((s) => s.profile.currencies.favor));
+  const atRisk = useSimStore((s) => {
+    const run = s.snapshot?.domains.run;
+    return run === undefined || run.end !== null ? NO_RISK : run.atRisk;
+  });
+  const favorAtRisk = Object.entries(atRisk).reduce((sum, [key, n]) => (favorDeity(key) === null ? sum : sum + n), 0);
   return (
-    <ul className={styles.currencies} aria-label="Banked currencies">
-      <Currency icon="♛" id="renown" tone={styles.renown} value={renown} />
-      <Currency icon="☠" id="trophies" tone={styles.trophies} value={trophies} />
+    <ul className={styles.currencies} aria-label="Currencies">
+      <Currency icon="♛" id="renown" tone={styles.renown} value={renown} atRisk={atRisk[RENOWN] ?? 0} />
+      <Currency icon="☠" id="trophies" tone={styles.trophies} value={trophies} atRisk={atRisk[TROPHIES] ?? 0} />
       <Currency
         icon="♨"
         id="favor"
         tone={styles.favor}
         value={totalFavor(favor)}
+        atRisk={favorAtRisk}
         detail={<FavorBreakdown favor={favor} />}
       />
     </ul>
@@ -90,10 +109,12 @@ interface CurrencyProps {
   id: CurrencyId;
   tone: string | undefined;
   value: number;
+  /** This run's earnings so far, not banked yet; 0 shows nothing. */
+  atRisk: number;
   detail?: ReactNode;
 }
 
-function Currency({ icon, id, tone, value, detail }: CurrencyProps) {
+function Currency({ icon, id, tone, value, atRisk, detail }: CurrencyProps) {
   const { name, about } = CURRENCY_INFO[id];
   return (
     <li>
@@ -102,12 +123,15 @@ function Currency({ icon, id, tone, value, detail }: CurrencyProps) {
         content={
           <>
             <strong>
-              {name}: {TURN_FORMAT.format(value)}
+              {name}: {TURN_FORMAT.format(value)} banked
+              {atRisk > 0 && <>, +{TURN_FORMAT.format(atRisk)} at risk</>}
             </strong>
             <br />
             {about}
             <br />
             {BANKED_NOTE}
+            <br />
+            {AT_RISK_NOTE}
             {detail !== undefined && (
               <>
                 <br />
@@ -123,6 +147,11 @@ function Currency({ icon, id, tone, value, detail }: CurrencyProps) {
           </span>
           <span className="sr-only">{name}</span>
           <span className={styles.number}>{formatNumber(value)}</span>
+          {atRisk > 0 && (
+            <span className={styles.atRisk}>
+              <span className="sr-only">, at risk: </span>+{formatNumber(atRisk)}
+            </span>
+          )}
         </span>
       </Tooltip>
     </li>

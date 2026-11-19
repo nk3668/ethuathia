@@ -86,7 +86,7 @@ describe('top bar and Options', () => {
     await bindSaveStore(new MemorySaveStore(), { target: quiet }).loaded;
     act(() => useProfileStore.getState().applyRunResult(run(12_400)));
     render(<TopBar narrow={false} drawerOpen={false} drawerId="d" onToggleDrawer={() => undefined} />);
-    const list = screen.getByRole('list', { name: 'Banked currencies' });
+    const list = screen.getByRole('list', { name: 'Currencies' });
     expect(list.textContent).toBe('♛Renown12.4k☠Trophies0♨Favor2');
   });
 

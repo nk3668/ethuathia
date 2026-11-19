@@ -6,6 +6,7 @@
  * - `trackers.ts`: the tracker framework (every domain's `RunTracker` over the event stream into
  *   `rewards.atRisk` and `RunResult.extras`) and the base trackers (depth, turns, kills, deaths).
  * - `end.ts`: noticing the end (`settleRun`), its cause, and building the `RunResult`.
+ * - `wipeLoss.ts`: the share of the at-risk earnings a wipe loses (ETH-023).
  * - `rules.ts`: `cond.heading_out` and `act.retreat_run`.
  * - Here: the events, the `retreat` command, the state and snapshot slices and the invariants.
  *
@@ -31,6 +32,7 @@ export * from './result';
 export * from './trackers';
 export * from './end';
 export * from './rules';
+export * from './wipeLoss';
 
 /** The events this domain emits (bodies, without `turn`). Each has wording in `ui/shell/logText/run.ts`. */
 export type RunDomainEvent =
@@ -43,6 +45,12 @@ export type RunDomainEvent =
   | { type: 'turnedBack'; actor: EntityId | null; reason: LeavingReason }
   /** A party member's HP reached 0: they fell on `floor` (at `depth`). */
   | { type: 'fell'; actor: EntityId; name: string; floor: FloorId; pos: Pos; depth: number }
+  /**
+   * The party was wiped out: `lost` is what the wipe takes from this run's at-risk earnings
+   * (`share` of each, ETH-023), out of `atRisk`; the rest is banked. Just before `runEnded`, only
+   * on a wipe that loses something. `lost` equals the `RunResult`'s.
+   */
+  | { type: 'earningsLost'; lost: RewardAmounts; atRisk: RewardAmounts; share: number }
   /** The run is over. Always the last event of a run. */
   | { type: 'runEnded'; outcome: RunOutcome; cause: string; depth: number };
 
@@ -62,8 +70,8 @@ export interface RunDomainState {
   /**
    * The reward flow (docs/ARCHITECTURE.md, Contracts, "Rewards"): run trackers reduce sim
    * events into `rewards.atRisk` (`trackers.ts`); at run end it goes into the `RunResult`, and
-   * meta's `applyRunResult` banks it (losing a share on a wipe). The sim never touches banked
-   * currency.
+   * meta's `applyRunResult` banks it, less `RunResult.lost` on a wipe (`wipeLoss`). The sim never
+   * touches banked currency.
    */
   rewards: { atRisk: RewardAmounts };
   /** Whether `runStarted` has been emitted (on the first step). */
