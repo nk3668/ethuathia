@@ -2,7 +2,7 @@
 id: ETH-077
 title: Show attribute previews in the Prepare screen's class and race selects
 type: feature
-status: pending-review
+status: done
 priority: P3
 milestone: M2
 epic: ui-shell
@@ -28,3 +28,4 @@ Readability (`CLAUDE.md` §1). Follow-up from ETH-064.
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-19: Assigned to Antigravity as a low-risk item.
 - 2026-11-19: **Gemini** implemented and marked `pending-review`. `(default)` choices: (a) partial/Random selections show class-only `(before race)`, race-only `(before class)`, or `"Attributes rolled on descent"` when both are Random instead of resolving single-option pools; (b) preview displays base class + race HP/MP without town upgrades (which appear in the adjacent Town panel).
+- 2026-11-19: Reviewed by Claude and merged as PR #74. Done.
