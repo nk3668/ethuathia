@@ -1,9 +1,34 @@
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { formatComparison, makeReport, parseReport, parseReportText } from '../../tools/compare';
+import {
+  formatComparison,
+  makeReport,
+  parseReport,
+  parseReportText,
+  resolveCompareRef,
+  staleBaseWarning,
+} from '../../tools/compare';
 import { formatReport, runSeeds } from '../../tools/headless';
 import type { SeedResult } from '../../tools/headless';
 
 const ARGS = { from: 1, seeds: 3, cap: 1000, party: 1 };
+
+function gitIn(cwd: string, args: string[]): string {
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  if (r.error !== undefined) throw r.error;
+  if (r.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${r.stderr}`);
+  return r.stdout.trim();
+}
+
+function commitFile(cwd: string, name: string, content: string): string {
+  writeFileSync(join(cwd, name), content);
+  gitIn(cwd, ['add', name]);
+  gitIn(cwd, ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', 'commit', '-m', name]);
+  return gitIn(cwd, ['rev-parse', 'HEAD']);
+}
 
 describe('tools/compare', () => {
   it('reads the printed report table back, for refs from before --json', () => {
@@ -40,7 +65,57 @@ describe('tools/compare', () => {
     expect(text).toMatch(/turns, mean \(done\)\s+[\d.]+\s+[\d.]+\s+\+16\.7 \(\+\d+\.\d%\)/);
     expect(text).toContain('1 of 3 shared seeds end differently: 2.');
 
-    const other = formatComparison(before, makeReport({ ...ARGS, cap: 500 }, before.results));
+    const other = formatComparison(before, makeReport({ ...ARGS, cap: 500 }, before.results), undefined, ['Warning: stale base']);
     expect(other).toContain('Warning: the reports ran with different arguments');
+    expect(other).toContain('Warning: stale base');
+  });
+
+  it('formats stale-base warnings only when ahead of the merge base', () => {
+    expect(staleBaseWarning('origin/main', 0, 'abcdef1234567')).toBeNull();
+    expect(staleBaseWarning('origin/main', 1, 'abcdef1234567')).toBe(
+      'Warning: origin/main is 1 commit ahead of merge-base abcdef1, so hash diffs may include changes from origin/main. Rebase onto origin/main or run with --compare merge-base.',
+    );
+    expect(staleBaseWarning('origin/main', 3, 'abcdef1234567')).toContain('origin/main is 3 commits ahead of merge-base abcdef1');
+  });
+
+  it('warns when the compare ref moved since the branch was cut, and resolves --compare merge-base', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'eth-compare-'));
+    try {
+      gitIn(dir, ['init']);
+      gitIn(dir, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
+      const shaA = commitFile(dir, 'a.txt', 'a');
+      gitIn(dir, ['checkout', '-b', 'feat']);
+      commitFile(dir, 'b.txt', 'b');
+      gitIn(dir, ['checkout', 'main']);
+      commitFile(dir, 'c.txt', 'c');
+      const shaD = commitFile(dir, 'd.txt', 'd');
+      gitIn(dir, ['checkout', 'feat']);
+
+      const staleMain = resolveCompareRef('main', dir);
+      expect(staleMain).toMatchObject({ ref: 'main', sha: shaD, label: 'main', mergeBase: shaA, ahead: 2 });
+      expect(staleMain.warning).toContain(`main is 2 commits ahead of merge-base ${shaA.slice(0, 7)}`);
+      expect(staleMain.warning).toContain('Rebase onto main or run with --compare merge-base');
+
+      expect(resolveCompareRef('merge-base', dir)).toEqual({
+        ref: 'merge-base',
+        sha: shaA,
+        label: 'merge-base',
+        baseRef: 'main',
+        mergeBase: shaA,
+        ahead: 0,
+        warning: null,
+      });
+
+      gitIn(dir, ['update-ref', 'refs/remotes/origin/main', shaD]);
+      const staleOrigin = resolveCompareRef('origin/main', dir);
+      expect(staleOrigin.ahead).toBe(2);
+      expect(staleOrigin.warning).toContain('origin/main is 2 commits ahead');
+      expect(resolveCompareRef('merge-base', dir)).toMatchObject({ sha: shaA, baseRef: 'origin/main', ahead: 0, warning: null });
+
+      gitIn(dir, ['checkout', 'main']);
+      expect(resolveCompareRef('origin/main', dir)).toMatchObject({ sha: shaD, ahead: 0, warning: null });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

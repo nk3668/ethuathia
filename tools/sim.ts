@@ -6,7 +6,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import { formatComparison, makeReport, parseReport, runRef } from './compare';
+import { formatComparison, makeReport, parseReport, resolveCompareRef, runRef } from './compare';
 import type { SimReport } from './compare';
 import { formatReport, headlessParty, parseSimArgs, runSeeds, USAGE } from './headless';
 import type { SimArgs } from './headless';
@@ -26,14 +26,24 @@ function main(argv: readonly string[]): number {
 
   let before: SimReport | null = null;
   let label = 'before';
+  const warnings: string[] = [];
   try {
     if (args.baseline !== null) {
       before = parseReport(readFileSync(args.baseline, 'utf8'), args.baseline);
       label = 'baseline';
     } else if (args.compare !== null) {
-      console.log(`Running the same seeds on ${args.compare} for the baseline...`);
-      before = runRef(args.compare, args);
-      label = args.compare;
+      const resolved = resolveCompareRef(args.compare);
+      if (resolved.warning !== null) {
+        console.warn(resolved.warning);
+        warnings.push(resolved.warning);
+      }
+      const target =
+        resolved.baseRef !== null
+          ? `${resolved.label} (${resolved.sha.slice(0, 7)}, with ${resolved.baseRef})`
+          : resolved.label;
+      console.log(`Running the same seeds on ${target} for the baseline...`);
+      before = runRef(resolved, args);
+      label = resolved.label;
     }
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
@@ -57,7 +67,7 @@ function main(argv: readonly string[]): number {
   }
   if (before !== null) {
     console.log(`\nComparison (${label} -> this checkout):\n`);
-    console.log(formatComparison(before, report, { before: label, after: 'this' }));
+    console.log(formatComparison(before, report, { before: label, after: 'this' }, warnings));
   }
   return 0;
 }
