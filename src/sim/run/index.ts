@@ -14,6 +14,7 @@
  */
 import type { Pos } from '../../core';
 import type { ActionRecord } from '../actions';
+import type { Killer } from '../combat/death';
 import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx } from '../domain';
 import { registerInvariant } from '../invariants';
@@ -43,8 +44,11 @@ export type RunDomainEvent =
   | { type: 'runStarted'; party: { actor: EntityId; name: string; classId: string; raceId: string }[]; depth: number }
   /** The party turned back for the surface: ordered (`actor` null) or by `actor`'s retreat rule. */
   | { type: 'turnedBack'; actor: EntityId | null; reason: LeavingReason }
-  /** A party member's HP reached 0: they fell on `floor` (at `depth`). */
-  | { type: 'fell'; actor: EntityId; name: string; floor: FloorId; pos: Pos; depth: number }
+  /**
+   * A party member's HP reached 0: they fell on `floor` (at `depth`), struck down by `killer`
+   * (ETH-075: a monster, a status and who inflicted it, …), or `null` when nothing is known.
+   */
+  | { type: 'fell'; actor: EntityId; name: string; floor: FloorId; pos: Pos; depth: number; killer: Killer | null }
   /**
    * The party was wiped out: `lost` is what the wipe takes from this run's at-risk earnings
    * (`share` of each, ETH-023), out of `atRisk`; the rest is banked. Just before `runEnded`, only

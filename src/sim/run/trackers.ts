@@ -11,6 +11,8 @@
  * 3. At run end, `trackerExtras` gives each tracker's `extras(state)` (default: its state) for
  *    `RunResult.extras[id]`.
  */
+import { deathPredicate } from '../combat/death';
+import type { Killer } from '../combat/death';
 import type { RunTracker } from '../domain';
 import type { SimEvent } from '../events';
 import { TRACKER_LIST } from '../registries';
@@ -140,14 +142,25 @@ export interface FallenRecord {
   name: string;
   depth: number;
   turn: number;
+  /** What struck them down (ETH-075), or `null` when nothing is known. */
+  killer: Killer | null;
+  /** How they died, as the run summary words it: "was slain by a slate hound" (`deathPredicate`). */
+  how: string;
 }
 
-/** `track.deaths`: who fell, where and when, from the run domain's `fell` events. */
+/** `track.deaths`: who fell, where, when and to what, from the run domain's `fell` events. */
 export const DEATHS_TRACKER: RunTracker<{ fallen: FallenRecord[] }> = {
   id: 'track.deaths',
   init: () => ({ fallen: [] }),
   reduce: (s, e) =>
-    e.type === 'fell' ? { fallen: [...s.fallen, { actor: e.actor, name: e.name, depth: e.depth, turn: e.turn }] } : s,
+    e.type === 'fell'
+      ? {
+          fallen: [
+            ...s.fallen,
+            { actor: e.actor, name: e.name, depth: e.depth, turn: e.turn, killer: e.killer, how: deathPredicate(e.killer) },
+          ],
+        }
+      : s,
 };
 
 /** The run domain's trackers, in the order they run. */

@@ -226,8 +226,9 @@ All in `src/sim/run/`:
   nothing.
 - **Events:** `runStarted { party: { actor, name, classId, raceId }[], depth }` is the first
   event of the first step (the Codex discovers the party's classes and races from it);
-  `turnedBack { actor | null, reason }`; `fell { actor, name, floor, pos, depth }` when a party
-  member's HP reaches 0 by any cause (a highlight); `runEnded { outcome, cause, depth }`, always
+  `turnedBack { actor | null, reason }`; `fell { actor, name, floor, pos, depth, killer }` when a
+  party member's HP reaches 0 by any cause (a highlight; `killer` below); `runEnded { outcome,
+  cause, depth }`, always
   a run's last event. The floors domain's stairs action emits `leftDungeon { actor, party,
   floor, pos }` when the party walks out of the first floor's up stairs, which are refused unless
   every living member is gathered there (`stairsGathering`).
@@ -239,6 +240,16 @@ All in `src/sim/run/`:
   into `VICTORY_CHECKS`. A `VictoryCheck` is `{ id, check(state) → { applies, met, detail } }`.
   Contracts add `victory.contracts` (ETH-024, "Contracts in the run"); a run without contracts
   has no check that applies, so walking out is a retreat.
+- **Killer (ETH-075):** `fell.killer` is a `Killer` (`src/sim/combat/death.ts`) or `null` when
+  nothing is known: `{ kind: 'monster' | 'adventurer' | 'status' | 'trap' | 'other', id, def,
+  name, ranged?, bolt?, source? }`. `killerOf(state, victim, events, from)` reads it from the
+  stretch of events in which the member fell: the `killed` blow (with `ranged` for a bolt), else
+  the last `damaged` effect, a status naming its inflicter (`source`) from `ActiveStatus.by`.
+  `deathPredicate(killer, tense)` words it ("was slain by a slate hound", "died poisoned by a
+  mire toad", "fell") and `deathLine(name, killer, depth, tense)` makes the whole clause, used by
+  the log line ("Mira is slain by a slate hound on floor 4."), the wipe's cause and the run
+  summary. `track.deaths`' `FallenRecord` carries `killer` and `how` (the past predicate); the
+  history keeps `fell.how`. The run chronicle (ETH-120) should read `killer` from `fell`.
 - **Result:** `runResult(state)` builds the `RunResult` (a fresh copy), with
   `extras['run.end']` (the `RunEnd`) and `extras['run.party']` (`PartyMemberRecord[]`:
   `{ actor, name, classId, raceId }` in party order, ETH-048); `runReport(state)` is
@@ -271,7 +282,7 @@ All in `src/sim/run/`:
   harmful status) and leaves the run. A party member at 0 HP stays in the state at 0 HP, off the
   schedule and taking up no tile (`isStanding`); the run domain reports it (`fell`) and ends the
   run as a wipe when nobody is left. A blow that kills emits `killed { killer, victim, byParty,
-  threat }`, which `track.kills` turns into Trophies. `isPartyWiped(state)` agrees with the run
+  threat, ranged? }`, which `track.kills` turns into Trophies. `isPartyWiped(state)` agrees with the run
   domain's wipe check.
 - **Recovery:** an adventurer with no enemy next to them gets 1 HP back every
   `RECOVERY_INTERVAL` turns (`recovered`, quiet in the log).
@@ -443,7 +454,10 @@ The API every later item uses (ETH-057, §2.2):
   `trigger.turn_end` and ticks statuses.
 - **Statuses** are content (`STATUSES`, `status.*`): `{ bundle, stacking, group?, maxStacks?,
   harmful, glyph }`. `applyStatus(state, entity, statusId, turns, emit, potency = 1)`,
-  `removeStatus(state, entity, statusId, emit)` (the whole group), `tickStatuses`. Stacking is per
+  `removeStatus(state, entity, statusId, emit)` (the whole group), `tickStatuses`. `applyStatus`
+  takes an optional last `by` (the inflicter): a `to: 'other'` effect passes the bundle's holder
+  and `aid` the supporter, stored as `ActiveStatus.by { id, def }` (the latest applier on a
+  merge), so a death from the status names its source (ETH-075; invariant `stats.statusSources`). Stacking is per
   def, within a `group` (default: its id): `refresh` keeps one, with the longer remaining turns
   and the stronger potency (the stronger status replaces the weaker); `extend` keeps one and adds
   the turns; `stack` keeps separate instances up to `maxStacks` (default 5), then replaces the
@@ -542,8 +556,9 @@ then 5 on main, ETH-058 (the floors slice) 6, ETH-057 7 (the `stats` part; `spee
 slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061 11
 (the `item` and `inventory` parts and the items slice), 12 on main after that, ETH-034 13
 (the `growth` part and the `track.xp` tracker state), ETH-024 14 (the quests slice's contracts), ETH-043 15
-(`inventory.equipped`), ETH-110 16 (`growth.gained`, the rolled level-up gains), and ETH-111
-17 (the ring and neck slots), ETH-113 18 (`AiMemory.waited`) and ETH-066 19 (`ai.possessed`).
+(`inventory.equipped`), ETH-110 16 (`growth.gained`, the rolled level-up gains), ETH-111
+17 (the ring and neck slots), ETH-113 18 (`AiMemory.waited`), ETH-066 19 (`ai.possessed`) and
+ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`).
 
 ### Contracts in the run (ETH-024)
 

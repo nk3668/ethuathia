@@ -84,7 +84,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
                 return (
                   <li key={m.id}>
                     <span className={styles.name}>{m.name}</span>{' '}
-                    {fell === undefined ? <span>survived</span> : <span className={styles.fell}>✝ fell on floor {fell.depth}</span>}
+                    {fell === undefined ? <span>survived</span> : <span className={styles.fell}>✝ {fell.how} on floor {fell.depth}</span>}
                   </li>
                 );
               })}

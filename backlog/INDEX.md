@@ -72,7 +72,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-044](combat-items/ETH-044-enchant-curse-identify.md) | Enchantment, blessed and cursed items, and identification | combat-items | M1 | P2 | idea | M |
 | [ETH-066](ui-shell/ETH-066-possession.md) | Possess an adventurer and play them directly | ui-shell | M1 | P2 | done | M |
 | [ETH-073](ui-shell/ETH-073-collapse-repeated-trace-lines.md) | Collapse repeated identical AI trace lines in the log | ui-shell | M1 | P2 | done | S |
-| [ETH-075](combat-items/ETH-075-killer-named-death-line.md) | Name the killer in the death log line and the wipe summary | combat-items | M1 | P2 | ready | S |
+| [ETH-075](combat-items/ETH-075-killer-named-death-line.md) | Name the killer in the death log line and the wipe summary | combat-items | M1 | P2 | done | S |
 | [ETH-080](tools-balance/ETH-080-monster-balance-pass.md) | Monster and loot balance pass at the end of M1 | tools-balance | M1 | P2 | idea | M |
 | [ETH-081](characters/ETH-081-attribute-secondary-jobs.md) | Give each attribute a second job | characters | M1 | P2 | done | M |
 | [ETH-090](ui-shell/ETH-090-qe-cycle-keys.md) | Q and E cycle adventurers; diagonals while possessed | ui-shell | M1 | P2 | ready | S |

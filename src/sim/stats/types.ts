@@ -27,6 +27,18 @@ export interface ActiveStatus {
   remaining: number;
   /** Scales the status's modifiers and trigger amounts. 1 is the def as written. */
   potency: number;
+  /**
+   * Who inflicted it, if someone else did (a monster's hit trigger, an ally's bolster): the latest
+   * applier's id and def, so a death from it can name its source (ETH-075). Left out when unknown
+   * or self-inflicted.
+   */
+  by?: StatusSource;
+}
+
+/** The actor that inflicted a status: `ActiveStatus.by`. The def outlives the entity. */
+export interface StatusSource {
+  id: EntityId;
+  def: string;
 }
 
 /**

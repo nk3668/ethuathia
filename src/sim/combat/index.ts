@@ -95,7 +95,8 @@ export type CombatEvent =
   /**
    * `killer` struck the blow that killed `victim` (a monster or a party member). `byParty` is
    * true when the killer is in the party; `threat` is the victim's monster threat (0 for
-   * adventurers). The kills tracker credits Trophies from it.
+   * adventurers). The kills tracker credits Trophies from it. `ranged` is set when the blow was
+   * a bolt (ETH-075).
    */
   | {
       type: 'killed';
@@ -107,6 +108,7 @@ export type CombatEvent =
       threat: number;
       floor: FloorId;
       pos: Pos;
+      ranged?: boolean;
     }
   /** A party member (`actor`) saw `monster` (def `def`) for the first time, at `pos`. */
   | { type: 'monsterSighted'; actor: EntityId; monster: EntityId; def: string; floor: FloorId; pos: Pos }
@@ -292,7 +294,7 @@ export const COMBAT_ACTIONS: ActionRecord<CombatRequest> = {
       if (power === 'mend' && mend !== undefined) {
         runEffect({ state, emit, self: actor.id, other: t.id, source: actor.def, potency: 1 }, { kind: 'heal', amount: mend.amount, to: 'other' });
       } else if (power === 'bolster' && bolster !== undefined) {
-        applyStatus(state, t, bolster.status, bolster.turns, emit);
+        applyStatus(state, t, bolster.status, bolster.turns, emit, 1, true, actor);
       }
     },
   },
@@ -335,7 +337,7 @@ function strike(state: RunState, actor: ActorEntity, target: ActorEntity, emit: 
   if (actor.actor.hp > 0) fireTrigger(state, actor, TRIGGER_HIT.id, emit, target.id);
   const floor = actor.floor;
   if (state.entities[target.id] !== undefined && target.actor.hp <= 0) {
-    killActor(state, target, emit, { cause: actor.def, killer: actor });
+    killActor(state, target, emit, { cause: actor.def, killer: actor, ranged });
   }
   reapDead(state, floor, emit);
 }

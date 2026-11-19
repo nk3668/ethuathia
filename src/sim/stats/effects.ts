@@ -57,7 +57,8 @@ export function runEffect(ctx: EffectCtx, effect: Effect): void {
       return;
     }
     case 'applyStatus':
-      applyStatus(ctx.state, target, effect.status, effect.turns, ctx.emit, effect.potency ?? 1);
+      // The bundle's holder inflicts it on someone else (a venomous bite's `to: 'other'`).
+      applyStatus(ctx.state, target, effect.status, effect.turns, ctx.emit, effect.potency ?? 1, true, ctx.state.entities[ctx.self]);
       return;
   }
 }

@@ -31,7 +31,8 @@ const WIPE: RunResult = {
     'track.deaths': {
       fallen: [
         { actor: 1, name: 'Mira', depth: 2, turn: 500 },
-        { actor: 2, name: 'Oren', depth: 3, turn: 812 },
+        // How they died (ETH-075); Mira's record predates it.
+        { actor: 2, name: 'Oren', depth: 3, turn: 812, how: 'was slain by a slate hound' },
       ],
     },
     'track.codex': { 'class.vanguard': ['seen'], 'feature.door': ['used'] },
@@ -50,7 +51,7 @@ describe('runRecord', () => {
       cause: 'Oren fell on floor 3.',
       party: [
         { name: 'Mira', classId: 'class.vanguard', raceId: 'race.human', fell: { depth: 2, turn: 500 } },
-        { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human', fell: { depth: 3, turn: 812 } },
+        { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human', fell: { depth: 3, turn: 812, how: 'was slain by a slate hound' } },
       ],
       met: ['class.vanguard', 'feature.door'],
       contracts: [],

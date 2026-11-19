@@ -8,6 +8,8 @@
  * `runEnded`. Once `state.domains.run.end` is set, `step` does nothing.
  */
 import { clonePlain } from '../../core';
+import { deathPredicate, killerOf } from '../combat/death';
+import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
 import { dungeonDepth, floorNode } from '../floors/dungeon';
 import { VICTORY_CHECKS } from '../registries';
@@ -103,12 +105,23 @@ export function settleRun(state: RunState, events: readonly SimEvent[], from: nu
     emit({ type: 'turnedBack', actor: leaving.by, reason: leaving.reason });
   }
 
+  // Who fell in this stretch of events (the wipe's cause names the last one's killer).
+  let lastKiller: Killer | null = null;
   for (const id of state.party) {
     const entity = state.entities[id];
     if (entity?.actor === undefined || entity.actor.hp > 0 || slice.fallen.includes(id)) continue;
     slice.fallen.push(id);
     const depth = floorNode(state, entity.floor).depth;
-    emit({ type: 'fell', actor: id, name: entity.adventurer?.name ?? `#${id}`, floor: entity.floor, pos: { x: entity.pos.x, y: entity.pos.y }, depth });
+    lastKiller = killerOf(state, entity, events, from);
+    emit({
+      type: 'fell',
+      actor: id,
+      name: entity.adventurer?.name ?? `#${id}`,
+      floor: entity.floor,
+      pos: { x: entity.pos.x, y: entity.pos.y },
+      depth,
+      killer: lastKiller,
+    });
   }
 
   if (left !== null) {
@@ -117,7 +130,7 @@ export function settleRun(state: RunState, events: readonly SimEvent[], from: nu
     return true;
   }
   if (livingParty(state).length === 0) {
-    end(state, events, emit, 'wipe', wipeCause(state));
+    end(state, events, emit, 'wipe', wipeCause(state, lastKiller));
     return true;
   }
   return false;
@@ -163,14 +176,19 @@ function leftCause(state: RunState, checks: string, won: boolean): string {
   return won ? `${checks} ${why}` : `${why} Not everything was done: ${checks}`;
 }
 
-function wipeCause(state: RunState): string {
+/** The wipe's cause: the last to fall, what killed them (ETH-075) and where. */
+function wipeCause(state: RunState, killer: Killer | null): string {
   const fallen = state.domains.run.fallen;
   const lastId = fallen.at(-1);
   const last = lastId === undefined ? undefined : state.entities[lastId];
   if (last === undefined) return 'Nobody in the party is left standing.';
-  const name = last.adventurer?.name ?? `#${last.id}`;
-  const depth = floorNode(state, last.floor).depth;
-  return fallen.length === 1 ? `${name} fell on floor ${depth}.` : `${name} fell on floor ${depth}, the last of the party standing.`;
+  const line = deathLine(last.adventurer?.name ?? `#${last.id}`, killer, floorNode(state, last.floor).depth);
+  return fallen.length === 1 ? `${line}.` : `${line}, the last of the party standing.`;
+}
+
+/** "Mira was slain by a slate hound on floor 4": a death as a clause, without the full stop (ETH-075). */
+export function deathLine(name: string, killer: Killer | null, depth: number, tense: 'past' | 'present' = 'past'): string {
+  return `${name} ${deathPredicate(killer, tense)} on floor ${depth}`;
 }
 
 /**
