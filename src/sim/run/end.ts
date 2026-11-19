@@ -156,7 +156,7 @@ function end(state: RunState, stepEvents: readonly SimEvent[], emit: Emit, outco
   if (outcome === 'wipe') {
     const atRisk = projectedRewards(state, [...stepEvents, { ...ended, turn: state.turn }]);
     const lost = wipeLoss(atRisk, outcome);
-    if (Object.keys(lost).length > 0) emit({ type: 'earningsLost', lost, atRisk, share: WIPE_LOSS_SHARE });
+    if (Object.keys(lost).length > 0) emit({ type: 'earningsLost', lost, atRisk, share: WIPE_LOSS_SHARE, depth });
   }
   emit(ended);
 }

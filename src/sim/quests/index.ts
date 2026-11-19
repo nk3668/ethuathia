@@ -16,6 +16,8 @@ import type { ActionRecord } from '../actions';
 import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx } from '../domain';
 import { registerInvariant } from '../invariants';
+import { defineChronicleKind, momentAt } from '../run/chronicle';
+import type { ChronicleRules } from '../run/chronicle';
 import type { RewardAmounts } from '../run/result';
 import type { EntityId, FloorId, RunConfig } from '../state';
 import {
@@ -167,6 +169,14 @@ registerInvariant('quests.relics', (state) => {
   return problems;
 });
 
+/** A run chronicle moment (ETH-120): a contract is complete. `ids` is the contract, `actors` who completed it. */
+export const CHRONICLE_CONTRACT_COMPLETE = defineChronicleKind({ id: 'contractComplete', priority: 90 });
+
+/** Which of this domain's events are run chronicle moments. */
+export const QUESTS_CHRONICLE: ChronicleRules = {
+  contractCompleted: (e) => momentAt(CHRONICLE_CONTRACT_COMPLETE, e, e.actor === null ? [] : [e.actor], [e.contract]),
+};
+
 /** What this domain registers with the shared code, in this order. */
 export const QUESTS_DOMAIN: SimDomain<QuestsTypes> = {
   actions: QUESTS_ACTIONS,
@@ -183,6 +193,8 @@ export const QUESTS_DOMAIN: SimDomain<QuestsTypes> = {
     contractsTaken: (e) => e.contracts.map((c) => ({ id: c.contract, mark: 'seen' as const })),
     contractCompleted: (e) => [{ id: e.contract, mark: 'used' }],
   },
+  chronicle: QUESTS_CHRONICLE,
+  chronicleKinds: [CHRONICLE_CONTRACT_COMPLETE],
   // Synced at both ends of every turn, so a bearer felled by a status at the start of a turn counts too.
   turnStart: ({ state, emit }) => {
     announceContracts(state, emit);

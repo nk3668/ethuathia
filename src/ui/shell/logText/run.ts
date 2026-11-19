@@ -1,16 +1,28 @@
 /** Log wording for the run domain's events (`src/sim/run/`). One entry per event type. */
 import { formatNumber } from '../../../core';
+import { MONSTERS, STATUSES } from '../../../content';
 import { deathLine } from '../../../sim';
 import type { RunDomainEvent } from '../../../sim';
 import { currencyName } from '../runSummaryText';
 import { defineHighlight, mention } from './types';
-import type { LogPart, LogTextRecord } from './types';
+import { onFloor } from './types';
+import type { LogPart, LogTextRecord, MomentTextRecord, NameOf } from './types';
 
 /** An adventurer falls (HP reaches 0). */
 export const HIGHLIGHT_FELL = defineHighlight({
   id: 'adventurerFell',
   label: 'An adventurer falls',
   description: 'A party member’s HP reaches 0. Their run is over; the rest of the party carries on.',
+});
+
+/**
+ * A wipe cost part of the run's earnings (ETH-120). A chronicle moment only: it is not a log
+ * highlight (the run is over, so there is nothing to pause), so it is not in the Options list.
+ */
+export const MOMENT_EARNINGS_LOST = defineHighlight({
+  id: 'earningsLost',
+  label: 'A wipe costs earnings',
+  description: 'The whole party fell, and the wipe took its share of the run’s earnings.',
 });
 
 const OUTCOME_TEXT = { victory: 'Victory!', retreat: 'The party is out: a retreat.', wipe: 'The party is lost.' } as const;
@@ -66,5 +78,30 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
   runEnded: {
     category: 'system',
     text: (e) => `${OUTCOME_TEXT[e.outcome]} ${e.cause}`,
+  },
+};
+
+/** What struck a fallen adventurer down, from their chronicle entry: "slain by a slate hound". */
+function fellBy(m: { actors: readonly number[]; ids: readonly string[] }, nameOf: NameOf): LogPart[] {
+  const def = m.ids[0];
+  if (def === undefined) return [];
+  if (MONSTERS.has(def)) return [', slain by a ', mention(def, MONSTERS.get(def).name.toLowerCase())];
+  if (STATUSES.has(def)) return [', worn down while ', mention(def, STATUSES.get(def).name.toLowerCase())];
+  const killer = m.actors[1];
+  return killer === undefined ? [] : [`, slain by ${nameOf(killer)}`];
+}
+
+/** How the run domain's chronicle moments read (ETH-120). */
+export const RUN_DOMAIN_MOMENT_TEXT: MomentTextRecord = {
+  adventurerFell: {
+    kind: HIGHLIGHT_FELL,
+    category: 'combat',
+    // "Mira fell on floor 4, slain by a slate hound."
+    text: (m, nameOf) => [`${nameOf(m.actors[0] ?? 0)} fell${onFloor(m.depth)}`, ...fellBy(m, nameOf), '.'],
+  },
+  earningsLost: {
+    kind: MOMENT_EARNINGS_LOST,
+    category: 'system',
+    text: (m) => `The wipe cost ${m.amount ?? 0}% of the run’s earnings.`,
   },
 };

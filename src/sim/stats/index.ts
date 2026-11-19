@@ -13,6 +13,8 @@ import type { CommandRecord } from '../commands';
 import type { RunTracker, SimDomain, SnapshotCtx, TurnCtx } from '../domain';
 import type { Emit } from '../events';
 import { registerInvariant } from '../invariants';
+import { defineChronicleKind, momentAt } from '../run/chronicle';
+import type { ChronicleRules } from '../run/chronicle';
 import type { DiscoveryRules } from '../run/codex';
 import type { EntityId, RunConfig, RunState } from '../state';
 import { getAttributes, PROVIDER_ATTRIBUTES } from './attributes';
@@ -352,6 +354,14 @@ export const STATS_DISCOVERIES: DiscoveryRules = {
   statusApplied: (e) => (STATUSES.has(e.status) ? [{ id: e.status, mark: 'seen' }] : []),
 };
 
+/** A run chronicle moment (ETH-120): an adventurer gained a level. `amount` is the level reached. */
+export const CHRONICLE_LEVEL_UP = defineChronicleKind({ id: 'leveledUp', priority: 60 });
+
+/** Which of this domain's events are run chronicle moments. */
+export const STATS_CHRONICLE: ChronicleRules = {
+  leveledUp: (e) => momentAt(CHRONICLE_LEVEL_UP, e, [e.actor], [e.classId], { amount: e.level }),
+};
+
 /** What this domain registers with the shared code, in this order. */
 export const STATS_DOMAIN: SimDomain<StatsTypes> = {
   actions: STATS_ACTIONS,
@@ -364,5 +374,7 @@ export const STATS_DOMAIN: SimDomain<StatsTypes> = {
   turnStart: statsTurnStart,
   turnEnd: statsTurnEnd,
   discoveries: STATS_DISCOVERIES,
+  chronicle: STATS_CHRONICLE,
+  chronicleKinds: [CHRONICLE_LEVEL_UP],
   trackers: [XP_TRACKER as RunTracker<unknown>],
 };

@@ -7,7 +7,7 @@ import { useSimStore } from '../stores/simStore';
 import { LOG_FILTERS, useUiStore } from '../stores/uiStore';
 import type { LogFilter, MapFocus } from '../stores/uiStore';
 import styles from './LogPanel.module.css';
-import { LOG_PREFIX, logLines, repeatLabel, repeatTooltip } from './text';
+import { LOG_PREFIX, logLines, momentLines, repeatLabel, repeatTooltip } from './text';
 import type { LogLine, LogPart } from './text';
 
 /** How close to the bottom (in pixels) still counts as "at the bottom" for auto-scrolling. */
@@ -26,12 +26,13 @@ const HIGHLIGHT_MARK = '★';
 /**
  * The log strip (docs/VISUAL-DESIGN.md §3.3): recent events from `simStore` as plain text,
  * newest at the bottom. It follows new lines while scrolled to the bottom and stays put when the
- * player has scrolled up to read. The Highlights filter (ETH-047) shows only notable moments, and
- * clicking a highlight centers the map where it happened. Identical AI decisions in a row show as
+ * player has scrolled up to read. The Highlights filter (ETH-047) shows only notable moments, from
+ * the run chronicle (ETH-120), and clicking a highlight centers the map where it happened. Identical AI decisions in a row show as
  * one line with a `×N` count (ETH-073). Category filters arrive in M1.
  */
 export function LogPanel() {
   const events = useSimStore((s) => s.events);
+  const chronicle = useSimStore((s) => s.chronicle);
   const names = useSimStore(
     useShallow((s) => Object.fromEntries((s.snapshot?.party ?? []).map((m) => [m.id, m.name]))),
   );
@@ -40,10 +41,12 @@ export function LogPanel() {
   const focusMap = useUiStore((s) => s.focusMap);
   const autoPaused = useUiStore((s) => s.autoPaused);
   const paused = useSimStore((s) => s.speed === 0);
+  // The Highlights filter reads the run chronicle (ETH-120), which keeps the whole run's moments,
+  // not the rolling event buffer.
   const lines = useMemo(() => {
-    const all = logLines(events, (id: EntityId) => names[id] ?? `#${id}`);
-    return filter === 'highlights' ? all.filter((l) => l.highlight !== undefined) : all;
-  }, [events, names, filter]);
+    const nameOf = (id: EntityId) => names[id] ?? `#${id}`;
+    return filter === 'highlights' ? momentLines(chronicle.entries, nameOf) : logLines(events, nameOf);
+  }, [events, chronicle, names, filter]);
 
   const scroller = useRef<HTMLOListElement>(null);
   const stick = useRef(true);
@@ -92,6 +95,7 @@ export function LogPanel() {
 
 const Line = memo(function Line({ line, onShow }: { line: LogLine; onShow(focus: MapFocus): void }) {
   const { highlight } = line;
+  const place = highlight?.place ?? null;
   return (
     <li className={styles.line} data-category={line.category} data-highlight={highlight ? '' : undefined}>
       <span className={styles.turn}>
@@ -101,17 +105,23 @@ const Line = memo(function Line({ line, onShow }: { line: LogLine; onShow(focus:
       <span className={styles.prefix} aria-hidden="true">
         {LOG_PREFIX[line.category]}
       </span>
-      {highlight ? (
+      {highlight && place !== null ? (
         <button
           type="button"
           className={styles.highlight}
           title={`${highlight.kind.label}. Click to show where on the map.`}
-          onClick={() => onShow(highlight.place)}
+          onClick={() => onShow(place)}
         >
           <span className="sr-only">Highlight: </span>
           <span aria-hidden="true">{HIGHLIGHT_MARK} </span>
           {line.text}
         </button>
+      ) : highlight ? (
+        <span className={styles.moment} title={highlight.kind.label}>
+          <span className="sr-only">Highlight: </span>
+          <span aria-hidden="true">{HIGHLIGHT_MARK} </span>
+          {line.text}
+        </span>
       ) : (
         <span className={styles.text}>
           <Parts parts={line.parts} />

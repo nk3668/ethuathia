@@ -12,6 +12,7 @@ import { Registry } from '../core';
 import type { ConditionDef, RuleActionDef } from './ai/types';
 import type { FloorPlanHook, RunTracker, VictoryCheck } from './domain';
 import type { GenStepDef } from './gen/types';
+import type { ChronicleKind, ChronicleRule } from './run/chronicle';
 import type { DiscoveryRule } from './run/codex';
 import type { BundleSource, StatProvider, TriggerKindDef } from './stats/types';
 
@@ -50,3 +51,15 @@ export const VICTORY_CHECKS: VictoryCheck[] = [];
 
 /** Every floor plan hook, in domain order (ETH-024). `planFloor` runs them; read at run time only. */
 export const FLOOR_PLAN_HOOKS: FloorPlanHook[] = [];
+
+/**
+ * Every run chronicle moment kind, by id (ETH-120): each domain's `chronicleKinds`, in domain
+ * order. Read at run time only.
+ */
+export const CHRONICLE_KINDS = new Map<string, ChronicleKind>();
+
+/**
+ * Which events are chronicle moments, keyed by event type: the core rules, then each domain's
+ * `chronicle`, in domain order. `CHRONICLE_TRACKER` reads it (`run/chronicle.ts`).
+ */
+export const CHRONICLE_RULES = new Map<string, ChronicleRule[]>();

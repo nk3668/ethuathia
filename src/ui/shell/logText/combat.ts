@@ -1,8 +1,10 @@
 /** Log wording for the combat domain's events (`src/sim/combat/`). One entry per event type. */
 import { findDef, MONSTERS } from '../../../content';
+import { isNearDeathBlow } from '../../../sim';
 import type { CombatEvent, EntityId } from '../../../sim';
 import { defineHighlight, mention } from './types';
-import type { LogPart, LogTextRecord, NameOf } from './types';
+import { onFloor } from './types';
+import type { LogPart, LogTextRecord, MomentTextRecord, NameOf } from './types';
 
 /** A blow left an adventurer under a quarter of their HP. */
 export const HIGHLIGHT_NEAR_DEATH = defineHighlight({
@@ -10,9 +12,6 @@ export const HIGHLIGHT_NEAR_DEATH = defineHighlight({
   label: 'An adventurer is near death',
   description: 'A blow left a party member with less than a quarter of their HP.',
 });
-
-/** The share of max HP under which a blow on an adventurer is a near-death highlight. */
-export const NEAR_DEATH_FRACTION = 0.25;
 
 /**
  * Who an event is about: a monster as a mention of its kind ("the gloam rat", an Explain link),
@@ -41,7 +40,8 @@ export const COMBAT_LOG_TEXT: LogTextRecord<CombatEvent> = {
   attacked: {
     category: 'combat',
     highlight: HIGHLIGHT_NEAR_DEATH,
-    highlightWhen: (e) => !MONSTERS.has(e.targetDef) && e.hp > 0 && e.hp < e.maxHp * NEAR_DEATH_FRACTION,
+    // The same test as the sim's chronicle rule, so the log and the chronicle agree (ETH-120).
+    highlightWhen: isNearDeathBlow,
     text: (e, nameOf) => [
       ...who(e.actor, e.actorDef, nameOf, true),
       ' hits ',
@@ -89,5 +89,19 @@ export const COMBAT_LOG_TEXT: LogTextRecord<CombatEvent> = {
   fleeFailed: {
     category: 'combat',
     text: (e, nameOf) => [`${nameOf(e.actor)} tries to break away, but `, ...who(e.enemy, e.enemyDef, nameOf), ` holds them back (Flee ${e.chance}%).`],
+  },
+};
+
+/** How the combat domain's chronicle moments read (ETH-120). */
+export const COMBAT_MOMENT_TEXT: MomentTextRecord = {
+  nearDeath: {
+    kind: HIGHLIGHT_NEAR_DEATH,
+    category: 'combat',
+    // "Mira was left with 2 HP by the gloam rat on floor 3."
+    text: (m, nameOf) => [
+      `${nameOf(m.actors[0] ?? 0)} was left with ${m.amount ?? 0} HP by `,
+      ...who(m.actors[1] ?? 0, m.ids[0] ?? '', nameOf),
+      `${onFloor(m.depth)}.`,
+    ],
   },
 };

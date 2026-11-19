@@ -7,7 +7,7 @@
  */
 import { parseArgs } from 'node:util';
 import { CLASS_VANGUARD, CONTRACT_RECOVER_RELIC, RACE_HUMAN } from '../src/content';
-import { ACT_WAIT, DROP_TURNS, floorIdAt, RUN_OUTCOMES, SimSession } from '../src/sim';
+import { ACT_WAIT, CHRONICLE_TRACKER, DROP_TURNS, floorIdAt, RUN_OUTCOMES, SimSession } from '../src/sim';
 import type { AdventurerConfig, Explored, RewardAmounts, RunConfig, RunOutcome, Snapshot } from '../src/sim';
 
 /**
@@ -114,6 +114,8 @@ export interface SeedResult {
   contracts?: number;
   /** Times a party member put on a piece of gear (ETH-043). */
   equips?: number;
+  /** Entries in the run chronicle where the run stopped (ETH-120). Missing from reports before it. */
+  moments?: number;
   /** `stateHash` of where the run stopped, to tell whether a change altered behavior. */
   hash: string;
 }
@@ -155,6 +157,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
   let fleeFails = 0;
   let resisted = 0;
   let equips = 0;
+  let chronicle = CHRONICLE_TRACKER.init();
   const party = new Set(snap.party.map((m) => m.id));
   const deathCauses: Record<string, number> = {};
   /** Who killed each party member struck down, until their `fell` event. */
@@ -175,6 +178,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
       if (e.type === 'fleeFailed' && party.has(e.actor)) fleeFails++;
       if (e.type === 'statusApplied' && party.has(e.actor)) resisted += e.resisted ?? 0;
       if (e.type === 'equipped') equips++;
+      chronicle = CHRONICLE_TRACKER.reduce(chronicle, e);
       if (e.type === 'fell') {
         deaths++;
         const cause = slain.get(e.actor) ?? 'other';
@@ -239,6 +243,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     level: Math.max(1, ...Object.values(snap.domains.stats.members).map((m) => m.level.level)),
     contracts: snap.domains.quests.contracts.filter((c) => c.complete).length,
     equips,
+    moments: chronicle.entries.length,
     hash: session.stateHash(),
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
     atRisk: { ...snap.domains.run.atRisk },

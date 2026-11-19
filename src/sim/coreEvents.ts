@@ -6,6 +6,8 @@
 import type { Pos } from '../core';
 import { FEATURE_DOOR } from '../content';
 import type { RuleRef } from './ai/types';
+import { defineChronicleKind, momentAt } from './run/chronicle';
+import type { ChronicleKind, ChronicleRules } from './run/chronicle';
 import type { DiscoveryRules } from './run/codex';
 import type { EntityId, FloorId } from './state';
 
@@ -61,4 +63,15 @@ export type CoreEvent =
  */
 export const CORE_DISCOVERIES: DiscoveryRules = {
   doorOpened: () => [{ id: FEATURE_DOOR.id, mark: 'used' }],
+};
+
+/** A run chronicle moment (ETH-120): an adventurer got stuck and dropped its goal. The least notable kind. */
+export const CHRONICLE_STUCK = defineChronicleKind({ id: 'stuck', priority: 10 });
+
+/** The core moment kinds, registered before every domain's. */
+export const CORE_CHRONICLE_KINDS: readonly ChronicleKind[] = [CHRONICLE_STUCK];
+
+/** Which core events are run chronicle moments (`run/chronicle.ts`). */
+export const CORE_CHRONICLE: ChronicleRules = {
+  stuck: (e) => momentAt(CHRONICLE_STUCK, e, [e.actor], [e.action]),
 };

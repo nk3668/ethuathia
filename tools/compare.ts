@@ -151,6 +151,8 @@ export const METRICS: Metric[] = [
   // Contracts (ETH-024). Reports from before it took none, so this reads 0.
   { name: 'contracts complete, total', value: (rs) => rs.reduce((n, r) => n + (r.contracts ?? 0), 0), digits: 0 },
   { name: 'gear equipped, mean', value: (rs) => mean(rs.map((r) => r.equips ?? 0)), digits: 1 },
+  // The run chronicle (ETH-120). Reports from before it kept none, so this reads 0.
+  { name: 'chronicle moments, mean', value: (rs) => mean(rs.map((r) => r.moments ?? 0)), digits: 1 },
 ];
 
 function fmt(value: number | null, digits: number): string {

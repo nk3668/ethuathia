@@ -196,7 +196,7 @@ describe('highlights in the shell', () => {
     expect(useUiStore.getState().logFilter).toBe('highlights');
     const items = within(log).getAllByRole('listitem');
     expect(items).toHaveLength(1);
-    await user.click(within(items[0] as HTMLElement).getByRole('button', { name: /Highlight:.*No progress/ }));
+    await user.click(within(items[0] as HTMLElement).getByRole('button', { name: /Highlight:.*Mira got stuck/ }));
     expect(useUiStore.getState().mapFocus).toEqual({ floor: 'f1', pos: { x: 4, y: 1 } });
 
     // Selecting an adventurer goes back to following them.

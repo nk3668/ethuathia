@@ -2,7 +2,8 @@
 import { FEATURE_DOOR } from '../../../content';
 import type { CoreEvent, RuleRef } from '../../../sim';
 import { defineHighlight, mention } from './types';
-import type { LogTextRecord } from './types';
+import { onFloor } from './types';
+import type { LogTextRecord, MomentTextRecord } from './types';
 
 /** An adventurer made no progress and dropped its goal: often a sign of a bad rule or a blocked path. */
 export const HIGHLIGHT_STUCK = defineHighlight({
@@ -41,4 +42,13 @@ export const CORE_LOG_TEXT: LogTextRecord<CoreEvent> = {
   },
   released: { category: 'ai', text: (e, nameOf) => `You release ${nameOf(e.actor)}; the AI takes over again.` },
   commandRejected: { category: 'system', text: (e) => `Command "${e.command}" ignored (${e.reason})` },
+};
+
+/** How the core chronicle moments read (ETH-120). */
+export const CORE_MOMENT_TEXT: MomentTextRecord = {
+  stuck: {
+    kind: HIGHLIGHT_STUCK,
+    category: 'ai',
+    text: (m, nameOf) => `${nameOf(m.actors[0] ?? 0)} got stuck${onFloor(m.depth)} and gave up on a goal for a while.`,
+  },
 };

@@ -293,6 +293,11 @@ default. When one fires, the run pauses, the map centers on it, the focus marker
 tile, and the log header says "Auto-paused: (kind)". Resuming the run clears the notice and the
 marker.
 
+Since ETH-120 the Highlights filter lists the run chronicle, so a moment from turn 5 is still
+there at turn 5,000. Its lines are worded from the moment, in the past tense ("Mira reached
+level 3 on floor 2."), with the turn on the left as usual. A moment with no one place (the
+wipe's loss) keeps the `★` and the accent color but is plain text, not a button.
+
 ---
 
 ## 4. The map
@@ -523,7 +528,9 @@ cancelled.
 As built (ETH-062, `ui/shell/RunSummary.tsx`): a `role="dialog"` over a dimmed backdrop, with a
 3px top border in the outcome's color and the outcome icon (★ Victory, ⇡ Retreat, ✝ Wipe) next
 to the heading, so the outcome never rests on color. Then the cause, "Floor N reached · T turns",
-the party with each member's fate, a currency table (Earned, Lost in the wipe, Banked; the Omen
+the party with each member's fate, the contracts, **Moments** (ETH-120: the run's five most
+notable chronicle moments in turn order, each "Turn N" in faint tabular figures then its
+sentence; a past run shows the five its record kept), a currency table (Earned, Lost in the wipe, Banked; the Omen
 multiplier column arrives with ETH-067, between Earned and Lost, so it reads base → ×Omen → −25%)
 with a muted line under it saying how the outcome treated the earnings (ETH-023), "Met this run" (the Codex discoveries), a placeholder epitaph in
 italics, the Auto-restart checkbox with "Next run in N s" and Cancel while counting down, and

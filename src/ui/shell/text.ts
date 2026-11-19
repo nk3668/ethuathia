@@ -6,19 +6,19 @@
  * joins them (docs/ARCHITECTURE.md, Contracts, "Log text").
  */
 import { findDef } from '../../content';
-import type { EntityId, SimEvent } from '../../sim';
-import { COMBAT_LOG_TEXT } from './logText/combat';
-import { CORE_LOG_TEXT } from './logText/core';
+import type { ChronicleEntry, EntityId, SimEvent } from '../../sim';
+import { COMBAT_LOG_TEXT, COMBAT_MOMENT_TEXT } from './logText/combat';
+import { CORE_LOG_TEXT, CORE_MOMENT_TEXT } from './logText/core';
 import { FLOORS_LOG_TEXT } from './logText/floors';
-import { ITEMS_LOG_TEXT } from './logText/items';
-import { QUESTS_LOG_TEXT } from './logText/quests';
-import { RUN_DOMAIN_LOG_TEXT } from './logText/run';
-import { STATS_LOG_TEXT } from './logText/stats';
-import type { HighlightKind, LogCategory, LogPart, LogText, LogTextRecord, NameOf, Place } from './logText/types';
+import { ITEMS_LOG_TEXT, ITEMS_MOMENT_TEXT } from './logText/items';
+import { QUESTS_LOG_TEXT, QUESTS_MOMENT_TEXT } from './logText/quests';
+import { RUN_DOMAIN_LOG_TEXT, RUN_DOMAIN_MOMENT_TEXT } from './logText/run';
+import { STATS_LOG_TEXT, STATS_MOMENT_TEXT } from './logText/stats';
+import type { HighlightKind, LogCategory, LogPart, LogText, LogTextRecord, MomentText, MomentTextRecord, NameOf, Place } from './logText/types';
 
 export { ruleLabel } from './logText/core';
 export { defineHighlight, mention } from './logText/types';
-export type { HighlightKind, LogCategory, LogPart, LogText, LogTextRecord, Mention, NameOf, Place } from './logText/types';
+export type { HighlightKind, LogCategory, LogPart, LogText, LogTextRecord, Mention, MomentText, MomentTextRecord, NameOf, Place } from './logText/types';
 
 /**
  * The name of a content id: its def's `name`, or for an id with no def (monsters until M1) the
@@ -62,9 +62,14 @@ export interface Repeat {
   lastTurn: number;
 }
 
-/** A highlighted event's kind and place. */
+/** A highlight's kind and place: `null` for a chronicle moment with no one place (the wipe's loss). */
 export interface Highlight {
   kind: HighlightKind;
+  place: Place | null;
+}
+
+/** A highlighted event's kind and place: an event highlight always has a place. */
+export interface PlacedHighlight extends Highlight {
   place: Place;
 }
 
@@ -108,7 +113,7 @@ export function collectHighlightKinds(record: Readonly<Record<string, { highligh
 }
 
 /** The event's highlight, or `undefined` if it isn't one. */
-export function highlightOf(event: SimEvent): Highlight | undefined {
+export function highlightOf(event: SimEvent): PlacedHighlight | undefined {
   const entry = textOf(event) as LogText<SimEvent> & { highlight?: HighlightKind };
   const kind = entry.highlight;
   if (kind === undefined) return undefined;
@@ -186,4 +191,38 @@ export function describe(event: SimEvent, nameOf: NameOf): Pick<LogLine, 'catego
 /** Log parts as plain text: each mention as its label, or its content name. */
 export function partsText(parts: readonly LogPart[]): string {
   return parts.map((p) => (typeof p === 'string' ? p : (p.label ?? contentName(p.ref)))).join('');
+}
+
+/**
+ * The wording of every run chronicle moment kind (ETH-120), one domain per line. A test fails on a
+ * sim chronicle kind (`CHRONICLE_KINDS`) with no entry here.
+ */
+export const MOMENT_TEXT: MomentTextRecord = {
+  ...CORE_MOMENT_TEXT,
+  ...STATS_MOMENT_TEXT,
+  ...COMBAT_MOMENT_TEXT,
+  ...ITEMS_MOMENT_TEXT,
+  ...QUESTS_MOMENT_TEXT,
+  ...RUN_DOMAIN_MOMENT_TEXT,
+};
+
+/** Wording for a kind no domain words (an entry from a newer save, say). */
+const UNKNOWN_MOMENT: MomentText = {
+  kind: { id: 'unknown', label: 'A notable moment', description: 'Something notable happened.' },
+  category: 'system',
+  text: (m) => `Something notable happened${m.depth > 0 ? ` on floor ${m.depth}` : ''}.`,
+};
+
+/** A chronicle entry as a log line (the Highlights feed). `seq` is its place in the chronicle. */
+export function momentLine(entry: ChronicleEntry, seq: number, nameOf: NameOf): LogLine {
+  const wording = MOMENT_TEXT[entry.kind] ?? UNKNOWN_MOMENT;
+  const said = wording.text(entry, nameOf);
+  const parts = typeof said === 'string' ? [said] : said;
+  const place = entry.floor === null || entry.pos === null ? null : { floor: entry.floor, pos: { x: entry.pos.x, y: entry.pos.y } };
+  return { seq, turn: entry.turn, category: wording.category, text: partsText(parts), parts, highlight: { kind: wording.kind, place } };
+}
+
+/** A run's chronicle entries as log lines, oldest first. */
+export function momentLines(entries: readonly ChronicleEntry[], nameOf: NameOf): LogLine[] {
+  return entries.map((entry, i) => momentLine(entry, i, nameOf));
 }

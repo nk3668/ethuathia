@@ -28,11 +28,14 @@ import type { Leaving, LeavingReason, RunEnd } from './end';
 import { RUN_OUTCOMES } from './result';
 import type { RewardAmounts, RunOutcome } from './result';
 import { RUN_DOMAIN_CONDITIONS, RUN_DOMAIN_RULE_ACTIONS } from './rules';
+import { CHRONICLE_TRACKER, chronicleProblems, defineChronicleKind, momentAt } from './chronicle';
+import type { ChronicleRules } from './chronicle';
 import { CODEX_TRACKER } from './codex';
 import { REQUIREMENTS_TRACKER, REQUIREMENTS_TRACKER_ID, watchedRequirements } from './requirements';
 import type { RequirementsTrackerState } from './requirements';
 import { initTrackers, RUN_DOMAIN_TRACKERS, trackerRewards } from './trackers';
 
+export * from './chronicle';
 export * from './codex';
 export * from './result';
 export * from './trackers';
@@ -58,9 +61,10 @@ export type RunDomainEvent =
   /**
    * The party was wiped out: `lost` is what the wipe takes from this run's at-risk earnings
    * (`share` of each, ETH-023), out of `atRisk`; the rest is banked. Just before `runEnded`, only
-   * on a wipe that loses something. `lost` equals the `RunResult`'s.
+   * on a wipe that loses something. `lost` equals the `RunResult`'s. `depth` is the deepest floor
+   * reached (`RunEnd.depth`), for the run chronicle (ETH-120).
    */
-  | { type: 'earningsLost'; lost: RewardAmounts; atRisk: RewardAmounts; share: number }
+  | { type: 'earningsLost'; lost: RewardAmounts; atRisk: RewardAmounts; share: number; depth: number }
   /** The run is over. Always the last event of a run. */
   | { type: 'runEnded'; outcome: RunOutcome; cause: string; depth: number };
 
@@ -213,6 +217,41 @@ registerInvariant('run.end', (state) => {
   return problems;
 });
 
+registerInvariant('run.chronicle', (state) => chronicleProblems(state.domains.run.trackers[CHRONICLE_TRACKER.id], state.turn));
+
+/**
+ * A run chronicle moment (ETH-120): a party member fell. `actors` are the fallen, then their
+ * killer and a status's inflicter when those are actors; `ids` the killer's content id (and the
+ * inflicter's). The most notable kind.
+ */
+export const CHRONICLE_FELL = defineChronicleKind({ id: 'adventurerFell', priority: 100 });
+
+/**
+ * A run chronicle moment: a wipe cost a share of the run's earnings. It has no one place (`floor`
+ * and `pos` are `null`); `amount` is the share lost, in percent.
+ */
+export const CHRONICLE_EARNINGS_LOST = defineChronicleKind({ id: 'earningsLost', priority: 80 });
+
+/** Which of this domain's events are run chronicle moments. */
+export const RUN_DOMAIN_CHRONICLE: ChronicleRules = {
+  fell: (e) => {
+    const k = e.killer;
+    const actors = [e.actor, ...(k === null || k.id === null ? [] : [k.id]), ...(k?.source === undefined ? [] : [k.source.id])];
+    const ids = k === null ? [] : [k.def, ...(k.source === undefined ? [] : [k.source.def])];
+    return momentAt(CHRONICLE_FELL, e, actors, ids, { depth: e.depth });
+  },
+  earningsLost: (e) => ({
+    kind: CHRONICLE_EARNINGS_LOST.id,
+    turn: e.turn,
+    floor: null,
+    pos: null,
+    depth: e.depth,
+    actors: [],
+    ids: [],
+    amount: Math.round(e.share * 100),
+  }),
+};
+
 /** What this domain registers with the shared code, in this order. */
 export const RUN_DOMAIN: SimDomain<RunDomainTypes> = {
   actions: RUN_DOMAIN_ACTIONS,
@@ -221,9 +260,11 @@ export const RUN_DOMAIN: SimDomain<RunDomainTypes> = {
   snapshot: runDomainSnapshot,
   conditions: RUN_DOMAIN_CONDITIONS,
   ruleActions: RUN_DOMAIN_RULE_ACTIONS,
-  trackers: [...RUN_DOMAIN_TRACKERS, CODEX_TRACKER, REQUIREMENTS_TRACKER as RunTracker<unknown>],
+  trackers: [...RUN_DOMAIN_TRACKERS, CODEX_TRACKER, REQUIREMENTS_TRACKER as RunTracker<unknown>, CHRONICLE_TRACKER as RunTracker<unknown>],
   // The party's classes and races are met when the run starts.
   discoveries: {
     runStarted: (e) => e.party.flatMap((m) => [{ id: m.classId, mark: 'seen' as const }, { id: m.raceId, mark: 'seen' as const }]),
   },
+  chronicle: RUN_DOMAIN_CHRONICLE,
+  chronicleKinds: [CHRONICLE_FELL, CHRONICLE_EARNINGS_LOST],
 };

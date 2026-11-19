@@ -2,7 +2,7 @@
 id: ETH-120
 title: Run chronicle: a durable list of a run's notable events, kept apart from the event buffer
 type: feature
-status: ready
+status: done
 priority: P1
 milestone: M2
 epic: sim-core
@@ -26,24 +26,24 @@ Nothing durable lists "what happened this run", yet the run summary, epitaphs (E
 See `CLAUDE.md` §2 (Run summary) and the "Shared systems" list in `docs/ARCHITECTURE.md`.
 
 ## Acceptance criteria
-- [ ] Sim: `ChronicleEntry = { kind (a highlight id), turn, floor, pos, depth, actors: EntityId[],
+- [x] Sim: `ChronicleEntry = { kind (a highlight id), turn, floor, pos, depth, actors: EntityId[],
       ids: string[] (content ids) }` (plain data, no wording: the UI words it from the kind).
       Each domain says which events are notable in `SimDomain.chronicle`, a map typed per event
       type like `discoveries` (`event → ChronicleEntry | null`), joined into `CHRONICLE_RULES`
       (`registries.ts`) in domain order.
-- [ ] `track.chronicle` (run domain) reduces events through `CHRONICLE_RULES` into
+- [x] `track.chronicle` (run domain) reduces events through `CHRONICLE_RULES` into
       `{ entries }`, capped at `CHRONICLE_LIMIT` (default 200) by dropping the lowest-priority
       kind first, never the run's first or last entry. Its extras, `RunResult.extras
       ['track.chronicle']`, are the entries. Invariant `run.chronicle` (sorted by turn, known
       kinds). `STATE_VERSION` + 1.
-- [ ] Every log-text entry that names a `highlight` has a matching chronicle rule; a test walks
+- [x] Every log-text entry that names a `highlight` has a matching chronicle rule; a test walks
       `LOG_TEXT` and fails on a highlighted event type with no rule (so the two never drift).
-- [ ] UI: `simStore` reduces incoming events with the chronicle tracker into `chronicle` (as it
+- [x] UI: `simStore` reduces incoming events with the chronicle tracker into `chronicle` (as it
       does `discoveries`), and the Highlights filter shows the chronicle, so a highlight from
       turn 5 is still there at turn 5,000. `EVENT_BUFFER_SIZE` stays for the full log.
-- [ ] The run summary shows a short "Moments" list from the chronicle; the `history` slice keeps
+- [x] The run summary shows a short "Moments" list from the chronicle; the `history` slice keeps
       the top few entries per run (slice version + 1, migration fills `[]`).
-- [ ] Tests: a fixed-seed run longer than 500 events keeps its first highlight in
+- [x] Tests: a fixed-seed run longer than 500 events keeps its first highlight in
       `simStore.chronicle` and in `RunResult.extras`; the cap drops low-priority entries first;
       app-boot smoke test stays green.
 
@@ -68,3 +68,10 @@ Open decisions:
 - 2026-11-19: Created in the shared-systems pass (foundation for Highlights, the run summary, ETH-068, 101, 103 and time-away; fixes the rolling-buffer loss of early highlights).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
+- 2026-11-19: Started.
+- 2026-11-19: Built. `run/chronicle.ts` (`ChronicleEntry`, `defineChronicleKind`, `momentAt`, `CHRONICLE_TRACKER`, cap, `topMoments`), `SimDomain.chronicle` / `chronicleKinds` joined into `CHRONICLE_RULES` / `CHRONICLE_KINDS`, invariant `run.chronicle`, `STATE_VERSION` 22; `simStore.chronicle` feeds the Highlights filter; run summary "Moments"; `history` v4 keeps 5 moments per run. Docs: ARCHITECTURE "Run chronicle (ETH-120)", shared-systems row built; VISUAL-DESIGN §3.3 and §6.2.
+- 2026-11-19: (default) Entries carry an optional `amount` (level reached, HP left, item value, share lost) so the UI can word a moment from the entry alone — alternative: keep the spec's exact shape and word moments without numbers.
+- 2026-11-19: (default) `earningsLost` is a chronicle-only kind (not a log highlight or auto-pause option) with `floor`/`pos` null; the event gained `depth` — alternative: make it a log highlight too, or leave it out of the chronicle.
+- 2026-11-19: (default) Priorities: adventurerFell 100, contractComplete 90, earningsLost 80, leveledUp 60, valuableFind 40, nearDeath 30, stuck 10 — alternative: any other order.
+- 2026-11-19: (default) The run summary shows as many moments as the history keeps (5) so a past run's summary matches — alternative: show more live (e.g. 10) than are kept.
+- 2026-11-19: (default) A run loaded from a mid-run save starts the UI chronicle empty (as `simStore.discoveries` does) — alternative: send the chronicle in the snapshot.
