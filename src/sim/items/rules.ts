@@ -16,6 +16,7 @@ import { statValue } from '../stats/getStat';
 import { bestUpgrade, gearStatsText } from './equipment';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
+import { itemName } from './name';
 import { carryLimit, carryWeight, inventoryOf, isOverloaded, itemsAt, knownItems, lowestValueIndex, wantsItem } from './inventory';
 import { itemValue } from './value';
 
@@ -105,7 +106,7 @@ export const ACT_QUAFF_HEALING = defineRuleAction({
   resolve(ctx): Resolved | null {
     const best = bestHealing(ctx);
     if (best === null) return null;
-    const name = ITEMS.get((inventoryOf(ctx.actor)[best.index] as ItemInstance).def).name;
+    const name = itemName(ctx.state, inventoryOf(ctx.actor)[best.index] as ItemInstance, ctx.actor);
     return { request: { id: 'use', index: best.index }, detail: `quaffing a ${name}` };
   },
   describe: () => 'quaff the best healing potion',
@@ -127,7 +128,8 @@ export const ACT_DROP_LOWEST = defineRuleAction({
     // one by one, since the rest of that stack stays the least valuable thing carried.
     const excess = carryWeight(state, actor) - carryLimit(state, actor);
     const qty = Math.max(1, Math.min(entry.qty, Math.ceil(excess / def.weight)));
-    const what = qty === 1 ? `a ${def.name}` : `${qty} × ${def.name}`;
+    const name = itemName(state, entry, actor);
+    const what = qty === 1 ? `a ${name}` : `${qty} × ${name}`;
     return { request: { id: 'drop', index, qty }, detail: `dropping ${what}, the least valuable thing carried` };
   },
   describe: () => 'drop the least valuable item',
@@ -156,7 +158,7 @@ export const ACT_PICK_UP = defineRuleAction({
     for (const e of itemsAt(state, actor.floor, actor.pos)) {
       if (!wantsItem(state, actor, e.item)) continue;
       const value = itemValue(state, e.item);
-      if (best === null || value > best.value) best = { id: e.id, value, name: itemDef(e.item).name };
+      if (best === null || value > best.value) best = { id: e.id, value, name: itemName(state, e.item, actor) };
     }
     if (best !== null) return { request: { id: 'pickup', item: best.id }, detail: `picking up the ${best.name}` };
 
@@ -198,13 +200,13 @@ export const ACT_EQUIP_UPGRADE = defineRuleAction({
     'Put on a weapon or piece of armor from the pack that is clearly better than what is worn in its slot: at least as good in every ' +
     'stat and better in one. Gear with a tradeoff (more damage but less accuracy, say) is left for the player to decide.',
   parse: noParams,
-  resolve({ actor }): Resolved | null {
-    const up = bestUpgrade(actor);
+  resolve({ state, actor }): Resolved | null {
+    const up = bestUpgrade(state, actor);
     if (up === null) return null;
-    const name = itemDef(up.item).name;
-    const stats = gearStatsText(up.item);
+    const name = itemName(state, up.item, actor);
+    const stats = gearStatsText(state, actor, up.item);
     const what = stats === null ? `the ${name}` : `the ${name} (${stats})`;
-    const instead = up.replaces === null ? `, nothing worn there yet` : ` in place of the ${itemDef(up.replaces).name}`;
+    const instead = up.replaces === null ? `, nothing worn there yet` : ` in place of the ${itemName(state, up.replaces, actor)}`;
     const where = gearSlotsCount(up.item) > 1 ? ` (${EQUIP_SLOT_INFO[up.slot].label.toLowerCase()})` : '';
     return { request: { id: 'equip', index: up.index, slot: up.slot }, detail: `equipping ${what}${where}${instead}` };
   },

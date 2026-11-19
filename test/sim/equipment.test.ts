@@ -124,7 +124,7 @@ describe('equipping', () => {
     expect(hero.inventory.equipped).toEqual({ body: one(MAIL) });
 
     const view = snapshot(state).domains.items.members[hero.id];
-    expect(view?.equipped).toEqual([{ slot: 'body', def: MAIL, weight: 14, value: 60 }]);
+    expect(view?.equipped).toEqual([{ slot: 'body', def: MAIL, name: 'Riveted mail', weight: 14, value: 60 }]);
     // Worn gear doesn't count against Carry: only the jerkin in the pack does.
     expect(view?.weight).toBe(10);
 
@@ -160,24 +160,25 @@ describe('equipping', () => {
 
 describe('comparing gear', () => {
   it('calls an upgrade only what is at least as good in every stat', () => {
-    expect(compareGear(one(HATCHET), null)).toBe('better');
-    expect(compareGear(null, one(HATCHET))).toBe('worse');
-    expect(compareGear(one(SWORD), one(HATCHET))).toBe('better');
-    expect(compareGear(one(CUDGEL), one(HATCHET))).toBe('worse');
-    expect(compareGear(one(HATCHET), one(HATCHET))).toBe('same');
+    const { state } = setup();
+    expect(compareGear(state, undefined, one(HATCHET), null)).toBe('better');
+    expect(compareGear(state, undefined, null, one(HATCHET))).toBe('worse');
+    expect(compareGear(state, undefined, one(SWORD), one(HATCHET))).toBe('better');
+    expect(compareGear(state, undefined, one(CUDGEL), one(HATCHET))).toBe('worse');
+    expect(compareGear(state, undefined, one(HATCHET), one(HATCHET))).toBe('same');
     // More damage for less accuracy is a tradeoff, left to the player's rules.
-    expect(compareGear(one(MACE), one(HATCHET))).toBe('mixed');
-    expect(compareGear(one(MAIL), one(JERKIN))).toBe('mixed');
-    expect(compareGear(one(MAIL), null)).toBe('mixed');
+    expect(compareGear(state, undefined, one(MACE), one(HATCHET))).toBe('mixed');
+    expect(compareGear(state, undefined, one(MAIL), one(JERKIN))).toBe('mixed');
+    expect(compareGear(state, undefined, one(MAIL), null)).toBe('mixed');
   });
 
   it('picks the candidate nothing else beats', () => {
-    const { hero } = setup();
+    const { state, hero } = setup();
     hero.inventory = { items: [one(CUDGEL), one(HATCHET), one(SWORD), one(MACE)] };
-    expect(bestUpgrade(hero)).toMatchObject({ index: 2, slot: 'mainHand', replaces: null });
+    expect(bestUpgrade(state, hero)).toMatchObject({ index: 2, slot: 'mainHand', replaces: null });
     hero.inventory.equipped = { mainHand: one(SWORD) };
     hero.inventory.items = [one(CUDGEL), one(HATCHET), one(MACE)];
-    expect(bestUpgrade(hero)).toBeNull();
+    expect(bestUpgrade(state, hero)).toBeNull();
   });
 
   it('words modifiers', () => {
@@ -222,7 +223,7 @@ describe('gear and the Carry limit', () => {
     // Potions up to the limit, then a jerkin on top: overloaded.
     while (hero.inventory.items.length * 5 + 5 <= carry) hero.inventory.items.push({ def: POTION, qty: 5 });
     hero.inventory.items.push(one(JERKIN));
-    expect(compareGear(one(JERKIN), null)).toBe('better');
+    expect(compareGear(state, undefined, one(JERKIN), null)).toBe('better');
     // Full: a biscuit is not wanted, but an upgrade still is.
     expect(wantsItem(state, hero, { def: 'item.trail_biscuit', qty: 1 })).toBe(false);
     expect(wantsItem(state, hero, one(CAP))).toBe(true);
@@ -283,7 +284,7 @@ describe('rings and amulets (ETH-111)', () => {
   it('auto-equip replaces the weaker ring once both are full, and settles', () => {
     const { state, hero } = setup();
     hero.inventory = { items: [one(SIGNET)], equipped: { ring1: one(SIGNET), ring2: one(BAND) } };
-    expect(upgradeSlot(hero, one(SIGNET))).toBe('ring2');
+    expect(upgradeSlot(state, hero, one(SIGNET))).toBe('ring2');
     const events = run(state, 10);
     expect(ofType(events, 'equipped')).toMatchObject([{ item: SIGNET, slot: 'ring2', replaced: BAND }]);
     expect(hero.inventory.equipped).toEqual({ ring1: one(SIGNET), ring2: one(SIGNET) });
@@ -291,9 +292,9 @@ describe('rings and amulets (ETH-111)', () => {
   });
 
   it('leaves a ring with a tradeoff against both worn ones', () => {
-    const { hero } = setup();
+    const { state, hero } = setup();
     hero.inventory = { items: [one(OWL)], equipped: { ring1: one(SIGNET), ring2: one(BAND) } };
-    expect(upgradeSlot(hero, one(OWL))).toBeNull();
-    expect(bestUpgrade(hero)).toBeNull();
+    expect(upgradeSlot(state, hero, one(OWL))).toBeNull();
+    expect(bestUpgrade(state, hero)).toBeNull();
   });
 });

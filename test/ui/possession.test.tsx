@@ -124,7 +124,7 @@ describe('possession keys', () => {
     const snap = structuredClone(useSimStore.getState().snapshot);
     const id = mira()?.id ?? 0;
     if (snap === null) throw new Error('no snapshot');
-    const cap = { def: 'item.iron_cap', weight: 3, value: 5 };
+    const cap = { def: 'item.iron_cap', name: 'Iron cap', weight: 3, value: 5 };
     snap.domains.items.members[id] = {
       items: [{ ...cap, qty: 1, usable: false }],
       equipped: [{ ...cap, slot: 'head' }],

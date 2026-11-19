@@ -39,4 +39,21 @@ describe('log text', () => {
     const missing: LogTextRecord<{ type: 'ping' }> = {};
     expect(missing).toEqual({});
   });
+
+  it('words an item with properties by its event name, and a plain one by its def (ETH-118)', () => {
+    const base = { turn: 1, actor: 1, item: 'item.iron_hatchet', slot: 'mainHand' as const, floor: 'floor.1', pos: { x: 0, y: 0 } };
+    const named = ITEMS_LOG_TEXT.equipped.text(
+      { type: 'equipped', ...base, name: '+1 Iron hatchet', replaced: 'item.oak_cudgel', replacedName: 'Oak cudgel of Mist' },
+      () => 'Mira',
+    );
+    expect(named).toEqual([
+      'Mira wields ',
+      { ref: 'item.iron_hatchet', label: '+1 Iron hatchet' },
+      ', packing away ',
+      { ref: 'item.oak_cudgel', label: 'Oak cudgel of Mist' },
+      '.',
+    ]);
+    const plain = ITEMS_LOG_TEXT.unequipped.text({ type: 'unequipped', ...base }, () => 'Mira');
+    expect(plain).toEqual(['Mira takes off ', { ref: 'item.iron_hatchet' }, ' (main hand).']);
+  });
 });

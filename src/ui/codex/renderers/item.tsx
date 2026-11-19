@@ -4,7 +4,7 @@
  */
 import { EQUIP_SLOT_INFO, GEAR_TYPE_INFO, isJunk, ITEM_CATEGORIES, ITEM_CATEGORY_INFO, ITEMS, STATUSES } from '../../../content';
 import type { Effect, ItemDef } from '../../../content';
-import { gearStatsText } from '../../../sim';
+import { bundleStatsText } from '../../../sim';
 import type { CodexField } from '../types';
 import { defineCodexRenderer } from '../types';
 
@@ -41,7 +41,7 @@ function gearFields(def: ItemDef): CodexField[] {
     },
     {
       label: 'Stats',
-      value: gearStatsText({ def: def.id, qty: 1 }) ?? 'None',
+      value: bundleStatsText(def.bundle === undefined ? [] : [def.bundle]) ?? 'None',
       hint: 'What it adds to the wearer’s stats while worn. Adventurers put on gear that is at least as good in every stat and better in one.',
       key: true,
     },

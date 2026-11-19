@@ -35,17 +35,31 @@ export interface ExplainCardProps {
   heading?: boolean;
   /** `key` shows the renderer's key fields; `all` the whole stat table. */
   fields?: 'key' | 'all';
+  /** The heading's name, when it isn't the def's: one item's `itemName` ("+2 Iron hatchet", ETH-118). */
+  name?: string;
   className?: string;
 }
 
 /** What a content entry is: its name, kind, description and stats, from its Codex renderer. */
-export function ExplainCard({ id, heading = true, fields = 'key', className }: ExplainCardProps) {
+export function ExplainCard({ id, heading = true, fields = 'key', name, className }: ExplainCardProps) {
   const entry = codexEntry(id);
   if (entry === undefined) return null;
-  return <EntryCard entry={entry} heading={heading} fields={fields} className={className} />;
+  return <EntryCard entry={entry} heading={heading} fields={fields} name={name} className={className} />;
 }
 
-function EntryCard({ entry, heading, fields, className }: { entry: CodexEntry; heading: boolean; fields: 'key' | 'all'; className?: string }) {
+function EntryCard({
+  entry,
+  heading,
+  fields,
+  name,
+  className,
+}: {
+  entry: CodexEntry;
+  heading: boolean;
+  fields: 'key' | 'all';
+  name?: string | undefined;
+  className?: string | undefined;
+}) {
   const { def, renderer } = entry;
   const group = renderer.group?.(def);
   const rows = (renderer.fields?.(def) ?? []).filter((f) => fields === 'all' || f.key === true);
@@ -54,7 +68,7 @@ function EntryCard({ entry, heading, fields, className }: { entry: CodexEntry; h
       {heading && (
         <div className={styles.heading}>
           <GlyphMark glyph={entryGlyph(entry)} />
-          <span className={styles.name}>{def.name}</span>
+          <span className={styles.name}>{name ?? def.name}</span>
           <span className={styles.kind}>{group ?? renderer.registry.kind}</span>
         </div>
       )}
@@ -76,7 +90,12 @@ function EntryCard({ entry, heading, fields, className }: { entry: CodexEntry; h
 export interface ExplainProps {
   /** A content id: `class.vanguard`, `feature.door`. */
   id: string;
-  /** The text shown; defaults to the def's name. */
+  /**
+   * The name of this particular thing when it isn't the def's: one item's `itemName` ("+2 Iron
+   * hatchet", ETH-118). Shown as the text (unless `children` is given) and as the card's heading.
+   */
+  name?: string;
+  /** The text shown; defaults to `name`, else the def's name. */
   children?: ReactNode;
 }
 
@@ -84,12 +103,12 @@ export interface ExplainProps {
  * A content mention with a hover and focus tooltip explaining it. An id no kind knows renders
  * its text (or the id) plainly.
  */
-export function Explain({ id, children }: ExplainProps) {
+export function Explain({ id, name, children }: ExplainProps) {
   const entry = codexEntry(id);
-  const text = children ?? entry?.def.name ?? id;
+  const text = children ?? name ?? entry?.def.name ?? id;
   if (entry === undefined) return <>{text}</>;
   return (
-    <Tooltip content={<EntryCard entry={entry} heading fields="key" />}>
+    <Tooltip content={<EntryCard entry={entry} heading fields="key" name={name} />}>
       <span tabIndex={0} className={styles.link} data-explain={id}>
         {text}
       </span>

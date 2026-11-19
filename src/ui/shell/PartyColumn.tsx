@@ -366,12 +366,12 @@ function Pack({ id, possessed }: { id: EntityId; possessed: boolean }) {
             <li key={worn.slot} className={styles.packRow}>
               <span>
                 <span className={styles.packSlot}>{EQUIP_SLOT_INFO[worn.slot].label}: </span>
-                <Explain id={worn.def}>{contentName(worn.def)}</Explain>
+                <Explain id={worn.def} name={worn.name} />
               </span>
               {possessed && (
                 <PackAction
                   label="Take off"
-                  hint={`Take off ${contentName(worn.def)} and put it in the pack. Spends the turn.`}
+                  hint={`Take off ${worn.name} and put it in the pack. Spends the turn.`}
                   onClick={() => act({ id: 'unequip', slot: worn.slot })}
                 />
               )}
@@ -386,20 +386,20 @@ function Pack({ id, possessed }: { id: EntityId; possessed: boolean }) {
           {pack.items.map((item, i) => (
             <li key={`${item.def}-${i}`} className={styles.packRow}>
               <span>
-                <Explain id={item.def}>{contentName(item.def)}</Explain>
+                <Explain id={item.def} name={item.name} />
                 {item.qty > 1 && <span className={styles.packQty}> ×{item.qty}</span>}
               </span>
               {possessed && wearable(item.def) && (
                 <PackAction
                   label="Equip"
-                  hint={`Put on ${contentName(item.def)}; whatever was worn there goes into the pack. Spends the turn.`}
+                  hint={`Put on ${item.name}; whatever was worn there goes into the pack. Spends the turn.`}
                   onClick={() => act({ id: 'equip', index: i })}
                 />
               )}
               {possessed && item.usable && (
                 <PackAction
                   label="Use"
-                  hint={`Use one ${contentName(item.def)}. Spends the turn.`}
+                  hint={`Use one ${item.name}. Spends the turn.`}
                   onClick={() => act({ id: 'use', index: i })}
                 />
               )}

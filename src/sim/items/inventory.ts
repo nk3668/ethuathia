@@ -188,7 +188,7 @@ export function wantsItem(state: RunState, actor: Entity, item: ItemInstance): b
   const def = itemDef(item);
   if (isJunk(def)) return false;
   if (def.category === 'gold' || def.category === 'relic') return true;
-  if (upgradeSlot(actor, item) !== null) return true;
+  if (upgradeSlot(state, actor, item) !== null) return true;
   const limit = carryLimit(state, actor);
   let weight = carryWeight(state, actor) + itemWeight(item);
   if (weight <= limit) return true;

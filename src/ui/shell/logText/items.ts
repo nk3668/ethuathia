@@ -12,9 +12,12 @@ export const HIGHLIGHT_VALUABLE_FIND = defineHighlight({
   description: `An adventurer picks up an item worth ${NOTABLE_ITEM_VALUE} or more.`,
 });
 
-/** The item as a mention, with ` ×3` after it for more than one. */
-function itemParts(item: string, qty: number): LogPart[] {
-  return qty === 1 ? [mention(item)] : [mention(item), ` ×${qty}`];
+/**
+ * The item as a mention, with ` ×3` after it for more than one. `name` is the event's item name
+ * (`itemName`, ETH-118: "+2 Iron hatchet"), present only when it differs from the def's name.
+ */
+function itemParts(item: string, qty: number, name?: string): LogPart[] {
+  return qty === 1 ? [mention(item, name)] : [mention(item, name), ` ×${qty}`];
 }
 
 function verb(item: string): string {
@@ -30,7 +33,7 @@ export const ITEMS_LOG_TEXT: LogTextRecord<ItemsEvent> = {
     category: 'loot',
     highlight: HIGHLIGHT_VALUABLE_FIND,
     highlightWhen: (e) => e.value >= NOTABLE_ITEM_VALUE,
-    text: (e, nameOf) => [`${nameOf(e.actor)} picks up `, ...itemParts(e.item, e.qty), '.'],
+    text: (e, nameOf) => [`${nameOf(e.actor)} picks up `, ...itemParts(e.item, e.qty, e.name), '.'],
   },
   goldPickedUp: {
     category: 'loot',
@@ -38,22 +41,22 @@ export const ITEMS_LOG_TEXT: LogTextRecord<ItemsEvent> = {
   },
   dropped: {
     category: 'loot',
-    text: (e, nameOf) => [`${nameOf(e.actor)} drops `, ...itemParts(e.item, e.qty), '.'],
+    text: (e, nameOf) => [`${nameOf(e.actor)} drops `, ...itemParts(e.item, e.qty, e.name), '.'],
   },
   used: {
     category: 'loot',
-    text: (e, nameOf) => [`${nameOf(e.actor)} ${verb(e.item)} `, mention(e.item), '.'],
+    text: (e, nameOf) => [`${nameOf(e.actor)} ${verb(e.item)} `, mention(e.item, e.name), '.'],
   },
   equipped: {
     category: 'loot',
     text: (e, nameOf) => [
       `${nameOf(e.actor)} ${e.slot === 'mainHand' ? 'wields' : 'puts on'} `,
-      mention(e.item),
-      ...(e.replaced === null ? ['.'] : [', packing away ', mention(e.replaced), '.']),
+      mention(e.item, e.name),
+      ...(e.replaced === null ? ['.'] : [', packing away ', mention(e.replaced, e.replacedName), '.']),
     ],
   },
   unequipped: {
     category: 'loot',
-    text: (e, nameOf) => [`${nameOf(e.actor)} takes off `, mention(e.item), ` (${EQUIP_SLOT_INFO[e.slot].label.toLowerCase()}).`],
+    text: (e, nameOf) => [`${nameOf(e.actor)} takes off `, mention(e.item, e.name), ` (${EQUIP_SLOT_INFO[e.slot].label.toLowerCase()}).`],
   },
 };
