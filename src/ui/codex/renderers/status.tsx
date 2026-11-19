@@ -1,6 +1,6 @@
 /** Codex view of timed statuses (buffs and debuffs, ETH-057). */
 import { DEFAULT_MAX_STACKS, STATUSES, statusGroup } from '../../../content';
-import type { Effect, StatusDef } from '../../../content';
+import type { Bundle, Effect, StatusDef } from '../../../content';
 import { isStatId, STAT_INFO } from '../../../sim';
 import { defineCodexRenderer } from '../types';
 
@@ -26,14 +26,23 @@ export function effectText(effect: Effect): string {
   }
 }
 
-/** The bundle in words: "Speed ×1.5", "Sight −3", "turn start: heals 1 HP". */
-function bundleText(def: StatusDef): string {
-  const parts = (def.bundle.modifiers ?? []).map((m) =>
-    m.op === 'add' ? `${statLabel(m.stat)} ${m.value >= 0 ? '+' : '−'}${Math.abs(m.value)}` : `${statLabel(m.stat)} ×${m.value}`,
-  );
-  for (const t of def.bundle.triggers ?? []) {
-    const when = t.on === 'trigger.turn_start' ? 'each turn' : t.on === 'trigger.turn_end' ? 'at turn end' : t.on;
-    parts.push(`${when}: ${t.effects.map(effectText).join(', ')}`);
+/** A stat change in words: "Speed ×1.5", "Sight −3". Also used by the template renderer. */
+export function changeText(stat: string, op: 'add' | 'mul', value: number): string {
+  return op === 'add' ? `${statLabel(stat)} ${value >= 0 ? '+' : '−'}${Math.abs(value)}` : `${statLabel(stat)} ×${value}`;
+}
+
+const TRIGGER_WORDS: Readonly<Record<string, string>> = {
+  'trigger.turn_start': 'each turn',
+  'trigger.turn_end': 'at turn end',
+  'trigger.hit': 'on a hit',
+  'trigger.struck': 'when struck',
+};
+
+/** A bundle in words: "Speed ×1.5", "Sight −3", "each turn: heals 1 HP". Also used by the template renderer. */
+export function bundleText(bundle: Bundle): string {
+  const parts = (bundle.modifiers ?? []).map((m) => changeText(m.stat, m.op, m.value));
+  for (const t of bundle.triggers ?? []) {
+    parts.push(`${TRIGGER_WORDS[t.on] ?? t.on}: ${t.effects.map((e) => `${effectText(e)}${e.to === 'other' ? ' to the other' : ''}`).join(', ')}`);
   }
   return parts.length > 0 ? parts.join('; ') : 'No effect';
 }
@@ -45,7 +54,7 @@ export default defineCodexRenderer({
   hint: 'Have an adventurer gain it to learn about it.',
   group: (def) => (def.harmful ? 'Harmful' : 'Helpful'),
   fields: (def) => [
-    { label: 'Effect', value: bundleText(def), hint: 'What it does while it lasts, at normal strength.', key: true },
+    { label: 'Effect', value: bundleText(def.bundle), hint: 'What it does while it lasts, at normal strength.', key: true },
     {
       label: 'Stacking',
       value: def.stacking === 'stack' ? `${STACKING_TEXT.stack} (up to ${def.maxStacks ?? DEFAULT_MAX_STACKS})` : STACKING_TEXT[def.stacking],

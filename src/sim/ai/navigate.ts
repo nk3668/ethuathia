@@ -3,7 +3,7 @@
  * frontier, and turning one step along a goal map into an action.
  */
 import type { Grid, Pos } from '../../core';
-import { MONSTERS } from '../../content';
+import { isProperName, monsterDisplayName, MONSTERS } from '../../content';
 import { blockerAt, featureAt, getEntity, getFloor } from '../entities';
 import { memoryPathGrid, OPEN_DOOR_COST, stepToward } from '../goalMap';
 import type { PathGrid } from '../goalMap';
@@ -118,8 +118,14 @@ export function willingToSwap({ actor }: AiCtx, other: Entity): boolean {
   return intent === null || (RULE_ACTIONS.has(intent.action) && RULE_ACTIONS.get(intent.action).idle);
 }
 
-/** A short name for an entity in a reason: an adventurer's name, a monster's kind, else its id. */
+/**
+ * A short name for an entity in a reason: an adventurer's name, a monster's kind with its
+ * templates ("the venomous gloam rat") or its own name ("Vell the Unbowed", ETH-117), else its id.
+ */
 export function nameOf(entity: Entity): string {
   if (entity.adventurer !== undefined) return entity.adventurer.name;
-  return MONSTERS.has(entity.def) ? `the ${MONSTERS.get(entity.def).name.toLowerCase()}` : `entity ${entity.id}`;
+  if (!MONSTERS.has(entity.def)) return `entity ${entity.id}`;
+  const naming = entity.monster?.overlay ?? {};
+  const name = monsterDisplayName(MONSTERS.get(entity.def), naming);
+  return isProperName(naming) ? name : `the ${name.toLowerCase()}`;
 }

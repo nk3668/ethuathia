@@ -9,6 +9,7 @@ import { clonePlain, Grid } from '../core';
 import type { Pos } from '../core';
 import { MONSTERS } from '../content';
 import type { FloorPlan } from './floorText';
+import { fillVitals } from './stats/getStat';
 import type { Entity, EntityId, Floor, FloorId, RunState } from './state';
 
 /** Everything an entity needs except its id, which `addEntity` assigns. */
@@ -35,7 +36,9 @@ export function addFloor(state: RunState, id: FloorId, plan: FloorPlan): Floor {
   state.memory[id] = { terrain: new Grid(plan.terrain.width, plan.terrain.height, 'u8').toBuffer(), features: {} };
   for (const { def, pos, feature } of plan.features) addEntity(state, { def, floor: id, pos, feature });
   for (const { pos, item } of plan.items ?? []) addEntity(state, { def: item.def, floor: id, pos, item });
-  for (const spawn of plan.spawns ?? []) addEntity(state, { ...spawn, floor: id });
+  // Creatures start at full HP and MP by `statValue`, so templates (ETH-117) and run-wide
+  // modifiers (ETH-115) that raise a maximum are counted.
+  for (const spawn of plan.spawns ?? []) fillVitals(state, addEntity(state, { ...spawn, floor: id }));
   return floor;
 }
 

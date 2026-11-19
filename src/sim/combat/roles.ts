@@ -13,7 +13,7 @@
  */
 import { DIRS_8 } from '../../core';
 import type { Pos } from '../../core';
-import { MONSTERS } from '../../content';
+import { MONSTERS, monsterPowers } from '../../content';
 import type { BoltPower, BolsterPower, MendPower } from '../../content';
 import { followMap, nameOf } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
@@ -23,6 +23,7 @@ import { blockerAt, getEntity, getFloor, inFloorBounds } from '../entities';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { fieldOfView, sightRadius } from '../perception';
 import type { ActorEntity, Entity, RunState } from '../state';
+import { templatesOf } from './overlay';
 import { adjacentEnemies, distance, hpPercent, isHostile, pathGridFor, visibleEnemies } from './rules';
 
 /** The role powers of an actor: those on its monster def, or none (adventurers, for now). */
@@ -32,11 +33,10 @@ export interface RolePowers {
   bolster?: BolsterPower;
 }
 
-/** What `actor` can do beyond a blow: the powers on its monster def. */
+/** What `actor` can do beyond a blow: the powers on its monster def, with its templates' over them (ETH-117). */
 export function rolePowers(actor: Entity): RolePowers {
   if (!MONSTERS.has(actor.def)) return {};
-  const { bolt, mend, bolster } = MONSTERS.get(actor.def);
-  return { ...(bolt === undefined ? {} : { bolt }), ...(mend === undefined ? {} : { mend }), ...(bolster === undefined ? {} : { bolster }) };
+  return { ...monsterPowers(MONSTERS.get(actor.def), templatesOf(actor)) };
 }
 
 /** True if `a` and `b` are different living actors on the same side (and not neutral). */

@@ -36,17 +36,20 @@ backlog/
 | Field | Values |
 |---|---|
 | `type` | `feature` · `bug` · `chore` (tooling or refactoring) · `spike` (research or prototype) · `content` (data such as monsters and items) |
-| `status` | `idea` · `ready` · `in-progress` · `blocked` · `done` · `dropped` |
+| `status` | `idea` · `ready` · `in-progress` · `blocked` · `pending-review` · `done` · `dropped` |
 | `priority` | `P0` now · `P1` this milestone · `P2` soon · `P3` someday |
 | `milestone` | `M0`–`M6` (see the roadmap in `CLAUDE.md` §10) · `later` |
 | `epic` | name of the epic's folder, or `none` |
 | `size` | `S` under half a day · `M` 1–2 days · `L` too big: split it |
 | `depends_on` | list of IDs, e.g. `[ETH-003, ETH-004]` |
+| `assignee` | optional. `antigravity` marks an item Antigravity may pick up on its own; leave it out for the Claude orchestrator's queue |
 
 **Status meanings:**
 - `idea`: captured but not thought through yet.
 - `ready`: acceptance criteria written and size S or M. Can be started.
 - `blocked`: the Log must say what it is waiting on.
+- `pending-review`: an Antigravity item whose PR is open and waiting for Claude's review. The
+  reviewer sets it to `done` and ticks the epic when merging (Claude agents set `done` themselves).
 
 ## Workflow
 
