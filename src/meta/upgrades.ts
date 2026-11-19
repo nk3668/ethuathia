@@ -15,6 +15,7 @@
 import { BUILDINGS, CAPACITY_INFO, describeMilestone, findDef, groupNodes, UPGRADES } from '../content';
 import type { CapacityKey, UpgradeGrant, UpgradeNodeDef } from '../content';
 import { formatNumber } from '../core';
+import { describeRequirement } from '../sim';
 import { addCurrencies, CURRENCY_INFO, emptyCurrencies, subtractCurrencies } from './currencies';
 import type { Currencies } from './currencies';
 import { lockingMilestone } from './milestones';
@@ -124,7 +125,7 @@ export function canPurchase(profile: Profile, nodeId: string): PurchaseCheck {
   const shut = lockingMilestone(profile, node.building);
   if (shut !== null) {
     const building = BUILDINGS.get(node.building).name;
-    return { ok: false, status: 'locked', missing: [], reason: `The ${building} opens when you ${describeMilestone(shut).toLowerCase()}.` };
+    return { ok: false, status: 'locked', missing: [], reason: `The ${building} opens when you ${describeMilestone(shut, describeRequirement).toLowerCase()}.` };
   }
 
   if (node.exclusiveGroup !== undefined) {

@@ -12,6 +12,7 @@ import type { ConditionDef } from './types';
 export const COND_ALWAYS = defineCondition({
   id: 'cond.always',
   name: 'Always',
+  scope: 'run',
   description: 'Always true. The rule fires whenever its action can be done.',
   parse: noParams,
   evaluate: () => ({ ok: true, detail: '' }),

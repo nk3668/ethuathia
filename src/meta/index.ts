@@ -13,7 +13,16 @@ export {
 export type { Currencies, CurrencyId } from './currencies';
 export { applyRunResult, checkProfile, newProfile } from './profile';
 export type { Profile, ProfileSliceKey } from './profile';
-export { isMilestoneOpen, latestUnlocks, lockingMilestone, milestoneProgress, milestoneTargets, unlockMilestones, unlockOf } from './milestones';
+export {
+  isMilestoneOpen,
+  latestUnlocks,
+  lockingMilestone,
+  milestoneProgress,
+  milestoneRequirements,
+  milestoneTargets,
+  unlockMilestones,
+  unlockOf,
+} from './milestones';
 export type { MilestoneTarget } from './milestones';
 export type { Milestones, MilestoneUnlock } from './slices/milestones';
 export { checkRunResult, currenciesFromRewards } from './runResult';

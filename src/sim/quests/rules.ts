@@ -23,6 +23,7 @@ const turns = (n: number) => `${n} ${n === 1 ? 'turn' : 'turns'}`;
 export const COND_CONTRACTS_COMPLETE = defineCondition({
   id: 'cond.contracts_complete',
   name: 'Contracts complete',
+  scope: 'run',
   description:
     'True once every contract the party took on is complete (a recovered relic counts while a living adventurer carries it). ' +
     'Never true on a run without contracts.',

@@ -2,7 +2,7 @@
 id: ETH-121
 title: Shared conditions: run-scope conditions and a Requirement type usable outside rules
 type: feature
-status: ready
+status: done
 priority: P1
 milestone: M2
 epic: behavior-rules
@@ -28,32 +28,32 @@ third and fourth vocabulary, and the rules editor (M3) would not offer them. See
 §5.2 and the "Shared systems" list in `docs/ARCHITECTURE.md`.
 
 ## Acceptance criteria
-- [ ] `ConditionDef` (`src/sim/ai/types.ts`) gains `scope: 'actor' | 'run'` (default `actor`,
+- [x] `ConditionDef` (`src/sim/ai/types.ts`) gains `scope: 'actor' | 'run'` (default `actor`,
       so every existing condition is unchanged). A `run` condition's `evaluate` takes a
       `RunCtx = { state }` (`AiCtx` extends it), so it can be checked by the run, a tracker or
       the meta layer as well as inside a rule. `defineCondition` types the ctx by scope. At
       least `cond.always`, `cond.heading_out`, `cond.bottom_floor` and `cond.contracts_complete`
       are marked `run`.
-- [ ] `Requirement` (plain data, Zod `requirementSchema` in `src/content/requirements.ts`):
+- [x] `Requirement` (plain data, Zod `requirementSchema` in `src/content/requirements.ts`):
       `{ cond: id, params? } | { all: Requirement[] } | { any: Requirement[] } | { not: Requirement }`.
       `checkRequirement(ctx, req) → { ok, detail }` (`src/sim/ai/requirements.ts`) evaluates it,
       and `describeRequirement(req)` words it from each condition's `describe` ("HP below 30% and
       not poisoned"). An `actor`-scope condition inside a requirement checked with a `RunCtx`
       is a validation error, not a runtime surprise.
-- [ ] Content refs: `requirementRefs(path, req)` lets any kind that embeds a requirement have its
+- [x] Content refs: `requirementRefs(path, req)` lets any kind that embeds a requirement have its
       condition ids and params checked by `checkGame` against `CONDITIONS` (the same way upgrade
       unlock ids are checked today).
-- [ ] Profile scope: a new `Milestone` kind `{ kind: 'metInRun', requirement }` (one union member,
+- [x] Profile scope: a new `Milestone` kind `{ kind: 'metInRun', requirement }` (one union member,
       schema option and cases in `milestoneMet` / `describeMilestone`). A run tracker
       `track.requirements` checks each watched run-scope requirement at the end of every step
       and records the ones that held at least once; its `RunResult.extras` lists them, and
       `unlockMilestones` reads it. Watched requirements are collected from `milestoneTargets()`
       and passed in through `RunConfig.watchRequirements?` by `buildRunConfig`.
-- [ ] Tests: combinators and wording; a run-scope condition used both in a rule and in a
+- [x] Tests: combinators and wording; a run-scope condition used both in a rule and in a
       requirement gives the same answer; a fixed-seed run that reaches floor 3 records a
       `metInRun` milestone; content validation rejects an unknown condition id and an
       actor-scope condition in a run-scope requirement.
-- [ ] `docs/ARCHITECTURE.md` §4 and the "Shared systems" entry describe scopes and `Requirement`.
+- [x] `docs/ARCHITECTURE.md` §4 and the "Shared systems" entry describe scopes and `Requirement`.
 
 ## Notes
 Who uses it and how:
@@ -79,3 +79,17 @@ Open decisions:
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-036, ETH-070, ETH-093, ETH-104).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
+- 2026-11-19: Started (in-progress).
+- 2026-11-19: Built. `ConditionDef.scope` + `RunCtx`, `Requirement` (content) with
+  `checkRequirement` / `describeRequirement` / `requirementProblems` (sim), `CONDITION_TARGET`
+  and `RefTarget.checkRef` for content validation, the `metInRun` milestone, `track.requirements`
+  (new `RunTracker.afterStep` hook) and `RunConfig.watchRequirements`. STATE_VERSION 21.
+  Added `cond.at_depth { depth }` (run scope) so a requirement can ask for a floor reached.
+- 2026-11-19: (default) `cond.bottom_floor` became run-scope as "a living party member stands on
+  the bottom floor" instead of "the deciding actor is on it" — alternative: keep it actor-scope
+  and add a separate run-level condition. Sim compare: identical outcomes on 50 seeds.
+- 2026-11-19: (default) `metInRun` wording is "Achieve in one run: <requirement>" built from the
+  conditions' `describe` — alternative: an optional hand-written `text` on the milestone.
+- 2026-11-19: (default) Watched requirements are only those of still-locked `metInRun`
+  milestones; the tracker has no log line or Codex entry of its own (the unlock shows in the run
+  summary and Town tooltip) — alternative: a `requirementMet` event with a log line.

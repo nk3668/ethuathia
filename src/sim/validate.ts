@@ -7,6 +7,7 @@
 import { checkContent, ContentError, FEATURES, FLOOR_TYPES, TERRAIN } from '../content';
 import type { FloorTypeDef } from '../content';
 import { BASELINE_RULES } from './ai/engine';
+import { CONDITION_TARGET } from './ai/requirements';
 import { checkFloorType } from './gen';
 import { CONDITIONS, GEN_STEPS, RULE_ACTIONS, TRIGGERS } from './registries';
 import { STAT_REFS } from './stats';
@@ -17,13 +18,14 @@ import { DEFS, TERRAIN_IDS } from './state';
  *
  * - content shapes and cross-references (`checkContent`), with floor types' steps looked up in
  *   `GEN_STEPS`, stat ids in `STAT_REFS`, unlocked conditions and rule actions in theirs, and bundle
- *   trigger kinds in `TRIGGERS`;
+ *   trigger kinds in `TRIGGERS`; requirements' conditions also have their params and scope
+ *   checked (`CONDITION_TARGET`, ETH-121);
  * - each floor type's step parameters, when all its steps exist;
  * - the content ids the sim names in code: `TERRAIN_IDS` and the feature ids in `DEFS`;
  * - the conditions and rule actions the baseline rules name.
  */
 export function checkGame(): string[] {
-  const problems = checkContent([GEN_STEPS, STAT_REFS, CONDITIONS, RULE_ACTIONS, TRIGGERS]);
+  const problems = checkContent([GEN_STEPS, STAT_REFS, CONDITION_TARGET, RULE_ACTIONS, TRIGGERS]);
   problems.push(...checkFloorParams(FLOOR_TYPES.all()));
 
   TERRAIN_IDS.forEach((id, code) => {

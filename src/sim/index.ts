@@ -81,6 +81,13 @@ export {
   POSSESSION_COMMANDS,
   possessedMember,
   tracePlayerAction,
+  checkRequirement,
+  CONDITION_TARGET,
+  describeCondition,
+  describeRequirement,
+  hasActor,
+  requirementProblems,
+  requirementScope,
 } from './ai';
 export type {
   AiActor,
@@ -90,6 +97,7 @@ export type {
   Choice,
   ConditionDef,
   ConditionResult,
+  ConditionScope,
   DroppedGoal,
   Intent,
   ParamParser,
@@ -102,6 +110,7 @@ export type {
   PossessCommand,
   PossessionCommand,
   ReleaseCommand,
+  RunCtx,
 } from './ai';
 export { applyCommand } from './commands';
 export type { BaseCommand, Command, CommandDef, CommandRecord, CommandType } from './commands';

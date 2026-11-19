@@ -6,7 +6,8 @@
  *
  * 1. `createRun` starts every tracker at `init()`, in `state.domains.run.trackers[id]`.
  * 2. At the end of each step, `reduceTrackers` folds that step's events (in order) into each
- *    tracker's state, then recomputes `state.domains.run.rewards.atRisk` as the sum of every
+ *    tracker's state, then gives each tracker with an `afterStep` the run (ETH-121), then
+ *    recomputes `state.domains.run.rewards.atRisk` as the sum of every
  *    tracker's `rewards(state)`. Nothing else writes `atRisk`.
  * 3. At run end, `trackerExtras` gives each tracker's `extras(state)` (default: its state) for
  *    `RunResult.extras[id]`.
@@ -52,6 +53,10 @@ export function reduceTrackers(state: RunState, events: readonly SimEvent[]): vo
     let s = Object.hasOwn(slice.trackers, tracker.id) ? slice.trackers[tracker.id] : tracker.init();
     for (const event of events) s = tracker.reduce(s, event);
     slice.trackers[tracker.id] = s;
+  }
+  // After every tracker has the events, so one watching the run sees this step whole (ETH-121).
+  for (const tracker of TRACKER_LIST) {
+    if (tracker.afterStep !== undefined) slice.trackers[tracker.id] = tracker.afterStep(slice.trackers[tracker.id], state);
   }
   slice.rewards.atRisk = trackerRewards(state);
 }

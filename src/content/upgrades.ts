@@ -19,7 +19,7 @@ import type { Def } from '../core';
 import { bundleRefs, bundleSchema } from './bundles';
 import type { Bundle } from './bundles';
 import type { ContentKind, ContentRef } from './kind';
-import { milestoneSchema } from './milestones';
+import { milestoneRefs, milestoneSchema } from './milestones';
 import type { Milestone } from './milestones';
 import { defShape, idSchema, positiveInt } from './schema';
 
@@ -40,6 +40,7 @@ export const BUILDINGS = new Registry<BuildingDef>('building');
 export const BUILDING_KIND: ContentKind<BuildingDef> = {
   registry: BUILDINGS,
   schema: z.strictObject({ ...defShape('building'), unlock: milestoneSchema.optional() }),
+  refs: (def) => (def.unlock === undefined ? [] : milestoneRefs('unlock', def.unlock)),
 };
 
 /** Registers a building def and returns it. Its shape is checked by `validateContent`. */

@@ -127,7 +127,7 @@ describe('the history slice', () => {
     const decoded = decodeSave(text);
     if (!decoded.ok) throw new Error(decoded.error);
     expect(decoded.profile.history.totals).toEqual(totals);
-    expect(milestoneProgress(decoded.profile)).toEqual({ runs: 4, victories: 1, deepestDepth: 3 });
+    expect(milestoneProgress(decoded.profile)).toEqual({ runs: 4, victories: 1, deepestDepth: 3, metInRun: [] });
     // The save predates milestones: the next run banked opens what the old totals earned.
     expect(isMilestoneOpen(decoded.profile, 'building.smithy')).toBe(false);
     const after = applyRunResult(decoded.profile, { ...emptyRunResult('retreat'), turns: 10, deepestDepth: 1 });

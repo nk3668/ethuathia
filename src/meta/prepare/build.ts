@@ -5,9 +5,10 @@
  */
 import { CLASSES, CONTRACTS, RACES, upgradeBundle } from '../../content';
 import { Rng } from '../../core';
-import { configDepth, hasBundle } from '../../sim';
+import { configDepth, hasBundle, requirementProblems } from '../../sim';
 import type { RunConfig } from '../../sim';
 import type { Profile } from '../profile';
+import { milestoneRequirements } from '../milestones';
 import { ownedNodes } from '../upgrades';
 import { CHOICE_ENTRIES } from './index';
 import type { RunChoices } from './index';
@@ -31,7 +32,8 @@ export function upgradePartyBundles(profile: Profile): string[] {
  * The run config for `choices` on this profile: each `RUN_CHOICES` section applies its choice in
  * order (random recruits draw from `seed`, so the same seed gives the same party), then the
  * owned upgrades' party bundles are added to `partyBundles`. Run-scope bundle grants have no
- * consumer yet (Omens and blessings add a run-wide bundle source). Throws a `RangeError` listing
+ * consumer yet (Omens and blessings add a run-wide bundle source). The requirements of locked
+ * `metInRun` milestones go into `watchRequirements` (ETH-121). Throws a `RangeError` listing
  * the problems if the result fails `checkRunConfig`.
  */
 export function buildRunConfig(profile: Profile, choices: RunChoices, seed: number): RunConfig {
@@ -40,6 +42,9 @@ export function buildRunConfig(profile: Profile, choices: RunChoices, seed: numb
   for (const [key, section] of CHOICE_ENTRIES) section.apply(ctx, choices[key]);
   const bundles = upgradePartyBundles(profile);
   if (bundles.length > 0) config.partyBundles = [...(config.partyBundles ?? []), ...bundles];
+  // The locked `metInRun` milestones' requirements, for `track.requirements` (ETH-121).
+  const watch = milestoneRequirements(profile);
+  if (watch.length > 0) config.watchRequirements = watch;
   const problems = checkRunConfig(config);
   if (problems.length > 0) throw new RangeError(`Invalid run config: ${problems.join('; ')}`);
   return config;
@@ -59,6 +64,9 @@ export function checkRunConfig(config: RunConfig): string[] {
   const contracts = config.contracts ?? [];
   for (const id of contracts) if (!CONTRACTS.has(id)) problems.push(`unknown contract "${id}"`);
   if (new Set(contracts).size !== contracts.length) problems.push('a contract is taken twice');
+  (config.watchRequirements ?? []).forEach((req, i) => {
+    for (const problem of requirementProblems(req, 'run')) problems.push(`watchRequirements[${i}].${problem}`);
+  });
   try {
     configDepth(config);
   } catch (error) {

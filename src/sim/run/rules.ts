@@ -18,6 +18,7 @@ import { buildGoalMap, UNREACHABLE } from '../goalMap';
 export const COND_HEADING_OUT = defineCondition({
   id: 'cond.heading_out',
   name: 'Heading out',
+  scope: 'run',
   description:
     'True once the party has turned back for the surface: after a retreat order, or once any adventurer has started a retreat.',
   parse: noParams,
