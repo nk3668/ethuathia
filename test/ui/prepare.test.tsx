@@ -2,7 +2,9 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { RaceDef } from '../../src/content';
 import { buildRunConfig } from '../../src/meta';
+import { raceOptionLabel, slotAttributePreview } from '../../src/ui/prepare/components/attributePreview';
 import { PrepareScreen } from '../../src/ui/prepare/PrepareScreen';
 import { collectPanels, PREPARE_PANELS } from '../../src/ui/prepare/registry';
 import { definePreparePanel } from '../../src/ui/prepare/types';
@@ -58,6 +60,35 @@ describe('PrepareScreen', () => {
     useRunStore.setState({ startError: 'No dungeon is available' });
     render(<PrepareScreen />);
     expect(screen.getByRole('alert').textContent).toContain('No dungeon is available');
+  });
+
+  it('shows attribute modifiers in class and race selects and previews attributes and HP/MP per slot', async () => {
+    const user = userEvent.setup();
+    render(<PrepareScreen />);
+
+    const party = within(screen.getByTestId('prepare-party'));
+    const classSelect = party.getByRole('combobox', { name: 'Class' });
+    const raceSelect = party.getByRole('combobox', { name: 'Race' });
+
+    expect(within(classSelect).getByRole('option', { name: 'Vanguard (BRN 11 · FIN 9 · WIT 4 · GRT 13)' })).toBeTruthy();
+    expect(within(raceSelect).getByRole('option', { name: 'Human (BRN +1 · FIN +1 · WIT +1 · GRT +1)' })).toBeTruthy();
+
+    expect(party.getByText('Attributes rolled on descent')).toBeTruthy();
+
+    await user.selectOptions(classSelect, 'class.vanguard');
+    expect(party.getByText('BRN 11 · FIN 9 · WIT 4 · GRT 13 · HP 19 · MP 4 (before race)')).toBeTruthy();
+
+    await user.selectOptions(raceSelect, 'race.human');
+    expect(party.getByText('BRN 12 · FIN 10 · WIT 5 · GRT 14 · HP 20 · MP 5')).toBeTruthy();
+
+    await user.selectOptions(classSelect, '');
+    expect(party.getByText('BRN +1 · FIN +1 · WIT +1 · GRT +1 (before class)')).toBeTruthy();
+  });
+
+  it('omits modifier parentheses and describes zero-modifier races cleanly', () => {
+    const plainRace: RaceDef = { id: 'race.plain', name: 'Plain', description: 'No modifiers.', tags: [], attributes: {}, speed: 100 };
+    expect(raceOptionLabel(plainRace)).toBe('Plain');
+    expect(slotAttributePreview(undefined, plainRace)).toEqual({ text: 'No attribute modifiers (before class)', resolved: true });
   });
 });
 

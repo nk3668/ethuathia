@@ -9,6 +9,7 @@ import type { RecruitPick } from '../../../meta';
 import { Explain } from '../../codex/Explain';
 import styles from '../panels.module.css';
 import type { PreparePanelProps } from '../types';
+import { classOptionLabel, raceOptionLabel, slotAttributePreview } from './attributePreview';
 
 const RANDOM = '';
 
@@ -43,8 +44,9 @@ export function PartyPanel({ profile, choices, update }: PreparePanelProps) {
             );
           }
           const pick = slots[i] ?? RANDOM_PICK;
-          const classOk = pick.classId === null || classes.some((c) => c.id === pick.classId);
-          const raceOk = pick.raceId === null || races.some((r) => r.id === pick.raceId);
+          const selectedClass = pick.classId === null ? undefined : classes.find((c) => c.id === pick.classId);
+          const selectedRace = pick.raceId === null ? undefined : races.find((r) => r.id === pick.raceId);
+          const preview = slotAttributePreview(selectedClass, selectedRace);
           return (
             <li key={i} className={styles.slot}>
               <span className={styles.slotNumber}>{i + 1}</span>
@@ -52,13 +54,13 @@ export function PartyPanel({ profile, choices, update }: PreparePanelProps) {
                 <span className={styles.label}>Class</span>
                 <select
                   name={`slot-${i}-class`}
-                  value={classOk ? (pick.classId ?? RANDOM) : RANDOM}
+                  value={selectedClass?.id ?? RANDOM}
                   onChange={(e) => setSlot(i, { ...pick, classId: e.currentTarget.value === RANDOM ? null : e.currentTarget.value })}
                 >
                   <option value={RANDOM}>Random</option>
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {classOptionLabel(c)}
                     </option>
                   ))}
                 </select>
@@ -67,21 +69,24 @@ export function PartyPanel({ profile, choices, update }: PreparePanelProps) {
                 <span className={styles.label}>Race</span>
                 <select
                   name={`slot-${i}-race`}
-                  value={raceOk ? (pick.raceId ?? RANDOM) : RANDOM}
+                  value={selectedRace?.id ?? RANDOM}
                   onChange={(e) => setSlot(i, { ...pick, raceId: e.currentTarget.value === RANDOM ? null : e.currentTarget.value })}
                 >
                   <option value={RANDOM}>Random</option>
                   {races.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.name}
+                      {raceOptionLabel(r)}
                     </option>
                   ))}
                 </select>
               </label>
               <span className={styles.summary}>
-                {pick.classId !== null && classOk ? <Explain id={pick.classId} /> : 'any class'}
+                {selectedClass !== undefined ? <Explain id={selectedClass.id} /> : 'any class'}
                 {' · '}
-                {pick.raceId !== null && raceOk ? <Explain id={pick.raceId} /> : 'any race'}
+                {selectedRace !== undefined ? <Explain id={selectedRace.id} /> : 'any race'}
+              </span>
+              <span className={styles.preview} data-random={preview.resolved ? undefined : 'true'}>
+                {preview.text}
               </span>
             </li>
           );

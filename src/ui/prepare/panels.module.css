@@ -32,10 +32,11 @@
 
 .slot {
   display: grid;
-  grid-template-columns: 20px 1fr 1fr;
+  grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr);
   grid-template-areas:
     'num class race'
-    '. summary summary';
+    '. summary summary'
+    '. preview preview';
   gap: var(--space-1) var(--space-2);
   align-items: end;
   padding: var(--space-2);
@@ -72,6 +73,7 @@
 
 .field select {
   height: var(--control-height);
+  width: 100%;
   min-width: 0;
   padding: 0 var(--space-1);
   background: var(--bg-panel);
@@ -83,6 +85,18 @@
 
 .summary {
   grid-area: summary;
+  color: var(--text-muted);
+}
+
+.preview {
+  grid-area: preview;
+  color: var(--text);
+  font-size: var(--font-size-log);
+  line-height: var(--line-height-log);
+  font-variant-numeric: tabular-nums;
+}
+
+.preview[data-random='true'] {
   color: var(--text-muted);
 }
 
