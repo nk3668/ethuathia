@@ -12,7 +12,7 @@
  */
 import { ITEMS } from '../../content';
 import { clonePlain } from '../../core';
-import type { ItemDef } from '../../content';
+import type { EquipSlot, ItemDef } from '../../content';
 
 /** One item or a stack of identical ones. Plain data; leave optional fields out rather than `undefined`. */
 export interface ItemInstance {
@@ -22,10 +22,16 @@ export interface ItemInstance {
   qty: number;
 }
 
-/** What an actor carries. ETH-043 adds what is equipped. */
+/** What an actor carries and wears. */
 export interface InventoryPart {
   /** Carried items, in the order they were picked up; stacks of one def merge. */
   items: ItemInstance[];
+  /**
+   * What it wears (ETH-043), one item (qty 1) per slot; an empty slot is left out, and so is the
+   * whole field while nothing is worn. Worn items are not pack entries and don't count toward
+   * the carried weight: pack indices, dropping, using and the Carry limit never see them.
+   */
+  equipped?: Partial<Record<EquipSlot, ItemInstance>>;
 }
 
 /** The def of an instance. Throws on an unknown id. */

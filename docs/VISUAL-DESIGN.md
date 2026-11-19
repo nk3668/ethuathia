@@ -300,7 +300,7 @@ marker.
 | Altar | `_` | Patron's color, or grey when unaligned |
 | Grave | `†` | `#a886e0` |
 | Fountain | `{` | `#4f8fd9`; `#5b6573` once it has run dry |
-| Item | by category: `!` potion, `?` scroll, `%` food, `)` weapon, `[` armor, `$` gold (bold), `,` junk, `&` relic (bold) | Per item: Mending draught `#e3706b`, Quickstep tonic `#8fd16a`, Scroll of renewal `#d9c58a`, Trail biscuit `#c9a36b`, Iron hatchet `#b8c4cf`, Quilted jerkin `#9c8f7a`, gold `#f2c14e`, Bent nail `#8a8f96`, Ember Reliquary `#ffb347`. Items are drawn over features and under actors; remembered items are dimmed like terrain |
+| Item | by category: `!` potion, `?` scroll, `%` food, `)` weapon, `[` armor, `$` gold (bold), `,` junk, `&` relic (bold) | Per item: Mending draught `#e3706b`, Quickstep tonic `#8fd16a`, Scroll of renewal `#d9c58a`, Trail biscuit `#c9a36b`, Iron hatchet `#b8c4cf`, Quilted jerkin `#9c8f7a`, Skinning knife `#c9d1d9`, Oak cudgel `#a07850`, Ashwood staff `#d8c9a3`, Arming sword `#e6edf3` (bold), Flanged mace `#9aa7b3` (bold), Riveted mail `#b8c4cf` (bold), Round shield `#c08a52`, Iron cap `#8f9ba6`, Grip gloves `#a8865e`, Soft boots `#7d6a55`, gold `#f2c14e`, Bent nail `#8a8f96`, Ember Reliquary `#ffb347`. Items are drawn over features and under actors; remembered items are dimmed like terrain |
 
 The glyph and color for each content entry live on its definition, so the Codex shows exactly
 what the map shows.

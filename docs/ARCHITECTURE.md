@@ -335,7 +335,8 @@ only current `hp` and `mp` (plus energy, faction, queued).
      at the end of a domain's `statProviders`. They run in domain order, then list order.
   2. **Bundle sources** (`BUNDLE_SOURCES`): every active bundle's `modifiers` for that stat, scaled
      by potency (`add`: value × potency; `mul`: 1 + (value − 1) × potency). The stats domain has
-     `stats.attached` (`stats.bundles`) and `stats.statuses`. **Gear (ETH-043), run-wide Omens and
+     `stats.attached` (`stats.bundles`) and `stats.statuses`; the items domain has
+     `items.equipped` (worn gear, ETH-043). **Run-wide Omens and
      blessings (ETH-067/070) add a `BundleSource`** (`{ id, visit(state, entity, visit) }`, calling
      `visit(bundle, sourceId, potency)`) in their domain's `bundleSources`, so their triggers fire
      too.
@@ -513,7 +514,8 @@ then 5 on main, ETH-058 (the floors slice) 6, ETH-057 7 (the `stats` part; `spee
 `maxHp` and `maxMp` left `ActorPart`), ETH-033 8 (`stats.attributes`), ETH-062 9 (the run
 slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061 11
 (the `item` and `inventory` parts and the items slice), 12 on main after that, ETH-034 13
-(the `growth` part and the `track.xp` tracker state), and ETH-024 14 (the quests slice's contracts).
+(the `growth` part and the `track.xp` tracker state), ETH-024 14 (the quests slice's contracts), and ETH-043 15
+(`inventory.equipped`).
 
 ### Contracts in the run (ETH-024)
 
@@ -608,12 +610,12 @@ What later items build on, all exported from `src/sim/floors/`:
 
 All in `src/sim/items/`; content in `src/content/items.ts`.
 
-- **Content:** `ItemDef` = `{ glyph, category, weight, value, stack?, bundle?, loot? }`.
+- **Content:** `ItemDef` = `{ glyph, category, weight, value, stack?, bundle?, gear?, loot? }`.
   Categories (`ITEM_CATEGORIES`): `potion`, `scroll`, `food` (ETH-054 fills it), `weapon` and
-  `armor` (ETH-043 adds slots), `relic` (ETH-024; never dropped), `gold` (goes to the purse),
+  `armor` (worn: see Equipment below), `relic` (ETH-024; never dropped), `gold` (goes to the purse),
   `junk`. `isJunk(def)` (category `junk` or tag `junk` / `corpse`), `isUsable(def)` (its bundle
   has `effects`) and `healAmount(def)` read a def. `bundle.effects` run on use; `bundle.modifiers`
-  and `triggers` are for gear (ETH-043 makes equipped items a `BundleSource`). `bundleOf(itemId)`
+  and `triggers` apply while gear is worn (ETH-043). `bundleOf(itemId)`
   works, since the field is called `bundle`.
 - **Instances:** `ItemInstance = { def, qty }`, plain data. Later features **add optional
   fields** (equipped slot, enchantment, identified, affixes, heirloom history): no migration, and
@@ -649,7 +651,41 @@ All in `src/sim/items/`; content in `src/content/items.ts`.
   carry }, floor: FloorItemView[] }`; `floor` lists items in view now and remembered ones out
   of view, bottom first per tile. The map draws them over features; the selected party card shows
   the pack and the gold.
-- **Codex:** `itemSighted` and `pickedUp` mark an item `seen`, `used` marks it `used`.
+- **Codex:** `itemSighted` and `pickedUp` mark an item `seen`, `used` and `equipped` mark it `used`.
+
+### Equipment (ETH-043)
+
+Content in `src/content/items.ts`, sim in `src/sim/items/equipment.ts` and `actions.ts`.
+
+- **Slots:** `EQUIP_SLOTS` = `mainHand`, `offHand`, `head`, `body`, `hands`, `feet`, one item each
+  (`EQUIP_SLOT_INFO` has labels and tooltip text). No two-handed weapons or rings yet.
+- **Base types:** a weapon or armor def must have `gear: { type }`, and nothing else may.
+  `GEAR_TYPE_INFO[type]` = `{ label, slot, category, description, scalesWith? }` (sword, dagger,
+  axe, mace, staff; shield, helm, light/medium/heavy armor, gloves, boots); the type names the
+  slot (`gearSlot(def)`). `scalesWith` (an `AttributeId`) is declared for ETH-082 and not set or
+  read yet. Gear never stacks and has no `effects`. Its **base stats are `bundle.modifiers`**.
+- **Worn items** sit in `inventory.equipped: Partial<Record<EquipSlot, ItemInstance>>` (qty 1; the
+  field is left out while nothing is worn). They are not pack entries and don't count in
+  `carryWeight` (Carry limits the pack; counting worn armor crowded out potions in the sim
+  compare), so pack indices, dropping and `lowestValueIndex` never see them.
+- **Stats:** the `items.equipped` `BundleSource` visits `gearBundles(item)` for each worn item,
+  credited to the item's def id (tooltip "Iron hatchet +2"); triggers fire through it too.
+  **ETH-044/045 add enchantment and affix bundles in `gearBundles`**, which reaches stats, triggers
+  and the AI's comparison at once (and an `ITEM_VALUE_HOOKS` entry for worth).
+- **Actions:** `equip { index }` (the old item in that slot goes back into the pack) and
+  `unequip { slot }`; both call `clampVitals`. Events `equipped { actor, item, slot, replaced,
+  floor, pos }` and `unequipped { actor, item, slot, floor, pos }`. ETH-044's curses refuse
+  `unequip` (and replacing) in `validate`.
+- **AI:** `compareGear(a, b)` → `better | worse | same | mixed`, stat by stat (every stat higher is
+  better; any triggers make it `mixed`). `bestUpgrade(entity)` picks a pack item `better` than what
+  its slot holds, never one another candidate beats, so equipping never flip-flops.
+  `act.equip_upgrade` (baseline, first of `ITEMS_BASELINE_LOOT`, so not next to an enemy) puts it
+  on with a trace line ("equipping the Arming sword (Damage +2, Accuracy +1) in place of …").
+  Tradeoffs are left to player rules or possession. `modifierText` / `gearStatsText` word stats.
+- **Snapshot / UI:** `InventoryView.equipped: WornView[]` (`{ slot, def, weight, value }`); the
+  party card lists worn gear above the pack. The item Codex renderer adds `Worn` (slot · type) and
+  `Stats` key fields, so every `Explain` (pack, map hover, log) shows them.
+- **Invariants:** `items.parts` checks worn items: known slot, valid instance, qty 1, the def's slot.
 
 ### Content kinds
 

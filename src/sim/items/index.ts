@@ -6,7 +6,8 @@
  * - `instance.ts`: `ItemInstance`, the plain-data item, and stacking.
  * - `value.ts`: `itemValue` / `unitValue`, the one scoring function, extended by `ITEM_VALUE_HOOKS`.
  * - `inventory.ts`: floor items, packs, `carryWeight`, `wantsItem` and the party's item memory.
- * - `actions.ts`: `pickup`, `drop`, `use`.
+ * - `equipment.ts`: worn gear (ETH-043), its bundle source and the clear-upgrade comparison.
+ * - `actions.ts`: `pickup`, `drop`, `use`, `equip`, `unequip`.
  * - `loot.ts`: the `gen.loot` generation step.
  * - `rules.ts`: the conditions, rule actions and baseline rules.
  * - Here: events, state and snapshot slices, the carry provider, invariants and discoveries.
@@ -15,7 +16,8 @@
  */
 import { Grid } from '../../core';
 import type { Pos } from '../../core';
-import { isUsable, ITEMS } from '../../content';
+import { gearSlot, isEquipSlot, isUsable, ITEMS } from '../../content';
+import type { EquipSlot } from '../../content';
 import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx, TurnCtx } from '../domain';
 import { getFloor } from '../entities';
@@ -24,6 +26,7 @@ import { partyVisible } from '../perception';
 import type { EntityId, FloorId, RunConfig } from '../state';
 import { ITEMS_ACTIONS } from './actions';
 import type { ItemsRequest } from './actions';
+import { SOURCE_EQUIPPED, wornItems } from './equipment';
 import { instanceProblem, itemDef, itemWeight } from './instance';
 import type { InventoryPart, ItemInstance } from './instance';
 import { carryLimit, carryWeight, floorItems, inventoryOf, noticeItems } from './inventory';
@@ -33,6 +36,7 @@ import { ITEMS_CONDITIONS, ITEMS_RULE_ACTIONS } from './rules';
 import { itemValue } from './value';
 
 export * from './instance';
+export * from './equipment';
 export * from './value';
 export * from './inventory';
 export * from './actions';
@@ -53,7 +57,11 @@ export type ItemsEvent =
   /** `actor` dropped `qty` of `item` at `pos`. */
   | { type: 'dropped'; actor: EntityId; item: string; qty: number; floor: FloorId; pos: Pos }
   /** `actor` used one `item` (quaffed, read, ate). Its effects' events follow. */
-  | { type: 'used'; actor: EntityId; item: string; floor: FloorId; pos: Pos };
+  | { type: 'used'; actor: EntityId; item: string; floor: FloorId; pos: Pos }
+  /** `actor` put on `item` in `slot`; `replaced` is the item it took off there (now in its pack), if any. */
+  | { type: 'equipped'; actor: EntityId; item: string; slot: EquipSlot; replaced: string | null; floor: FloorId; pos: Pos }
+  /** `actor` took off `item` from `slot` and put it in its pack. */
+  | { type: 'unequipped'; actor: EntityId; item: string; slot: EquipSlot; floor: FloorId; pos: Pos };
 
 /** The commands this domain accepts. */
 export type ItemsCommand = never;
@@ -77,10 +85,20 @@ export interface ItemView {
   usable: boolean;
 }
 
-/** A party member's pack, for the UI. */
+/** One worn item, for the UI (ETH-043). */
+export interface WornView {
+  slot: EquipSlot;
+  def: string;
+  weight: number;
+  value: number;
+}
+
+/** A party member's pack and worn gear, for the UI. */
 export interface InventoryView {
   items: ItemView[];
-  /** Weight carried and the `carry` stat. */
+  /** What it wears, in `EQUIP_SLOTS` order. */
+  equipped: WornView[];
+  /** Weight in the pack (worn gear doesn't count) and the `carry` stat. */
   weight: number;
   carry: number;
 }
@@ -144,6 +162,7 @@ export function itemsSnapshot({ state, floor }: SnapshotCtx): ItemsSnapshot {
         value: itemValue(state, item),
         usable: isUsable(itemDef(item)),
       })),
+      equipped: wornItems(e).map(({ slot, item }) => ({ slot, def: item.def, weight: itemWeight(item), value: itemValue(state, item) })),
       weight: carryWeight(state, e),
       carry: carryLimit(state, e),
     };
@@ -194,6 +213,13 @@ registerInvariant('items.parts', (state) => {
         if (problem !== null) problems.push(`entity ${e.id} pack entry ${i}: ${problem}`);
         else if (ITEMS.get(item.def).category === 'gold') problems.push(`entity ${e.id} carries gold in its pack`);
       });
+      for (const [slot, item] of Object.entries(e.inventory.equipped ?? {})) {
+        if (!isEquipSlot(slot)) problems.push(`entity ${e.id} wears something in unknown slot "${slot}"`);
+        const problem = instanceProblem(item);
+        if (problem !== null) problems.push(`entity ${e.id} worn in ${slot}: ${problem}`);
+        else if (item.qty !== 1) problems.push(`entity ${e.id} wears ${item.qty} "${item.def}" in ${slot}`);
+        else if (gearSlot(ITEMS.get(item.def)) !== slot) problems.push(`entity ${e.id} wears "${item.def}" in ${slot}, not its slot`);
+      }
     }
   }
   return problems;
@@ -233,11 +259,13 @@ export const ITEMS_DOMAIN: SimDomain<ItemsTypes> = {
   conditions: ITEMS_CONDITIONS,
   ruleActions: ITEMS_RULE_ACTIONS,
   genSteps: [GEN_LOOT],
+  bundleSources: [SOURCE_EQUIPPED],
   turnStart: itemsTurnStart,
   discoveries: {
     itemSighted: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),
     pickedUp: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),
     goldPickedUp: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),
     used: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'used' }] : []),
+    equipped: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'used' }] : []),
   },
 };

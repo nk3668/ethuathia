@@ -1,14 +1,17 @@
 /**
- * The item actions (ETH-061): `pickup`, `drop` and `use`. The AI, behavior rules and a possessed
+ * The item actions: `pickup`, `drop` and `use` (ETH-061), `equip` and `unequip` (ETH-043). The AI, behavior rules and a possessed
  * adventurer all go through these, like every other action (docs/ARCHITECTURE.md §2.3).
  */
-import { isUsable } from '../../content';
+import { EQUIP_SLOTS, gearSlot, isEquipSlot, isUsable } from '../../content';
+import type { EquipSlot } from '../../content';
 import type { ActionRecord } from '../actions';
 import { removeEntity } from '../entities';
 import type { EntityId } from '../state';
 import { runEffects } from '../stats/effects';
+import { clampVitals } from '../stats/getStat';
+import { equippedIn } from './equipment';
 import { itemDef } from './instance';
-import { addToInventory, inventoryOf, itemsAt, placeItem, rememberTile, takeFromInventory } from './inventory';
+import { addToInventory, ensureInventory, inventoryOf, itemsAt, placeItem, rememberTile, takeFromInventory } from './inventory';
 import { itemValue } from './value';
 
 /** Pick up an item lying on your tile: `item` (an entity id), or the one on top. Gold goes to the purse. */
@@ -30,7 +33,19 @@ export interface UseRequest {
   index: number;
 }
 
-export type ItemsRequest = PickupRequest | DropRequest | UseRequest;
+/** Put on the pack entry at `index` (ETH-043); whatever was worn in its slot goes into the pack. */
+export interface EquipRequest {
+  id: 'equip';
+  index: number;
+}
+
+/** Take off what is worn in `slot` and put it in the pack (ETH-043). */
+export interface UnequipRequest {
+  id: 'unequip';
+  slot: EquipSlot;
+}
+
+export type ItemsRequest = PickupRequest | DropRequest | UseRequest | EquipRequest | UnequipRequest;
 
 const isIndex = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 1;
@@ -121,6 +136,52 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       takeFromInventory(actor, index, 1);
       emit({ type: 'used', actor: actor.id, item: def.id, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
       runEffects({ state, emit, self: actor.id, source: def.id, potency: 1 }, def.bundle?.effects ?? []);
+    },
+  },
+  equip: {
+    id: 'equip',
+    name: 'Equip',
+    description:
+      'Put on a weapon or piece of armor from your pack. Its stats count while it is worn. Whatever was worn in the same slot goes back into the pack.',
+    tags: [],
+    cost: 100,
+    parse: (raw) => (isIndex(raw.index) ? { id: 'equip', index: raw.index } : 'The pack index must be a whole number from 0'),
+    validate: ({ actor }, { index }) => {
+      const entry = inventoryOf(actor)[index];
+      if (entry === undefined) return 'There is no such item in the pack';
+      return gearSlot(itemDef(entry)) === null ? `${itemDef(entry).name} can't be worn` : null;
+    },
+    execute: ({ state, actor, emit }, { index }) => {
+      const entry = inventoryOf(actor)[index];
+      const slot = entry === undefined ? null : gearSlot(itemDef(entry));
+      if (entry === undefined || slot === null) return;
+      const item = takeFromInventory(actor, index, 1);
+      const equipped = (ensureInventory(actor).equipped ??= {});
+      const old = equipped[slot];
+      equipped[slot] = item;
+      if (old !== undefined) addToInventory(actor, old);
+      clampVitals(state, actor);
+      const pos = { x: actor.pos.x, y: actor.pos.y };
+      emit({ type: 'equipped', actor: actor.id, item: item.def, slot, replaced: old?.def ?? null, floor: actor.floor, pos });
+    },
+  },
+  unequip: {
+    id: 'unequip',
+    name: 'Unequip',
+    description: 'Take off a worn weapon or piece of armor and put it in your pack. Its stats stop counting.',
+    tags: [],
+    cost: 100,
+    parse: (raw) => (isEquipSlot(raw.slot) ? { id: 'unequip', slot: raw.slot } : `The slot must be one of ${EQUIP_SLOTS.join(', ')}`),
+    validate: ({ actor }, { slot }) => (equippedIn(actor, slot) === null ? 'Nothing is worn there' : null),
+    execute: ({ state, actor, emit }, { slot }) => {
+      const equipped = actor.inventory?.equipped;
+      const item = equipped?.[slot];
+      if (equipped === undefined || item === undefined) return;
+      Reflect.deleteProperty(equipped, slot);
+      if (Object.keys(equipped).length === 0) Reflect.deleteProperty(ensureInventory(actor), 'equipped');
+      addToInventory(actor, item);
+      clampVitals(state, actor);
+      emit({ type: 'unequipped', actor: actor.id, item: item.def, slot, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
     },
   },
 };

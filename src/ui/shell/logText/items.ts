@@ -1,5 +1,5 @@
 /** Log wording for the items domain's events (`src/sim/items/`). One entry per event type. */
-import { ITEM_CATEGORY_INFO, ITEMS } from '../../../content';
+import { EQUIP_SLOT_INFO, ITEM_CATEGORY_INFO, ITEMS } from '../../../content';
 import { NOTABLE_ITEM_VALUE } from '../../../sim';
 import type { ItemsEvent } from '../../../sim';
 import { defineHighlight, mention } from './types';
@@ -43,5 +43,17 @@ export const ITEMS_LOG_TEXT: LogTextRecord<ItemsEvent> = {
   used: {
     category: 'loot',
     text: (e, nameOf) => [`${nameOf(e.actor)} ${verb(e.item)} `, mention(e.item), '.'],
+  },
+  equipped: {
+    category: 'loot',
+    text: (e, nameOf) => [
+      `${nameOf(e.actor)} ${e.slot === 'mainHand' ? 'wields' : 'puts on'} `,
+      mention(e.item),
+      ...(e.replaced === null ? ['.'] : [', packing away ', mention(e.replaced), '.']),
+    ],
+  },
+  unequipped: {
+    category: 'loot',
+    text: (e, nameOf) => [`${nameOf(e.actor)} takes off `, mention(e.item), ` (${EQUIP_SLOT_INFO[e.slot].label.toLowerCase()}).`],
   },
 };

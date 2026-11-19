@@ -191,8 +191,9 @@ describe('the baseline with items', () => {
   it('drops the least valuable thing when overloaded, and does not pick it up again', () => {
     const { state, hero } = setup();
     const carry = carryLimit(state, hero);
-    // Fill the pack to just under the limit with jerkins, then offer a hatchet worth more.
-    hero.inventory = { items: [] };
+    // Fill the pack to just under the limit with jerkins, then offer a hatchet worth more. The hero
+    // already wears both (ETH-043), so neither is an upgrade to put on.
+    hero.inventory = { items: [], equipped: { body: { def: JERKIN, qty: 1 }, mainHand: { def: HATCHET, qty: 1 } } };
     while (carryWeight(state, hero) + 10 <= carry) hero.inventory.items.push({ def: JERKIN, qty: 1 });
     hero.inventory.items.push({ def: BISCUIT, qty: 1 });
     const spare = carry - carryWeight(state, hero);

@@ -13,6 +13,7 @@ import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } 
 import { getFloor } from '../entities';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { statValue } from '../stats/getStat';
+import { bestUpgrade, gearStatsText } from './equipment';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
 import { carryLimit, carryWeight, inventoryOf, isOverloaded, itemsAt, knownItems, lowestValueIndex, wantsItem } from './inventory';
@@ -186,11 +187,34 @@ export const ACT_PICK_UP = defineRuleAction({
   describe: ({ maxDetour }) => `pick up items within ${maxDetour} steps`,
 });
 
+/**
+ * Put on a clear upgrade from the pack (ETH-043, `bestUpgrade`): gear at least as good as what is
+ * worn in its slot in every stat and better in one. Gear with a tradeoff is left alone.
+ */
+export const ACT_EQUIP_UPGRADE = defineRuleAction({
+  id: 'act.equip_upgrade',
+  name: 'Equip upgrades',
+  description:
+    'Put on a weapon or piece of armor from the pack that is clearly better than what is worn in its slot: at least as good in every ' +
+    'stat and better in one. Gear with a tradeoff (more damage but less accuracy, say) is left for the player to decide.',
+  parse: noParams,
+  resolve({ actor }): Resolved | null {
+    const up = bestUpgrade(actor);
+    if (up === null) return null;
+    const name = itemDef(up.item).name;
+    const stats = gearStatsText(up.item);
+    const what = stats === null ? `the ${name}` : `the ${name} (${stats})`;
+    const instead = up.replaces === null ? `, nothing worn there yet` : ` in place of the ${itemDef(up.replaces).name}`;
+    return { request: { id: 'equip', index: up.index }, detail: `equipping ${what}${instead}` };
+  },
+  describe: () => 'equip clear upgrades',
+});
+
 /** The items domain's conditions, in registration order. */
 export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED];
 
 /** The items domain's rule actions, in registration order. */
-export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_QUAFF_HEALING, ACT_DROP_LOWEST, ACT_PICK_UP];
+export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_QUAFF_HEALING, ACT_DROP_LOWEST, ACT_PICK_UP, ACT_EQUIP_UPGRADE];
 
 /**
  * The baseline's urgent item rules, checked first: quaff healing below `HEAL_BELOW_PERCENT` HP,
@@ -201,7 +225,11 @@ export const ITEMS_BASELINE_URGENT: readonly Rule[] = [
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.drop_lowest' }, enabled: true },
 ];
 
-/** The baseline's looting rule, checked just before exploring: pick up wanted items within `PICKUP_DETOUR` steps. */
+/**
+ * The baseline's gear and looting rules, checked just before exploring (so never next to an
+ * enemy): put on clear upgrades (ETH-043), then pick up wanted items within `PICKUP_DETOUR` steps.
+ */
 export const ITEMS_BASELINE_LOOT: readonly Rule[] = [
+  { condition: { id: 'cond.always' }, action: { id: 'act.equip_upgrade' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.pick_up', params: { maxDetour: PICKUP_DETOUR } }, enabled: true },
 ];

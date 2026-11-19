@@ -25,7 +25,7 @@ Fights, gear and consumables that are all built from the same modifiers, effects
 - `docs/ARCHITECTURE.md` §2.2, §2.3
 
 ## Items
-- [ ] [ETH-043 Equipment slots and base item types](ETH-043-equipment-slots-base-items.md)
+- [x] [ETH-043 Equipment slots and base item types](ETH-043-equipment-slots-base-items.md)
 - [ ] [ETH-044 Enchantment, blessed and cursed items, and identification](ETH-044-enchant-curse-identify.md)
 - [ ] [ETH-045 Light affixes and named artifacts](ETH-045-affixes-artifacts.md)
 - [ ] [ETH-050 Summons and pets](ETH-050-summons-pets.md)

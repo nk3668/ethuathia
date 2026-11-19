@@ -108,6 +108,8 @@ export interface SeedResult {
   level?: number;
   /** Contracts complete when the run stopped (ETH-024). Missing from reports before it. */
   contracts?: number;
+  /** Times a party member put on a piece of gear (ETH-043). */
+  equips?: number;
   /** `stateHash` of where the run stopped, to tell whether a change altered behavior. */
   hash: string;
 }
@@ -146,6 +148,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
   let kills = 0;
   let deaths = 0;
   let drinks = 0;
+  let equips = 0;
   const deathCauses: Record<string, number> = {};
   /** Who killed each party member struck down, until their `fell` event. */
   const slain = new Map<number, string>();
@@ -162,6 +165,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
         else slain.set(e.victim, e.killerDef);
       }
       if (e.type === 'drankFountain') drinks++;
+      if (e.type === 'equipped') equips++;
       if (e.type === 'fell') {
         deaths++;
         const cause = slain.get(e.actor) ?? 'other';
@@ -223,6 +227,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     drinks,
     level: Math.max(1, ...Object.values(snap.domains.stats.members).map((m) => m.level.level)),
     contracts: snap.domains.quests.contracts.filter((c) => c.complete).length,
+    equips,
     hash: session.stateHash(),
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
     atRisk: { ...snap.domains.run.atRisk },
