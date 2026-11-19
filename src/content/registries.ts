@@ -69,6 +69,11 @@ export function findDef(id: string): Def | undefined {
   return undefined;
 }
 
+/** The name of the def with this id, of any kind, or the id itself if there is none (milestone text). */
+export function defName(id: string): string {
+  return findDef(id)?.name ?? id;
+}
+
 /**
  * The map look for a glyph id: a terrain, feature, item or monster id (`terrain.wall`,
  * `monster.gloam_rat`), or a feature id with a state (`feature.door.open`). A state the feature

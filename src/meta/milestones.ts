@@ -12,7 +12,7 @@
  */
 import { BUILDINGS, milestoneMet, requirementKey } from '../content';
 import type { Milestone, MilestoneProgress, Requirement } from '../content';
-import { metRequirements } from '../sim';
+import { completedObjectives, metRequirements } from '../sim';
 import type { RunResult } from '../sim';
 import type { Profile } from './profile';
 import type { MilestoneUnlock } from './slices/milestones';
@@ -35,11 +35,13 @@ export function milestoneTargets(): MilestoneTarget[] {
 
 /**
  * What milestones are checked against: the player's lifetime totals and, while `result` is being
- * banked, the watched requirements that run met (none without one).
+ * banked, the watched requirements that run met and the objectives it ended with complete (none
+ * without one).
  */
 export function milestoneProgress(profile: Profile, result?: RunResult): MilestoneProgress {
   const { deepestDepth, runs, victories } = profile.history.totals;
-  return { deepestDepth, runs, victories, metInRun: result === undefined ? [] : metRequirements(result.extras) };
+  if (result === undefined) return { deepestDepth, runs, victories, metInRun: [], objectivesDone: [] };
+  return { deepestDepth, runs, victories, metInRun: metRequirements(result.extras), objectivesDone: completedObjectives(result.extras) };
 }
 
 /**

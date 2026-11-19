@@ -34,4 +34,4 @@ Every run has a clear goal. The player picks contracts (main quests) that define
 - [ ] [ETH-030 Bounty encounters inside the dungeon](ETH-030-bounty-encounters.md)
 - [ ] [ETH-031 Quest rule conditions and objective weighting in the AI](ETH-031-quest-rule-conditions-ai.md)
 - [ ] [ETH-032 Rescue contract](ETH-032-rescue-contract.md)
-- [ ] [ETH-114 Objective engine: reusable objectives with progress, generalized from contracts](ETH-114-objective-engine.md)
+- [x] [ETH-114 Objective engine: reusable objectives with progress, generalized from contracts](ETH-114-objective-engine.md)

@@ -20,6 +20,7 @@ export {
   initDomains,
   RULE_ACTIONS,
   RUN_TRACKERS,
+  runStepEnd,
   runTurnEnd,
   runTurnStart,
   STAT_PROVIDERS,
@@ -35,6 +36,7 @@ export type {
   RunTracker,
   SimDomain,
   SnapshotCtx,
+  StepCtx,
   TurnCtx,
   VictoryCheck,
 } from './domain';

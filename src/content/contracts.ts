@@ -10,30 +10,25 @@
  * - `recover`: an item (`item`, a `relic` category item) lies on the dungeon's bottom floor; the
  *   contract is complete while a living party member carries it.
  *
- * Later kinds (ETH-026 slay, ETH-027 gather and delve, ETH-032 rescue) add a member to
- * `ContractObjective` and an option to `objectiveSchema`, then their meaning in the quests domain.
+ * The objective is the shared `Objective` (ETH-114, `objectives.ts`), measured by the sim's
+ * objective engine. Later contract types (ETH-026 slay, ETH-027 gather and delve, ETH-032 rescue)
+ * add an objective kind there and, if they place something, a floor plan hook.
  */
 import { z } from 'zod';
 import { Registry } from '../core';
 import type { Def } from '../core';
 import { defineItem } from './items';
 import type { ContentKind, ContentRef } from './kind';
-import { defShape, idSchema, positiveInt } from './schema';
+import { objectiveRefs, objectiveSchema } from './objectives';
+import type { Objective } from './objectives';
+import { defShape, positiveInt } from './schema';
 import { CURRENCY_KEY } from './upgrades';
 
-/** Recover an item placed on the bottom floor and carry it out. */
-export interface RecoverObjective {
-  readonly kind: 'recover';
-  /** The item to recover (an `item.*` id of category `relic`). */
-  readonly item: string;
-}
-
-/** What a contract asks for. One member per objective kind. */
-export type ContractObjective = RecoverObjective;
-
-/** Every objective kind, for the Codex and tooltips. */
-export const OBJECTIVE_KINDS = ['recover'] as const;
-export type ObjectiveKind = (typeof OBJECTIVE_KINDS)[number];
+/**
+ * What a contract asks for: an objective (ETH-114, `src/content/objectives.ts`). Kept as a name
+ * for the contract's own code; any objective kind works, though only `recover` places something.
+ */
+export type ContractObjective = Objective;
 
 export interface ContractDef extends Def {
   readonly objective: ContractObjective;
@@ -46,8 +41,6 @@ export interface ContractDef extends Def {
 
 export const CONTRACTS = new Registry<ContractDef>('contract');
 
-const objectiveSchema = z.discriminatedUnion('kind', [z.strictObject({ kind: z.literal('recover'), item: idSchema('item') })]);
-
 export const CONTRACT_KIND: ContentKind<ContractDef> = {
   registry: CONTRACTS,
   schema: z.strictObject({
@@ -58,7 +51,7 @@ export const CONTRACT_KIND: ContentKind<ContractDef> = {
       .refine((reward) => Object.keys(reward).length > 0, 'must pay something'),
   }),
   refs: (def) => {
-    const refs: ContentRef[] = [{ path: 'objective.item', kind: 'item', id: def.objective.item }];
+    const refs: ContentRef[] = objectiveRefs('objective', def.objective);
     for (const key of Object.keys(def.reward)) {
       if (key.startsWith('favor:')) refs.push({ path: `reward.${key}`, kind: 'deity', id: key.slice('favor:'.length) });
     }

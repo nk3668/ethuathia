@@ -2,7 +2,7 @@
 id: ETH-114
 title: Objective engine: reusable objectives with progress, generalized from contracts
 type: feature
-status: ready
+status: done
 priority: P1
 milestone: M2
 epic: quests
@@ -27,19 +27,19 @@ failed". Today that exists only inside `src/sim/quests/contracts.ts` as a `switc
 events and invariants. See `CLAUDE.md` §6 and the "Shared systems" list in `docs/ARCHITECTURE.md`.
 
 ## Acceptance criteria
-- [ ] Content: `src/content/objectives.ts` holds `Objective` and `objectiveSchema` (moved from
+- [x] Content: `src/content/objectives.ts` holds `Objective` and `objectiveSchema` (moved from
       `contracts.ts`; `ContractDef.objective` now uses them). Kinds in this item: `recover
       { item }` (as today), `count { event, match?, count }` (counted from events, e.g. kills of
       a monster id, fountains drunk), `reach { depth }`, `condition { requirement }` (ETH-121, 0/1)
       and `avoid { event, match? }` (failed the first time it happens; a conduct or taboo).
       `objectiveRefs` checks ids. A new kind is one union member, one schema option and one
       `ObjectiveKind` entry.
-- [ ] Sim: `OBJECTIVE_KINDS` (`src/sim/quests/objectives.ts`), each
+- [x] Sim: `OBJECTIVE_KINDS` (`src/sim/quests/objectives.ts`), each
       `{ kind, measure: 'state' | 'events', target(spec), progress(state, spec, counter),
       reduce?(counter, event, spec), describe(spec) }`. State-measured kinds recompute from the
       run (as `contractProgress` does now); event-measured ones fold events into a plain
       `counter` saved in the slice. `contractProgress` becomes a thin call into it.
-- [ ] State: `state.domains.quests.objectives: TrackedObjective[]`, each `{ key, owner:
+- [x] State: `state.domains.quests.objectives: TrackedObjective[]`, each `{ key, owner:
       { kind: 'contract' | 'bounty' | 'conduct' | 'taboo' | 'quest', id }, spec, counter?,
       current, target, status: 'active' | 'complete' | 'failed' }`. `trackObjective` /
       `syncObjectives` (run from the quests `turnStart` / `turnEnd` hooks, replacing
@@ -47,13 +47,13 @@ events and invariants. See `CLAUDE.md` §6 and the "Shared systems" list in `doc
       keep `contractProgress` / `contractCompleted` / `contractLost` unchanged). Invariant
       `quests.objectives` (whole numbers, `current ≤ target` for non-`avoid`, status agrees
       with progress). `STATE_VERSION` + 1.
-- [ ] Results: `RunResult.extras['quests.objectives']` lists every tracked objective's owner,
+- [x] Results: `RunResult.extras['quests.objectives']` lists every tracked objective's owner,
       key and final status, so meta (milestones, achievements, Favor for kept conducts) reads
       one place. A `Milestone` kind `{ kind: 'objectiveDone', owner }` is added for ETH-093.
-- [ ] Tests: the existing contract tests pass unchanged; fixed-seed tests for `count`, `reach`,
+- [x] Tests: the existing contract tests pass unchanged; fixed-seed tests for `count`, `reach`,
       `condition` and `avoid`; a save/load mid-run keeps event counters; the sim compare shows
       no behavior change.
-- [ ] `docs/ARCHITECTURE.md` "Contracts in the run" points at the engine; the "Shared systems"
+- [x] `docs/ARCHITECTURE.md` "Contracts in the run" points at the engine; the "Shared systems"
       entry is marked built.
 
 ## Notes
@@ -81,3 +81,7 @@ Open decisions:
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-026, 027, 029, 030, 031, 032, 067, 070, 093).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
+- 2026-11-19: Started.
+- 2026-11-19: Done. `src/content/objectives.ts` (Objective, schema, refs, owners) and `src/sim/quests/objectives.ts` (OBJECTIVE_KINDS, trackObjective / syncObjectives, `quests.objectives` tracker and invariant); contracts run on it with unchanged sim metrics. Added `TurnCtx.events` and a `SimDomain.stepEnd` hook so events after the last turn of a step (`fell`, `runEnded`) are folded. `objectiveDone` milestone; `describeMilestone*` take a `names` argument (`defName`). STATE_VERSION 24.
+- 2026-11-19: (default) An `avoid` objective's progress is "times it happened" against a target of 0 (so `current > target` means failed) — alternatives: 0/1 kept flag.
+- 2026-11-19: (default) `match` values that look like content ids (`monster.x`) must exist in the registry their prefix names; event type names are only shape-checked (the sim has no runtime list of event types) — alternative: a runtime event-type registry every domain fills.

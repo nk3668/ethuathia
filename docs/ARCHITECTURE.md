@@ -615,19 +615,20 @@ slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061
 17 (the ring and neck slots), ETH-113 18 (`AiMemory.waited`), ETH-066 19 (`ai.possessed`) and
 ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
-`track.chronicle` tracker state) and ETH-115 23 (the stats slice's `runModifiers` and
-`runModifiersAnnounced`).
+`track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
+`runModifiersAnnounced`) and ETH-114 24 (the quests slice's `objectives` and `folded`, and the
+`quests.objectives` tracker state).
 
 ### Contracts in the run (ETH-024)
 
 Content in `src/content/contracts.ts`; sim in `src/sim/quests/`; Prepare section in
 `src/meta/prepare/contracts.ts`.
 
-- **Content:** `ContractDef` = `{ objective, reward }`. `objective` is a union by `kind` (so far
-  `{ kind: 'recover', item }`); `reward` is currency id → amount (`renown`, `trophies`,
-  `favor:deity.<id>`). A later contract type (ETH-026 slay, ETH-027 gather and delve, ETH-032
-  rescue) adds a member to `ContractObjective` and `objectiveSchema`, a case in
-  `contractProgress` (`quests/contracts.ts`) and, if it places something, a floor plan hook.
+- **Content:** `ContractDef` = `{ objective, reward }`. `objective` is the shared `Objective`
+  (ETH-114, `src/content/objectives.ts`; contracts use `recover` so far); `reward` is currency id
+  → amount (`renown`, `trophies`, `favor:deity.<id>`). A later contract type (ETH-026 slay,
+  ETH-027 gather and delve, ETH-032 rescue) adds an objective kind to the engine and, if it places
+  something, a floor plan hook.
   The first def is `contract.recover_relic` (reward 100 Renown) with its relic
   `item.ember_reliquary` (category `relic`, `&`, never dropped, no `loot`).
 - **Config:** `RunConfig.contracts?: string[]` (contract ids, each at most once; `initQuests`
@@ -636,11 +637,14 @@ Content in `src/content/contracts.ts`; sim in `src/sim/quests/`; Prepare section
   (`{ contractIds }`) fills one per slot (`contractSlots(profile)` = `capacity(profile,
   'contractSlots', BASE_CONTRACT_SLOTS)`, 1 to start) and never none: an empty or stale choice
   falls back to the first available contract.
-- **State:** `state.domains.quests` = `{ contracts: ContractState[], announced }`, each
-  `{ contract, progress: { current, target }, complete }`. Progress is **recomputed from the run
-  state** (`contractProgress`), never counted from events: a `recover` contract is 1/1 while a
-  living party member carries its item. `syncContracts` runs in the domain's `turnStart` and
-  `turnEnd` hooks and stores it.
+- **State:** `state.domains.quests` = `{ contracts: ContractState[], announced, objectives,
+  folded }`, each contract `{ contract, progress: { current, target }, complete }`. Each contract
+  is also a tracked objective of the **objective engine** (ETH-114, "Objective engine" below) with
+  owner `{ kind: 'contract', id }`; `contractProgress` measures it there (`measureObjective`). A
+  `recover` contract is recomputed from the run state: 1/1 while a living party member carries
+  its item. `syncContracts` runs in the domain's `turnStart`, `turnEnd` and `stepEnd` hooks: it
+  syncs the objectives, mirrors each contract's progress into its `ContractState` and emits the
+  contract events below.
 - **Events** (log text in `logText/quests.ts`): `contractsTaken { contracts: { contract, reward }[] }`
   on the run's first turn (none without contracts); `contractProgress { contract, current,
   target }` when a contract moves without completing; `contractCompleted { contract, actor,
@@ -997,6 +1001,61 @@ store or reward math.**
   and/or a flag, and a `rewardBonus`; a blessing a `party` modifier credited to the deity; a curse
   `addRunModifier` from an encounter outcome; a dungeon event a modifier with `until: { floor }`;
   doctrine a flag-only modifier read with `runFlag`; a veteran a `party` modifier.
+### Objective engine (ETH-114)
+
+"A goal with progress toward a target, complete or failed", shared by contracts, bounties,
+conducts, taboos, building quests and achievements. Content in `src/content/objectives.ts`; sim
+in `src/sim/quests/objectives.ts`.
+
+- **Content:** `Objective` is a union by `kind`: `recover { item }`, `count { event, match?,
+  count }`, `reach { depth }`, `condition { requirement }` (a run-scope `Requirement`, ETH-121)
+  and `avoid { event, match? }`. `event` is a sim event type (`killed`, `drankFountain`);
+  `match` (`EventMatch`) is event field → value, all of which must be equal. `objectiveSchema`
+  checks the shape; `objectiveRefs(path, objective)` lists the refs (a `recover` item, each
+  id-shaped `match` value in the registry its prefix names, a `condition`'s conditions with run
+  scope). `ObjectiveOwner` = `{ kind: 'contract' | 'bounty' | 'conduct' | 'taboo' | 'quest', id }`,
+  keyed by `objectiveOwnerKey` (`contract:contract.recover_relic`); `objectiveOwnerSchema`,
+  `objectiveOwnerRefs` (contract and bounty owners must exist).
+- **Kinds** (`OBJECTIVE_KINDS`, one entry per content kind, checked at compile time):
+  `{ kind, measure: 'state' | 'events', goal: 'reach' | 'avoid', target(spec), progress(state,
+  spec, counter) → { current, by? }, reduce?(counter, event, spec), describe(spec) }`. A `state`
+  kind is remeasured from the run at each sync (`recover`, `reach`, `condition`); an `events`
+  kind folds events into a whole-number `counter` kept in the slice, so it survives a save
+  (`count`, `avoid`). A `reach` goal is complete once `current ≥ target`; an `avoid` goal
+  (target 0, `current` = times it happened) fails the first time and is **complete at run end**
+  if it never did. Helpers: `describeObjective(spec)`, `measureObjective(state, spec, counter)`,
+  `objectiveStatus`, `eventMatches`, `carrierOf`.
+- **State:** `state.domains.quests.objectives: TrackedObjective[]`, each `{ key, owner, spec,
+  counter?, current, target, status: 'active' | 'complete' | 'failed' }`, and `folded` (how many
+  of the current step's events are folded; 0 between steps). `initQuests` tracks the contracts;
+  `trackObjective(state, owner, spec, key?)` adds one mid-run (throws on a repeated key), and it
+  counts only events folded after that (**`count` counts from when it is tracked**). Also
+  `newObjective`, `findObjective`, `objectivesOf`.
+- **Syncing:** `syncObjectives(state, events)` folds the step's unfolded events (`TurnCtx.events`,
+  the step so far) into each active `events` objective, remeasures, and returns the
+  `ObjectiveChange`s (`{ objective, before, by, atRunEnd }`). The quests domain runs it from
+  `turnStart`, `turnEnd` and the new `SimDomain.stepEnd` hook (`StepCtx = { state, emit, events
+  }`, run once per step before the trackers, so events after the last turn, like `fell` and
+  `runEnded`, count too; `finishObjectivesStep` resets `folded`). Once the run has ended,
+  `state` progress is frozen and active `avoid` objectives become `complete`. **The engine emits
+  no events: each owner words its own changes** (contracts: `syncContracts` emits
+  `contractProgress` / `contractCompleted` / `contractLost`, nothing for run-end changes).
+- **Results:** the `quests.objectives` tracker copies every objective's `{ key, owner, status }`
+  after each step; `RunResult.extras['quests.objectives']` is that `ObjectiveRecord[]`, read with
+  `objectiveRecords(extras)` and `completedObjectives(extras)` (owner keys of the complete ones).
+- **Milestone:** `{ kind: 'objectiveDone', owner }` is met when the banked run ended with that
+  owner's objective complete (`MilestoneProgress.objectivesDone`, filled by meta's
+  `milestoneProgress` from the result). `describeMilestone` / `describeMilestoneMet` take a third
+  `names` argument (pass `defName`) to name the owner.
+- **Invariant** `quests.objectives`: unique keys, known kinds, whole numbers, `target` as the kind
+  says, `current ≤ target` for a `reach` goal, a counter exactly for `events` kinds, status as
+  progress (and the run end) says, `folded` 0. `quests.contracts` also checks each contract
+  agrees with its objective.
+- **For later items:** a contract type (026/027/032) is an objective kind; a bounty (029/030) is
+  an objective with owner `bounty` and its own reward tracker; a conduct (067) is an `avoid` with
+  owner `conduct` (kept ones read `complete` in the result); a taboo (070) is an `avoid` or a
+  `condition` with `not`; a building quest (093) is owner `quest` plus an `objectiveDone`
+  milestone; quest rule conditions (031) read `TrackedObjective`s.
 
 ### Shared systems
 
@@ -1009,6 +1068,8 @@ the features that use it.
 |---|---|---|---|
 | Objective engine | ETH-114 | planned | One `Objective` union, progress kinds (`OBJECTIVE_KINDS`) and tracked objectives with an owner, lifted from ETH-024's `contractProgress`: contracts, bounties, conducts, taboos, building quests, achievements |
 | Run-wide modifiers | ETH-115 | built | Run modifiers with a source, scope (party / monsters / all), bundle, flags and reward bonus; one `stats.run` `BundleSource`, the reward multiplier and the consumer of `run`-scope upgrade grants: Omens, blessings, curses, dungeon events, doctrine, veterans. See "Run-wide modifiers (ETH-115)" above |
+| Objective engine | ETH-114 | built | One `Objective` union, progress kinds (`OBJECTIVE_KINDS`) and tracked objectives with an owner, lifted from ETH-024's `contractProgress`: contracts, bounties, conducts, taboos, building quests, achievements. See "Objective engine (ETH-114)" |
+| Run-wide modifiers | ETH-115 | planned | Run modifiers with a source, scope (party / monsters / all), bundle, flags and reward bonus; one `stats.run` `BundleSource`, the reward multiplier and the consumer of `run`-scope upgrade grants: Omens, blessings, curses, dungeon events, doctrine, veterans |
 | Dungeon encounters | ETH-116 | planned | An `encounter` kind and feature part placed by a `FLOOR_PLAN_HOOKS` entry, one `interact { choice? }` action, data outcomes, log and Codex text; fountains folded in: altars, graves, merchants, bounty encounters, recruits, cursed wells, vaults |
 | Monster templates | ETH-117 | planned | `MonsterOverlay` (templates, name, title, stats, bundles, threat, loot tier) layered on a `MonsterDef` at `spawnMonster`: uniques, elites, mini-bosses, nemeses, heirloom carriers, families |
 | Item properties | ETH-118 | built | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling. See "Item properties (ETH-118)" |

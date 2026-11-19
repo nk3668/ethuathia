@@ -2,6 +2,8 @@
  * The quests domain: contracts, bounties and the return trip.
  * Built by ETH-024 (contracts and Recover-relic) and ETH-025 (the return trip).
  *
+ * - `objectives.ts`: the objective engine (ETH-114): objective kinds, tracked objectives with an
+ *   owner, syncing them and the `quests.objectives` tracker. Contracts are its first owner.
  * - `contracts.ts`: contract progress, the relic placed on the bottom floor (a floor plan hook),
  *   the victory check and the contracts tracker.
  * - `rules.ts`: `cond.contracts_complete`, `act.recover_contract_item` and the baseline's
@@ -28,15 +30,19 @@ import {
   contractReward,
   CONTRACTS_TRACKER,
   CONTRACTS_VICTORY,
+  initContractObjectives,
   initContracts,
   RELIC_PLAN_HOOK,
   relicCount,
   syncContracts,
 } from './contracts';
 import type { ContractState } from './contracts';
+import { objectiveProblems, OBJECTIVES_TRACKER } from './objectives';
+import type { TrackedObjective } from './objectives';
 import { QUESTS_CONDITIONS, QUESTS_RULE_ACTIONS } from './rules';
 
 export * from './contracts';
+export * from './objectives';
 export * from './rules';
 
 /** The events this domain emits (bodies, without `turn`). Each has wording in `ui/shell/logText/quests.ts`. */
@@ -65,6 +71,13 @@ export interface QuestsState {
   contracts: ContractState[];
   /** Whether `contractsTaken` has been emitted (on the run's first turn). */
   announced: boolean;
+  /**
+   * Every objective the run tracks (ETH-114), in tracking order: the contracts' first, then any
+   * added with `trackObjective` (bounties, conducts, taboos, building quests).
+   */
+  objectives: TrackedObjective[];
+  /** How many of the current step's events the objectives have folded; 0 between steps. */
+  folded: number;
 }
 
 /** One contract as the UI sees it. */
@@ -109,7 +122,8 @@ export const QUESTS_COMMANDS: CommandRecord<QuestsCommand> = {};
 
 /** The state slice for a new run. Throws a `RangeError` on an unknown or repeated contract id. */
 export function initQuests(config: RunConfig): QuestsState {
-  return { contracts: initContracts(config), announced: false };
+  const contracts = initContracts(config);
+  return { contracts, announced: false, objectives: initContractObjectives(contracts), folded: 0 };
 }
 
 /** The snapshot slice. Shares nothing with the state. */
@@ -149,9 +163,17 @@ registerInvariant('quests.contracts', (state) => {
       problems.push(`contract "${c.contract}" progress is ${current}/${target}`);
     }
     if (c.complete !== current >= target) problems.push(`contract "${c.contract}" is ${c.complete ? '' : 'not '}complete at ${current}/${target}`);
+    // Its tracked objective (ETH-114) says the same.
+    const o = state.domains.quests.objectives.find((x) => x.owner.kind === 'contract' && x.owner.id === c.contract);
+    if (o === undefined) problems.push(`contract "${c.contract}" has no tracked objective`);
+    else if (o.current !== current || o.target !== target || (o.status === 'complete') !== c.complete) {
+      problems.push(`contract "${c.contract}" is ${current}/${target}, its objective ${o.current}/${o.target} (${o.status})`);
+    }
   }
   return problems;
 });
+
+registerInvariant('quests.objectives', objectiveProblems);
 
 registerInvariant('quests.relics', (state) => {
   const problems: string[] = [];
@@ -185,7 +207,7 @@ export const QUESTS_DOMAIN: SimDomain<QuestsTypes> = {
   snapshot: questsSnapshot,
   conditions: QUESTS_CONDITIONS,
   ruleActions: QUESTS_RULE_ACTIONS,
-  trackers: [CONTRACTS_TRACKER],
+  trackers: [CONTRACTS_TRACKER, OBJECTIVES_TRACKER],
   victoryChecks: [CONTRACTS_VICTORY],
   floorPlanHooks: [RELIC_PLAN_HOOK],
   // A contract is met when the party takes it on, and used once it is done.
@@ -195,10 +217,12 @@ export const QUESTS_DOMAIN: SimDomain<QuestsTypes> = {
   },
   chronicle: QUESTS_CHRONICLE,
   chronicleKinds: [CHRONICLE_CONTRACT_COMPLETE],
-  // Synced at both ends of every turn, so a bearer felled by a status at the start of a turn counts too.
-  turnStart: ({ state, emit }) => {
+  // Synced at both ends of every turn, so a bearer felled by a status at the start of a turn counts
+  // too, and once more at the end of the step for the events after the last turn (ETH-114).
+  turnStart: ({ state, emit, events }) => {
     announceContracts(state, emit);
-    syncContracts(state, emit);
+    syncContracts(state, emit, events);
   },
-  turnEnd: ({ state, emit }) => syncContracts(state, emit),
+  turnEnd: ({ state, emit, events }) => syncContracts(state, emit, events),
+  stepEnd: ({ state, emit, events }) => syncContracts(state, emit, events, true),
 };

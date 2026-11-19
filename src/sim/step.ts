@@ -14,7 +14,7 @@ import { awaitsPlayer, tracePlayerAction } from './ai/possession';
 import type { ActionRequest } from './actions';
 import { applyCommand } from './commands';
 import type { Command } from './commands';
-import { runTurnEnd, runTurnStart } from './domains';
+import { runStepEnd, runTurnEnd, runTurnStart } from './domains';
 import { statValue } from './stats/getStat';
 import type { Emit, SimEvent } from './events';
 import { perceive } from './perception';
@@ -87,7 +87,7 @@ export function step(state: RunState, commands: readonly Command[], options: Ste
         break;
       }
       const from = events.length;
-      takeTurn(state, actor, decide, emit);
+      takeTurn(state, actor, decide, emit, events);
       acted = true;
       // The party may have left the dungeon, or its last member fallen.
       over = settleRun(state, events, from, emit);
@@ -98,7 +98,9 @@ export function step(state: RunState, commands: readonly Command[], options: Ste
     }
     if (!acted && !held) tick(state);
   }
-  // Run trackers see the whole step's events, `runEnded` included (docs/ARCHITECTURE.md, "Rewards").
+  // Domains finish the step (objectives fold its last events, ETH-114), then the run trackers see
+  // the whole step's events, `runEnded` included (docs/ARCHITECTURE.md, "Rewards").
+  runStepEnd({ state, emit, events });
   reduceTrackers(state, events);
   return events;
 }
@@ -108,11 +110,11 @@ export function step(state: RunState, commands: readonly Command[], options: Ste
  * monster may have opened a door since its last turn), and looks again after acting, so the
  * party's memory includes what the action revealed before the next snapshot.
  */
-function takeTurn(state: RunState, actor: ActorEntity, decide: Decide, emit: Emit): void {
+function takeTurn(state: RunState, actor: ActorEntity, decide: Decide, emit: Emit, events: readonly SimEvent[]): void {
   const inParty = state.party.includes(actor.id);
   if (inParty) perceive(state, actor.id);
   // Domain turn hooks (statuses' triggers). Something there may kill or remove the actor.
-  runTurnStart({ state, actor, emit });
+  runTurnStart({ state, actor, emit, events });
   if (state.entities[actor.id] === undefined || actor.actor.hp <= 0) {
     delete actor.actor.queued;
     return;
@@ -127,7 +129,7 @@ function takeTurn(state: RunState, actor: ActorEntity, decide: Decide, emit: Emi
   }
   actor.actor.energy -= performAction(state, actor, request, emit);
   if (state.entities[actor.id] === undefined) return;
-  runTurnEnd({ state, actor, emit });
+  runTurnEnd({ state, actor, emit, events });
   if (inParty && state.entities[actor.id] !== undefined) perceive(state, actor.id);
 }
 
