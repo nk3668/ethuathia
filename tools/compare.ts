@@ -170,9 +170,15 @@ function delta(before: number | null, after: number | null, digits: number): str
 
 /**
  * The before/after table: one row per metric with its delta, then which seeds ended in a
- * different state (by state hash). Warns when the two reports ran with different arguments.
+ * different state (by state hash). Warns when the two reports ran with different arguments,
+ * and appends any comparison warnings (e.g. a stale base ref).
  */
-export function formatComparison(before: SimReport, after: SimReport, labels = { before: 'before', after: 'after' }): string {
+export function formatComparison(
+  before: SimReport,
+  after: SimReport,
+  labels = { before: 'before', after: 'after' },
+  warnings: readonly string[] = [],
+): string {
   const header = ['metric', labels.before, labels.after, 'delta'];
   const rows = METRICS.map((m) => {
     const b = m.value(before.results);
@@ -195,6 +201,7 @@ export function formatComparison(before: SimReport, after: SimReport, labels = {
   const a = JSON.stringify(before.args);
   const b = JSON.stringify(after.args);
   if (a !== b) out.push(`Warning: the reports ran with different arguments (${labels.before} ${a}, ${labels.after} ${b}).`);
+  for (const warning of warnings) if (warning !== '') out.push(warning);
   return out.join('\n');
 }
 
@@ -207,11 +214,63 @@ export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 /** Where temporary worktrees go. Inside the checkout so they find its `node_modules`; git-ignored. */
 export const COMPARE_DIR = join(REPO_ROOT, '.sim-compare');
 
+/** What `--compare` resolved to: the commit SHA to check out and any stale-base warning. */
+export interface ResolvedCompareRef {
+  ref: string;
+  sha: string;
+  label: string;
+  baseRef: string | null;
+  mergeBase: string | null;
+  ahead: number;
+  warning: string | null;
+}
+
+function tryGit(args: string[], cwd = REPO_ROOT): string | null {
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  return r.error === undefined && r.status === 0 ? r.stdout.trim() : null;
+}
+
 function git(args: string[], cwd = REPO_ROOT): string {
   const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
   if (r.error !== undefined) throw new Error(`Could not run git: ${r.error.message}`);
   if (r.status !== 0) throw new Error(`git ${args.join(' ')} failed:\n${r.stderr.trim()}`);
   return r.stdout.trim();
+}
+
+/** Warning shown when `ref` has moved `ahead` commits past its merge base with `HEAD`. */
+export function staleBaseWarning(ref: string, ahead: number, mergeBase: string): string | null {
+  if (ahead <= 0) return null;
+  return (
+    `Warning: ${ref} is ${ahead} commit${ahead === 1 ? '' : 's'} ahead of merge-base ${mergeBase.slice(0, 7)}, ` +
+    `so hash diffs may include changes from ${ref}. Rebase onto ${ref} or run with --compare merge-base.`
+  );
+}
+
+/**
+ * Resolves a `--compare` argument to a commit SHA. Passing `merge-base` resolves the merge base
+ * between `HEAD` and `origin/main` (falling back to `main`); any other ref checks whether that
+ * ref has moved past its merge base with `HEAD` and builds a warning if so.
+ */
+export function resolveCompareRef(ref: string, cwd = REPO_ROOT): ResolvedCompareRef {
+  if (ref === 'merge-base') {
+    const baseRef =
+      tryGit(['rev-parse', '--verify', '--quiet', 'origin/main^{commit}'], cwd) !== null
+        ? 'origin/main'
+        : tryGit(['rev-parse', '--verify', '--quiet', 'main^{commit}'], cwd) !== null
+          ? 'main'
+          : null;
+    if (baseRef === null) throw new Error('Cannot resolve merge-base: neither "origin/main" nor "main" exists');
+    const sha = git(['merge-base', 'HEAD', baseRef], cwd);
+    return { ref, sha, label: 'merge-base', baseRef, mergeBase: sha, ahead: 0, warning: null };
+  }
+  const sha = tryGit(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], cwd);
+  if (sha === null || sha === '') throw new Error(`Unknown git ref "${ref}"`);
+  const mergeBase = tryGit(['merge-base', 'HEAD', sha], cwd);
+  const aheadRaw = mergeBase === null ? null : tryGit(['rev-list', '--count', `${mergeBase}..${sha}`], cwd);
+  const parsedAhead = aheadRaw === null ? 0 : Number(aheadRaw);
+  const ahead = Number.isFinite(parsedAhead) ? parsedAhead : 0;
+  const warning = mergeBase === null ? null : staleBaseWarning(ref, ahead, mergeBase);
+  return { ref, sha, label: ref, baseRef: null, mergeBase, ahead, warning };
 }
 
 /** The arguments to pass the ref's `tools/sim.ts` for `args`. */
@@ -225,9 +284,8 @@ function simArgv(args: ReportArgs): string[] {
  * `node_modules`, and the worktree is removed afterwards, even on failure. Throws a readable
  * `Error` if the ref doesn't exist or its harness fails.
  */
-export function runRef(ref: string, args: ReportArgs): SimReport {
-  const sha = git(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]);
-  if (sha === '') throw new Error(`Unknown git ref "${ref}"`);
+export function runRef(ref: string | ResolvedCompareRef, args: ReportArgs): SimReport {
+  const { sha, label } = typeof ref === 'string' ? resolveCompareRef(ref) : ref;
   mkdirSync(COMPARE_DIR, { recursive: true });
   const dir = join(COMPARE_DIR, `${sha.slice(0, 12)}-${process.pid}`);
   git(['worktree', 'add', '--detach', dir, sha]);
@@ -241,16 +299,16 @@ export function runRef(ref: string, args: ReportArgs): SimReport {
         maxBuffer: 256 * 1024 * 1024,
       });
     const withJson = run(['--json', out]);
-    if (withJson.status === 0 && existsSync(out)) return parseReport(readFileSync(out, 'utf8'), `${ref}'s report`);
+    if (withJson.status === 0 && existsSync(out)) return parseReport(readFileSync(out, 'utf8'), `${label}'s report`);
     if (withJson.status === 2 && /--json/.test(withJson.stderr)) {
       // A ref from before --json: read its printed table instead.
       const plain = run([]);
-      if (plain.status !== 0) throw new Error(`${ref}'s harness failed:\n${plain.stderr.trim()}`);
+      if (plain.status !== 0) throw new Error(`${label}'s harness failed:\n${plain.stderr.trim()}`);
       const results = parseReportText(plain.stdout);
-      if (results.length !== args.seeds) throw new Error(`Could not read ${ref}'s report table:\n${plain.stdout}`);
+      if (results.length !== args.seeds) throw new Error(`Could not read ${label}'s report table:\n${plain.stdout}`);
       return makeReport(args, results);
     }
-    throw new Error(`${ref}'s harness failed (exit ${withJson.status}):\n${withJson.stderr.trim()}`);
+    throw new Error(`${label}'s harness failed (exit ${withJson.status}):\n${withJson.stderr.trim()}`);
   } finally {
     try {
       git(['worktree', 'remove', '--force', dir]);

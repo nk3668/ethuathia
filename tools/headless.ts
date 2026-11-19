@@ -384,8 +384,9 @@ above the bottom or trigger stuck detection are listed at the end.
   --cap T          party turns allowed per run (default ${DEFAULT_TURN_CAP})
   --party P        adventurers in the party, 1 to ${MAX_PARTY} (default 1)
   --json FILE      also write the report as JSON, to keep as a baseline
-  --compare REF    run the same seeds on git ref REF (e.g. origin/main) and print a
-                   before/after table of the report metrics
+  --compare REF    run the same seeds on git ref REF (e.g. origin/main, or merge-base for the
+                   merge base with origin/main) and print a before/after table of the report
+                   metrics
   --baseline FILE  print the before/after table against a report saved with --json
   --help           show this text`;
 
