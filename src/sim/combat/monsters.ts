@@ -4,7 +4,7 @@
  */
 import { Grid } from '../../core';
 import type { Pos, Rng } from '../../core';
-import { MONSTERS } from '../../content';
+import { MONSTERS, monsterRules } from '../../content';
 import type { MonsterDef } from '../../content';
 import { newAiPart } from '../ai/types';
 import { addEntity, blockerAt, getFloor } from '../entities';
@@ -30,7 +30,7 @@ export function monsterTemplate(def: MonsterDef, pos: Pos): Omit<NewEntity, 'flo
     actor: { energy: 0, hp, mp: 0, faction: 'monster' },
     stats: newStatsPart({ hp, damage, accuracy, evasion, armor, speed, ...(sight === undefined ? {} : { sight }) }),
     ai: newAiPart(
-      def.rules.map((r) => ({
+      monsterRules(def).map((r) => ({
         condition: r.condition.params === undefined ? { id: r.condition.id } : { id: r.condition.id, params: r.condition.params },
         action: r.action.params === undefined ? { id: r.action.id } : { id: r.action.id, params: r.action.params },
         enabled: true,

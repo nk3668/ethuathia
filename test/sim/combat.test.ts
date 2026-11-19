@@ -4,7 +4,7 @@
  * snapshot, the Codex and the invariants make of it all.
  */
 import { describe, expect, it } from 'vitest';
-import { findGlyph, MONSTER_MOSSLING, MONSTERS } from '../../src/content';
+import { findGlyph, MONSTER_MOSSLING, monsterRules, MONSTERS } from '../../src/content';
 import {
   afterArmor,
   BASELINE_RULES,
@@ -56,7 +56,7 @@ describe('monster content', () => {
     expect(checkGame()).toEqual([]);
     for (const def of MONSTERS.all()) {
       expect(findGlyph(def.id)).toEqual(def.glyph);
-      expect(def.rules.length).toBeGreaterThan(0);
+      expect(monsterRules(def).length).toBeGreaterThan(0);
     }
     expect(MONSTERS.all().filter((m) => m.sharesTile === true).length).toBeGreaterThan(0);
     expect(monstersForDepth(1).length).toBeGreaterThan(0);
@@ -163,7 +163,7 @@ describe('monster AI', () => {
     const events = run(state, 30, () => dist(hero, mossling) <= 1);
     expect(dist(hero, mossling)).toBeLessThanOrEqual(1);
     expect(ofType(events, 'actionFailed')).toEqual([]);
-    expect(mossling.ai?.memory.intent?.action).toMatch(/act\.(approach_enemy|attack_adjacent)/);
+    expect(mossling.ai?.memory.intent?.action).toMatch(/act\.(approach_enemy|surround|attack_adjacent)/);
   });
 
   it('wanders when no adventurer is in sight, without tracing every decision', () => {

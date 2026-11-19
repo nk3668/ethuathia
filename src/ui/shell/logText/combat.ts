@@ -32,6 +32,11 @@ function causeText(cause: string): LogPart[] {
   return ['dead of their wounds'];
 }
 
+/** What a monster's bolt is called ("gob of bog-slime"), or "bolt". */
+function boltName(def: string): string {
+  return (MONSTERS.has(def) ? MONSTERS.get(def).bolt?.name : undefined) ?? 'bolt';
+}
+
 export const COMBAT_LOG_TEXT: LogTextRecord<CombatEvent> = {
   attacked: {
     category: 'combat',
@@ -41,12 +46,28 @@ export const COMBAT_LOG_TEXT: LogTextRecord<CombatEvent> = {
       ...who(e.actor, e.actorDef, nameOf, true),
       ' hits ',
       ...who(e.target, e.targetDef, nameOf),
+      e.ranged === true ? ` with a ${boltName(e.actorDef)}` : '',
       ` for ${e.damage} (${e.hp}/${e.maxHp} HP left).`,
     ],
   },
   missed: {
     category: 'combat',
-    text: (e, nameOf) => [...who(e.actor, e.actorDef, nameOf, true), ' misses ', ...who(e.target, e.targetDef, nameOf), '.'],
+    text: (e, nameOf) => [
+      ...who(e.actor, e.actorDef, nameOf, true),
+      ' misses ',
+      ...who(e.target, e.targetDef, nameOf),
+      e.ranged === true ? ` with a ${boltName(e.actorDef)}` : '',
+      '.',
+    ],
+  },
+  aided: {
+    category: 'combat',
+    text: (e, nameOf) => [
+      ...who(e.actor, e.actorDef, nameOf, true),
+      e.power === 'mend' ? ' tends the wounds of ' : ' spurs on ',
+      ...who(e.target, e.targetDef, nameOf),
+      '.',
+    ],
   },
   // A monster's death. A party member's is the run domain's `fell` line.
   died: {

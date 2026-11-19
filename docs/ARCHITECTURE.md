@@ -275,6 +275,20 @@ All in `src/sim/run/`:
 - **Recovery:** an adventurer with no enemy next to them gets 1 HP back every
   `RECOVERY_INTERVAL` turns (`recovered`, quiet in the log).
 - **Snapshot:** `ActorView` carries `name`, `hp` and `maxHp` for each visible actor.
+- **Roles (ETH-040):** every `MonsterDef` has a `role` (`MONSTER_ROLES`: `brute`, `skirmisher`,
+  `caster`, `support`, `swarm`; Codex text in `ROLE_INFO`). The role picks the rule set
+  (`ROLE_RULES`) unless the def lists its own `rules`; read the rules in force with
+  `monsterRules(def)`, never `def.rules`. Role powers are optional def fields: `bolt { range,
+  name }` (casters must have one), `mend { amount, range }` and `bolster { status, turns, range }`
+  (supports need one of them). `src/sim/combat/roles.ts` holds the role conditions
+  (`cond.just_attacked`, from the AI memory's last intent; `cond.ally_hurt`; `cond.in_bolt_range`)
+  and rule actions (`act.fall_back`, `act.cast_bolt`, `act.surround`, `act.mend_ally`,
+  `act.bolster_ally`, `act.hang_back`, `act.rush_caster`), plus `rolePowers`, `visibleAllies`,
+  `canSee` and `isAlly`. Actions: `bolt { target }` (same hit and damage rolls as `attack`; its
+  `attacked` / `missed` carry `ranged: true`) and `aid { target, power: 'mend' | 'bolster' }`
+  (emits `aided`, then the `healed` or `statusApplied` it causes). The adventurer baseline rushes
+  a caster that has it in bolt range (`cond.in_bolt_range` → `act.rush_caster`, after
+  `act.attack_adjacent`). No new state: roles add no parts or slices.
 
 ### Codex discoveries
 

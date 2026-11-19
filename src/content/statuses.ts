@@ -137,3 +137,21 @@ export const STATUS_DAZZLED = defineStatus({
   harmful: true,
   glyph: { ch: '*', color: '#f4d35e' },
 });
+
+export const STATUS_EMBOLDENED = defineStatus({
+  id: 'status.emboldened',
+  name: 'Emboldened',
+  description:
+    'Spurred on by a companion: +1 accuracy and +1 damage. Monsters that tend their kin hand it out in a fight. ' +
+    'Reapplying refreshes the duration.',
+  tags: ['buff'],
+  bundle: {
+    modifiers: [
+      { stat: 'accuracy', op: 'add', value: 1 },
+      { stat: 'damage', op: 'add', value: 1 },
+    ],
+  },
+  stacking: 'refresh',
+  harmful: false,
+  glyph: { ch: '!', color: '#e8a33d' },
+});

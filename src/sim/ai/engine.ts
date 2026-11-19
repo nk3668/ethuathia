@@ -37,7 +37,8 @@ export const BASELINE_FLEE_PERCENT = 35;
  * quaff healing below 35% HP and drop the least valuable thing when overloaded (items, ETH-061);
  * back off after getting stuck; below `BASELINE_FLEE_PERCENT`% HP with an enemy in sight, flee
  * if there is an escape route (`act.flee` can't be done otherwise, so a cornered adventurer
- * fights on); attack an adjacent enemy (combat, ETH-060); once the party has turned back, climb
+ * fights on); attack an adjacent enemy (combat, ETH-060); rush a caster in sight that has you in
+ * bolt range (ETH-040); once the party has turned back, climb
  * out with it (waiting at the stairs up for the others); once every contract is complete, turn
  * back and leave, and fetch a contract's item (the relic) once the party has seen it, however far
  * (quests, ETH-024, `src/sim/quests/rules.ts`); head down without waiting once the
@@ -57,6 +58,8 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.stuck' }, action: { id: 'act.back_off' }, enabled: true },
   { condition: { id: 'cond.hp_below', params: { percent: BASELINE_FLEE_PERCENT } }, action: { id: 'act.flee' }, enabled: true },
   { condition: { id: 'cond.enemy_adjacent' }, action: { id: 'act.attack_adjacent' }, enabled: true },
+  // Combat roles (ETH-040): rush a caster that can bolt you rather than stand under fire.
+  { condition: { id: 'cond.in_bolt_range' }, action: { id: 'act.rush_caster' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   // Quests (ETH-024): once every contract is complete, head out; fetch a contract item once seen.
