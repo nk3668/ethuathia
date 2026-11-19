@@ -8,8 +8,9 @@ milestone: M2
 epic: ui-shell
 size: S
 depends_on: [ETH-062, ETH-064]
+assignee: antigravity
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -25,3 +26,4 @@ Lets the player test rule changes on a known dungeon. Decided in Nate's intervie
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-19: Assigned to Antigravity as a low-risk item.
