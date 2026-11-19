@@ -1,6 +1,7 @@
 /** Log wording for the stats domain's events (`src/sim/stats/`). One entry per event type. */
 import { ATTRIBUTE_IDS, attributeDef, findDef } from '../../../content';
 import type { AttributeId } from '../../../content';
+import { rewardBonusText, scopeWords } from '../../../sim';
 import type { StatsEvent } from '../../../sim';
 import { defineHighlight } from './types';
 import { onFloor } from './types';
@@ -66,6 +67,17 @@ export const STATS_LOG_TEXT: LogTextRecord<StatsEvent> = {
     category: 'combat',
     highlight: HIGHLIGHT_LEVEL_UP,
     text: (e) => `${e.name} reaches level ${e.level}${gainsText(e.gains)}.`,
+  },
+  // Run-wide modifiers (ETH-115): an Omen, a blessing, a curse or a dungeon event takes hold or ends.
+  runModifierAdded: {
+    category: 'system',
+    text: (e) =>
+      `${e.atStart === true ? 'This run is under' : e.replaced === true ? 'Renewed:' : 'Now in force:'} ${e.source.label}, ` +
+      `affecting ${scopeWords(e.scope)}${e.rewardBonus === undefined || e.rewardBonus === 0 ? '' : ` (rewards ${rewardBonusText(e.rewardBonus)})`}.`,
+  },
+  runModifierRemoved: {
+    category: 'system',
+    text: (e) => `${e.source.label} ${e.reason === 'expired' ? 'has run its course' : 'no longer holds'}.`,
   },
 };
 

@@ -5,8 +5,8 @@
  */
 import { CLASSES, CONTRACTS, RACES, upgradeBundle } from '../../content';
 import { Rng } from '../../core';
-import { configDepth, hasBundle, requirementProblems } from '../../sim';
-import type { RunConfig } from '../../sim';
+import { configDepth, hasBundle, requirementProblems, runModifierListProblems } from '../../sim';
+import type { RunConfig, RunModifierConfig } from '../../sim';
 import type { Profile } from '../profile';
 import { milestoneRequirements } from '../milestones';
 import { ownedNodes } from '../upgrades';
@@ -29,10 +29,22 @@ export function upgradePartyBundles(profile: Profile): string[] {
 }
 
 /**
+ * The run modifiers owned upgrades give (ETH-115): one per owned node with a `bundle` grant of
+ * scope `run`, in purchase order, keyed and credited by the node (id and name) and carrying the
+ * node's merged run-scope grants as its bundle. Scope `party`: an upgrade the player bought helps
+ * the party, including allies outside the party roster.
+ */
+export function upgradeRunModifiers(profile: Profile): RunModifierConfig[] {
+  return ownedNodes(profile)
+    .filter((node) => upgradeBundle(node, 'run') !== undefined)
+    .map((node) => ({ key: node.id, source: { id: node.id, label: node.name }, scope: 'party', bundle: node.id }));
+}
+
+/**
  * The run config for `choices` on this profile: each `RUN_CHOICES` section applies its choice in
  * order (random recruits draw from `seed`, so the same seed gives the same party), then the
- * owned upgrades' party bundles are added to `partyBundles`. Run-scope bundle grants have no
- * consumer yet (Omens and blessings add a run-wide bundle source). The requirements of locked
+ * owned upgrades' party bundles are added to `partyBundles` and their run-scope bundle grants
+ * become run modifiers (`upgradeRunModifiers`, ETH-115). The requirements of locked
  * `metInRun` milestones go into `watchRequirements` (ETH-121). Throws a `RangeError` listing
  * the problems if the result fails `checkRunConfig`.
  */
@@ -42,6 +54,8 @@ export function buildRunConfig(profile: Profile, choices: RunChoices, seed: numb
   for (const [key, section] of CHOICE_ENTRIES) section.apply(ctx, choices[key]);
   const bundles = upgradePartyBundles(profile);
   if (bundles.length > 0) config.partyBundles = [...(config.partyBundles ?? []), ...bundles];
+  const mods = upgradeRunModifiers(profile);
+  if (mods.length > 0) config.runModifiers = [...(config.runModifiers ?? []), ...mods];
   // The locked `metInRun` milestones' requirements, for `track.requirements` (ETH-121).
   const watch = milestoneRequirements(profile);
   if (watch.length > 0) config.watchRequirements = watch;
@@ -61,6 +75,7 @@ export function checkRunConfig(config: RunConfig): string[] {
     if (!RACES.has(m.raceId)) problems.push(`party[${i}] has unknown race "${m.raceId}"`);
   });
   for (const id of config.partyBundles ?? []) if (!hasBundle(id)) problems.push(`unknown party bundle "${id}"`);
+  problems.push(...runModifierListProblems(config.runModifiers ?? []));
   const contracts = config.contracts ?? [];
   for (const id of contracts) if (!CONTRACTS.has(id)) problems.push(`unknown contract "${id}"`);
   if (new Set(contracts).size !== contracts.length) problems.push('a contract is taken twice');

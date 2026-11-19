@@ -18,6 +18,7 @@ import type { RunTracker } from '../domain';
 import type { SimEvent } from '../events';
 import { TRACKER_LIST } from '../registries';
 import type { EntityId, RunState } from '../state';
+import { applyRewardMultiplier, rewardMultiplier } from '../stats/runModifiers';
 import { RENOWN, TROPHIES } from './result';
 import type { RewardAmounts } from './result';
 
@@ -61,10 +62,14 @@ export function reduceTrackers(state: RunState, events: readonly SimEvent[]): vo
   slice.rewards.atRisk = trackerRewards(state);
 }
 
-/** The sum of every tracker's `rewards` for its current state. Amounts of 0 are left out. */
+/**
+ * The sum of every tracker's `rewards` for its current state, times the reward multiplier
+ * (`rewardMultiplier`, ETH-115: 1 + the run modifiers' bonuses, rounded down per currency).
+ * Amounts of 0 are left out.
+ */
 export function trackerRewards(state: RunState): RewardAmounts {
   const states = state.domains.run.trackers;
-  return sumTrackerRewards((tracker) => (Object.hasOwn(states, tracker.id) ? states[tracker.id] : undefined));
+  return sumTrackerRewards((tracker) => (Object.hasOwn(states, tracker.id) ? states[tracker.id] : undefined), rewardMultiplier(state));
 }
 
 /**
@@ -78,11 +83,15 @@ export function projectedRewards(state: RunState, events: readonly SimEvent[]): 
     let s = Object.hasOwn(states, tracker.id) ? states[tracker.id] : tracker.init();
     for (const event of events) s = tracker.reduce(s, event);
     return s;
-  });
+  }, rewardMultiplier(state));
 }
 
-/** Every tracker's `rewards` for the state `stateOf` gives it (skipped when `undefined`), summed; zeros left out. */
-function sumTrackerRewards(stateOf: (tracker: RunTracker<unknown>) => unknown): RewardAmounts {
+/**
+ * Every tracker's `rewards` for the state `stateOf` gives it (skipped when `undefined`), summed,
+ * then each currency times `multiplier` (base → ×multiplier; the wipe loss comes after, from
+ * this); zeros left out.
+ */
+function sumTrackerRewards(stateOf: (tracker: RunTracker<unknown>) => unknown, multiplier: number): RewardAmounts {
   const total: RewardAmounts = {};
   for (const tracker of TRACKER_LIST) {
     if (tracker.rewards === undefined) continue;
@@ -92,7 +101,13 @@ function sumTrackerRewards(stateOf: (tracker: RunTracker<unknown>) => unknown): 
       if (amount !== 0) total[currency] = (total[currency] ?? 0) + amount;
     }
   }
-  return total;
+  if (multiplier === 1) return total;
+  const out: RewardAmounts = {};
+  for (const [currency, amount] of Object.entries(total)) {
+    const scaled = applyRewardMultiplier(amount, multiplier);
+    if (scaled !== 0) out[currency] = scaled;
+  }
+  return out;
 }
 
 /** Each tracker's `extras` (default: its state), keyed by tracker id, for `RunResult.extras`. */

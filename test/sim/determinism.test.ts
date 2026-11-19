@@ -26,6 +26,12 @@ const CONFIG: RunConfig = {
     { status: 'status.poisoned', turns: 8, potency: 2 },
     { status: 'status.dazzled', turns: 50 },
   ],
+  // Run-wide modifiers (ETH-115): a monster-side one that ends when the party leaves the first
+  // floor, and a party-side one with a reward bonus and a flag that ends on a turn.
+  runModifiers: [
+    { key: 'test.swift_dark', source: { id: 'status.hasted', label: 'Swift Dark' }, scope: 'monsters', bundle: 'status.hasted', until: { floor: 'd1' } },
+    { key: 'test.boon', source: { id: 'status.regenerating', label: 'Boon' }, scope: 'party', bundle: 'status.regenerating', potency: 0.5, flags: ['test.flag'], rewardBonus: 0.3, until: { turn: 60 } },
+  ],
 };
 
 const SEEDS = Array.from({ length: 20 }, (_, i) => i + 1);

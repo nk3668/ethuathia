@@ -204,6 +204,7 @@ describe('AppShell at desktop width', () => {
       domains: {
         ...domains,
         stats: {
+          ...domains.stats,
           members: {
             1: { ...stats, statuses: [{ status: 'status.poisoned', remaining: 4, potency: 1 }, { status: 'status.hasted', remaining: 1, potency: 1 }] },
             2: { ...stats, statuses: [{ status: 'status.hasted', remaining: 9, potency: 1 }] },

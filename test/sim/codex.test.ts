@@ -24,7 +24,7 @@ describe('discovery rules', () => {
   it('name only content ids that exist', () => {
     for (const [type, rules] of DISCOVERY_RULES) {
       // `runStarted` lists the party, so the sample carries one member; `floorEntered` names a floor type;
-      // `contractsTaken` lists contracts and `contractCompleted` names one (ETH-024).
+      // `contractsTaken` lists contracts and `contractCompleted` names one (ETH-024); `runModifierAdded` names its source (ETH-115).
       const sample = {
         type,
         turn: 0,
@@ -32,6 +32,7 @@ describe('discovery rules', () => {
         party: [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }],
         contracts: [{ contract: 'contract.recover_relic', reward: {} }],
         contract: 'contract.recover_relic',
+        source: { id: 'status.hasted', label: 'Hasted' },
       } as unknown as SimEvent;
       for (const rule of rules) for (const d of rule(sample)) expect(findDef(d.id), `${type} → ${d.id}`).toBeDefined();
     }
