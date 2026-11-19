@@ -1,10 +1,10 @@
 import { useShallow } from 'zustand/react/shallow';
 import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, EQUIP_SLOT_INFO, STATUSES } from '../../content';
 import type { AttributeId } from '../../content';
-import { STAT_IDS, STAT_INFO, XP_PER_DEPTH, XP_PER_THREAT } from '../../sim';
+import { STAT_IDS, STAT_INFO } from '../../sim';
 import type { EntityId, InventoryView, LevelView, MemberStatsView } from '../../sim';
 import { Explain } from '../codex/Explain';
-import { attributeEffectText, attributeLine } from '../codex/attributeText';
+import { attributeEffectText, growthLine, xpSourcesText } from '../codex/attributeText';
 import { keyHint } from '../input/keymap';
 import { runKeyAction } from '../input/useKeymap';
 import { Bar, Button, Card, Panel, Tooltip } from '../kit';
@@ -264,7 +264,7 @@ function useLevel(id: EntityId): LevelView | null {
 function LevelBadge({ id, classId }: { id: EntityId; classId: string }) {
   const level = useLevel(id);
   if (level === null) return null;
-  const growth = CLASSES.has(classId) ? attributeLine(CLASSES.get(classId).growth, true) : null;
+  const growth = CLASSES.has(classId) ? growthLine(CLASSES.get(classId).growth) : null;
   return (
     <Tooltip
       placement="bottom"
@@ -272,20 +272,13 @@ function LevelBadge({ id, classId }: { id: EntityId; classId: string }) {
         <>
           <strong>Level {level.level}</strong>
           <br />
-          {level.nextXp === null ? (
-            <>{level.xp} XP: the highest level.</>
-          ) : (
-            <>
-              {level.xp} XP; level {level.level + 1} at {level.nextXp} XP.
-            </>
-          )}
+          {level.xp} XP; level {level.level + 1} at {level.nextXp} XP.
           <br />
-          XP comes from kills ({XP_PER_THREAT} per point of threat, to whoever strikes the blow) and from each new depth
-          ({XP_PER_DEPTH} per floor of depth, to every living member).
+          {xpSourcesText()}
           {growth !== null && (
             <>
               <br />
-              Each level: {growth}.
+              Each level rolls: {growth}.
             </>
           )}
         </>
@@ -298,13 +291,19 @@ function LevelBadge({ id, classId }: { id: EntityId; classId: string }) {
   );
 }
 
-/** Progress through the current level as an XP bar (ETH-034). Full at the highest level. */
+/** Progress through the current level as an XP bar (ETH-034). Levels have no cap (ETH-110). */
 function XpBar({ id, name }: { id: EntityId; name: string }) {
   const level = useLevel(id);
   if (level === null) return null;
-  const span = level.nextXp === null ? 1 : level.nextXp - level.levelXp;
-  const into = level.nextXp === null ? 1 : level.xp - level.levelXp;
-  return <Bar label="XP" tone="xp" value={into} max={span} ariaLabel={`${name}'s XP toward the next level`} />;
+  return (
+    <Bar
+      label="XP"
+      tone="xp"
+      value={level.xp - level.levelXp}
+      max={level.nextXp - level.levelXp}
+      ariaLabel={`${name}'s XP toward the next level`}
+    />
+  );
 }
 
 /**

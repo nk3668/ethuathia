@@ -244,8 +244,9 @@ Vanguard 11, Human +1."), what it adds to each stat ("Adds: Max HP +6, Damage +1
 and, muted, the per-point rule. Compact cards and dead members leave them out.
 
 Level (ETH-034): "Lv 6" in muted mono at the right of the header; its tooltip gives total XP,
-the XP for the next level, where XP comes from and the class's growth per level. The XP bar
-(`--xp`) shows progress within the current level ("26 / 30") and is full at the highest level.
+the XP for the next level, where XP comes from and the class's level-up rolls ("BRN 0–2 ·
+WIT 1 (25%)"). The XP bar (`--xp`) shows progress within the current level ("26 / 30");
+levels have no cap (ETH-110).
 Compact cards and dead members leave the bar out. A level-up is a log highlight.
 
 Status badges (ETH-057) show the status's glyph in its color, its name and the turns left in

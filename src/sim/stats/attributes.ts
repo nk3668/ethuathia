@@ -10,7 +10,7 @@
 import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, RACES } from '../../content';
 import type { AttributeId } from '../../content';
 import type { Entity } from '../state';
-import { growthAt, levelOf } from './leveling';
+import { growthOf, levelOf } from './leveling';
 import type { StatId } from './statIds';
 import type { StatProvider } from './types';
 
@@ -68,9 +68,9 @@ function collectAttribute(entity: Entity, attribute: AttributeId, sink: (value: 
     sink(cls.attributes[attribute], cls.id, cls.name);
     const race = RACES.get(a.raceId);
     sink(race.attributes[attribute] ?? 0, race.id, race.name);
-    // Class growth from levels (ETH-034), credited to the class: "Level 3".
+    // Class growth rolled at each level-up (ETH-034, ETH-110), credited to the class: "Level 3".
     const level = levelOf(entity);
-    if (level > 1) sink(growthAt(cls.id, attribute, level), cls.id, `Level ${level}`);
+    if (level > 1) sink(growthOf(entity, attribute), cls.id, `Level ${level}`);
   }
   const own = entity.stats?.attributes?.[attribute];
   if (own !== undefined) sink(own, entity.def, a === undefined ? 'Base' : 'Trained');

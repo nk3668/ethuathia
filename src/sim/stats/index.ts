@@ -22,7 +22,7 @@ import { fireTrigger } from './effects';
 import { bundleOf, fillVitals, getStats, hasBundle, statValue } from './getStat';
 import { isStatId, STAT_IDS, STAT_INFO } from './statIds';
 import type { StatId } from './statIds';
-import { levelForXp, levelView, MAX_LEVEL, XP_TRACKER } from './leveling';
+import { growthProblems, levelView, XP_TRACKER } from './leveling';
 import type { GrowthPart, LevelingEvent, LevelView } from './leveling';
 import { applyStatus, tickStatuses } from './statuses';
 import type { StatusApplyMode } from './statuses';
@@ -63,19 +63,24 @@ export {
   grantDepthXp,
   grantKillXp,
   grantXp,
-  growthAt,
+  growthOf,
+  growthProblems,
+  growthRng,
+  KILL_GROUP_BONUS,
+  KILL_SHARE_RADIUS,
+  killShare,
+  killSharers,
   levelForXp,
-  levelGains,
   levelOf,
   levelView,
-  MAX_LEVEL,
+  rollLevelGains,
   XP_PER_DEPTH,
   XP_PER_THREAT,
   XP_STEP,
   XP_TRACKER,
   xpForLevel,
 } from './leveling';
-export type { GrowthPart, LevelingEvent, LevelView, XpReason, XpRecord, XpTrackerState } from './leveling';
+export type { GrowthGains, GrowthPart, LevelingEvent, LevelView, XpReason, XpRecord, XpTrackerState } from './leveling';
 
 /** The events this domain emits (bodies, without `turn`). Each needs a formatter in `ui/shell/logText/stats.ts`. */
 export type StatsEvent =
@@ -326,25 +331,11 @@ registerInvariant('stats.parts', (state) => {
 });
 
 /**
- * Levels are well formed (ETH-034): only adventurers have a growth part, its XP is a whole number
- * of at least 0 and its level is the one that XP reaches.
+ * Levels are well formed (ETH-034, ETH-110): only adventurers have a growth part, its XP is a
+ * whole number of at least 0, its level is the one that XP reaches, and its rolled growth is
+ * whole points of at least 0 in known attributes.
  */
-registerInvariant('stats.growth', (state) => {
-  const problems: string[] = [];
-  for (const entity of Object.values(state.entities)) {
-    const growth = entity.growth;
-    if (growth === undefined) continue;
-    if (entity.adventurer === undefined) problems.push(`entity ${entity.id} has a level but is no adventurer`);
-    if (!Number.isInteger(growth.xp) || growth.xp < 0) problems.push(`entity ${entity.id} has ${String(growth.xp)} XP`);
-    else if (growth.level !== levelForXp(growth.xp)) {
-      problems.push(`entity ${entity.id} is level ${String(growth.level)} with ${growth.xp} XP (expected ${levelForXp(growth.xp)})`);
-    }
-    if (!Number.isInteger(growth.level) || growth.level < 1 || growth.level > MAX_LEVEL) {
-      problems.push(`entity ${entity.id} has level ${String(growth.level)}`);
-    }
-  }
-  return problems;
-});
+registerInvariant('stats.growth', (state) => Object.values(state.entities).flatMap(growthProblems));
 
 /** Codex discoveries: a status is seen the first time it lands on anyone. */
 export const STATS_DISCOVERIES: DiscoveryRules = {

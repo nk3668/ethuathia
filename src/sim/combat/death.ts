@@ -57,8 +57,8 @@ export function killActor(state: RunState, victim: ActorEntity, emit: Emit, { ca
       floor,
       pos: { ...pos },
     });
-    // The killer's XP (ETH-034): nothing unless it is a living adventurer.
-    grantKillXp(state, killer, victim.def, threat, emit);
+    // Kill XP (ETH-034, ETH-110): shared by the party members in the fight, if a member struck it.
+    grantKillXp(state, killer, victim, threat, emit);
   }
   if (inParty) return;
   emit({ type: 'died', actor: victim.id, def: victim.def, name: actorName(victim), cause, killer: killer?.id ?? null, floor, pos });
