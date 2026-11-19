@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FEATURE_DOOR } from '../../src/content';
 import { createRun, moveEntity, snapshot } from '../../src/sim';
 import type { RunState } from '../../src/sim';
-import { fitView, tileRect } from '../../src/ui/map';
+import { fitView, HIT_FLASH_MS, tileRect } from '../../src/ui/map';
 import { MapArea } from '../../src/ui/shell/MapArea';
 import { useSimStore } from '../../src/ui/stores/simStore';
 import { LOG_HEIGHT, useUiStore } from '../../src/ui/stores/uiStore';
@@ -25,12 +25,21 @@ const HEIGHT = 400;
 
 /** Draw calls the map made, by method name. */
 let calls: string[] = [];
+/** `fillRect` calls with the active `fillStyle`, for checking hit-flash washes. */
+let fills: { style: unknown; args: unknown[] }[] = [];
 
 // A 600×400 canvas with a 2D context that records calls, since jsdom has neither.
 beforeEach(() => {
   calls = [];
+  fills = [];
   const ctx = new Proxy({} as Record<string, unknown>, {
-    get: (target, key: string) => (key in target ? target[key] : (..._args: unknown[]) => void calls.push(key)),
+    get: (target, key: string) =>
+      key in target
+        ? target[key]
+        : (...args: unknown[]) => {
+            calls.push(key);
+            if (key === 'fillRect') fills.push({ style: target.fillStyle, args });
+          },
     set: (target, key: string, value) => {
       target[key] = value;
       return true;
@@ -214,5 +223,94 @@ describe('MapCanvas auto-pause marker', () => {
     frames(1);
     expect(frames(3)).toBe(0);
     expect(queued.size).toBe(0);
+  });
+});
+
+describe('MapCanvas hit flash', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ now: 0 });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    delete (window as Partial<Window>).matchMedia;
+  });
+
+  function setReducedMotion(reduce: boolean) {
+    window.matchMedia = (query: string) =>
+      ({
+        matches: reduce && query.includes('reduced-motion'),
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }) as unknown as MediaQueryList;
+  }
+
+  const attacked = (pos: { x: number; y: number }, floor = 'd1') => ({
+    type: 'attacked' as const,
+    turn: 1,
+    actor: 99,
+    actorDef: 'monster.cave_rat',
+    target: 1,
+    targetDef: 'actor.adventurer',
+    damage: 3,
+    hp: 17,
+    maxHp: 20,
+    floor,
+    pos,
+  });
+
+  it('flashes a struck tile for HIT_FLASH_MS and clears cleanly', () => {
+    expect(HIT_FLASH_MS).toBe(120);
+    setReducedMotion(false);
+    start();
+    render(<MapArea />);
+    act(() => {
+      vi.advanceTimersByTime(16);
+    });
+    fills.length = 0;
+    calls.length = 0;
+
+    act(() => {
+      useSimStore.getState().receiveEvents([attacked({ x: 3, y: 1 })]);
+    });
+    // Next animation frame draws the danger wash.
+    act(() => {
+      vi.advanceTimersByTime(16);
+    });
+    expect(fills.some((f) => f.style === 'rgba(227, 112, 107, 0.45)')).toBe(true);
+
+    // Before 120ms, the expiry redraw has not run yet.
+    fills.length = 0;
+    calls.length = 0;
+    act(() => {
+      vi.advanceTimersByTime(90);
+    });
+    expect(calls).toEqual([]);
+
+    // Past 120ms, the scheduled expiry redraw clears the flash without reapplying the wash.
+    act(() => {
+      vi.advanceTimersByTime(30);
+    });
+    expect(calls).toContain('drawImage');
+    expect(fills.some((f) => f.style === 'rgba(227, 112, 107, 0.45)')).toBe(false);
+  });
+
+  it('produces zero flash under prefers-reduced-motion', () => {
+    setReducedMotion(true);
+    start();
+    render(<MapArea />);
+    act(() => {
+      vi.advanceTimersByTime(16);
+    });
+    fills.length = 0;
+
+    act(() => {
+      useSimStore.getState().receiveEvents([attacked({ x: 3, y: 1 })]);
+    });
+    act(() => {
+      vi.advanceTimersByTime(16);
+    });
+    expect(fills.some((f) => f.style === 'rgba(227, 112, 107, 0.45)')).toBe(false);
   });
 });

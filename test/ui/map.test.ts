@@ -20,6 +20,7 @@ import {
   GlyphAtlas,
   glyphStyle,
   GlyphTable,
+  lineTiles,
   MapRenderer,
   Overlay,
   PARTY_HUES,
@@ -63,12 +64,20 @@ const DOC = readFileSync(join(import.meta.dirname, '..', '..', 'docs', 'VISUAL-D
 
 /** A recording 2D context: method calls are logged, property writes are kept. */
 function fakeContext() {
-  const calls: { name: string; args: unknown[]; fillStyle?: unknown; font?: unknown }[] = [];
+  const calls: { name: string; args: unknown[]; fillStyle?: unknown; strokeStyle?: unknown; lineWidth?: unknown; font?: unknown }[] = [];
   const props: Record<string, unknown> = {};
   const ctx = new Proxy(props, {
     get(target, key: string) {
       if (key in target) return target[key];
-      return (...args: unknown[]) => calls.push({ name: key, args, fillStyle: target.fillStyle, font: target.font });
+      return (...args: unknown[]) =>
+        calls.push({
+          name: key,
+          args,
+          fillStyle: target.fillStyle,
+          strokeStyle: target.strokeStyle,
+          lineWidth: target.lineWidth,
+          font: target.font,
+        });
     },
     set(target, key: string, value) {
       target[key] = value;
@@ -101,7 +110,7 @@ class RecordingTheme implements GlyphTheme {
   }
 }
 
-const PALETTE = { background: BG, selection: '#e8a33d', hover: '#e3e8ee' };
+const PALETTE = { background: BG, selection: '#e8a33d', hover: '#e3e8ee', danger: '#e3706b' };
 
 // ---------------------------------------------------------------------------------------------
 
@@ -164,6 +173,9 @@ describe('scene', () => {
   it('packs glyph, fog and overlay into one code', () => {
     const code = encodeCell(1234, Fog.Remembered, Overlay.Hover | Overlay.Selected);
     expect([cellGlyph(code), cellFog(code), cellOverlay(code)]).toEqual([1234, Fog.Remembered, 3]);
+    const all = Overlay.Hover | Overlay.Selected | Overlay.Focus | Overlay.Possessed | Overlay.HitFlash;
+    const full = encodeCell(50000, Fog.Visible, all);
+    expect([cellGlyph(full), cellFog(full), cellOverlay(full)]).toEqual([50000, Fog.Visible, 31]);
   });
 
   it('draws terrain, features and actors with fog: unknown tiles are blank', () => {
@@ -228,6 +240,27 @@ describe('scene', () => {
     expect(cellOverlay(scene.codes[1 * scene.width + 1] as number)).toBe(Overlay.Selected | Overlay.Focus);
     const away = buildScene(snap, { selected: null, hover: null, focus: { x: 3, y: 2 } }, new GlyphTable());
     expect(cellOverlay(away.codes[2 * away.width + 3] as number)).toBe(Overlay.Focus);
+  });
+
+  it('marks living possessed party member without selection ring, and marks hit flashes in bounds', () => {
+    const snap = snapshot(run());
+    const [mira, oren] = snap.party as [Snapshot['party'][number], Snapshot['party'][number]];
+    mira.possessed = true;
+    const scene = buildScene(
+      snap,
+      { selected: mira.id, hover: null, flashes: [{ x: 3, y: 2 }, { x: 99, y: 99 }] },
+      new GlyphTable(),
+    );
+    expect(cellOverlay(scene.codes[1 * scene.width + 1] as number)).toBe(Overlay.Possessed);
+    expect(cellOverlay(scene.codes[2 * scene.width + 3] as number)).toBe(Overlay.HitFlash);
+
+    // Dead or off-floor possessed member is not given the possession overlay.
+    mira.alive = false;
+    oren.possessed = true;
+    oren.floor = 'd2';
+    const inactive = buildScene(snap, { selected: null, hover: null }, new GlyphTable());
+    expect(cellOverlay(inactive.codes[1 * inactive.width + 1] as number)).toBe(Overlay.None);
+    expect(cellOverlay(inactive.codes[1 * inactive.width + 2] as number)).toBe(Overlay.None);
   });
 
   it('lists the tiles that changed between frames', () => {
@@ -506,6 +539,124 @@ describe('MapRenderer', () => {
     const view = renderer.currentView as View;
     const mira = tileRect(view, { x: 1, y: 1 });
     expect(rings[0]?.args).toEqual([mira.x + 0.5, mira.y + 0.5, mira.w - 1, mira.h - 1]);
+  });
+
+  it('draws a solid 2*line possession frame instead of the ring, keeping hover inset cleanly', () => {
+    const { renderer, calls } = setup();
+    const snap = snapshot(run());
+    const mira = snap.party[0] as Snapshot['party'][number];
+    mira.possessed = true;
+    mira.intent = { rule: { set: 'baseline', index: 0 }, action: 'act.explore', detail: 'Explore', goal: { x: 3, y: 2 } };
+    renderer.draw(snap, { mode: 'follow', selected: mira.id, hover: null });
+    calls.length = 0;
+
+    // Hovering the possessed cell redraws only that tile and keeps hover dashed inside the frame.
+    const stats = renderer.draw(snap, { mode: 'follow', selected: mira.id, hover: { x: 1, y: 1 } });
+    expect(stats).toEqual({ full: false, tiles: 1 });
+    // No goal line while possessed.
+    expect(calls.filter((c) => c.name === 'stroke')).toHaveLength(0);
+
+    const view = renderer.currentView as View;
+    const cell = tileRect(view, { x: 1, y: 1 });
+    const rects = calls.filter((c) => c.name === 'strokeRect');
+    expect(rects).toHaveLength(2);
+    expect(rects[0]).toMatchObject({
+      lineWidth: 2,
+      strokeStyle: PALETTE.selection,
+      args: [cell.x + 1, cell.y + 1, cell.w - 2, cell.h - 2],
+    });
+    expect(rects[1]).toMatchObject({
+      lineWidth: 1,
+      strokeStyle: PALETTE.hover,
+      args: [cell.x + 2.5, cell.y + 2.5, cell.w - 5, cell.h - 5],
+    });
+    const dashes = calls.filter((c) => c.name === 'setLineDash').map((c) => c.args[0]);
+    expect(dashes).toContainEqual([2, 2]);
+    expect(dashes.at(-1)).toEqual([]);
+  });
+
+  it('draws a semi-transparent danger wash for hit flashes', () => {
+    const { renderer, calls } = setup();
+    const snap = snapshot(run());
+    renderer.draw(snap, { mode: 'follow', selected: null, hover: null });
+    calls.length = 0;
+    const stats = renderer.draw(snap, { mode: 'follow', selected: null, hover: null, flashes: [{ x: 3, y: 2 }] });
+    expect(stats).toEqual({ full: false, tiles: 1 });
+    const view = renderer.currentView as View;
+    const cell = tileRect(view, { x: 3, y: 2 });
+    const fills = calls.filter((c) => c.name === 'fillRect');
+    expect(fills).toEqual([
+      expect.objectContaining({ fillStyle: 'rgba(227, 112, 107, 0.45)', args: [cell.x, cell.y, cell.w, cell.h] }),
+    ]);
+  });
+
+  it('computes lineTiles including corner-touching tiles, clamped to floor', () => {
+    expect(lineTiles({ x: 1, y: 1 }, { x: 3, y: 1 }, { width: 6, height: 4 })).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+    ]);
+    expect(lineTiles({ x: 2, y: 0 }, { x: 2, y: 2 }, { width: 6, height: 4 })).toEqual([
+      { x: 2, y: 0 },
+      { x: 2, y: 1 },
+      { x: 2, y: 2 },
+    ]);
+    // Diagonal crossing corner (1,1) includes neighboring corner tiles so dashes never leave trails.
+    expect(lineTiles({ x: 0, y: 0 }, { x: 1, y: 1 }, { width: 4, height: 4 })).toEqual([
+      { x: 0, y: 0 },
+      { x: 0, y: 1 },
+      { x: 1, y: 0 },
+      { x: 1, y: 1 },
+    ]);
+    // Reversed endpoints produce the same tile set, clipped to floor bounds.
+    expect(lineTiles({ x: 3, y: 1 }, { x: 1, y: 1 }, { width: 3, height: 3 })).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+  });
+
+  it('draws a dotted goal line for the selected adventurer and clears it without trails', () => {
+    const { renderer, calls, theme } = setup();
+    const snap = snapshot(run());
+    const mira = snap.party[0] as Snapshot['party'][number];
+    mira.intent = { rule: { set: 'baseline', index: 0 }, action: 'act.explore', detail: 'Explore', goal: { x: 3, y: 1 } };
+    renderer.draw(snap, { mode: 'follow', selected: null, hover: null });
+
+    // Enabling selection draws tiles on the line, then the dotted line center-to-center before focus.
+    calls.length = 0;
+    theme.cells = [];
+    const withGoal = renderer.draw(snap, { mode: 'follow', selected: mira.id, hover: null, focus: { x: 3, y: 2 } });
+    expect(withGoal.full).toBe(false);
+    const view = renderer.currentView as View;
+    const fromRect = tileRect(view, mira.pos);
+    const toRect = tileRect(view, { x: 3, y: 1 });
+    const dashCall = calls.find((c) => c.name === 'setLineDash' && (c.args[0] as number[]).length === 2);
+    expect(dashCall?.args[0]).toEqual([2, 3]);
+    const moves = calls.filter((c) => c.name === 'moveTo');
+    const lines = calls.filter((c) => c.name === 'lineTo');
+    // Goal line is first (before the four focus bracket strokes).
+    expect(moves[0]?.args).toEqual([fromRect.x + fromRect.w / 2, fromRect.y + fromRect.h / 2]);
+    expect(lines[0]?.args).toEqual([toRect.x + toRect.w / 2, toRect.y + toRect.h / 2]);
+    const strokes = calls.filter((c) => c.name === 'stroke');
+    expect(strokes).toHaveLength(5);
+    expect(strokes[0]).toMatchObject({ strokeStyle: PALETTE.selection, lineWidth: 1 });
+
+    // Goal equal to actor position or off-floor suppresses the line and clears the previous line tiles.
+    calls.length = 0;
+    theme.cells = [];
+    mira.intent = { rule: { set: 'baseline', index: 0 }, action: 'act.explore', detail: 'Explore', goal: { x: 1, y: 1 } };
+    const cleared = renderer.draw(snap, { mode: 'follow', selected: mira.id, hover: null });
+    expect(cleared.full).toBe(false);
+    expect(calls.filter((c) => c.name === 'stroke')).toHaveLength(0);
+    // Every tile from the old goal line (1,1), (2,1), (3,1) was redrawn to erase dashes.
+    const redrawn = new Set(theme.cells.map((c) => `${c.x},${c.y}`));
+    for (const p of lineTiles(mira.pos, { x: 3, y: 1 }, snap.floor)) {
+      const r = tileRect(view, p);
+      expect(redrawn.has(`${r.x},${r.y}`)).toBe(true);
+    }
+
+    // Subsequent frame with no goal line redraws 0 tiles.
+    expect(renderer.draw(snap, { mode: 'follow', selected: mira.id, hover: null })).toEqual({ full: false, tiles: 0 });
   });
 
   it('frames a focus tile with four corner brackets, and clears them when it goes', () => {

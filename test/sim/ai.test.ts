@@ -4,6 +4,7 @@ import {
   addEntity,
   BASELINE_RULES,
   buildGoalMap,
+  checkInvariants,
   CONDITIONS,
   createRun,
   defineCondition,
@@ -145,6 +146,7 @@ describe('decision engine', () => {
       action: 'act.test_step',
       detail: 'Test step: stepping (0, 1)',
     });
+    expect(Object.hasOwn(hero.ai.memory.intent ?? {}, 'goal')).toBe(false);
   });
 
   it('falls back on the baseline rules after the actor’s own', () => {
@@ -154,6 +156,7 @@ describe('decision engine', () => {
     expect(fired(step(state, []))).toMatchObject([
       { rule: { set: 'baseline', index: BASELINE_RULES.length - 1 }, action: 'act.wait', detail: 'Wait: nothing else to do' },
     ]);
+    expect(hero.ai.memory.intent?.goal).toBeUndefined();
   });
 
   it('lets actors without an AI part wait, with no trace', () => {
@@ -357,5 +360,51 @@ describe('stuck detection', () => {
     const events: SimEvent[] = [];
     for (let i = 0; i < 4 * STUCK_TURNS; i++) events.push(...step(state, []));
     expect(events.filter((e) => e.type === 'stuck')).toEqual([]);
+  });
+});
+
+describe('intent goal (ETH-019)', () => {
+  it('records goal tiles for pathing and combat actions, and checks them in core.aiMemory', () => {
+    // Exploring down a corridor records the frontier goal tile.
+    const { state, hero } = setup(['#########', '#@..+...#', '#########']);
+    step(state, []);
+    expect(hero.ai?.memory.intent?.action).toBe('act.explore');
+    expect(hero.ai?.memory.intent?.goal).toEqual({ x: 4, y: 1 });
+    expect(checkInvariants(state)).toEqual([]);
+
+    // Melee combat targets the adjacent enemy's tile.
+    const duel = setup(['#####', '#@..#', '#...#', '#####']);
+    const rat = addEntity(duel.state, {
+      def: 'monster.cave_rat',
+      floor: 'd1',
+      pos: { x: 2, y: 1 },
+      actor: { energy: 0, hp: 10, mp: 0, faction: 'monster' },
+      stats: newStatsPart({ hp: 10, speed: 0 }),
+    });
+    step(duel.state, []);
+    expect(duel.hero.ai?.memory.intent?.action).toBe('act.attack_adjacent');
+    expect(duel.hero.ai?.memory.intent?.goal).toEqual(rat.pos);
+    expect(checkInvariants(duel.state)).toEqual([]);
+
+    // Hurt hero fleeing records the flee path's end tile.
+    const retreat = setup(['#########', '#....@..#', '#########']);
+    addEntity(retreat.state, {
+      def: 'monster.cave_rat',
+      floor: 'd1',
+      pos: { x: 6, y: 1 },
+      actor: { energy: 0, hp: 10, mp: 0, faction: 'monster' },
+      stats: newStatsPart({ hp: 10, speed: 0 }),
+    });
+    retreat.hero.actor.hp = 1;
+    step(retreat.state, []);
+    expect(retreat.hero.ai?.memory.intent?.action).toBe('act.flee');
+    expect(retreat.hero.ai?.memory.intent?.goal).toEqual({ x: 1, y: 1 });
+    expect(checkInvariants(retreat.state)).toEqual([]);
+
+    // Invalid intent.goal fails the core.aiMemory invariant.
+    if (hero.ai?.memory.intent) hero.ai.memory.intent.goal = { x: -1, y: 2 };
+    expect(checkInvariants(state).join('\n')).toMatch(/core\.aiMemory.*invalid intent goal/);
+    if (hero.ai?.memory.intent) hero.ai.memory.intent.goal = { x: 1.5, y: 2 };
+    expect(checkInvariants(state).join('\n')).toMatch(/core\.aiMemory.*invalid intent goal/);
   });
 });

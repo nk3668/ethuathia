@@ -14,10 +14,10 @@ export const Fog = { Unknown: 0, Remembered: 1, Visible: 2 } as const;
 export type Fog = (typeof Fog)[keyof typeof Fog];
 
 /** Overlays drawn over a tile's glyph (§4.3), as bit flags. */
-export const Overlay = { None: 0, Hover: 1, Selected: 2, Focus: 4 } as const;
+export const Overlay = { None: 0, Hover: 1, Selected: 2, Focus: 4, Possessed: 8, HitFlash: 16 } as const;
 
 const FOG_BITS = 2;
-const OVERLAY_BITS = 3;
+const OVERLAY_BITS = 5;
 const GLYPH_SHIFT = FOG_BITS + OVERLAY_BITS;
 
 /** Packs a tile's look into one integer. Glyph 0 means nothing is drawn. */
@@ -34,7 +34,7 @@ export function cellFog(code: number): Fog {
 }
 
 export function cellOverlay(code: number): number {
-  return (code >>> FOG_BITS) & 0b111;
+  return (code >>> FOG_BITS) & 0b11111;
 }
 
 /**
@@ -70,12 +70,14 @@ export interface Scene {
 }
 
 export interface SceneOptions {
-  /** The selected adventurer; its tile gets the selection ring. */
+  /** The selected adventurer; its tile gets the selection ring (unless possessed). */
   selected: EntityId | null;
   /** The tile under the pointer or the keyboard cursor; it gets the hover outline. */
   hover: Pos | null;
   /** A tile the map was asked to show (a clicked highlight); it gets the focus ring. */
   focus?: Pos | null;
+  /** Tiles on the shown floor currently flashing from a hit (ETH-019). */
+  flashes?: readonly Pos[];
 }
 
 /** 1-based party slot of each party member, by entity id. */
@@ -114,17 +116,21 @@ export function buildScene(snap: Snapshot, options: SceneOptions, glyphs: GlyphT
   }
 
   const overlay = new Uint8Array(size);
-  const selected = options.selected === null ? undefined : snap.floor.actors.find((a) => a.id === options.selected);
+  const inside = (p: Pos) => p.x >= 0 && p.y >= 0 && p.x < width && p.y < height;
   const mark = (pos: Pos, flag: number) => {
     const i = pos.y * width + pos.x;
     overlay[i] = (overlay[i] as number) | flag;
   };
-  if (selected && alive.has(selected.id)) mark(selected.pos, Overlay.Selected);
-  const { hover } = options;
-  const inside = (p: Pos) => p.x >= 0 && p.y >= 0 && p.x < width && p.y < height;
+  const possessed = snap.party.find((m) => m.alive && m.possessed && m.floor === snap.floor.id);
+  if (possessed && inside(possessed.pos)) mark(possessed.pos, Overlay.Possessed);
+  const selected = options.selected === null ? undefined : snap.floor.actors.find((a) => a.id === options.selected);
+  if (selected && alive.has(selected.id) && !(possessed && selected.pos.x === possessed.pos.x && selected.pos.y === possessed.pos.y)) {
+    mark(selected.pos, Overlay.Selected);
+  }
+  const { hover, focus, flashes } = options;
   if (hover && inside(hover)) mark(hover, Overlay.Hover);
-  const { focus } = options;
   if (focus && inside(focus)) mark(focus, Overlay.Focus);
+  if (flashes) for (const pos of flashes) if (inside(pos)) mark(pos, Overlay.HitFlash);
 
   const codes = new Int32Array(size);
   for (let i = 0; i < size; i++) {

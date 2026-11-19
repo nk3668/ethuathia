@@ -147,7 +147,8 @@ export const ACT_FALL_BACK = defineRuleAction({
     }
     if (best === null) return null;
     const names = adjacentEnemies(state, actor).map(nameOf).join(' and ');
-    return { request: { id: 'move', dir: { x: best.dir.x, y: best.dir.y } }, detail: `falling back from ${names}` };
+    const to = { x: actor.pos.x + best.dir.x, y: actor.pos.y + best.dir.y };
+    return { request: { id: 'move', dir: { x: best.dir.x, y: best.dir.y } }, detail: `falling back from ${names}`, goal: to };
   },
   describe: () => 'fall back out of reach',
 });
@@ -165,7 +166,11 @@ export const ACT_CAST_BOLT = defineRuleAction({
     if (bolt === undefined) return null;
     const target = visibleEnemies(state, actor).find((e) => distance(e.pos, actor.pos) <= bolt.range);
     if (target === undefined) return null;
-    return { request: { id: 'bolt', target: target.id }, detail: `hurling a ${bolt.name} at ${nameOf(target)}` };
+    return {
+      request: { id: 'bolt', target: target.id },
+      detail: `hurling a ${bolt.name} at ${nameOf(target)}`,
+      goal: { x: target.pos.x, y: target.pos.y },
+    };
   },
   describe: () => 'attack from range',
 });
@@ -219,7 +224,11 @@ export const ACT_MEND_ALLY = defineRuleAction({
       .filter((a) => distance(a.pos, actor.pos) <= mend.range && hpPercent(state, a) < 100)
       .sort((a, b) => hpPercent(state, a) - hpPercent(state, b) || a.id - b.id)[0];
     if (target === undefined) return null;
-    return { request: { id: 'aid', target: target.id, power: 'mend' }, detail: `mending ${nameOf(target)}` };
+    return {
+      request: { id: 'aid', target: target.id, power: 'mend' },
+      detail: `mending ${nameOf(target)}`,
+      goal: { x: target.pos.x, y: target.pos.y },
+    };
   },
   describe: () => 'mend the most hurt ally',
 });
@@ -239,7 +248,11 @@ export const ACT_BOLSTER_ALLY = defineRuleAction({
       (a) => distance(a.pos, actor.pos) <= bolster.range && !hasStatus(a, bolster.status) && adjacentEnemies(state, a).length > 0,
     );
     if (target === undefined) return null;
-    return { request: { id: 'aid', target: target.id, power: 'bolster' }, detail: `spurring on ${nameOf(target)}` };
+    return {
+      request: { id: 'aid', target: target.id, power: 'bolster' },
+      detail: `spurring on ${nameOf(target)}`,
+      goal: { x: target.pos.x, y: target.pos.y },
+    };
   },
   describe: () => 'spur on an ally in a fight',
 });
