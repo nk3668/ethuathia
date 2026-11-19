@@ -14,6 +14,7 @@ import { CORE_ACTIONS, isStep } from '../coreActions';
 import type { MoveRequest } from '../coreActions';
 import { statValue } from '../stats/getStat';
 import { hasAttributes } from '../stats/attributes';
+import { namesOf } from './overlay';
 import { adjacentEnemies } from './rules';
 
 /** Step away from the enemies in `dir`, testing Finesse if one is next to the actor. */
@@ -54,6 +55,7 @@ export const FLEE_ACTION: ActionDef<FleeRequest> = {
           chance,
           floor: actor.floor,
           pos: { x: actor.pos.x, y: actor.pos.y },
+          ...namesOf(first),
         });
         return;
       }

@@ -18,6 +18,7 @@ import { ITEM_KIND, ITEMS } from './items';
 import { checkKinds, ContentError } from './kind';
 import type { ContentKind, RefTarget } from './kind';
 import { MONSTER_KIND, MONSTERS } from './monsters';
+import { MONSTER_TEMPLATE_KIND } from './monsterTemplates';
 import { OMEN_KIND } from './omens';
 import { RACE_KIND } from './races';
 import { STATUS_KIND } from './statuses';
@@ -39,6 +40,7 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
   STATUS_KIND,
   DRAUGHT_KIND,
   MONSTER_KIND,
+  MONSTER_TEMPLATE_KIND,
   ITEM_KIND,
   CONTRACT_KIND,
   BOUNTY_KIND,

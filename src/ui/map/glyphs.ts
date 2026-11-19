@@ -47,11 +47,22 @@ export function featureGlyphId(feature: FeatureView): string {
  * member, otherwise `null`.
  */
 export function actorGlyphId(actor: ActorView, partySlot: number | null): string {
-  return partySlot === null ? actor.def : partyGlyphId(partySlot);
+  if (partySlot !== null) return partyGlyphId(partySlot);
+  // A templated monster (ETH-117) is drawn in its template's tint: `monster.gloam_rat@#a6e22e`.
+  return actor.tint === undefined ? actor.def : `${actor.def}${TINT_MARK}${actor.tint}`;
 }
+
+/** Separates a glyph id from a tint color (`monster.gloam_rat@#a6e22e`). */
+const TINT_MARK = '@';
 
 /** How a glyph id is drawn. Never fails: ids with no look of their own get a fallback. */
 export function glyphStyle(id: string): GlyphStyle {
+  const at = id.indexOf(TINT_MARK);
+  if (at > 0) {
+    const tint = id.slice(at + 1);
+    const base = glyphStyle(id.slice(0, at));
+    return /^#[0-9a-f]{6}$/.test(tint) ? { ...base, color: tint } : base;
+  }
   const glyph = findGlyph(id);
   if (glyph) return glyph.bold ? { ch: glyph.ch, color: glyph.color, bold: true } : { ch: glyph.ch, color: glyph.color };
   const party = /^party\.(\d+)$/.exec(id);
