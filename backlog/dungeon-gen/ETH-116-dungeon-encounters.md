@@ -2,7 +2,7 @@
 id: ETH-116
 title: Dungeon encounters: placed interactive features with an interact action, choices and outcomes
 type: feature
-status: blocked
+status: ready
 priority: P1
 milestone: M4
 epic: dungeon-gen
@@ -78,3 +78,4 @@ Open decisions:
 ## Log
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-030, 049, 051, 069, 070, 089, 098, 105).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
+- 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.

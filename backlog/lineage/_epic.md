@@ -34,3 +34,5 @@ More items are added when M5 becomes the current milestone.
 - [ ] [ETH-099 A monster that killed an adventurer returns carrying their heirloom](ETH-099-unique-carrying-heirloom.md)
 - [ ] [ETH-103 Bard's ballads from run highlights](ETH-103-bards-ballads.md)
 - [ ] [ETH-119 Persistent adventurer records: a profile slice with identity, history, traits, level and death](ETH-119-adventurer-records.md)
+- [ ] [ETH-125 Ghosts at graves, hostile or allied with the Ossuary](ETH-125-ghost-allies.md)
+- [ ] [ETH-126 Descendant recruits inherit a trait from a fallen adventurer](ETH-126-descendants.md)

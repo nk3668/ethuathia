@@ -2,7 +2,7 @@
 id: ETH-119
 title: Persistent adventurer records: a profile slice with identity, history, traits, level and death
 type: feature
-status: blocked
+status: ready
 priority: P1
 milestone: M2
 epic: lineage
@@ -68,3 +68,4 @@ Open decisions:
 ## Log
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-068, 069, 087, 089, 101, 103, 104, retirement and descendants).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
+- 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
