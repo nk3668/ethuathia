@@ -56,4 +56,46 @@ describe('log text', () => {
     const plain = ITEMS_LOG_TEXT.unequipped.text({ type: 'unequipped', ...base }, () => 'Mira');
     expect(plain).toEqual(['Mira takes off ', { ref: 'item.iron_hatchet' }, ' (main hand).']);
   });
+
+  it('names templated and named monsters by their event names, with and without an article (ETH-117)', () => {
+    const at = { turn: 1, floor: 'd1', pos: { x: 0, y: 0 } };
+    const hit = COMBAT_LOG_TEXT.attacked.text(
+      {
+        type: 'attacked',
+        ...at,
+        actor: 2,
+        actorDef: 'monster.gloam_rat',
+        target: 1,
+        targetDef: 'actor.adventurer',
+        damage: 2,
+        hp: 5,
+        maxHp: 9,
+        names: { 2: { name: 'Venomous gloam rat' } },
+      },
+      () => 'Mira',
+    );
+    expect(hit).toEqual(['The ', { ref: 'monster.gloam_rat', label: 'venomous gloam rat' }, ' hits ', 'Mira', '', ' for 2 (5/9 HP left).']);
+    const died = COMBAT_LOG_TEXT.died.text(
+      {
+        type: 'died',
+        ...at,
+        actor: 2,
+        def: 'monster.gloam_rat',
+        name: 'Vell the Unbowed',
+        proper: true,
+        cause: 'actor.adventurer',
+        killer: 1,
+        drops: [{ item: 'item.mending_draught', qty: 2 }],
+      },
+      () => 'Mira',
+    );
+    expect(died).toEqual([
+      { ref: 'monster.gloam_rat', label: 'Vell the Unbowed' },
+      ' dies',
+      ', dropping ',
+      { ref: 'item.mending_draught' },
+      ' ×2',
+      '.',
+    ]);
+  });
 });

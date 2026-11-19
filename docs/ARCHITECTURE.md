@@ -305,7 +305,8 @@ All in `src/sim/run/`:
   (`cond.just_attacked`, from the AI memory's last intent; `cond.ally_hurt`; `cond.in_bolt_range`)
   and rule actions (`act.fall_back`, `act.cast_bolt`, `act.surround`, `act.mend_ally`,
   `act.bolster_ally`, `act.hang_back`, `act.rush_caster`), plus `rolePowers`, `visibleAllies`,
-  `canSee` and `isAlly`. Actions: `bolt { target }` (same hit and damage rolls as `attack`; its
+  `canSee` and `isAlly`. Templates (ETH-117) may change the role and powers: read them with
+  `monsterRules(def, templates)` and `rolePowers(actor)`. Actions: `bolt { target }` (same hit and damage rolls as `attack`; its
   `attacked` / `missed` carry `ranged: true`) and `aid { target, power: 'mend' | 'bolster' }`
   (emits `aided`, then the `healed` or `statusApplied` it causes). The adventurer baseline rushes
   a caster that has it in bolt range (`cond.in_bolt_range` → `act.rush_caster`, after
@@ -616,8 +617,8 @@ slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061
 ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
-`runModifiersAnnounced`) and ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state).
+`runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
+`quests.objectives` tracker state) and ETH-117 25 (`monster.overlay`).
 
 ### Contracts in the run (ETH-024)
 
@@ -1058,6 +1059,64 @@ in `src/sim/quests/objectives.ts`.
   `condition` with `not`; a building quest (093) is owner `quest` plus an `objectiveDone`
   milestone; quest rule conditions (031) read `TrackedObjective`s.
 
+### Monster templates (ETH-117)
+
+"This base monster, but more", without a new `MonsterDef`. Content in
+`src/content/monsterTemplates.ts`; sim in `src/sim/combat/overlay.ts`.
+
+- **Content:** the `template` kind (`MONSTER_TEMPLATES`, ids `template.*`):
+  `{ prefix?, suffix?, stats?: { add?, mul? } (stat id → number), bundle?, role?, powers?
+  (bolt / mend / bolster), threatMul, lootTier (0–MAX_LOOT_TIER 3), weight, glyphTint?,
+  families? (monster tags it fits) }`. Validated: a prefix or suffix, stat refs, bundle refs, a
+  caster template has `powers.bolt`, a support `powers.mend` or `bolster`. First defs: Venomous
+  (hit trigger poisons, beasts and swarms), Swift (speed ×1.3), Hulking (HP ×1.5, damage +1),
+  Hexspitting (role caster with a bolt). `templateFits(t, def)`, `templateDefs(ids)`,
+  `MAX_TEMPLATES` 2. Names: `monsterDisplayName(def, { templates?, name?, title? })` → "Swift
+  venomous gloam rat", "Vell the Unbowed" (an own name drops the prefixes), `isProperName`.
+  Content uses prefixes only (the approved default); `suffix` exists for later.
+- **Role:** `RoleOverride = { role?, powers? }` (templates are one). `monsterRules(def,
+  overrides?)` (a new role uses its `ROLE_RULES`), `monsterRole`, `monsterPowers`. The sim's
+  `rolePowers(actor)` reads the monster's templates.
+- **Overlay** (`MonsterOverlay`, plain data on `monster.overlay`): `{ templates?, name?, title?,
+  stats?: { add?, mul? }, bundles? (bundle ids), threatMul?, lootTier?, carries?: ItemInstance[] }`.
+  `spawnMonster(state, defId, floor, pos, overlay?)` checks it (`overlayProblems`, throws a
+  `RangeError`), builds the AI from the overlaid role and fills vitals. `newMonster(def, pos,
+  overlay?)` (was `monsterTemplate`) builds a plan spawn at `spawnHp(def, overlay)`; `addFloor`
+  now `fillVitals` every spawn, so anything that raises a monster's max HP (templates, ETH-115
+  monster modifiers) spawns it full.
+- **Stats:** stat provider `combat.overlay` (after `stats.base`, `stats.class_race`,
+  `stats.attributes`) adds each template's `stats` credited to the template (label "Hulking"),
+  then the overlay's own, credited to the def under the monster's name. Bundle source
+  `combat.templates` (after `stats.run`) visits each template's `bundle`, then the overlay's
+  `bundles`; their triggers fire like any bundle's.
+- **Reading it:** `overlayOf`, `templatesOf`, `monsterName(entity)` (used by `actorName`, so
+  `ActorView.name`, `died.name` and killers), `shownName(entity)` (`{ name, proper? }` when the
+  overlay changes the name), `monsterThreat(entity)` (def threat × each `threatMul`, rounded, ≥ 1;
+  `killed.threat`, Trophies, kill XP), `monsterLootTier(entity)` (highest tier; for ETH-052),
+  `monsterTint(entity)` (`ActorView.tint`; the map draws glyph id `def@#rrggbb` in that color).
+  The AI's `nameOf` uses the same names.
+- **Events:** `attacked`, `missed`, `aided`, `killed`, `monsterSighted` and `fleeFailed` carry
+  `names?: EventNames` (entity id → `ShownName`, from `namesOf(...entities)`) only when an overlay
+  changes a name, so plain events are unchanged; `died` adds `proper?`, `templates?` and `drops?`
+  (`DroppedLoot`: the `carries`, placed on its tile with `placeItem` after it leaves);
+  `monsterSighted` adds `templates?`. `Killer.proper` / `source.proper` keep a proper name's
+  capitals and drop the article ("was slain by Vell the Unbowed").
+- **Codex:** `monsterSighted` discovers each template (`seen`) and `templateMetKey(def, template)`
+  (`met.<def>.<template>`, not a content id); the monster entry's "Variants met" reads
+  `templatesMet(discovered, def)`. Templates have their own section ("Monster variants").
+- **Generation:** `gen.monsters` param `templateChance` (0–1, default 0): per monster, roll it up
+  to `MAX_TEMPLATES` times from the floor RNG, picking a fitting template by `weight` on each
+  success (`rollTemplates`). At 0 nothing is drawn, so existing floors are unchanged; no floor
+  type sets it yet.
+- **Invariant** `combat.overlay`: `overlayProblems` on every overlay (≤ 2 known, fitting, unique
+  templates; known stats with finite changes, mul > 0; known bundles; threat and loot tier in
+  range; valid carried items) and every stat finite.
+- **For later items:** ETH-041 uniques are content overlays (name, title, stats) on a base def;
+  ETH-052 elites roll 1–2 templates (`rollTemplates`) and read `monsterLootTier`; ETH-109 Ethan
+  is an overlay with tiny HP and `carries`; ETH-101 / ETH-099 store an overlay in the profile and
+  spawn it with `spawnMonster`; ETH-042 families fill `families`. Chronicle entries still name
+  monsters by def only (a follow-up).
+
 ### Shared systems
 
 Foundations that many later features share. **New features must use or extend these, not build
@@ -1070,7 +1129,7 @@ the features that use it.
 | Objective engine | ETH-114 | built | One `Objective` union, progress kinds (`OBJECTIVE_KINDS`) and tracked objectives with an owner, lifted from ETH-024's `contractProgress`: contracts, bounties, conducts, taboos, building quests, achievements. See "Objective engine (ETH-114)" above |
 | Run-wide modifiers | ETH-115 | built | Run modifiers with a source, scope (party / monsters / all), bundle, flags and reward bonus; one `stats.run` `BundleSource`, the reward multiplier and the consumer of `run`-scope upgrade grants: Omens, blessings, curses, dungeon events, doctrine, veterans. See "Run-wide modifiers (ETH-115)" above |
 | Dungeon encounters | ETH-116 | planned | An `encounter` kind and feature part placed by a `FLOOR_PLAN_HOOKS` entry, one `interact { choice? }` action, data outcomes, log and Codex text; fountains folded in: altars, graves, merchants, bounty encounters, recruits, cursed wells, vaults |
-| Monster templates | ETH-117 | planned | `MonsterOverlay` (templates, name, title, stats, bundles, threat, loot tier) layered on a `MonsterDef` at `spawnMonster`: uniques, elites, mini-bosses, nemeses, heirloom carriers, families |
+| Monster templates | ETH-117 | built | `MonsterOverlay` (templates, name, title, stats, bundles, threat, loot tier, carried items) layered on a `MonsterDef` at `spawnMonster`: uniques, elites, mini-bosses, nemeses, heirloom carriers, families, hostile ghosts. See "Monster templates (ETH-117)" above |
 | Item properties | ETH-118 | built | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling. See "Item properties (ETH-118)" |
 | Adventurer records | ETH-119 | planned | The `adventurers` profile slice: a stable id carried through the run, level, XP, traits, history, status and cause of death: roster, graveyard, recruits, quirks, Mastery, lineage |
 | Run chronicle | ETH-120 | built | `track.chronicle`: the run's notable moments, durable for the whole run (unlike `simStore`'s `EVENT_BUFFER_SIZE` buffer): Highlights, run summary, epitaphs, ballads, history, time-away. API in "Run chronicle (ETH-120)" above |

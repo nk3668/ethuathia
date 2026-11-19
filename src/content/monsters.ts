@@ -192,9 +192,47 @@ export interface MonsterDef extends Def {
   readonly sharesTile?: boolean;
 }
 
-/** The rules a monster of `def` follows: its own, or its role's. */
-export function monsterRules(def: MonsterDef): readonly MonsterRule[] {
-  return def.rules ?? ROLE_RULES[def.role];
+/** A monster's role powers: what it can do beyond a blow. */
+export interface MonsterPowers {
+  readonly bolt?: BoltPower;
+  readonly mend?: MendPower;
+  readonly bolster?: BolsterPower;
+}
+
+/**
+ * A change to how a monster fights, layered over its def (ETH-117): a monster template sets a new
+ * `role` and adds or replaces `powers`. Later ones in a list win.
+ */
+export interface RoleOverride {
+  readonly role?: MonsterRole;
+  readonly powers?: MonsterPowers;
+}
+
+/** The role a monster of `def` fights with: the last override that sets one, or the def's. */
+export function monsterRole(def: MonsterDef, overrides: readonly RoleOverride[] = []): MonsterRole {
+  let role = def.role;
+  for (const o of overrides) if (o.role !== undefined) role = o.role;
+  return role;
+}
+
+/**
+ * The rules a monster of `def` follows: its own, or its role's. With `overrides` (its templates,
+ * ETH-117) that change the role, the new role's rules.
+ */
+export function monsterRules(def: MonsterDef, overrides: readonly RoleOverride[] = []): readonly MonsterRule[] {
+  const role = monsterRole(def, overrides);
+  return role === def.role ? (def.rules ?? ROLE_RULES[role]) : ROLE_RULES[role];
+}
+
+/** The role powers of a monster of `def`: the def's, each replaced by the last override that has it. */
+export function monsterPowers(def: MonsterDef, overrides: readonly RoleOverride[] = []): MonsterPowers {
+  let { bolt, mend, bolster } = def;
+  for (const o of overrides) {
+    bolt = o.powers?.bolt ?? bolt;
+    mend = o.powers?.mend ?? mend;
+    bolster = o.powers?.bolster ?? bolster;
+  }
+  return { ...(bolt === undefined ? {} : { bolt }), ...(mend === undefined ? {} : { mend }), ...(bolster === undefined ? {} : { bolster }) };
 }
 
 export const MONSTERS = new Registry<MonsterDef>('monster');
@@ -203,6 +241,11 @@ const ruleSchema = z.strictObject({
   condition: z.strictObject({ id: idSchema('cond'), params: z.unknown().optional() }),
   action: z.strictObject({ id: idSchema('act'), params: z.unknown().optional() }),
 });
+
+/** The shapes of the role powers, shared with monster templates (ETH-117). */
+export const boltSchema = z.strictObject({ range: z.number().int().min(2).max(12), name: z.string().min(1) });
+export const mendSchema = z.strictObject({ amount: positiveInt, range: positiveInt });
+export const bolsterSchema = z.strictObject({ status: idSchema('status'), turns: positiveInt, range: positiveInt });
 
 export const MONSTER_KIND: ContentKind<MonsterDef> = {
   registry: MONSTERS,
@@ -221,9 +264,9 @@ export const MONSTER_KIND: ContentKind<MonsterDef> = {
       }),
       role: z.enum(MONSTER_ROLES),
       rules: z.array(ruleSchema).min(1, 'needs at least one rule').optional(),
-      bolt: z.strictObject({ range: z.number().int().min(2).max(12), name: z.string().min(1) }).optional(),
-      mend: z.strictObject({ amount: positiveInt, range: positiveInt }).optional(),
-      bolster: z.strictObject({ status: idSchema('status'), turns: positiveInt, range: positiveInt }).optional(),
+      bolt: boltSchema.optional(),
+      mend: mendSchema.optional(),
+      bolster: bolsterSchema.optional(),
       depth: z.strictObject({ min: positiveInt, max: positiveInt }),
       weight: positiveInt,
       threat: positiveInt,

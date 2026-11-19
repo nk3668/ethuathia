@@ -31,4 +31,4 @@ Monsters are varied and readable: they fight by role, belong to families, and in
 - [ ] [ETH-100 Scavenger monster family](ETH-100-scavenger-family.md)
 - [ ] [ETH-101 Nemesis system](ETH-101-nemesis-system.md)
 - [ ] [ETH-109 Ethan, an extremely rare and very weak boss](ETH-109-ethan-rare-boss.md)
-- [ ] [ETH-117 Monster templates: prefixes, traits and named overrides layered on a base MonsterDef](ETH-117-monster-templates.md)
+- [x] [ETH-117 Monster templates: prefixes, traits and named overrides layered on a base MonsterDef](ETH-117-monster-templates.md)

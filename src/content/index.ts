@@ -27,6 +27,7 @@ export type { Glyph } from './schema';
 export { defineTerrain, TERRAIN, TERRAIN_FLOOR, TERRAIN_KIND, TERRAIN_WALL } from './terrain';
 export type { TerrainDef } from './terrain';
 export * from './monsters';
+export * from './monsterTemplates';
 export * from './items';
 export * from './objectives';
 export * from './contracts';
