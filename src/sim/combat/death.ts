@@ -9,6 +9,7 @@ import { MONSTERS, STATUSES } from '../../content';
 import { getFloor, removeEntity } from '../entities';
 import type { Emit } from '../events';
 import type { ActorEntity, Entity, FloorId, RunState } from '../state';
+import { grantKillXp } from '../stats/leveling';
 
 /** The cause of a death nobody struck: what was left at 0 HP by a status, a trap, a trigger. */
 export const UNKNOWN_CAUSE = 'combat.unknown';
@@ -44,6 +45,7 @@ export function killActor(state: RunState, victim: ActorEntity, emit: Emit, { ca
   const inParty = state.party.includes(victim.id);
   delete victim.actor.queued;
   if (killer !== null) {
+    const threat = MONSTERS.has(victim.def) ? MONSTERS.get(victim.def).threat : 0;
     emit({
       type: 'killed',
       killer: killer.id,
@@ -51,10 +53,12 @@ export function killActor(state: RunState, victim: ActorEntity, emit: Emit, { ca
       byParty: state.party.includes(killer.id),
       victim: victim.id,
       victimDef: victim.def,
-      threat: MONSTERS.has(victim.def) ? MONSTERS.get(victim.def).threat : 0,
+      threat,
       floor,
       pos: { ...pos },
     });
+    // The killer's XP (ETH-034): nothing unless it is a living adventurer.
+    grantKillXp(state, killer, victim.def, threat, emit);
   }
   if (inParty) return;
   emit({ type: 'died', actor: victim.id, def: victim.def, name: actorName(victim), cause, killer: killer?.id ?? null, floor, pos });

@@ -1,10 +1,10 @@
 import { useShallow } from 'zustand/react/shallow';
-import { ATTRIBUTE_IDS, attributeDef, attributeDefId, STATUSES } from '../../content';
+import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, STATUSES } from '../../content';
 import type { AttributeId } from '../../content';
-import { STAT_IDS, STAT_INFO } from '../../sim';
-import type { EntityId, InventoryView, MemberStatsView } from '../../sim';
+import { STAT_IDS, STAT_INFO, XP_PER_DEPTH, XP_PER_THREAT } from '../../sim';
+import type { EntityId, InventoryView, LevelView, MemberStatsView } from '../../sim';
 import { Explain } from '../codex/Explain';
-import { attributeEffectText } from '../codex/attributeText';
+import { attributeEffectText, attributeLine } from '../codex/attributeText';
 import { keyHint } from '../input/keymap';
 import { runKeyAction } from '../input/useKeymap';
 import { Bar, Button, Card, Panel, Tooltip } from '../kit';
@@ -251,6 +251,62 @@ function AttributeChips({ id }: { id: EntityId }) {
   );
 }
 
+/** A member's level view, or `null` before the snapshot has one. Parsed from a selector string. */
+function useLevel(id: EntityId): LevelView | null {
+  const key = useSimStore((s) => {
+    const level = s.snapshot?.domains.stats.members[id]?.level;
+    return level === undefined ? '' : JSON.stringify(level);
+  });
+  return key === '' ? null : (JSON.parse(key) as LevelView);
+}
+
+/** "Lv 3", with a tooltip on XP and how levels grow the class's attributes (ETH-034). */
+function LevelBadge({ id, classId }: { id: EntityId; classId: string }) {
+  const level = useLevel(id);
+  if (level === null) return null;
+  const growth = CLASSES.has(classId) ? attributeLine(CLASSES.get(classId).growth, true) : null;
+  return (
+    <Tooltip
+      placement="bottom"
+      content={
+        <>
+          <strong>Level {level.level}</strong>
+          <br />
+          {level.nextXp === null ? (
+            <>{level.xp} XP: the highest level.</>
+          ) : (
+            <>
+              {level.xp} XP; level {level.level + 1} at {level.nextXp} XP.
+            </>
+          )}
+          <br />
+          XP comes from kills ({XP_PER_THREAT} per point of threat, to whoever strikes the blow) and from each new depth
+          ({XP_PER_DEPTH} per floor of depth, to every living member).
+          {growth !== null && (
+            <>
+              <br />
+              Each level: {growth}.
+            </>
+          )}
+        </>
+      }
+    >
+      <span className={styles.level} tabIndex={0} aria-label={`Level ${level.level}`}>
+        Lv {level.level}
+      </span>
+    </Tooltip>
+  );
+}
+
+/** Progress through the current level as an XP bar (ETH-034). Full at the highest level. */
+function XpBar({ id, name }: { id: EntityId; name: string }) {
+  const level = useLevel(id);
+  if (level === null) return null;
+  const span = level.nextXp === null ? 1 : level.nextXp - level.levelXp;
+  const into = level.nextXp === null ? 1 : level.xp - level.levelXp;
+  return <Bar label="XP" tone="xp" value={into} max={span} ariaLabel={`${name}'s XP toward the next level`} />;
+}
+
 /**
  * The selected member's pack (ETH-061): weight carried against the Carry stat, the party's gold,
  * then one line per stack with an `Explain` tooltip. The selector returns one string, so the list
@@ -339,7 +395,10 @@ function PartyCard({ id, slot, compact }: PartyCardProps) {
 
   return (
     <Card selected={selected} className={styles.card} data-dead={!member.alive || undefined}>
-      <div className={styles.header}>{nameButton}</div>
+      <div className={styles.header}>
+        {nameButton}
+        <LevelBadge id={id} classId={member.classId} />
+      </div>
       <p className={styles.kind}>
         <Explain id={member.raceId}>{contentName(member.raceId)}</Explain> <Explain id={member.classId}>{contentName(member.classId)}</Explain>
       </p>
@@ -347,6 +406,7 @@ function PartyCard({ id, slot, compact }: PartyCardProps) {
       {member.maxMp > 0 && (
         <Bar label="MP" tone="mp" value={member.mp} max={member.maxMp} ariaLabel={`${member.name}'s MP`} />
       )}
+      {member.alive && <XpBar id={id} name={member.name} />}
       {member.alive && <AttributeChips id={id} />}
       {member.alive && <StatusBadges id={id} />}
       {member.alive && selected && <Pack id={id} />}
