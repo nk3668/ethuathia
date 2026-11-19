@@ -5,7 +5,7 @@
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
 import { DEITIES, describeMilestoneMet } from '../../content';
-import { favorDeity, favorKey, RENOWN, TROPHIES } from '../../sim';
+import { favorDeity, favorKey, RENOWN, TROPHIES, WIPE_LOSS_SHARE } from '../../sim';
 import type { FallenRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
 
 /** Each outcome's heading and icon, so it never rests on color alone. */
@@ -43,6 +43,16 @@ export function currencyRows(report: RunReport): CurrencyRow[] {
     const gone = lost[key] ?? 0;
     return { key, atRisk: earned, lost: gone, banked: earned - gone };
   });
+}
+
+/** The wipe loss as a whole percentage: "25%". */
+export const WIPE_LOSS_PERCENT = `${Math.round(WIPE_LOSS_SHARE * 100)}%`;
+
+/** The line under the currency table: how this outcome treated the run's at-risk earnings. */
+export function lossNote(outcome: RunOutcome): string {
+  return outcome === 'wipe'
+    ? `The wipe took ${WIPE_LOSS_PERCENT} of each currency earned this run, rounded in your disfavor. The rest is banked.`
+    : `Everything earned this run is banked: only a wipe loses ${WIPE_LOSS_PERCENT} of a run’s earnings.`;
 }
 
 /** Who fell this run, from the deaths tracker (`extras['track.deaths']`). */

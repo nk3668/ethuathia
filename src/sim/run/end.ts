@@ -14,7 +14,8 @@ import { VICTORY_CHECKS } from '../registries';
 import type { EntityId, RunState } from '../state';
 import type { RunOutcome, RunResult } from './result';
 import { ACT_RETREAT_RUN } from './rules';
-import { trackerExtras } from './trackers';
+import { projectedRewards, trackerExtras } from './trackers';
+import { WIPE_LOSS_SHARE, wipeLoss } from './wipeLoss';
 
 /** How and when the run ended: `state.domains.run.end`. */
 export interface RunEnd {
@@ -112,11 +113,11 @@ export function settleRun(state: RunState, events: readonly SimEvent[], from: nu
 
   if (left !== null) {
     const victory = victoryDetail(state);
-    end(state, emit, victory.won ? 'victory' : 'retreat', leftCause(state, victory.detail, victory.won));
+    end(state, events, emit, victory.won ? 'victory' : 'retreat', leftCause(state, victory.detail, victory.won));
     return true;
   }
   if (livingParty(state).length === 0) {
-    end(state, emit, 'wipe', wipeCause(state));
+    end(state, events, emit, 'wipe', wipeCause(state));
     return true;
   }
   return false;
@@ -129,10 +130,22 @@ export function victoryDetail(state: RunState): { won: boolean; detail: string }
   return { won, detail: results.map((r) => r.detail).join(' ') };
 }
 
-function end(state: RunState, emit: Emit, outcome: RunOutcome, cause: string): void {
+/**
+ * Ends the run. `stepEvents` is every event of this step so far (`step`'s own array). On a wipe it
+ * first emits `earningsLost` with what the wipe takes: the step's trackers haven't run yet, so
+ * the at-risk totals are projected over the step's events and the `runEnded` to come, which is
+ * what `reduceTrackers` will make of them and what `runResult` then reads.
+ */
+function end(state: RunState, stepEvents: readonly SimEvent[], emit: Emit, outcome: RunOutcome, cause: string): void {
   const depth = state.domains.floors.deepest;
   state.domains.run.end = { outcome, turn: state.turn, cause, depth };
-  emit({ type: 'runEnded', outcome, cause, depth });
+  const ended = { type: 'runEnded', outcome, cause, depth } as const;
+  if (outcome === 'wipe') {
+    const atRisk = projectedRewards(state, [...stepEvents, { ...ended, turn: state.turn }]);
+    const lost = wipeLoss(atRisk, outcome);
+    if (Object.keys(lost).length > 0) emit({ type: 'earningsLost', lost, atRisk, share: WIPE_LOSS_SHARE });
+  }
+  emit(ended);
 }
 
 function leftCause(state: RunState, checks: string, won: boolean): string {
@@ -163,16 +176,17 @@ function wipeCause(state: RunState): string {
 /**
  * The finished run's `RunResult`, for meta's `applyRunResult`: the at-risk totals, the turns,
  * the deepest floor and every tracker's extras (plus `extras['run.end']`, the `RunEnd`, and
- * `extras['run.party']`, the party's `PartyMemberRecord`s). `lost` stays empty until the wipe
- * penalty (ETH-023). Throws if the run hasn't ended.
+ * `extras['run.party']`, the party's `PartyMemberRecord`s). `lost` is what a wipe takes
+ * (`wipeLoss`, ETH-023), empty for a victory or a retreat. Throws if the run hasn't ended.
  */
 export function runResult(state: RunState): RunResult {
   const runEnd = state.domains.run.end;
   if (runEnd === null) throw new Error('The run has not ended');
+  const atRisk = state.domains.run.rewards.atRisk;
   return clonePlain({
     outcome: runEnd.outcome,
-    atRisk: state.domains.run.rewards.atRisk,
-    lost: {},
+    atRisk,
+    lost: wipeLoss(atRisk, runEnd.outcome),
     turns: state.turn,
     deepestDepth: state.domains.floors.deepest,
     extras: { ...trackerExtras(state), 'run.end': runEnd, 'run.party': partyRecords(state) },

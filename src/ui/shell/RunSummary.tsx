@@ -6,7 +6,7 @@ import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
 import { useSimStore } from '../stores/simStore';
 import styles from './RunSummary.module.css';
-import { currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, OUTCOME_LOOK, partyOf, reportFromRecord, unlockLines } from './runSummaryText';
+import { currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, lossNote, OUTCOME_LOOK, partyOf, reportFromRecord, unlockLines } from './runSummaryText';
 import { contentName } from './text';
 
 /** Turn counts in full, as in the top bar. */
@@ -97,7 +97,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
               <tr>
                 <th scope="col">Currency</th>
                 <th scope="col">Earned</th>
-                <th scope="col">Lost</th>
+                <th scope="col">Lost in the wipe</th>
                 <th scope="col">Banked</th>
               </tr>
             </thead>
@@ -112,6 +112,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
               ))}
             </tbody>
           </table>
+          <p className={styles.note}>{lossNote(report.end.outcome)}</p>
         </section>
 
         {found.length > 0 && (

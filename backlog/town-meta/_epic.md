@@ -28,7 +28,7 @@ Between runs the player spends three currencies on branching upgrade trees that 
 - `docs/VISUAL-DESIGN.md` §5.2, §6.1
 
 ## Items
-- [ ] [ETH-023](ETH-023-at-risk-run-currency.md) Track run earnings as at-risk currency and lose 25% on a wipe
+- [x] [ETH-023](ETH-023-at-risk-run-currency.md) Track run earnings as at-risk currency and lose 25% on a wipe
 - [x] [ETH-048 Run history list](ETH-048-run-history.md)
 
 More items are added when M2 becomes the current milestone.

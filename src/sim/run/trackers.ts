@@ -56,10 +56,32 @@ export function reduceTrackers(state: RunState, events: readonly SimEvent[]): vo
 
 /** The sum of every tracker's `rewards` for its current state. Amounts of 0 are left out. */
 export function trackerRewards(state: RunState): RewardAmounts {
+  const states = state.domains.run.trackers;
+  return sumTrackerRewards((tracker) => (Object.hasOwn(states, tracker.id) ? states[tracker.id] : undefined));
+}
+
+/**
+ * What `rewards.atRisk` will be once `events` (the step so far) are folded in, without changing
+ * any tracker's state. The run end uses it to work out a wipe's loss before the step's
+ * `reduceTrackers` runs (`end.ts`).
+ */
+export function projectedRewards(state: RunState, events: readonly SimEvent[]): RewardAmounts {
+  const states = state.domains.run.trackers;
+  return sumTrackerRewards((tracker) => {
+    let s = Object.hasOwn(states, tracker.id) ? states[tracker.id] : tracker.init();
+    for (const event of events) s = tracker.reduce(s, event);
+    return s;
+  });
+}
+
+/** Every tracker's `rewards` for the state `stateOf` gives it (skipped when `undefined`), summed; zeros left out. */
+function sumTrackerRewards(stateOf: (tracker: RunTracker<unknown>) => unknown): RewardAmounts {
   const total: RewardAmounts = {};
   for (const tracker of TRACKER_LIST) {
-    if (tracker.rewards === undefined || !Object.hasOwn(state.domains.run.trackers, tracker.id)) continue;
-    for (const [currency, amount] of Object.entries(tracker.rewards(state.domains.run.trackers[tracker.id]))) {
+    if (tracker.rewards === undefined) continue;
+    const s = stateOf(tracker);
+    if (s === undefined) continue;
+    for (const [currency, amount] of Object.entries(tracker.rewards(s))) {
       if (amount !== 0) total[currency] = (total[currency] ?? 0) + amount;
     }
   }

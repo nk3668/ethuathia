@@ -33,6 +33,12 @@
   font-weight: var(--font-weight-medium);
 }
 
+/* This run's at-risk earnings, beside the banked total: muted, with a "+" so it never rests on color. */
+.atRisk {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .renown {
   color: var(--renown);
 }
