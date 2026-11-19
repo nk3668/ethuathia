@@ -1,14 +1,16 @@
 /**
  * Attributes and the stats derived from them (ETH-033, docs/ARCHITECTURE.md Contracts, "Stats").
  *
- * An actor's attribute = its class's value + its race's adjustment + its own points
- * (`stats.attributes`, which leveling raises; for an actor without a class, its whole value).
+ * An actor's attribute = its class's value + its race's adjustment + its class's growth for its
+ * level (ETH-034) + its own points (`stats.attributes`; for an actor without a class, its whole
+ * value).
  * The `stats.attributes` provider turns attributes into stat parts through `ATTRIBUTE_FORMULAS`,
  * the one table of derivation constants: tune balance there.
  */
 import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, RACES } from '../../content';
 import type { AttributeId } from '../../content';
 import type { Entity } from '../state';
+import { growthAt, levelOf } from './leveling';
 import type { StatId } from './statIds';
 import type { StatProvider } from './types';
 
@@ -66,6 +68,9 @@ function collectAttribute(entity: Entity, attribute: AttributeId, sink: (value: 
     sink(cls.attributes[attribute], cls.id, cls.name);
     const race = RACES.get(a.raceId);
     sink(race.attributes[attribute] ?? 0, race.id, race.name);
+    // Class growth from levels (ETH-034), credited to the class: "Level 3".
+    const level = levelOf(entity);
+    if (level > 1) sink(growthAt(cls.id, attribute, level), cls.id, `Level ${level}`);
   }
   const own = entity.stats?.attributes?.[attribute];
   if (own !== undefined) sink(own, entity.def, a === undefined ? 'Base' : 'Trained');

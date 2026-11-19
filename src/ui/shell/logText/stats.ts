@@ -1,7 +1,25 @@
 /** Log wording for the stats domain's events (`src/sim/stats/`). One entry per event type. */
-import { findDef } from '../../../content';
+import { ATTRIBUTE_IDS, attributeDef, findDef } from '../../../content';
+import type { AttributeId } from '../../../content';
 import type { StatsEvent } from '../../../sim';
+import { defineHighlight } from './types';
 import type { LogTextRecord } from './types';
+
+/** An adventurer gains a level (ETH-034). */
+export const HIGHLIGHT_LEVEL_UP = defineHighlight({
+  id: 'leveledUp',
+  label: 'An adventurer levels up',
+  description: 'A party member earns enough XP for a new level, and their class’s attributes grow.',
+});
+
+/** `: Brawn +1, Grit +2` for the attributes a level raised, in display order; nothing if none. */
+function gainsText(gains: Partial<Record<AttributeId, number>>): string {
+  const parts = ATTRIBUTE_IDS.flatMap((a) => {
+    const n = gains[a] ?? 0;
+    return n === 0 ? [] : [`${attributeDef(a).name} +${n}`];
+  });
+  return parts.length === 0 ? '' : `: ${parts.join(', ')}`;
+}
 
 /** A content id's display name, or the id itself. */
 function nameOfDef(id: string): string {
@@ -35,4 +53,16 @@ export const STATS_LOG_TEXT: LogTextRecord<StatsEvent> = {
   statusRemoved: { category: 'combat', text: (e, nameOf) => `${nameOf(e.actor)} is cured of ${nameOfDef(e.status)}.` },
   healed: { category: 'combat', text: (e, nameOf) => `${nameOf(e.actor)} heals ${e.amount} HP (${nameOfDef(e.source)}).` },
   damaged: { category: 'combat', text: (e, nameOf) => `${nameOf(e.actor)} loses ${e.amount} HP (${nameOfDef(e.source)}).` },
+  // Every kill and new floor earns XP: too frequent for the log, so only level-ups show.
+  xpGained: {
+    category: 'combat',
+    quiet: true,
+    text: (e, nameOf) =>
+      `${nameOf(e.actor)} earns ${e.amount} XP (${e.reason === 'kill' ? nameOfDef(e.source) : 'a new depth'}).`,
+  },
+  leveledUp: {
+    category: 'combat',
+    highlight: HIGHLIGHT_LEVEL_UP,
+    text: (e) => `${e.name} reaches level ${e.level}${gainsText(e.gains)}.`,
+  },
 };

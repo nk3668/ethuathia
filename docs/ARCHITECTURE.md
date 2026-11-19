@@ -313,10 +313,10 @@ only current `hp` and `mp` (plus energy, faction, queued).
   to `STAT_INFO[stat].min`. Parts come from, in order:
   1. **Stat providers** (`STAT_PROVIDERS`): `stats.base` (the entity's `stats.base[stat]`, or
      `STAT_INFO` base, labeled "Base"), then `stats.class_race` (the race's speed), then
-     `stats.attributes` (ETH-033, below). **ETH-034 level adds a provider** (`StatProvider`:
-     `{ id, contribute(state, entity, stat, sink) }`, calling `sink(op, value, sourceId, label?)`)
-     to the end of `STATS_DOMAIN.statProviders`; another domain lists it in its own
-     `statProviders`. They run in domain order, then list order.
+     `stats.attributes` (ETH-033, below). Levels (ETH-034) need no provider of their own: they
+     raise attributes, which this provider already reads. A new derivation is a `StatProvider`
+     (`{ id, contribute(state, entity, stat, sink) }`, calling `sink(op, value, sourceId, label?)`)
+     at the end of a domain's `statProviders`. They run in domain order, then list order.
   2. **Bundle sources** (`BUNDLE_SOURCES`): every active bundle's `modifiers` for that stat, scaled
      by potency (`add`: value × potency; `mul`: 1 + (value − 1) × potency). The stats domain has
      `stats.attached` (`stats.bundles`) and `stats.statuses`. **Gear (ETH-043), run-wide Omens and
@@ -345,6 +345,23 @@ only current `hp` and `mp` (plus energy, faction, queued).
   subtracts). An entity with no adventurer part and no `stats.attributes` gets no attribute parts,
   so monsters built from `stats.base` alone are unaffected. The snapshot's
   `domains.stats.members[id].attributes` carries each `AttributeResult`.
+- **XP and levels (ETH-034, `src/sim/stats/leveling.ts`).** An adventurer's `growth` part is
+  `{ level, xp }` (absent: level 1, 0 XP; only adventurers have one; `level` always equals
+  `levelForXp(xp)`, invariant `stats.growth`). Each class has `growth` in content
+  (`ClassDef.growth`, points per level, fractions allowed): at level L an attribute has gained
+  `floor(rate × (L − 1))`, an attribute part credited to the class and labeled "Level L". Level
+  L → L + 1 costs `XP_STEP` (15) × L; `MAX_LEVEL` 20 (XP keeps accruing past it). XP comes from
+  `grantXp(state, entity, amount, reason, source, emit)`; living adventurers only. Combat's
+  `killActor` calls `grantKillXp` (`XP_PER_THREAT` 4 × the victim's threat, to the killer), and
+  the floors domain's stairs call `grantDepthXp` on reaching a new deepest floor
+  (`XP_PER_DEPTH` 5 × depth, to every living member). A level-up raises current HP and MP by
+  as much as their maxima rose. No randomness. Events: `xpGained { actor, classId, amount, xp,
+  reason: 'kill' | 'depth', source }` (quiet in the log) and `leveledUp { actor, name, classId,
+  level, gains, floor, pos }` (a log highlight, `leveledUp`). **For class Mastery (ETH-087) and
+  the roster (ETH-068):** the `track.xp` tracker (stats domain) keeps `{ byActor: { [id]:
+  { classId, xp, level } }, byClass: { [classId]: xp } }`, fallen members included, so
+  `RunResult.extras['track.xp']` holds it. The snapshot's `members[id].level` is a `LevelView`
+  (`{ level, xp, levelXp, nextXp }`) for the party card.
 - Content names stats by id string; `checkGame` checks refs of kind `stat` against `STAT_REFS`.
   A new stat is one entry in `STAT_IDS` and `STAT_INFO`.
 
@@ -478,8 +495,9 @@ plus one when it rebases**, so two branches never ship different shapes under on
 main moved past your version while your PR waited, rebase and bump again. ETH-055 made it 4,
 then 5 on main, ETH-058 (the floors slice) 6, ETH-057 7 (the `stats` part; `speed`,
 `maxHp` and `maxMp` left `ActorPart`), ETH-033 8 (`stats.attributes`), ETH-062 9 (the run
-slice's trackers and run end), ETH-072 10 (the `fountain` feature part), and ETH-061 11
-(the `item` and `inventory` parts and the items slice).
+slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061 11
+(the `item` and `inventory` parts and the items slice), 12 on main after that, and ETH-034 13
+(the `growth` part and the `track.xp` tracker state).
 
 ### Floors and arrival (ETH-058)
 

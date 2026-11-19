@@ -143,6 +143,8 @@ export const METRICS: Metric[] = [
   { name: 'kills, mean', value: (rs) => mean(rs.map((r) => r.kills ?? 0)), digits: 1 },
   { name: 'deaths, total', value: (rs) => rs.reduce((n, r) => n + (r.deaths ?? 0), 0), digits: 0 },
   { name: 'fountain drinks, mean', value: (rs) => mean(rs.map((r) => r.drinks ?? 0)), digits: 1 },
+  // Leveling (ETH-034). Reports from before it read '-'.
+  { name: 'party level, mean', value: (rs) => mean(present(rs.map((r) => r.level))), digits: 2 },
 ];
 
 function fmt(value: number | null, digits: number): string {

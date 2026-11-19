@@ -21,6 +21,7 @@ import type { SimDomain, SnapshotCtx } from '../domain';
 import { featureAt, moveEntity } from '../entities';
 import { registerInvariant } from '../invariants';
 import { runEffects } from '../stats/effects';
+import { grantDepthXp } from '../stats/leveling';
 import type { EntityId, FloorId, RunConfig } from '../state';
 import { arrivalStairs, arrivalTile, dungeonDepth, floorIdAt, floorNode, floorTypeOf, stairsOn, stairsTarget } from './dungeon';
 import type { StairsDir } from './dungeon';
@@ -167,9 +168,12 @@ export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {
       const depth = floorNode(state, to).depth;
       const slice = state.domains.floors;
       if (slice.arrived[to] === undefined) slice.arrived[to] = state.turn;
+      const deeper = depth > slice.deepest;
       slice.deepest = Math.max(slice.deepest, depth);
       emit({ type: 'tookStairs', actor: actor.id, dir, from, to, depth, pos: { x: pos.x, y: pos.y } });
       emit({ type: 'floorEntered', actor: actor.id, floor: to, depth, firstVisit, floorType: floorTypeOf(state, to) });
+      // A new deepest floor is worth XP to every living member (ETH-034).
+      if (deeper) grantDepthXp(state, to, depth, emit);
     },
   },
   drink: {

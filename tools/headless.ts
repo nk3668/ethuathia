@@ -99,6 +99,8 @@ export interface SeedResult {
   deathCauses?: Record<string, number>;
   /** Draughts drunk from fountains (ETH-072). */
   drinks?: number;
+  /** The party's highest level where the run stopped (ETH-034). Missing from older reports. */
+  level?: number;
   /** `stateHash` of where the run stopped, to tell whether a change altered behavior. */
   hash: string;
 }
@@ -208,6 +210,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     deaths,
     deathCauses,
     drinks,
+    level: Math.max(1, ...Object.values(snap.domains.stats.members).map((m) => m.level.level)),
     hash: session.stateHash(),
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
     atRisk: { ...snap.domains.run.atRisk },

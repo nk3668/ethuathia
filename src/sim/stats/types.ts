@@ -41,9 +41,9 @@ export interface StatsPart {
   /** Timed statuses, in the order they were applied. */
   statuses: ActiveStatus[];
   /**
-   * The actor's own attribute points (ETH-033), added to its class and race values; leveling
-   * (ETH-034) raises them. For an actor without a class (a monster), its whole attributes.
-   * Left out, an adventurer has only its class and race values and anyone else has none.
+   * The actor's own attribute points (ETH-033), added to its class and race values and its
+   * class's level growth (ETH-034, derived from `growth.level`, not stored here). For an actor
+   * without a class (a monster), its whole attributes. Left out, an adventurer has only its class and race values and anyone else has none.
    */
   attributes?: Partial<Record<AttributeId, number>>;
 }
