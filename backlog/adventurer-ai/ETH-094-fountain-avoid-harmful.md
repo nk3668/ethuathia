@@ -8,8 +8,9 @@ milestone: M4
 epic: adventurer-ai
 size: S
 depends_on: [ETH-072]
+assignee: antigravity
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -25,3 +26,4 @@ Decided in Nate's interview answers (2026-11-18).
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-19: Assigned to Antigravity as a low-risk item.

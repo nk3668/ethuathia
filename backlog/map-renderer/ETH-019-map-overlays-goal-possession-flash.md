@@ -2,14 +2,15 @@
 id: ETH-019
 title: "Map overlays: goal line, possession frame and hit flash"
 type: feature
-status: idea
+status: ready
 priority: P2
 milestone: M1
 epic: map-renderer
 size: S
 depends_on: [ETH-013, ETH-066]
+assignee: antigravity
 created: 2026-11-16
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -36,3 +37,4 @@ flash is running.
 ## Log
 - 2026-11-16: Created while building ETH-013.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
+- 2026-11-19: Assigned to Antigravity as a low-risk item; acceptance criteria already written, so status ready.
