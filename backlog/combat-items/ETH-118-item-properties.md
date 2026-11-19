@@ -2,7 +2,7 @@
 id: ETH-118
 title: Item properties: per-instance layers that feed gearBundles, value, names and stacking
 type: feature
-status: blocked
+status: ready
 priority: P1
 milestone: M1
 epic: combat-items
@@ -73,3 +73,4 @@ Open decisions:
 ## Log
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-044, 045, 069, 082, 096, 109).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
+- 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.

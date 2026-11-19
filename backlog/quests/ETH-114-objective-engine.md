@@ -2,7 +2,7 @@
 id: ETH-114
 title: Objective engine: reusable objectives with progress, generalized from contracts
 type: feature
-status: blocked
+status: ready
 priority: P1
 milestone: M2
 epic: quests
@@ -80,3 +80,4 @@ Open decisions:
 ## Log
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-026, 027, 029, 030, 031, 032, 067, 070, 093).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
+- 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.

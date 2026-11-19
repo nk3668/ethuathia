@@ -2,7 +2,7 @@
 id: ETH-117
 title: Monster templates: prefixes, traits and named overrides layered on a base MonsterDef
 type: feature
-status: blocked
+status: ready
 priority: P1
 milestone: M2
 epic: bestiary
@@ -70,3 +70,4 @@ Open decisions:
 ## Log
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-041, 042, 052, 099, 101, 109).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
+- 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.

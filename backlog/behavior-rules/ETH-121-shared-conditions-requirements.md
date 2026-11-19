@@ -2,7 +2,7 @@
 id: ETH-121
 title: Shared conditions: run-scope conditions and a Requirement type usable outside rules
 type: feature
-status: blocked
+status: ready
 priority: P1
 milestone: M2
 epic: behavior-rules
@@ -78,3 +78,4 @@ Open decisions:
 ## Log
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-036, ETH-070, ETH-093, ETH-104).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
+- 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.

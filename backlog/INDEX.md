@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-124**
+**Next ID: ETH-129**
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
@@ -15,7 +15,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [behavior-rules](behavior-rules/_epic.md) | Behavior rules | active | M2, M3 |
 | [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M2, M5, later |
 | [content](content/_epic.md) | Content definitions | active | M0, M1, M2, M3, M4, M5, M6 |
-| [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M3, M5 |
+| [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M3, M5, later |
 | [saves-platform](saves-platform/_epic.md) | Saves, desktop packaging and time-away | active | M2, M6 |
 | [risk-omens](risk-omens/_epic.md) | Omens and conducts | active | M2, M4 |
 | [lineage](lineage/_epic.md) | Lineage | active | M2, M5 |
@@ -64,7 +64,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-111](combat-items/ETH-111-ring-neck-slots.md) | Ring and neck equipment slots | combat-items | M1 | P1 | done | S |
 | [ETH-113](sim-core/ETH-113-stairs-blocker-softlock.md) | A creature that never moves on the stairs soft-locks the run | sim-core | M1 | P1 | done | S |
 | [ETH-082](combat-items/ETH-082-weapon-attribute-scaling.md) | Each weapon type scales damage off its own attribute | combat-items | M1 | P1 | ready | M |
-| [ETH-118](combat-items/ETH-118-item-properties.md) | Item properties: per-instance layers that feed gearBundles, value, names and stacking | combat-items | M1 | P1 | blocked | M |
+| [ETH-118](combat-items/ETH-118-item-properties.md) | Item properties: per-instance layers that feed gearBundles, value, names and stacking | combat-items | M1 | P1 | ready | M |
 | [ETH-019](map-renderer/ETH-019-map-overlays-goal-possession-flash.md) | Map overlays: goal line, possession frame and hit flash | map-renderer | M1 | P2 | idea | S |
 | [ETH-017](adventurer-ai/ETH-017-party-yield-in-corridors.md) | Party members yield or swap places in narrow passages | adventurer-ai | M1 | P2 | done | S |
 | [ETH-020](ui-shell/ETH-020-cycle-adventurers-key.md) | Key to cycle the selected adventurer | ui-shell | M1 | P2 | done | S |
@@ -87,12 +87,12 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-064](ui-shell/ETH-064-prepare-screen.md) | Prepare screen and building a run config from the profile | ui-shell | M2 | P1 | done | M |
 | [ETH-065](codex-tooltips/ETH-065-codex-framework.md) | Codex tab, discovery tracking and Explain tooltips from content | codex-tooltips | M2 | P1 | done | M |
 | [ETH-095](saves-platform/ETH-095-tauri-packaging-saves.md) | Tauri desktop packaging and save backend | saves-platform | M2 | P1 | ready | M |
-| [ETH-114](quests/ETH-114-objective-engine.md) | Objective engine: reusable objectives with progress, generalized from contracts | quests | M2 | P1 | blocked | M |
-| [ETH-115](risk-omens/ETH-115-run-wide-modifiers.md) | Run-wide modifiers: a run-level BundleSource with sources, scopes, flags and tooltips | risk-omens | M2 | P1 | blocked | M |
-| [ETH-117](bestiary/ETH-117-monster-templates.md) | Monster templates: prefixes, traits and named overrides layered on a base MonsterDef | bestiary | M2 | P1 | blocked | M |
-| [ETH-119](lineage/ETH-119-adventurer-records.md) | Persistent adventurer records: a profile slice with identity, history, traits, level and death | lineage | M2 | P1 | blocked | M |
-| [ETH-120](sim-core/ETH-120-run-chronicle.md) | Run chronicle: a durable list of a run's notable events, kept apart from the event buffer | sim-core | M2 | P1 | blocked | M |
-| [ETH-121](behavior-rules/ETH-121-shared-conditions-requirements.md) | Shared conditions: run-scope conditions and a Requirement type usable outside rules | behavior-rules | M2 | P1 | blocked | M |
+| [ETH-114](quests/ETH-114-objective-engine.md) | Objective engine: reusable objectives with progress, generalized from contracts | quests | M2 | P1 | ready | M |
+| [ETH-115](risk-omens/ETH-115-run-wide-modifiers.md) | Run-wide modifiers: a run-level BundleSource with sources, scopes, flags and tooltips | risk-omens | M2 | P1 | ready | M |
+| [ETH-117](bestiary/ETH-117-monster-templates.md) | Monster templates: prefixes, traits and named overrides layered on a base MonsterDef | bestiary | M2 | P1 | ready | M |
+| [ETH-119](lineage/ETH-119-adventurer-records.md) | Persistent adventurer records: a profile slice with identity, history, traits, level and death | lineage | M2 | P1 | ready | M |
+| [ETH-120](sim-core/ETH-120-run-chronicle.md) | Run chronicle: a durable list of a run's notable events, kept apart from the event buffer | sim-core | M2 | P1 | ready | M |
+| [ETH-121](behavior-rules/ETH-121-shared-conditions-requirements.md) | Shared conditions: run-scope conditions and a Requirement type usable outside rules | behavior-rules | M2 | P1 | ready | M |
 | [ETH-026](quests/ETH-026-slay-named-foe-contract.md) | Slay-named-foe contract | quests | M2 | P2 | idea | M |
 | [ETH-027](quests/ETH-027-gather-delve-contracts.md) | Gather and Delve contracts | quests | M2 | P2 | idea | M |
 | [ETH-028](quests/ETH-028-contract-slots-upgrade.md) | Contract slots as a Guild Hall upgrade | quests | M2 | P2 | idea | S |
@@ -124,7 +124,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-038](characters/ETH-038-class-aware-ai-roles.md) | Class-aware AI roles | characters | M3 | P2 | idea | M |
 | [ETH-088](characters/ETH-088-class-mastery-trees.md) | Class Mastery trees with class-specific nodes | characters | M3 | P2 | idea | M |
 | [ETH-112](combat-items/ETH-112-weighted-gear-score.md) | Weighted gear score so auto-equip can take trade-offs | combat-items | M3 | P3 | idea | M |
-| [ETH-116](dungeon-gen/ETH-116-dungeon-encounters.md) | Dungeon encounters: placed interactive features with an interact action, choices and outcomes | dungeon-gen | M4 | P1 | blocked | M |
+| [ETH-116](dungeon-gen/ETH-116-dungeon-encounters.md) | Dungeon encounters: placed interactive features with an interact action, choices and outcomes | dungeon-gen | M4 | P1 | ready | M |
 | [ETH-067](risk-omens/ETH-067-omens-conducts-core.md) | Omens with ranks, the reward multiplier and conduct tracking | risk-omens | M4 | P2 | idea | M |
 | [ETH-072](dungeon-gen/ETH-072-fountains.md) | Fountains with a documented effect table and a drink action | dungeon-gen | M4 | P2 | done | M |
 | [ETH-030](quests/ETH-030-bounty-encounters.md) | Bounty encounters inside the dungeon | quests | M4 | P3 | idea | M |
@@ -133,11 +133,12 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-094](adventurer-ai/ETH-094-fountain-avoid-harmful.md) | The AI avoids fountain draughts known to be harmful | adventurer-ai | M4 | P3 | ready | S |
 | [ETH-097](bestiary/ETH-097-sleeping-monsters-stealth.md) | Sleeping monsters and stealth | bestiary | M4 | P3 | idea | M |
 | [ETH-105](risk-omens/ETH-105-cursed-modifiers-mid-run.md) | Cursed modifiers found in the dungeon | risk-omens | M4 | P3 | idea | M |
-| [ETH-122](content/ETH-122-seeded-text-generator.md) | Seeded text generator: grammar templates for names, titles, epitaphs, ballads and backstories | content | M5 | P1 | blocked | M |
-| [ETH-123](combat-items/ETH-123-allied-creatures.md) | Allied non-party creatures: actors that fight with the party without being members | combat-items | M5 | P1 | blocked | M |
+| [ETH-122](content/ETH-122-seeded-text-generator.md) | Seeded text generator: grammar templates for names, titles, epitaphs, ballads and backstories | content | M5 | P1 | ready | M |
+| [ETH-123](combat-items/ETH-123-allied-creatures.md) | Allied non-party creatures: actors that fight with the party without being members | combat-items | M5 | P1 | ready | M |
 | [ETH-051](lineage/ETH-051-gravestone-interactions.md) | Gravestone interactions: minor loot, a patron boon and an epitaph | lineage | M5 | P2 | idea | M |
 | [ETH-068](lineage/ETH-068-roster-lineage-core.md) | Persistent roster, graveyard and Graveyard tab | lineage | M5 | P2 | idea | M |
 | [ETH-069](lineage/ETH-069-gravestones-heirlooms.md) | Gravestones and heirlooms in the dungeon | lineage | M5 | P2 | idea | M |
+| [ETH-124](town-meta/ETH-124-tavern-veterans-retirement.md) | Retire veterans to Tavern jobs for permanent passive bonuses | town-meta | M5 | P2 | idea | M |
 | [ETH-032](quests/ETH-032-rescue-contract.md) | Rescue contract | quests | M5 | P3 | idea | M |
 | [ETH-089](lineage/ETH-089-rare-dungeon-recruits.md) | Rare adventurers met in the dungeon who join the party | lineage | M5 | P3 | idea | M |
 | [ETH-099](lineage/ETH-099-unique-carrying-heirloom.md) | A monster that killed an adventurer returns carrying their heirloom | lineage | M5 | P3 | idea | M |
@@ -145,7 +146,10 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-103](lineage/ETH-103-bards-ballads.md) | Bard's ballads from run highlights | lineage | M5 | P3 | idea | M |
 | [ETH-104](characters/ETH-104-personality-quirks.md) | Personality quirks | characters | M5 | P3 | idea | M |
 | [ETH-108](town-meta/ETH-108-guild-trophy-room.md) | Guild trophy room | town-meta | M5 | P3 | idea | M |
+| [ETH-125](lineage/ETH-125-ghost-allies.md) | Ghosts at graves, hostile or allied with the Ossuary | lineage | M5 | P3 | idea | M |
+| [ETH-126](lineage/ETH-126-descendants.md) | Descendant recruits inherit a trait from a fallen adventurer | lineage | M5 | P3 | idea | S |
 | [ETH-070](deities/ETH-070-deity-core.md) | Patron deities with a blessing, a taboo and Favor | deities | M6 | P2 | idea | M |
+| [ETH-128](saves-platform/ETH-128-time-away-catch-up.md) | Time-away catch-up simulation and summary | saves-platform | M6 | P2 | idea | M |
 | [ETH-049](dungeon-gen/ETH-049-dungeon-merchants.md) | Dungeon merchants | dungeon-gen | M6 | P3 | idea | M |
 | [ETH-098](dungeon-gen/ETH-098-hand-made-vaults.md) | Hand-made room vaults | dungeon-gen | M6 | P3 | idea | M |
 | [ETH-107](dungeon-gen/ETH-107-dungeon-events.md) | Rare floor-wide dungeon events | dungeon-gen | M6 | P3 | idea | M |
@@ -155,3 +159,4 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-100](bestiary/ETH-100-scavenger-family.md) | Scavenger monster family | bestiary | later | P3 | idea | M |
 | [ETH-102](dungeon-gen/ETH-102-rival-guild.md) | A rival guild party in the dungeon | dungeon-gen | later | P3 | idea | M |
 | [ETH-106](combat-items/ETH-106-pets-that-level.md) | Pets that persist and level up | combat-items | later | P3 | idea | M |
+| [ETH-127](town-meta/ETH-127-achievements.md) | Achievements tracked with the objective engine | town-meta | later | P3 | idea | M |

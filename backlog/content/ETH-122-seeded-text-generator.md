@@ -2,7 +2,7 @@
 id: ETH-122
 title: Seeded text generator: grammar templates for names, titles, epitaphs, ballads and backstories
 type: feature
-status: blocked
+status: ready
 priority: P1
 milestone: M5
 epic: content
@@ -64,3 +64,4 @@ Open decisions:
 ## Log
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-068, 069, 089, 101, 103).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
+- 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.

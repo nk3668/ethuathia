@@ -2,7 +2,7 @@
 id: ETH-120
 title: Run chronicle: a durable list of a run's notable events, kept apart from the event buffer
 type: feature
-status: blocked
+status: ready
 priority: P1
 milestone: M2
 epic: sim-core
@@ -67,3 +67,4 @@ Open decisions:
 ## Log
 - 2026-11-19: Created in the shared-systems pass (foundation for Highlights, the run summary, ETH-068, 101, 103 and time-away; fixes the rolling-buffer loss of early highlights).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
+- 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
