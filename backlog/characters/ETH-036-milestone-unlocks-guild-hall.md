@@ -7,9 +7,9 @@ priority: P2
 milestone: M2
 epic: characters
 size: M
-depends_on: [ETH-034, ETH-063]
+depends_on: [ETH-034, ETH-063, ETH-121]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -29,3 +29,4 @@ Discovery plus a spending choice. See `CLAUDE.md` §4 (Guild Hall).
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
+- 2026-11-19: Added ETH-121 (shared conditions) to `depends_on`: build on the shared system instead of a parallel version.

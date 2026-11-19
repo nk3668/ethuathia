@@ -7,9 +7,9 @@ priority: P2
 milestone: M1
 epic: combat-items
 size: M
-depends_on: [ETH-043]
+depends_on: [ETH-043, ETH-118]
 created: 2026-11-17
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ Classic roguelike item risk and knowledge. The Cursed Hoard Omen and the Smithy'
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-18: Identification chance should read the Wits-based identify stat from ETH-081.
+- 2026-11-19: Added ETH-118 (item properties) to `depends_on`: build on the shared system instead of a parallel version.

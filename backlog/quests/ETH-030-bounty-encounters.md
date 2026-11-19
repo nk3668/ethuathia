@@ -7,9 +7,9 @@ priority: P3
 milestone: M4
 epic: quests
 size: M
-depends_on: [ETH-029]
+depends_on: [ETH-029, ETH-114, ETH-116]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -28,3 +28,4 @@ Surprises mid-run without setup. See `CLAUDE.md` §6 (Quests).
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-19: Added ETH-114 (objective engine), ETH-116 (dungeon encounters) to `depends_on`: build on the shared system instead of a parallel version.

@@ -7,9 +7,9 @@ priority: P2
 milestone: M2
 epic: combat-items
 size: M
-depends_on: [ETH-044]
+depends_on: [ETH-044, ETH-118]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -29,3 +29,4 @@ Loot variety without heavy loot-sorting for the AI. See the gear decision in `CL
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-19: Added ETH-118 (item properties) to `depends_on`: build on the shared system instead of a parallel version.

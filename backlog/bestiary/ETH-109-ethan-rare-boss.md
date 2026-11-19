@@ -7,9 +7,9 @@ priority: P3
 milestone: M2
 epic: bestiary
 size: S
-depends_on: [ETH-041, ETH-045]
+depends_on: [ETH-041, ETH-045, ETH-117, ETH-118]
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 ## Summary
@@ -28,3 +28,4 @@ Just weak: no special fleeing or surrender behavior.
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-19: Added ETH-117 (monster templates), ETH-118 (item properties) to `depends_on`: build on the shared system instead of a parallel version.

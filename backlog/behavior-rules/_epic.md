@@ -2,7 +2,7 @@
 epic: behavior-rules
 title: Behavior rules
 status: active
-milestones: [M3]
+milestones: [M2, M3]
 ---
 
 ## Goal
@@ -25,4 +25,4 @@ The player shapes how adventurers act by ordering if-then rules, and can see whi
 - `docs/VISUAL-DESIGN.md` §5.1
 
 ## Items
-- None yet. Items are added when M3 becomes the current milestone.
+- [ ] [ETH-121 Shared conditions: run-scope conditions and a Requirement type usable outside rules](ETH-121-shared-conditions-requirements.md)

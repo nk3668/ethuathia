@@ -730,6 +730,29 @@ a trait or blessing) and `status` (`statuses.ts`, `status.*`, with four first de
 Regenerating, Poisoned, Dazzled; ETH-072 added Keen-eyed and Queasy). ETH-072 added `draught`
 (`draughts.ts`, `draught.*`): the fountain table (Mending, Bright, Brackish and Still water).
 
+### Shared systems
+
+Foundations that many later features share. **New features must use or extend these, not build
+parallel versions.** If one doesn't fit, extend it (and this list) in the same change, or raise
+it on the item before starting. Each is a backlog item; its spec has the API, the defaults and
+the features that use it.
+
+| System | Item | Status | Purpose |
+|---|---|---|---|
+| Objective engine | ETH-114 | planned | One `Objective` union, progress kinds (`OBJECTIVE_KINDS`) and tracked objectives with an owner, lifted from ETH-024's `contractProgress`: contracts, bounties, conducts, taboos, building quests, achievements |
+| Run-wide modifiers | ETH-115 | planned | Run modifiers with a source, scope (party / monsters / all), bundle, flags and reward bonus; one `stats.run` `BundleSource`, the reward multiplier and the consumer of `run`-scope upgrade grants: Omens, blessings, curses, dungeon events, doctrine, veterans |
+| Dungeon encounters | ETH-116 | planned | An `encounter` kind and feature part placed by a `FLOOR_PLAN_HOOKS` entry, one `interact { choice? }` action, data outcomes, log and Codex text; fountains folded in: altars, graves, merchants, bounty encounters, recruits, cursed wells, vaults |
+| Monster templates | ETH-117 | planned | `MonsterOverlay` (templates, name, title, stats, bundles, threat, loot tier) layered on a `MonsterDef` at `spawnMonster`: uniques, elites, mini-bosses, nemeses, heirloom carriers, families |
+| Item properties | ETH-118 | planned | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling |
+| Adventurer records | ETH-119 | planned | The `adventurers` profile slice: a stable id carried through the run, level, XP, traits, history, status and cause of death: roster, graveyard, recruits, quirks, Mastery, lineage |
+| Run chronicle | ETH-120 | planned | `track.chronicle`: the run's notable moments, durable for the whole run (unlike `simStore`'s `EVENT_BUFFER_SIZE` buffer): Highlights, run summary, epitaphs, ballads, history, time-away |
+| Shared conditions | ETH-121 | planned | Run-scope `CONDITIONS` and a data `Requirement` (all / any / not) checked outside rules, plus the `metInRun` milestone: unlocks, taboos, quirk triggers, building quests |
+| Seeded text generator | ETH-122 | planned | Grammar content expanded with a per-purpose seeded RNG that never touches sim streams: names, titles, epitaphs, ballads, backstories |
+| Allied creatures | ETH-123 | planned | A `companion` part for `party`-faction actors outside `state.party`, with follow rules and stairs handling: summons, pets, ghost allies, over-cap recruits, a helped rival party |
+
+When one of these is built, its row turns `built` and its details move into a subsection above,
+like "Contracts in the run".
+
 ---
 
 ## 1. Layers

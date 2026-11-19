@@ -2,7 +2,7 @@
 epic: combat-items
 title: Combat, items and statuses
 status: active
-milestones: [M1, M2, later]
+milestones: [M1, M2, M5, later]
 ---
 
 ## Goal
@@ -41,3 +41,5 @@ More items are added when M1 becomes the current milestone.
 - [ ] [ETH-106 Pets that persist and level up](ETH-106-pets-that-level.md)
 - [x] [ETH-111 Ring and neck equipment slots](ETH-111-ring-neck-slots.md)
 - [ ] [ETH-112 Weighted gear score so auto-equip can take trade-offs](ETH-112-weighted-gear-score.md)
+- [ ] [ETH-118 Item properties: per-instance layers that feed gearBundles, value, names and stacking](ETH-118-item-properties.md)
+- [ ] [ETH-123 Allied non-party creatures: actors that fight with the party without being members](ETH-123-allied-creatures.md)
