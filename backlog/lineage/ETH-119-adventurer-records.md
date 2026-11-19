@@ -64,6 +64,7 @@ Open decisions:
 - (default) Records are never deleted; a cap (e.g. 200 fallen) trims the oldest fallen with no
   heirloom — alternative: keep everything forever.
 - (default) Level and XP carry over in full between runs — alternative: survivors keep a share.
+  **Nate (2026-11-19): try full carry-over and see.** The worry is balance: losing characters should feel normal, and survivors who keep stacking levels could make runs too easy. Put the share behind one tunable constant (`CARRY_OVER_SHARE = 1` in `src/meta/adventurers.ts`, applied to XP, with level and gains recomputed from it), so a later balance pass can lower it or switch to a reset without changing the data model. The record keeps its history either way.
 
 ## Implementation instructions
 
@@ -94,3 +95,4 @@ To keep this foundation pure, extensible and zero-delta on existing runs:
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
 - 2026-11-19: Implementation instructions drafted by Antigravity; reviewed and amended by Claude (bugs fixed, open either/or choices decided, missing cases added). Ready to build.
+- 2026-11-19: Nate: full carry-over as a trial, to revisit when balancing; the carry-over share is one tunable constant.
