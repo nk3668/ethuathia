@@ -11,7 +11,7 @@ import { clonePlain } from '../../core';
 import { deathPredicate, killerOf } from '../combat/death';
 import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
-import { dungeonDepth, floorNode } from '../floors/dungeon';
+import { dungeonDepth, floorNode, floorTypeOf } from '../floors/dungeon';
 import { VICTORY_CHECKS } from '../registries';
 import type { EntityId, RunState } from '../state';
 import type { RunOutcome, RunResult } from './result';
@@ -66,7 +66,7 @@ export function announceStart(state: RunState, emit: Emit): void {
   const slice = state.domains.run;
   if (slice.started) return;
   slice.started = true;
-  emit({ type: 'runStarted', party: partyRecords(state), depth: dungeonDepth(state) });
+  emit({ type: 'runStarted', party: partyRecords(state), depth: dungeonDepth(state), floorType: floorTypeOf(state, state.dungeon.entry) });
 }
 
 /** True once the run has ended. */
