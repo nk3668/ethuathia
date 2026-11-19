@@ -11,6 +11,7 @@
 import { DEFAULT_MAX_STACKS, STATUSES, statusGroup } from '../../content';
 import type { Emit } from '../events';
 import type { Entity, RunState } from '../state';
+import { registerInvariant } from '../invariants';
 import { clampVitals, newStatsPart, statValue } from './getStat';
 import type { ActiveStatus, StatsPart } from './types';
 
@@ -37,7 +38,8 @@ export function resistedTurns(turns: number, resist: number): number {
  * Applies status `statusId` to `entity` for `turns` of its turns at `potency`, following the
  * def's stacking rule, and emits `statusApplied`. A harmful status is shortened first by the
  * holder's status resistance (`resistedTurns`) unless `resistible` is false (a run's starting
- * statuses). Does nothing to an entity without a living actor part, and returns whether it
+ * statuses). `by` is whoever inflicted it, if someone else did; a merged status takes the latest
+ * applier (ETH-075). Does nothing to an entity without a living actor part, and returns whether it
  * applied. Throws on an unknown status id or bad numbers.
  */
 export function applyStatus(
@@ -48,6 +50,7 @@ export function applyStatus(
   emit: Emit,
   potency = 1,
   resistible = true,
+  by?: Entity,
 ): boolean {
   const def = STATUSES.get(statusId);
   if (!Number.isInteger(turns) || turns <= 0) throw new Error(`Status "${statusId}" needs whole turns above 0, got ${turns}`);
@@ -60,7 +63,8 @@ export function applyStatus(
   const statuses = ensureStats(entity).statuses;
   const group = statusGroup(def);
   const same = statuses.filter((s) => statusGroup(STATUSES.get(s.status)) === group);
-  const fresh: ActiveStatus = { status: statusId, remaining: turns, potency };
+  const source = by === undefined || by.id === entity.id ? undefined : { id: by.id, def: by.def };
+  const fresh: ActiveStatus = source === undefined ? { status: statusId, remaining: turns, potency } : { status: statusId, remaining: turns, potency, by: source };
   let mode: StatusApplyMode;
   let result: ActiveStatus;
 
@@ -85,6 +89,7 @@ export function applyStatus(
       first.potency = potency;
       first.status = statusId;
     }
+    if (source !== undefined) first.by = source;
     mode = def.stacking === 'extend' ? 'extended' : 'refreshed';
     result = first;
   }
@@ -135,3 +140,19 @@ export function tickStatuses(state: RunState, entity: Entity, emit: Emit): void 
   for (const s of expired) emit({ type: 'statusExpired', actor: entity.id, status: s.status });
   clampVitals(state, entity);
 }
+
+/**
+ * A status's inflicter (ETH-075) is someone else: a positive entity id with a def. The entity may
+ * be gone (a slain monster's poison outlives it), so only the shape is checked.
+ */
+registerInvariant('stats.statusSources', (state) =>
+  Object.values(state.entities).flatMap((entity) =>
+    (entity.stats?.statuses ?? []).flatMap((s) => {
+      if (s.by === undefined) return [];
+      if (!Number.isSafeInteger(s.by.id) || s.by.id <= 0 || typeof s.by.def !== 'string' || s.by.def === '') {
+        return [`entity ${entity.id} has status "${s.status}" inflicted by ${JSON.stringify(s.by)}`];
+      }
+      return s.by.id === entity.id ? [`entity ${entity.id} inflicted status "${s.status}" on itself`] : [];
+    }),
+  ),
+);

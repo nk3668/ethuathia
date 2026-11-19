@@ -103,6 +103,33 @@ describe('RunSummary', () => {
     off();
   });
 
+  it('lists each fallen adventurer with their killer (ETH-075)', () => {
+    render(<RunSummary />);
+    const report: RunReport = {
+      ...WIPE,
+      result: {
+        ...WIPE.result,
+        extras: {
+          'run.party': [
+            { actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' },
+            { actor: 2, name: 'Oren', classId: 'class.vanguard', raceId: 'race.human' },
+          ],
+          'track.deaths': {
+            fallen: [
+              { actor: 2, name: 'Oren', depth: 2, turn: 700, killer: null, how: 'died poisoned by a mire toad' },
+              { actor: 1, name: 'Mira', depth: 3, turn: 800, killer: null, how: 'was slain by a slate hound' },
+            ],
+          },
+        },
+      },
+    };
+    act(() => useRunStore.getState().runEnded(report));
+    const items = within(screen.getByRole('region', { name: 'The party' }))
+      .getAllByRole('listitem')
+      .map((li) => li.textContent);
+    expect(items).toEqual(['Mira ✝ was slain by a slate hound on floor 3', 'Oren ✝ died poisoned by a mire toad on floor 2']);
+  });
+
   it('mirrors the auto-restart toggle in Options, saved in the profile settings', async () => {
     const user = userEvent.setup();
     render(

@@ -24,8 +24,11 @@ export interface RunRecordMember {
   readonly name: string;
   readonly classId: string;
   readonly raceId: string;
-  /** Where and when they fell, or `null` if they survived the run. */
-  readonly fell: { readonly depth: number; readonly turn: number } | null;
+  /**
+   * Where and when they fell, or `null` if they survived the run. `how` words what killed them
+   * ("was slain by a slate hound", ETH-075); left out for runs recorded before it.
+   */
+  readonly fell: { readonly depth: number; readonly turn: number; readonly how?: string } | null;
 }
 
 /** One contract of a recorded run (ETH-024). */
@@ -76,11 +79,14 @@ const count = z.number().int().nonnegative();
 /** Longest `cause` kept; longer ones are cut. */
 const MAX_CAUSE = 500;
 
+/** Longest `fell.how` kept; longer ones are cut. */
+const MAX_HOW = 200;
+
 const memberSchema = z.object({
   name: z.string().max(80),
   classId: z.string().max(80),
   raceId: z.string().max(80),
-  fell: z.object({ depth: count, turn: count }).nullable(),
+  fell: z.object({ depth: count, turn: count, how: z.string().max(MAX_HOW).optional() }).nullable(),
 });
 
 const recordSchema = z.object({
@@ -113,7 +119,7 @@ const OUTCOME_TOTAL = { victory: 'victories', retreat: 'retreats', wipe: 'wipes'
 // What the record reads from `RunResult.extras`. A missing or odd value just leaves its part out:
 // the record is for showing, not for banking.
 const partyExtras = z.array(z.object({ actor: z.number(), name: z.string(), classId: z.string(), raceId: z.string() }));
-const deathsExtras = z.object({ fallen: z.array(z.object({ actor: z.number(), depth: count, turn: count })) });
+const deathsExtras = z.object({ fallen: z.array(z.object({ actor: z.number(), depth: count, turn: count, how: z.string().optional() })) });
 const endExtras = z.object({ cause: z.string() });
 const contractsExtras = z.array(z.object({ contract: z.string(), complete: z.boolean(), reward: z.record(z.string(), z.number()) }));
 
@@ -136,7 +142,8 @@ export function runRecord(run: number, result: RunResult): RunRecord {
     party: party.success
       ? party.data.map((m) => {
           const fell = fallen.find((f) => f.actor === m.actor);
-          return { name: m.name, classId: m.classId, raceId: m.raceId, fell: fell === undefined ? null : { depth: fell.depth, turn: fell.turn } };
+          const how = fell?.how === undefined ? {} : { how: fell.how.slice(0, MAX_HOW) };
+          return { name: m.name, classId: m.classId, raceId: m.raceId, fell: fell === undefined ? null : { depth: fell.depth, turn: fell.turn, ...how } };
         })
       : [],
     met: typeof codex === 'object' && codex !== null ? Object.keys(codex) : [],

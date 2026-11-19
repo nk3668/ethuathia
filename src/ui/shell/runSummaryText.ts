@@ -107,7 +107,10 @@ export const NO_CAUSE = 'No details were kept for this run.';
 export function reportFromRecord(record: RunRecord): RunReport {
   const earned = addCurrencies(record.banked, record.lost);
   const party: PartyMemberRecord[] = record.party.map((m, i) => ({ actor: i, name: m.name, classId: m.classId, raceId: m.raceId }));
-  const fallen: FallenRecord[] = record.party.flatMap((m, i) => (m.fell === null ? [] : [{ actor: i, name: m.name, ...m.fell }]));
+  // The record keeps how they died as words only (`how`); runs recorded before ETH-075 just fell.
+  const fallen: FallenRecord[] = record.party.flatMap((m, i) =>
+    m.fell === null ? [] : [{ actor: i, name: m.name, depth: m.fell.depth, turn: m.fell.turn, killer: null, how: m.fell.how ?? 'fell' }],
+  );
   const end: RunEnd = { outcome: record.outcome, turn: record.turns, cause: record.cause === '' ? NO_CAUSE : record.cause, depth: record.deepestDepth };
   return {
     result: {

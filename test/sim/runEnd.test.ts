@@ -225,8 +225,12 @@ describe('run trackers', () => {
     expect(turns).toEqual({ turns: 3 * TURNS_PER_RENOWN + 1 });
     expect(TURNS_TRACKER.rewards?.(turns)).toEqual({ renown: 3 });
 
-    const fell = DEATHS_TRACKER.reduce(DEATHS_TRACKER.init(), e({ type: 'fell', actor: 2, name: 'Mira', floor: 'd2', pos: { x: 1, y: 1 }, depth: 2 }));
-    expect(fell).toEqual({ fallen: [{ actor: 2, name: 'Mira', depth: 2, turn: 5 }] });
+    const hound = { kind: 'monster', id: 7, def: 'monster.slate_hound', name: 'Slate hound' } as const;
+    const fell = DEATHS_TRACKER.reduce(
+      DEATHS_TRACKER.init(),
+      e({ type: 'fell', actor: 2, name: 'Mira', floor: 'd2', pos: { x: 1, y: 1 }, depth: 2, killer: hound }),
+    );
+    expect(fell).toEqual({ fallen: [{ actor: 2, name: 'Mira', depth: 2, turn: 5, killer: hound, how: 'was slain by a slate hound' }] });
   });
 
   it('keep rewards.atRisk the sum of every tracker’s rewards after each step', () => {

@@ -1,9 +1,10 @@
 /** Log wording for the run domain's events (`src/sim/run/`). One entry per event type. */
 import { formatNumber } from '../../../core';
+import { deathLine } from '../../../sim';
 import type { RunDomainEvent } from '../../../sim';
 import { currencyName } from '../runSummaryText';
-import { defineHighlight } from './types';
-import type { LogTextRecord } from './types';
+import { defineHighlight, mention } from './types';
+import type { LogPart, LogTextRecord } from './types';
 
 /** An adventurer falls (HP reaches 0). */
 export const HIGHLIGHT_FELL = defineHighlight({
@@ -16,6 +17,27 @@ const OUTCOME_TEXT = { victory: 'Victory!', retreat: 'The party is out: a retrea
 
 function list(names: readonly string[]): string {
   return names.length <= 1 ? (names[0] ?? 'Nobody') : `${names.slice(0, -1).join(', ')} and ${names.at(-1) as string}`;
+}
+
+/**
+ * "Mira is slain by a slate hound on floor 4." (ETH-075), worded by the sim's `deathLine`, with
+ * the killer's monster or status (and a status's inflicter) as Codex mentions.
+ */
+function fellText(e: Extract<RunDomainEvent, { type: 'fell' }>): LogPart[] {
+  const sentence = `${deathLine(e.name, e.killer, e.depth, 'present')}.`;
+  const k = e.killer;
+  const refs: [string, string][] = [];
+  if (k !== null && k.kind !== 'adventurer') refs.push([k.def, k.name.toLowerCase()]);
+  if (k?.source?.kind === 'monster') refs.push([k.source.def, k.source.name.toLowerCase()]);
+  const parts: LogPart[] = [];
+  let rest = sentence.slice(e.name.length);
+  for (const [ref, label] of refs) {
+    const at = rest.indexOf(label);
+    if (at < 0) continue;
+    parts.push(rest.slice(0, at), mention(ref, label));
+    rest = rest.slice(at + label.length);
+  }
+  return [e.name, ...parts, rest].filter((p) => p !== '');
 }
 
 export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
@@ -31,7 +53,8 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
   fell: {
     category: 'combat',
     highlight: HIGHLIGHT_FELL,
-    text: (e) => `${e.name} falls on floor ${e.depth}.`,
+    // "Mira is slain by a slate hound on floor 4." The killer's kind links to its Codex entry.
+    text: (e) => fellText(e),
   },
   earningsLost: {
     category: 'system',
