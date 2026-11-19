@@ -61,7 +61,46 @@ Open decisions:
 - (default) Generated text is stored once made (the epitaph on the record), not regenerated —
   alternative: regenerate on display from the key (smaller saves, but grammar edits change old text).
 
+## Implementation instructions
+
+To keep the engine fast, deterministic, dependency-free and strictly validated:
+
+1. **Core engine (`src/core/textGen.ts`, exported from `src/core/index.ts`):**
+   - Must import only from `src/core/` (`Rng`, `seedState`) to respect the layer rule (`core` imports nothing outside `core`).
+   - Types:
+     - `GrammarRule = string | { readonly text: string; readonly weight?: number }` (default `weight = 1`, must be a positive integer/finite number > 0).
+     - `Grammar = Readonly<Record<string, readonly GrammarRule[]>>`.
+     - `TextVars = Readonly<Record<string, string | number>>`.
+     - `ExpandOptions = { readonly strict?: boolean; readonly maxDepth?: number }` (`maxDepth` default `MAX_GRAMMAR_DEPTH = 24`). `strict` defaults to `false` (a missing variable renders `[?var]`); tests and content validation pass `strict: true`. `core` can't read Vite's env, so the caller decides, never a build flag.
+   - Template syntax & parser:
+     - Support placeholders `{token}` where `token` is `<name>` or `<name>|<filter1>|<filter2>...` (chained filters allowed).
+     - If `<name>` starts with `$` (e.g. `{$name}`, `{$killer|a}`), look up `vars[name.slice(1)]`; otherwise look up symbol `grammar[name]` and pick a weighted alternative with exactly one `rng.int(1, totalWeight)` draw (a symbol with a single alternative draws nothing), then recursively expand it before applying filters.
+     - Built-in filters (`TEXT_FILTERS`):
+       - `cap`: capitalize the first character (`"gloam rat"` → `"Gloam rat"`).
+       - `lower`: lowercase the string (`"Vanguard"` → `"vanguard"`).
+       - `a`: prefix `"an "` when the value's **first** letter is a vowel (`/^[aeiou]/i.test(s.trim())`; note the `^`), else `"a "`, with a small exception list for vowel-sound edge cases (`hour` → an; `one`, `unique`, `user` → a). No proper-name detection: grammars simply don't put `|a` on names. Also `the` (`"the " + s`).
+       - `s` / `plural`: simple English pluralizer (`-y` after consonant → `-ies`, `-s/-x/-z/-ch/-sh` → `-es`, else `-s`).
+       - `ord`: ordinal number (`1` → `"1st"`, `2` → `"2nd"`, `3` → `"3rd"`, `4` → `"4th"`, handling `11..13`).
+     - On missing variable: throw a `RangeError` when `strict: true`, or render `[?varName]` when `strict: false`. On missing symbol or depth exceeding `maxDepth`: throw a `RangeError`.
+   - Seeded RNG helper:
+     - `textRng(seed: number, purpose: string, key: string | number = ''): Rng` returning `Rng.seeded(seed, 'text/' + purpose + '/' + String(key))`.
+2. **Content kind & load-time static validation (`src/content/grammars.ts`):**
+   - Define `GrammarDef extends Def`: `{ readonly root?: string; readonly vars?: readonly string[]; readonly rules: Grammar }` (`root` defaults to `'root'`).
+   - Register `GRAMMARS = new Registry<GrammarDef>('grammar')` and `GRAMMAR_KIND` in `CONTENT_KINDS` (`src/content/registries.ts`); mark its Codex renderer `hidden: true` (`src/ui/codex/renderers/grammar.tsx`) so internal grammar tables don't clutter the player's Codex tab.
+   - In `GRAMMAR_KIND.check(defs)` (or schema refinement + `checkGrammar(def)` in `src/core/textGen.ts`), statically validate every registered `GrammarDef`:
+     - `root` symbol exists in `def.rules`, and every rule list is non-empty with valid template syntax (no unclosed `{` or `}`, no unknown `|filter` names).
+     - Every `{symbol}` referenced in any rule exists in `def.rules`.
+     - Every `{$var}` referenced in any rule is listed in `def.vars`, and every variable in `def.vars` is referenced at least once.
+     - Every symbol in `def.rules` is reachable from `root` (BFS/DFS from `root`).
+     - **Termination check:** compute the *productive* symbols by fixed-point iteration (a symbol is productive if at least one alternative references only productive symbols; plain text is productive). Every symbol reachable from `root` must be productive, or it's a validation problem ("symbol X can never finish"). That's the whole static check. A grammar that is productive but can still recurse deeply is caught at run time by `maxDepth` (a `RangeError`) and in tests by the 1,000-expansion property test.
+3. **First grammars & integration with `PARTY_CHOICE` (`src/meta/prepare/party.ts`):**
+   - Define `grammar.adventurer_name` (keeping `RECRUIT_NAMES` as one weighted branch alongside compound syllable/root patterns so all existing names remain possible), `grammar.title` (`vars: ['name', 'class', 'race']`), and `grammar.epitaph` (`vars: ['name', 'class', 'race', 'depth', 'cause', 'killer']`).
+   - **Optional variables:** not every death has a killer, and strict mode throws on a missing variable. So `generateText` takes an optional `symbol` (default `root`), and `grammar.epitaph` has two entry symbols: `slain`, which uses `{$killer}`, and `fell`, which doesn't. The caller picks `slain` only when there is a killer. Validation counts every top-level symbol a def lists in `entries?: string[]` as a root for the reachability and variable checks.
+   - Provide a high-level helper `generateText(id: string, rng: Rng, vars?: TextVars, options?: ExpandOptions & { symbol?: string }): string` in `src/content/grammars.ts`.
+   - In `src/meta/prepare/party.ts`, `recruitName` must **not** draw from the `prepare` RNG any more. Today it draws from the same stream as the random class and race picks, so changing how many draws it makes would shift every later slot's class and race. Generate the name from `textRng(seed, 'recruit-name', slot + '/' + attempt)` instead, retrying up to 16 attempts until the name is not in `taken`, then falling back to `${name} ${n}`. (`buildRunConfig` already has `seed`; pass the slot index through `PARTY_CHOICE`.) This drops the `rng.pick(free)` draw from the `prepare` stream, which changes recruit class/race picks for slots 2+ once. Say so in the PR. The sim compare is unaffected (0 delta, same hashes), because `npm run sim` builds its party with `headlessParty` and never calls `recruitName`. Update any test that pins specific random recruit names.
+
 ## Log
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-068, 069, 089, 101, 103).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
+- 2026-11-19: Implementation instructions drafted by Antigravity; reviewed and amended by Claude (bugs fixed, open either/or choices decided, missing cases added). Ready to build.
