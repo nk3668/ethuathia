@@ -18,6 +18,7 @@ import type { ActorEntity, Entity, FloorId, RunState } from '../state';
 import { statValue } from '../stats/getStat';
 import { addToStacks, canStack, itemDef, itemWeight, stackSize } from './instance';
 import type { InventoryPart, ItemInstance } from './instance';
+import { upgradeSlot } from './equipment';
 import { unitValue } from './value';
 
 /** An item as the party last saw it on a tile. A copy, so it goes stale when the real one changes. */
@@ -180,12 +181,14 @@ export function lowestValueIndex(state: RunState, entity: Entity): number | null
  * (it goes to the purse) and relics; anything else if it would stay in the pack once the actor
  * dropped its least valuable things one by one (`lowestValueIndex`) until it is within `carry`
  * again. So an adventurer never picks up what it would drop straight away, and never drops
- * something it would pick up again.
+ * something it would pick up again. A clear upgrade to its gear (`upgradeSlot`) is always wanted:
+ * it is put on at once and worn gear doesn't count against Carry.
  */
 export function wantsItem(state: RunState, actor: Entity, item: ItemInstance): boolean {
   const def = itemDef(item);
   if (isJunk(def)) return false;
   if (def.category === 'gold' || def.category === 'relic') return true;
+  if (upgradeSlot(actor, item) !== null) return true;
   const limit = carryLimit(state, actor);
   let weight = carryWeight(state, actor) + itemWeight(item);
   if (weight <= limit) return true;

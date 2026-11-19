@@ -16,7 +16,7 @@
  */
 import { Grid } from '../../core';
 import type { Pos } from '../../core';
-import { gearSlot, isEquipSlot, isUsable, ITEMS } from '../../content';
+import { gearSlots, isEquipSlot, isUsable, ITEMS } from '../../content';
 import type { EquipSlot } from '../../content';
 import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx, TurnCtx } from '../domain';
@@ -218,7 +218,9 @@ registerInvariant('items.parts', (state) => {
         const problem = instanceProblem(item);
         if (problem !== null) problems.push(`entity ${e.id} worn in ${slot}: ${problem}`);
         else if (item.qty !== 1) problems.push(`entity ${e.id} wears ${item.qty} "${item.def}" in ${slot}`);
-        else if (gearSlot(ITEMS.get(item.def)) !== slot) problems.push(`entity ${e.id} wears "${item.def}" in ${slot}, not its slot`);
+        else if (!(gearSlots(ITEMS.get(item.def)) as readonly string[]).includes(slot)) {
+          problems.push(`entity ${e.id} wears "${item.def}" in ${slot}, not one of its slots`);
+        }
       }
     }
   }

@@ -121,6 +121,15 @@ describe('Explain', () => {
     expect(tip.textContent).toContain('StatsDamage +3, Accuracy −1');
   });
 
+  it('shows that a ring fits either ring slot (ETH-111)', async () => {
+    const user = userEvent.setup();
+    render(<Explain id="item.owl_eye_ring" />);
+    await user.tab();
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toContain('WornLeft ring or Right ring · Ring');
+    expect(tip.textContent).toContain('StatsSight +1, Accuracy +1');
+  });
+
   it('renders an unknown id as plain text', () => {
     const { container } = render(<Explain id="monster.nothing">a thing</Explain>);
     expect(container.textContent).toBe('a thing');

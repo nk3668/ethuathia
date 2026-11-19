@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-111**
+**Next ID: ETH-113**
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
@@ -61,6 +61,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-034](characters/ETH-034-xp-leveling-class-growth.md) | XP, leveling and per-class attribute growth | characters | M1 | P1 | done | M |
 | [ETH-040](bestiary/ETH-040-monster-roles.md) | Monster roles and role behaviors | bestiary | M1 | P1 | done | M |
 | [ETH-043](combat-items/ETH-043-equipment-slots-base-items.md) | Equipment slots and base item types | combat-items | M1 | P1 | done | M |
+| [ETH-111](combat-items/ETH-111-ring-neck-slots.md) | Ring and neck equipment slots | combat-items | M1 | P1 | done | S |
 | [ETH-082](combat-items/ETH-082-weapon-attribute-scaling.md) | Each weapon type scales damage off its own attribute | combat-items | M1 | P1 | ready | M |
 | [ETH-019](map-renderer/ETH-019-map-overlays-goal-possession-flash.md) | Map overlays: goal line, possession frame and hit flash | map-renderer | M1 | P2 | idea | S |
 | [ETH-017](adventurer-ai/ETH-017-party-yield-in-corridors.md) | Party members yield or swap places in narrow passages | adventurer-ai | M1 | P2 | done | S |
@@ -114,6 +115,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M3 | P2 | idea | M |
 | [ETH-038](characters/ETH-038-class-aware-ai-roles.md) | Class-aware AI roles | characters | M3 | P2 | idea | M |
 | [ETH-088](characters/ETH-088-class-mastery-trees.md) | Class Mastery trees with class-specific nodes | characters | M3 | P2 | idea | M |
+| [ETH-112](combat-items/ETH-112-weighted-gear-score.md) | Weighted gear score so auto-equip can take trade-offs | combat-items | M3 | P3 | idea | M |
 | [ETH-067](risk-omens/ETH-067-omens-conducts-core.md) | Omens with ranks, the reward multiplier and conduct tracking | risk-omens | M4 | P2 | idea | M |
 | [ETH-072](dungeon-gen/ETH-072-fountains.md) | Fountains with a documented effect table and a drink action | dungeon-gen | M4 | P2 | done | M |
 | [ETH-030](quests/ETH-030-bounty-encounters.md) | Bounty encounters inside the dungeon | quests | M4 | P3 | idea | M |

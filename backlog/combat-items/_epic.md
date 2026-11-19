@@ -39,3 +39,5 @@ More items are added when M1 becomes the current milestone.
 - [ ] [ETH-082 Each weapon type scales damage off its own attribute](ETH-082-weapon-attribute-scaling.md)
 - [ ] [ETH-096 Wands that recharge on each new floor](ETH-096-rechargeable-wands.md)
 - [ ] [ETH-106 Pets that persist and level up](ETH-106-pets-that-level.md)
+- [x] [ETH-111 Ring and neck equipment slots](ETH-111-ring-neck-slots.md)
+- [ ] [ETH-112 Weighted gear score so auto-equip can take trade-offs](ETH-112-weighted-gear-score.md)

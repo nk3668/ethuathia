@@ -6,7 +6,7 @@
  * hand each one to the player's own rules.
  */
 import type { Pos } from '../../core';
-import { healAmount, ITEMS } from '../../content';
+import { EQUIP_SLOT_INFO, gearSlots, healAmount, ITEMS } from '../../content';
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } from '../ai/types';
@@ -205,10 +205,15 @@ export const ACT_EQUIP_UPGRADE = defineRuleAction({
     const stats = gearStatsText(up.item);
     const what = stats === null ? `the ${name}` : `the ${name} (${stats})`;
     const instead = up.replaces === null ? `, nothing worn there yet` : ` in place of the ${itemDef(up.replaces).name}`;
-    return { request: { id: 'equip', index: up.index }, detail: `equipping ${what}${instead}` };
+    const where = gearSlotsCount(up.item) > 1 ? ` (${EQUIP_SLOT_INFO[up.slot].label.toLowerCase()})` : '';
+    return { request: { id: 'equip', index: up.index, slot: up.slot }, detail: `equipping ${what}${where}${instead}` };
   },
   describe: () => 'equip clear upgrades',
 });
+
+function gearSlotsCount(item: ItemInstance): number {
+  return gearSlots(itemDef(item)).length;
+}
 
 /** The items domain's conditions, in registration order. */
 export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED];
@@ -217,11 +222,14 @@ export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVE
 export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_QUAFF_HEALING, ACT_DROP_LOWEST, ACT_PICK_UP, ACT_EQUIP_UPGRADE];
 
 /**
- * The baseline's urgent item rules, checked first: quaff healing below `HEAL_BELOW_PERCENT` HP,
- * and drop the least valuable thing while overloaded.
+ * The baseline's urgent item rules, checked first: quaff healing below `HEAL_BELOW_PERCENT` HP;
+ * while overloaded, first put on a clear upgrade from the pack (worn gear doesn't count against
+ * Carry, so that may be enough), then drop the least valuable thing. Putting the upgrade on first
+ * keeps the AI from dropping things it would pick up again once the upgrade is worn.
  */
 export const ITEMS_BASELINE_URGENT: readonly Rule[] = [
   { condition: { id: 'cond.wounded', params: { percent: HEAL_BELOW_PERCENT } }, action: { id: 'act.quaff_healing' }, enabled: true },
+  { condition: { id: 'cond.overloaded' }, action: { id: 'act.equip_upgrade' }, enabled: true },
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.drop_lowest' }, enabled: true },
 ];
 
