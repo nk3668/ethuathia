@@ -112,6 +112,15 @@ describe('Explain', () => {
     expect(tip.textContent).toContain('AttributesBRN 11 · FIN 9 · WIT 4 · GRT 13');
   });
 
+  it('shows a piece of gear’s slot, base type and stats (ETH-043)', async () => {
+    const user = userEvent.setup();
+    render(<Explain id="item.flanged_mace" />);
+    await user.tab();
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toContain('WornMain hand · Mace');
+    expect(tip.textContent).toContain('StatsDamage +3, Accuracy −1');
+  });
+
   it('renders an unknown id as plain text', () => {
     const { container } = render(<Explain id="monster.nothing">a thing</Explain>);
     expect(container.textContent).toBe('a thing');

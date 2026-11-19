@@ -1,5 +1,5 @@
 import { useShallow } from 'zustand/react/shallow';
-import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, STATUSES } from '../../content';
+import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, EQUIP_SLOT_INFO, STATUSES } from '../../content';
 import type { AttributeId } from '../../content';
 import { STAT_IDS, STAT_INFO, XP_PER_DEPTH, XP_PER_THREAT } from '../../sim';
 import type { EntityId, InventoryView, LevelView, MemberStatsView } from '../../sim';
@@ -337,6 +337,16 @@ function Pack({ id }: { id: EntityId }) {
           </span>
         </Tooltip>
       </p>
+      {pack.equipped.length > 0 && (
+        <ul className={styles.packList} aria-label="Worn">
+          {pack.equipped.map((worn) => (
+            <li key={worn.slot}>
+              <span className={styles.packSlot}>{EQUIP_SLOT_INFO[worn.slot].label}: </span>
+              <Explain id={worn.def}>{contentName(worn.def)}</Explain>
+            </li>
+          ))}
+        </ul>
+      )}
       {pack.items.length === 0 ? (
         <p className={styles.packEmpty}>Nothing carried.</p>
       ) : (

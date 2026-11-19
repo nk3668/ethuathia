@@ -207,3 +207,8 @@
   color: var(--text-muted);
   font-family: var(--font-mono);
 }
+
+/* Worn gear (ETH-043): the slot before each worn item. */
+.packSlot {
+  color: var(--text-muted);
+}

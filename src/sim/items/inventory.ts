@@ -89,7 +89,10 @@ export function inventoryOf(entity: Entity): readonly ItemInstance[] {
   return entity.inventory?.items ?? [];
 }
 
-/** Total weight `entity` carries. */
+/**
+ * Total weight in `entity`'s pack. Worn gear (ETH-043) doesn't count: the Carry limit is for the
+ * pack, so wearing armor never crowds out potions (a balance choice, see ETH-043's Log).
+ */
 export function carryWeight(_state: RunState, entity: Entity): number {
   let total = 0;
   for (const item of inventoryOf(entity)) total += itemWeight(item);
