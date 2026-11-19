@@ -14,11 +14,11 @@ import styles from './SidePanel.module.css';
 /** Each tab's label and, until its feature lands, a line saying when it will. */
 const TAB_INFO: Readonly<Record<SideTab, { label: string; empty?: string }>> = {
   rules: { label: 'Rules', empty: 'Behavior rules arrive in M3.' },
-  town: { label: 'Town', empty: 'The Town opens in M2.' },
-  codex: { label: 'Codex', empty: 'The Codex fills in as you discover things, from M2.' },
+  town: { label: 'Town' },
+  codex: { label: 'Codex' },
   graveyard: { label: 'Graveyard', empty: 'No one has fallen yet.' },
   stats: { label: 'Stats' },
-  options: { label: 'Options', empty: 'No options yet.' },
+  options: { label: 'Options' },
 };
 
 /** Tabs whose feature has landed: one line per tab. The rest show their `empty` line. */
