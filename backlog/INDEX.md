@@ -80,7 +80,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-090](ui-shell/ETH-090-qe-cycle-keys.md) | Q and E cycle adventurers; diagonals while possessed | ui-shell | M1 | P2 | ready | S |
 | [ETH-022](tools-balance/ETH-022-validate-content-cli.md) | Run content validation as a tsx command | tools-balance | M1 | P3 | done | S |
 | [ETH-039](characters/ETH-039-survey-roguelike-ideas.md) | Survey ideas from DCSS and NetHack with clean-room notes | characters | M1 | P3 | done | S |
-| [ETH-076](tools-balance/ETH-076-sim-compare-stale-base-warning.md) | Sim compare warns when its base has moved since the branch was cut | tools-balance | M1 | P3 | pending-review | S |
+| [ETH-076](tools-balance/ETH-076-sim-compare-stale-base-warning.md) | Sim compare warns when its base has moved since the branch was cut | tools-balance | M1 | P3 | done | S |
 | [ETH-078](ui-shell/ETH-078-remove-unused-tab-empty-texts.md) | Remove the unused empty texts from SidePanel TAB_INFO | ui-shell | M1 | P3 | done | S |
 | [ETH-079](sim-core/ETH-079-run-started-floor-type.md) | runStarted carries the first floor's type | sim-core | M1 | P3 | ready | S |
 | [ETH-059](saves-platform/ETH-059-profile-saves.md) | Profile, banked currencies and versioned local saves | saves-platform | M2 | P0 | done | M |

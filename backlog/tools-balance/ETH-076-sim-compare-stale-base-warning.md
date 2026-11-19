@@ -2,7 +2,7 @@
 id: ETH-076
 title: Sim compare warns when its base has moved since the branch was cut
 type: chore
-status: pending-review
+status: done
 priority: P3
 milestone: M1
 epic: tools-balance
@@ -27,3 +27,4 @@ Follow-up from ETH-074: agents misread diffs that came from main moving.
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-19: (default) `--compare merge-base` resolves against `origin/main` (falling back to `main` when `origin/main` does not exist) — alternative: a `--base` flag or `merge-base:<ref>` syntax.
 - 2026-11-19: Implemented by Gemini; marked pending-review (PR opened, not merged).
+- 2026-11-19: Reviewed by Claude and merged as PR #70. Done.
