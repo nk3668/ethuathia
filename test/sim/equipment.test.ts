@@ -4,9 +4,11 @@
  * clear upgrades (with a trace line). Fixed seeds and hand-built floors.
  */
 import { describe, expect, it } from 'vitest';
-import { EQUIP_SLOTS, GEAR_TYPE_INFO, gearSlot, ITEM_KIND, ITEMS } from '../../src/content';
+import { EQUIP_SLOTS, GEAR_TYPE_INFO, gearSlots, ITEM_KIND, ITEMS } from '../../src/content';
 import {
   bestUpgrade,
+  upgradeSlot,
+  wantsItem,
   checkInvariants,
   compareGear,
   createRun,
@@ -58,17 +60,22 @@ function run(state: RunState, steps: number): SimEvent[] {
 }
 
 describe('gear content', () => {
-  it('gives every weapon and armor a gear type whose slot and category fit', () => {
-    const gear = ITEMS.all().filter((d) => d.category === 'weapon' || d.category === 'armor');
+  it('gives every weapon, armor and jewelry a gear type whose slots and category fit', () => {
+    const gear = ITEMS.all().filter((d) => d.category === 'weapon' || d.category === 'armor' || d.category === 'jewelry');
     expect(gear.length).toBeGreaterThanOrEqual(8);
     for (const def of gear) {
       expect(def.gear, def.id).toBeDefined();
       const type = GEAR_TYPE_INFO[def.gear?.type ?? 'sword'];
       expect(type.category).toBe(def.category);
-      expect(EQUIP_SLOTS).toContain(gearSlot(def));
+      expect(gearSlots(def).length).toBeGreaterThan(0);
+      for (const slot of gearSlots(def)) expect(EQUIP_SLOTS).toContain(slot);
       expect(def.bundle?.modifiers?.length ?? 0, def.id).toBeGreaterThan(0);
     }
-    for (const def of ITEMS.all().filter((d) => d.gear === undefined)) expect(gearSlot(def)).toBeNull();
+    // Every slot is fitted by some gear type, and a ring fits either ring slot.
+    for (const slot of EQUIP_SLOTS) expect(Object.values(GEAR_TYPE_INFO).some((t) => t.slots.includes(slot)), slot).toBe(true);
+    expect(GEAR_TYPE_INFO.ring.slots).toEqual(['ring1', 'ring2']);
+    expect(gear.some((d) => d.gear?.type === 'ring') && gear.some((d) => d.gear?.type === 'amulet')).toBe(true);
+    for (const def of ITEMS.all().filter((d) => d.gear === undefined)) expect(gearSlots(def)).toEqual([]);
     // ETH-082 fills `scalesWith`; until then no type claims one.
     expect(Object.values(GEAR_TYPE_INFO).every((t) => t.scalesWith === undefined)).toBe(true);
   });
@@ -140,7 +147,7 @@ describe('equipping', () => {
   it('flags worn gear in the wrong slot', () => {
     const { state, hero } = setup();
     hero.inventory = { items: [], equipped: { head: one(HATCHET) } };
-    expect(checkInvariants(state).join('\n')).toContain('not its slot');
+    expect(checkInvariants(state).join('\n')).toContain('not one of its slots');
   });
 
   it('marks gear as used in the Codex when put on', () => {
@@ -204,5 +211,89 @@ describe('the baseline with gear', () => {
     const events = run(state, 10);
     expect(ofType(events, 'equipped').map((e) => e.item)).toEqual([HATCHET]);
     expect(hero.inventory.equipped).toEqual({ mainHand: one(HATCHET) });
+  });
+});
+
+describe('gear and the Carry limit', () => {
+  it('puts on an upgrade before dropping anything when overloaded, and wants upgrades even when full', () => {
+    const { state, hero } = setup();
+    const carry = statValue(state, hero, 'carry');
+    hero.inventory = { items: [] };
+    // Potions up to the limit, then a jerkin on top: overloaded.
+    while (hero.inventory.items.length * 5 + 5 <= carry) hero.inventory.items.push({ def: POTION, qty: 5 });
+    hero.inventory.items.push(one(JERKIN));
+    expect(compareGear(one(JERKIN), null)).toBe('better');
+    // Full: a biscuit is not wanted, but an upgrade still is.
+    expect(wantsItem(state, hero, { def: 'item.trail_biscuit', qty: 1 })).toBe(false);
+    expect(wantsItem(state, hero, one(CAP))).toBe(true);
+    const events = run(state, 3);
+    expect(ofType(events, 'ruleFired')[0]).toMatchObject({ condition: 'cond.overloaded', action: 'act.equip_upgrade' });
+    expect(ofType(events, 'dropped')).toEqual([]);
+    expect(hero.inventory.equipped?.body).toEqual(one(JERKIN));
+  });
+});
+
+describe('rings and amulets (ETH-111)', () => {
+  const BAND = 'item.copper_band';
+  const SIGNET = 'item.garnet_signet';
+  const OWL = 'item.owl_eye_ring';
+  const PENDANT = 'item.knotwork_pendant';
+
+  it('fit either ring slot; the equip action fills an empty one first, or the slot asked for', () => {
+    const { state, hero } = setup();
+    const hp = statValue(state, hero, 'hp');
+    hero.inventory = { items: [one(BAND), one(OWL), one(SIGNET)] };
+    let events = by(state, act(hero.id, { id: 'equip', index: 0 }));
+    expect(ofType(events, 'equipped')).toMatchObject([{ item: BAND, slot: 'ring1', replaced: null }]);
+    events = by(state, act(hero.id, { id: 'equip', index: 0 }));
+    expect(ofType(events, 'equipped')).toMatchObject([{ item: OWL, slot: 'ring2', replaced: null }]);
+    expect(statValue(state, hero, 'hp')).toBe(hp + 3);
+    // Both full: the slot asked for, or else the first.
+    events = by(state, act(hero.id, { id: 'equip', index: 0, slot: 'ring2' }));
+    expect(ofType(events, 'equipped')).toMatchObject([{ item: SIGNET, slot: 'ring2', replaced: OWL }]);
+    expect(hero.inventory.equipped).toEqual({ ring1: one(BAND), ring2: one(SIGNET) });
+    expect(statValue(state, hero, 'hp')).toBe(hp + 6);
+
+    events = by(state, act(hero.id, { id: 'equip', index: 0, slot: 'neck' }));
+    expect(ofType(events, 'actionFailed')[0]?.reason).toBe("Owl-eye ring can't be worn there");
+    expect(checkInvariants(state)).toEqual([]);
+    expect(deserialize(serialize(state))).toEqual(state);
+  });
+
+  it('flags a ring worn at the neck', () => {
+    const { state, hero } = setup();
+    hero.inventory = { items: [], equipped: { neck: one(BAND) } };
+    expect(checkInvariants(state).join('\n')).toContain('not one of its slots');
+  });
+
+  it('auto-equip fills empty ring slots first, with the slot in the trace', () => {
+    const { state, hero } = setup();
+    hero.inventory = { items: [one(BAND), one(OWL), one(PENDANT)] };
+    const events = run(state, 10);
+    expect(ofType(events, 'equipped').map((e) => [e.item, e.slot])).toEqual([
+      [PENDANT, 'neck'],
+      [BAND, 'ring1'],
+      [OWL, 'ring2'],
+    ]);
+    expect(hero.inventory.items).toEqual([]);
+    const trace = ofType(events, 'ruleFired').filter((e) => e.action === 'act.equip_upgrade');
+    expect(trace[1]?.detail).toContain('equipping the Copper band (Max HP +3) (left ring), nothing worn there yet');
+  });
+
+  it('auto-equip replaces the weaker ring once both are full, and settles', () => {
+    const { state, hero } = setup();
+    hero.inventory = { items: [one(SIGNET)], equipped: { ring1: one(SIGNET), ring2: one(BAND) } };
+    expect(upgradeSlot(hero, one(SIGNET))).toBe('ring2');
+    const events = run(state, 10);
+    expect(ofType(events, 'equipped')).toMatchObject([{ item: SIGNET, slot: 'ring2', replaced: BAND }]);
+    expect(hero.inventory.equipped).toEqual({ ring1: one(SIGNET), ring2: one(SIGNET) });
+    expect(hero.inventory.items).toEqual([one(BAND)]);
+  });
+
+  it('leaves a ring with a tradeoff against both worn ones', () => {
+    const { hero } = setup();
+    hero.inventory = { items: [one(OWL)], equipped: { ring1: one(SIGNET), ring2: one(BAND) } };
+    expect(upgradeSlot(hero, one(OWL))).toBeNull();
+    expect(bestUpgrade(hero)).toBeNull();
   });
 });

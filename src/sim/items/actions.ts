@@ -2,14 +2,14 @@
  * The item actions: `pickup`, `drop` and `use` (ETH-061), `equip` and `unequip` (ETH-043). The AI, behavior rules and a possessed
  * adventurer all go through these, like every other action (docs/ARCHITECTURE.md §2.3).
  */
-import { EQUIP_SLOTS, gearSlot, isEquipSlot, isUsable } from '../../content';
+import { EQUIP_SLOTS, gearSlots, isEquipSlot, isUsable } from '../../content';
 import type { EquipSlot } from '../../content';
 import type { ActionRecord } from '../actions';
 import { removeEntity } from '../entities';
 import type { EntityId } from '../state';
 import { runEffects } from '../stats/effects';
 import { clampVitals } from '../stats/getStat';
-import { equippedIn } from './equipment';
+import { equippedIn, slotFor } from './equipment';
 import { itemDef } from './instance';
 import { addToInventory, ensureInventory, inventoryOf, itemsAt, placeItem, rememberTile, takeFromInventory } from './inventory';
 import { itemValue } from './value';
@@ -33,10 +33,15 @@ export interface UseRequest {
   index: number;
 }
 
-/** Put on the pack entry at `index` (ETH-043); whatever was worn in its slot goes into the pack. */
+/**
+ * Put on the pack entry at `index` (ETH-043), in `slot` if given (a ring fits either ring slot,
+ * ETH-111), else the first empty slot it fits, else its first slot. Whatever was worn there goes
+ * into the pack.
+ */
 export interface EquipRequest {
   id: 'equip';
   index: number;
+  slot?: EquipSlot;
 }
 
 /** Take off what is worn in `slot` and put it in the pack (ETH-043). */
@@ -145,15 +150,22 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       'Put on a weapon or piece of armor from your pack. Its stats count while it is worn. Whatever was worn in the same slot goes back into the pack.',
     tags: [],
     cost: 100,
-    parse: (raw) => (isIndex(raw.index) ? { id: 'equip', index: raw.index } : 'The pack index must be a whole number from 0'),
-    validate: ({ actor }, { index }) => {
+    parse: (raw) => {
+      if (!isIndex(raw.index)) return 'The pack index must be a whole number from 0';
+      if (raw.slot === undefined) return { id: 'equip', index: raw.index };
+      return isEquipSlot(raw.slot) ? { id: 'equip', index: raw.index, slot: raw.slot } : `The slot must be one of ${EQUIP_SLOTS.join(', ')}`;
+    },
+    validate: ({ actor }, { index, slot }) => {
       const entry = inventoryOf(actor)[index];
       if (entry === undefined) return 'There is no such item in the pack';
-      return gearSlot(itemDef(entry)) === null ? `${itemDef(entry).name} can't be worn` : null;
+      const def = itemDef(entry);
+      const slots = gearSlots(def);
+      if (slots.length === 0) return `${def.name} can't be worn`;
+      return slot === undefined || slots.includes(slot) ? null : `${def.name} can't be worn there`;
     },
-    execute: ({ state, actor, emit }, { index }) => {
+    execute: ({ state, actor, emit }, { index, slot: asked }) => {
       const entry = inventoryOf(actor)[index];
-      const slot = entry === undefined ? null : gearSlot(itemDef(entry));
+      const slot = entry === undefined ? null : (asked ?? slotFor(actor, entry));
       if (entry === undefined || slot === null) return;
       const item = takeFromInventory(actor, index, 1);
       const equipped = (ensureInventory(actor).equipped ??= {});

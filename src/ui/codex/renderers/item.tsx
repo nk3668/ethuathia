@@ -25,16 +25,18 @@ function usedText(def: ItemDef): string | null {
   return effects.length === 0 ? null : effects.map(effectText).join(', ');
 }
 
-/** Slot, base type and stats of a weapon or piece of armor; nothing for other items. */
+/** Slot, base type and stats of a weapon, piece of armor or jewelry; nothing for other items. */
 function gearFields(def: ItemDef): CodexField[] {
   if (def.gear === undefined) return [];
   const type = GEAR_TYPE_INFO[def.gear.type];
-  const slot = EQUIP_SLOT_INFO[type.slot];
+  const slots = type.slots.map((s) => EQUIP_SLOT_INFO[s]);
+  const where = slots.length === 1 ? (slots[0]?.label ?? '') : `${slots.map((s) => s.label).join(' or ')}`;
+  const slotText = slots.length === 1 ? (slots[0]?.description ?? '') : `Fits any of ${slots.length} slots: ${where.toLowerCase()}.`;
   return [
     {
       label: 'Worn',
-      value: `${slot.label} · ${type.label}`,
-      hint: `${slot.description} ${type.description} One item per slot: putting on another packs this one away.`,
+      value: `${where} · ${type.label}`,
+      hint: `${slotText} ${type.description} One item per slot: putting on another packs this one away.`,
       key: true,
     },
     {

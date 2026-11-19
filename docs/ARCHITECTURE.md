@@ -522,7 +522,8 @@ then 5 on main, ETH-058 (the floors slice) 6, ETH-057 7 (the `stats` part; `spee
 slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061 11
 (the `item` and `inventory` parts and the items slice), 12 on main after that, ETH-034 13
 (the `growth` part and the `track.xp` tracker state), ETH-024 14 (the quests slice's contracts), ETH-043 15
-(`inventory.equipped`), and ETH-110 16 (`growth.gained`, the rolled level-up gains).
+(`inventory.equipped`), ETH-110 16 (`growth.gained`, the rolled level-up gains), and ETH-111
+17 (the ring and neck slots).
 
 ### Contracts in the run (ETH-024)
 
@@ -618,8 +619,8 @@ What later items build on, all exported from `src/sim/floors/`:
 All in `src/sim/items/`; content in `src/content/items.ts`.
 
 - **Content:** `ItemDef` = `{ glyph, category, weight, value, stack?, bundle?, gear?, loot? }`.
-  Categories (`ITEM_CATEGORIES`): `potion`, `scroll`, `food` (ETH-054 fills it), `weapon` and
-  `armor` (worn: see Equipment below), `relic` (ETH-024; never dropped), `gold` (goes to the purse),
+  Categories (`ITEM_CATEGORIES`): `potion`, `scroll`, `food` (ETH-054 fills it), `weapon`,
+  `armor` and `jewelry` (worn: see Equipment below), `relic` (ETH-024; never dropped), `gold` (goes to the purse),
   `junk`. `isJunk(def)` (category `junk` or tag `junk` / `corpse`), `isUsable(def)` (its bundle
   has `effects`) and `healAmount(def)` read a def. `bundle.effects` run on use; `bundle.modifiers`
   and `triggers` apply while gear is worn (ETH-043). `bundleOf(itemId)`
@@ -660,16 +661,18 @@ All in `src/sim/items/`; content in `src/content/items.ts`.
   the pack and the gold.
 - **Codex:** `itemSighted` and `pickedUp` mark an item `seen`, `used` and `equipped` mark it `used`.
 
-### Equipment (ETH-043)
+### Equipment (ETH-043, ETH-111)
 
 Content in `src/content/items.ts`, sim in `src/sim/items/equipment.ts` and `actions.ts`.
 
-- **Slots:** `EQUIP_SLOTS` = `mainHand`, `offHand`, `head`, `body`, `hands`, `feet`, one item each
-  (`EQUIP_SLOT_INFO` has labels and tooltip text). No two-handed weapons or rings yet.
-- **Base types:** a weapon or armor def must have `gear: { type }`, and nothing else may.
-  `GEAR_TYPE_INFO[type]` = `{ label, slot, category, description, scalesWith? }` (sword, dagger,
-  axe, mace, staff; shield, helm, light/medium/heavy armor, gloves, boots); the type names the
-  slot (`gearSlot(def)`). `scalesWith` (an `AttributeId`) is declared for ETH-082 and not set or
+- **Slots:** `EQUIP_SLOTS` = `mainHand`, `offHand`, `head`, `body`, `hands`, `feet`, `neck`,
+  `ring1`, `ring2` (ETH-111), one item each (`EQUIP_SLOT_INFO` has labels and tooltip text). No
+  two-handed weapons.
+- **Base types:** a weapon, armor or jewelry def (category `jewelry`, ETH-111) must have
+  `gear: { type }`, and nothing else may. `GEAR_TYPE_INFO[type]` = `{ label, slots, category,
+  description, scalesWith? }` (sword, dagger, axe, mace, staff; shield, helm, light/medium/heavy
+  armor, gloves, boots; amulet; ring). `slots` lists every slot the type fits: one for most, both
+  ring slots for `ring` (`gearSlots(def)`, empty for non-gear). `scalesWith` (an `AttributeId`) is declared for ETH-082 and not set or
   read yet. Gear never stacks and has no `effects`. Its **base stats are `bundle.modifiers`**.
 - **Worn items** sit in `inventory.equipped: Partial<Record<EquipSlot, ItemInstance>>` (qty 1; the
   field is left out while nothing is worn). They are not pack entries and don't count in
@@ -679,20 +682,28 @@ Content in `src/content/items.ts`, sim in `src/sim/items/equipment.ts` and `acti
   credited to the item's def id (tooltip "Iron hatchet +2"); triggers fire through it too.
   **ETH-044/045 add enchantment and affix bundles in `gearBundles`**, which reaches stats, triggers
   and the AI's comparison at once (and an `ITEM_VALUE_HOOKS` entry for worth).
-- **Actions:** `equip { index }` (the old item in that slot goes back into the pack) and
+- **Actions:** `equip { index, slot? }` (`slot` defaults to `slotFor`: the first empty slot the
+  item fits, else its first; the old item there goes back into the pack) and
   `unequip { slot }`; both call `clampVitals`. Events `equipped { actor, item, slot, replaced,
   floor, pos }` and `unequipped { actor, item, slot, floor, pos }`. ETH-044's curses refuse
   `unequip` (and replacing) in `validate`.
 - **AI:** `compareGear(a, b)` → `better | worse | same | mixed`, stat by stat (every stat higher is
-  better; any triggers make it `mixed`). `bestUpgrade(entity)` picks a pack item `better` than what
-  its slot holds, never one another candidate beats, so equipping never flip-flops.
+  better; any triggers make it `mixed`). `upgradeSlot(entity, item)` is where a piece would be an
+  upgrade: an empty slot it fits first (if it beats nothing), else a worn item it beats, the weaker
+  of the two rings when one beats the other. `bestUpgrade(entity)` picks a pack item for the first
+  such slot in `EQUIP_SLOTS` order, never one another candidate beats, so equipping never
+  flip-flops (a replaced ring never beats the one left on). The rule action passes the slot, and
+  its trace names it for rings ("… (left ring), nothing worn there yet"). A clear upgrade is
+  always wanted (`wantsItem`), and while overloaded the baseline puts one on before dropping
+  anything (`ITEMS_BASELINE_URGENT`), since worn gear frees the pack.
   `act.equip_upgrade` (baseline, first of `ITEMS_BASELINE_LOOT`, so not next to an enemy) puts it
   on with a trace line ("equipping the Arming sword (Damage +2, Accuracy +1) in place of …").
   Tradeoffs are left to player rules or possession. `modifierText` / `gearStatsText` word stats.
 - **Snapshot / UI:** `InventoryView.equipped: WornView[]` (`{ slot, def, weight, value }`); the
   party card lists worn gear above the pack. The item Codex renderer adds `Worn` (slot · type) and
   `Stats` key fields, so every `Explain` (pack, map hover, log) shows them.
-- **Invariants:** `items.parts` checks worn items: known slot, valid instance, qty 1, the def's slot.
+- **Invariants:** `items.parts` checks worn items: known slot, valid instance, qty 1, one of the
+  def's slots.
 
 ### Content kinds
 

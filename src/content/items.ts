@@ -26,7 +26,7 @@ import { defShape, glyphSchema, positiveInt } from './schema';
 import type { Glyph } from './schema';
 
 /** Every item category, in Codex order. */
-export const ITEM_CATEGORIES = ['potion', 'scroll', 'food', 'weapon', 'armor', 'relic', 'gold', 'junk'] as const;
+export const ITEM_CATEGORIES = ['potion', 'scroll', 'food', 'weapon', 'armor', 'jewelry', 'relic', 'gold', 'junk'] as const;
 export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
 
 /** How each category reads: the Codex group, and the verb used when an adventurer uses one. */
@@ -36,6 +36,7 @@ export const ITEM_CATEGORY_INFO: Readonly<Record<ItemCategory, { readonly label:
   food: { label: 'Food', verb: 'eats' },
   weapon: { label: 'Weapons', verb: 'uses' },
   armor: { label: 'Armor', verb: 'uses' },
+  jewelry: { label: 'Jewelry', verb: 'uses' },
   relic: { label: 'Relics', verb: 'uses' },
   gold: { label: 'Gold', verb: 'uses' },
   junk: { label: 'Junk', verb: 'uses' },
@@ -44,8 +45,11 @@ export const ITEM_CATEGORY_INFO: Readonly<Record<ItemCategory, { readonly label:
 // ---------------------------------------------------------------------------------------------
 // Equipment (ETH-043)
 
-/** Every equipment slot, in display order. Each holds at most one item. */
-export const EQUIP_SLOTS = ['mainHand', 'offHand', 'head', 'body', 'hands', 'feet'] as const;
+/**
+ * Every equipment slot, in display order. Each holds at most one item. A gear type may fit more
+ * than one slot (a ring fits either ring slot, ETH-111): `GearTypeInfo.slots`.
+ */
+export const EQUIP_SLOTS = ['mainHand', 'offHand', 'head', 'body', 'hands', 'feet', 'neck', 'ring1', 'ring2'] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
 
 /** How each slot reads: its label and tooltip text. */
@@ -56,6 +60,9 @@ export const EQUIP_SLOT_INFO: Readonly<Record<EquipSlot, { readonly label: strin
   body: { label: 'Body', description: 'A coat of armor, from quilted cloth to riveted mail.' },
   hands: { label: 'Hands', description: 'Gloves or gauntlets.' },
   feet: { label: 'Feet', description: 'Boots.' },
+  neck: { label: 'Neck', description: 'An amulet or pendant on a cord or chain.' },
+  ring1: { label: 'Left ring', description: 'A ring on the left hand. Any ring fits either ring slot.' },
+  ring2: { label: 'Right ring', description: 'A ring on the right hand. Any ring fits either ring slot.' },
 };
 
 /** True if `value` is an equipment slot. */
@@ -63,7 +70,7 @@ export function isEquipSlot(value: unknown): value is EquipSlot {
   return typeof value === 'string' && (EQUIP_SLOTS as readonly string[]).includes(value);
 }
 
-/** Every base gear type. Each item with `gear` names one; the type says the slot it is worn in. */
+/** Every base gear type. Each item with `gear` names one; the type says the slots it fits. */
 export const GEAR_TYPES = [
   'sword',
   'dagger',
@@ -77,14 +84,17 @@ export const GEAR_TYPES = [
   'heavyArmor',
   'gloves',
   'boots',
+  'amulet',
+  'ring',
 ] as const;
 export type GearType = (typeof GEAR_TYPES)[number];
 
-/** What a base gear type is: its name, and the slot and item category it belongs to. */
+/** What a base gear type is: its name, the slots it fits and the item category it belongs to. */
 export interface GearTypeInfo {
   readonly label: string;
-  readonly slot: EquipSlot;
-  readonly category: 'weapon' | 'armor';
+  /** The slots it can be worn in; most types fit one, a ring fits either ring slot. Never empty. */
+  readonly slots: readonly EquipSlot[];
+  readonly category: 'weapon' | 'armor' | 'jewelry';
   readonly description: string;
   /**
    * The attribute a weapon type's damage scales with (ETH-082: swords and daggers Finesse, axes
@@ -95,28 +105,35 @@ export interface GearTypeInfo {
 }
 
 export const GEAR_TYPE_INFO: Readonly<Record<GearType, GearTypeInfo>> = {
-  sword: { label: 'Sword', slot: 'mainHand', category: 'weapon', description: 'A straight blade, quick and accurate.' },
-  dagger: { label: 'Dagger', slot: 'mainHand', category: 'weapon', description: 'A short blade: light and precise, never heavy-hitting.' },
-  axe: { label: 'Axe', slot: 'mainHand', category: 'weapon', description: 'A hafted blade that hits hard.' },
-  mace: { label: 'Mace', slot: 'mainHand', category: 'weapon', description: 'A club or flanged head that crushes rather than cuts.' },
-  staff: { label: 'Staff', slot: 'mainHand', category: 'weapon', description: 'A long shaft of wood, good for keeping foes at bay.' },
-  shield: { label: 'Shield', slot: 'offHand', category: 'armor', description: 'Held in the off hand to turn blows aside.' },
-  helm: { label: 'Helm', slot: 'head', category: 'armor', description: 'Protection for the head.' },
-  lightArmor: { label: 'Light armor', slot: 'body', category: 'armor', description: 'Cloth or leather: a little protection, no hindrance.' },
-  mediumArmor: { label: 'Medium armor', slot: 'body', category: 'armor', description: 'Mail or scale: real protection, a little less nimble.' },
-  heavyArmor: { label: 'Heavy armor', slot: 'body', category: 'armor', description: 'Plate: the most protection, at a cost in nimbleness.' },
-  gloves: { label: 'Gloves', slot: 'hands', category: 'armor', description: 'A better grip, and some protection for the hands.' },
-  boots: { label: 'Boots', slot: 'feet', category: 'armor', description: 'Sure footing.' },
+  sword: { label: 'Sword', slots: ['mainHand'], category: 'weapon', description: 'A straight blade, quick and accurate.' },
+  dagger: { label: 'Dagger', slots: ['mainHand'], category: 'weapon', description: 'A short blade: light and precise, never heavy-hitting.' },
+  axe: { label: 'Axe', slots: ['mainHand'], category: 'weapon', description: 'A hafted blade that hits hard.' },
+  mace: { label: 'Mace', slots: ['mainHand'], category: 'weapon', description: 'A club or flanged head that crushes rather than cuts.' },
+  staff: { label: 'Staff', slots: ['mainHand'], category: 'weapon', description: 'A long shaft of wood, good for keeping foes at bay.' },
+  shield: { label: 'Shield', slots: ['offHand'], category: 'armor', description: 'Held in the off hand to turn blows aside.' },
+  helm: { label: 'Helm', slots: ['head'], category: 'armor', description: 'Protection for the head.' },
+  lightArmor: { label: 'Light armor', slots: ['body'], category: 'armor', description: 'Cloth or leather: a little protection, no hindrance.' },
+  mediumArmor: { label: 'Medium armor', slots: ['body'], category: 'armor', description: 'Mail or scale: real protection, a little less nimble.' },
+  heavyArmor: { label: 'Heavy armor', slots: ['body'], category: 'armor', description: 'Plate: the most protection, at a cost in nimbleness.' },
+  gloves: { label: 'Gloves', slots: ['hands'], category: 'armor', description: 'A better grip, and some protection for the hands.' },
+  boots: { label: 'Boots', slots: ['feet'], category: 'armor', description: 'Sure footing.' },
+  amulet: { label: 'Amulet', slots: ['neck'], category: 'jewelry', description: 'Worn at the throat. Small, but often more than it seems.' },
+  ring: {
+    label: 'Ring',
+    slots: ['ring1', 'ring2'],
+    category: 'jewelry',
+    description: 'Worn on a finger; an adventurer can wear two, one on each hand.',
+  },
 };
 
-/** What makes an item wearable: its base type, which names its slot. */
+/** What makes an item wearable: its base type, which names the slots it fits. */
 export interface ItemGear {
   readonly type: GearType;
 }
 
-/** The slot an item is worn in, or `null` if it can't be worn. */
-export function gearSlot(def: ItemDef): EquipSlot | null {
-  return def.gear === undefined ? null : GEAR_TYPE_INFO[def.gear.type].slot;
+/** The slots an item can be worn in, in `EQUIP_SLOTS` order; empty if it can't be worn. */
+export function gearSlots(def: ItemDef): readonly EquipSlot[] {
+  return def.gear === undefined ? [] : GEAR_TYPE_INFO[def.gear.type].slots;
 }
 
 /** Where and how often the loot step places an item. */
@@ -188,8 +205,8 @@ export const ITEM_KIND: ContentKind<ItemDef> = {
       message: 'a loot pile must fit in one stack',
       path: ['loot', 'qty', 'max'],
     })
-    .refine((d) => (d.category === 'weapon' || d.category === 'armor') === (d.gear !== undefined), {
-      message: 'weapons and armor need a gear type, and nothing else may have one',
+    .refine((d) => (d.category === 'weapon' || d.category === 'armor' || d.category === 'jewelry') === (d.gear !== undefined), {
+      message: 'weapons, armor and jewelry need a gear type, and nothing else may have one',
       path: ['gear'],
     })
     .refine((d) => d.gear === undefined || GEAR_TYPE_INFO[d.gear.type].category === d.category, {
@@ -476,6 +493,91 @@ export const ITEM_SOFT_BOOTS = defineItem({
   gear: { type: 'boots' },
   bundle: { modifiers: [{ stat: 'evasion', op: 'add', value: 1 }] },
   loot: { weight: 0.5 },
+});
+
+export const ITEM_COPPER_BAND = defineItem({
+  id: 'item.copper_band',
+  name: 'Copper band',
+  description: 'A plain ring of hammered copper that leaves a green mark on the finger. Its wearer shrugs off a little more.',
+  tags: [],
+  glyph: { ch: '=', color: '#c87f4a' },
+  category: 'jewelry',
+  weight: 0,
+  value: 20,
+  gear: { type: 'ring' },
+  bundle: { modifiers: [{ stat: 'hp', op: 'add', value: 3 }] },
+  loot: { weight: 0.5 },
+});
+
+export const ITEM_GARNET_SIGNET = defineItem({
+  id: 'item.garnet_signet',
+  name: 'Garnet signet',
+  description: 'A heavy gold signet set with a dark red stone, its crest long worn smooth. Its wearer stands firmer and hits harder.',
+  tags: [],
+  glyph: { ch: '=', color: '#c2414b' },
+  category: 'jewelry',
+  weight: 0,
+  value: 45,
+  gear: { type: 'ring' },
+  bundle: {
+    modifiers: [
+      { stat: 'hp', op: 'add', value: 3 },
+      { stat: 'damage', op: 'add', value: 1 },
+    ],
+  },
+  loot: { weight: 0.5, minDepth: 3 },
+});
+
+export const ITEM_OWL_EYE_RING = defineItem({
+  id: 'item.owl_eye_ring',
+  name: 'Owl-eye ring',
+  description: 'A silver ring set with a round amber stone flecked like an owl’s eye. Shadows seem shallower to its wearer.',
+  tags: [],
+  glyph: { ch: '=', color: '#d9a441' },
+  category: 'jewelry',
+  weight: 0,
+  value: 50,
+  gear: { type: 'ring' },
+  bundle: {
+    modifiers: [
+      { stat: 'sight', op: 'add', value: 1 },
+      { stat: 'accuracy', op: 'add', value: 1 },
+    ],
+  },
+  loot: { weight: 0.5, minDepth: 4 },
+});
+
+export const ITEM_KNOTWORK_PENDANT = defineItem({
+  id: 'item.knotwork_pendant',
+  name: 'Knotwork pendant',
+  description: 'A bronze disc worked in an endless knot, hung on a leather cord. Its wearer seems always half a step aside.',
+  tags: [],
+  glyph: { ch: '"', color: '#b08d57' },
+  category: 'jewelry',
+  weight: 0,
+  value: 30,
+  gear: { type: 'amulet' },
+  bundle: { modifiers: [{ stat: 'evasion', op: 'add', value: 1 }] },
+  loot: { weight: 0.5, minDepth: 2 },
+});
+
+export const ITEM_HEARTHSTONE_AMULET = defineItem({
+  id: 'item.hearthstone_amulet',
+  name: 'Hearthstone amulet',
+  description: 'A smooth grey stone, warm to the touch even underground, caged in iron wire. It steadies the heart and the mind.',
+  tags: [],
+  glyph: { ch: '"', color: '#e08a5a', bold: true },
+  category: 'jewelry',
+  weight: 0,
+  value: 60,
+  gear: { type: 'amulet' },
+  bundle: {
+    modifiers: [
+      { stat: 'hp', op: 'add', value: 4 },
+      { stat: 'mp', op: 'add', value: 2 },
+    ],
+  },
+  loot: { weight: 0.5, minDepth: 4 },
 });
 
 export const ITEM_GOLD = defineItem({
