@@ -7,7 +7,7 @@
  * The `stats.attributes` provider turns attributes into stat parts through `ATTRIBUTE_FORMULAS`,
  * the one table of derivation constants: tune balance there.
  */
-import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, RACES } from '../../content';
+import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, RACES, UNARMED_ATTRIBUTE } from '../../content';
 import type { AttributeId } from '../../content';
 import type { Entity } from '../state';
 import { growthOf, levelOf } from './leveling';
@@ -30,6 +30,14 @@ export interface AttributeFormula {
 export const ATTRIBUTE_NEUTRAL = 10;
 
 /**
+ * Damage from an attribute: half a point per point above 10, from `UNARMED_ATTRIBUTE` (Brawn).
+ * A wielded weapon whose type `scalesWith` another attribute swaps that attribute in (ETH-082):
+ * the weapon scaling item property (`src/sim/items/scaling.ts`) takes this row back off and adds
+ * the same formula for the weapon's attribute, so stats, tooltips and gear comparison agree.
+ */
+export const DAMAGE_FORMULA: AttributeFormula = { stat: 'damage', attribute: UNARMED_ATTRIBUTE, perPoint: 0.5, from: ATTRIBUTE_NEUTRAL };
+
+/**
  * Every stat each attribute derives, in tooltip order. A starting Human Vanguard (Brawn 12,
  * Finesse 10, Wits 5, Grit 14) gets 20 max HP, 5 MP, 0 accuracy and evasion, 1 damage, 24 carry.
  */
@@ -39,7 +47,7 @@ export const ATTRIBUTE_FORMULAS: readonly AttributeFormula[] = [
   { stat: 'mp', attribute: 'wits', perPoint: 1, from: 0 },
   { stat: 'accuracy', attribute: 'finesse', perPoint: 1, from: ATTRIBUTE_NEUTRAL },
   { stat: 'evasion', attribute: 'finesse', perPoint: 1, from: ATTRIBUTE_NEUTRAL },
-  { stat: 'damage', attribute: 'brawn', perPoint: 0.5, from: ATTRIBUTE_NEUTRAL },
+  DAMAGE_FORMULA,
   { stat: 'carry', attribute: 'brawn', perPoint: 2, from: 0 },
   // Second jobs (ETH-081): the skill chances, in percent, on top of their `STAT_INFO` bases. The
   // same Vanguard has Identify 15%, Trap spotting 25%, Status resistance 28%, Disarm 50%,

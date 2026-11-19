@@ -48,6 +48,11 @@
   color: var(--text-muted);
 }
 
+.note {
+  margin: 0;
+  color: var(--text);
+}
+
 .fields {
   display: flex;
   flex-wrap: wrap;

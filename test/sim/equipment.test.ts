@@ -39,9 +39,16 @@ const POTION = 'item.mending_draught';
 
 const ROOM = ['#########', '#@......#', '#.......#', '#########'];
 
+/**
+ * A run with one Human Vanguard (Brawn 12), trained up to Finesse 12 so a sword's scaling
+ * (ETH-082) changes nothing and these tests weigh the gear's own stats; `weaponScaling.test.ts`
+ * covers scaling.
+ */
 function setup(floorText = ROOM, seed = 1): { state: RunState; hero: ActorEntity } {
   const state = createRun({ party: [HERO], depth: 1, floorText, monsters: false }, seed);
-  return { state, hero: getEntity(state, state.party[0] as EntityId) as ActorEntity };
+  const hero = getEntity(state, state.party[0] as EntityId) as ActorEntity;
+  if (hero.stats !== undefined) hero.stats.attributes = { finesse: 2 };
+  return { state, hero };
 }
 
 const act = (actor: EntityId, action: ActionRequest): Command => ({ type: 'playerAction', actor, action });
@@ -76,8 +83,8 @@ describe('gear content', () => {
     expect(GEAR_TYPE_INFO.ring.slots).toEqual(['ring1', 'ring2']);
     expect(gear.some((d) => d.gear?.type === 'ring') && gear.some((d) => d.gear?.type === 'amulet')).toBe(true);
     for (const def of ITEMS.all().filter((d) => d.gear === undefined)) expect(gearSlots(def)).toEqual([]);
-    // ETH-082 fills `scalesWith`; until then no type claims one.
-    expect(Object.values(GEAR_TYPE_INFO).every((t) => t.scalesWith === undefined)).toBe(true);
+    // Every weapon type names the attribute its damage scales with (ETH-082), and nothing else does.
+    for (const t of Object.values(GEAR_TYPE_INFO)) expect(t.scalesWith !== undefined, t.label).toBe(t.category === 'weapon');
   });
 
   it('rejects gear that is malformed', () => {

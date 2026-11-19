@@ -15,9 +15,11 @@
  * - A gear type may fit several slots (a ring fits either ring slot, ETH-111): `slotFor` picks
  *   where a piece goes when put on, `upgradeSlot` where it would be an upgrade.
  *
- * Enchantment (ETH-044), affixes (ETH-045) and weapon scaling (ETH-082) are item properties
- * (`properties.ts`) with `bundles`, so stats, triggers and the upgrade comparison all pick them up
- * through `gearBundles` with no change here.
+ * Enchantment (ETH-044), affixes (ETH-045) and weapon scaling (ETH-082, a derived property in
+ * `scaling.ts`) are item properties (`properties.ts`) with `bundles`, so stats, triggers and the
+ * upgrade comparison all pick them up through `gearBundles` with no change here. Since weapon
+ * scaling depends on the wielder, `compareGear` weighs a sword higher for a deft wielder than for
+ * a strong one.
  */
 import { EQUIP_SLOTS, gearSlots } from '../../content';
 import type { Bundle, EquipSlot, Modifier } from '../../content';
@@ -27,7 +29,8 @@ import { isStatId, STAT_INFO } from '../stats/statIds';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
 import { inventoryOf } from './inventory';
-import { propertyBundles } from './properties';
+import { propertyBundleParts } from './properties';
+import type { ItemBundle } from './properties';
 
 /** One worn item and its slot. */
 export interface WornItem {
@@ -59,17 +62,25 @@ export function wornItems(entity: Entity): WornItem[] {
  * depends on the wearer (ETH-082 scaling) adds nothing.
  */
 export function gearBundles(state: RunState, wearer: Entity | undefined, item: ItemInstance): Bundle[] {
-  const bundle = itemDef(item).bundle;
-  const own = bundle === undefined ? [] : [bundle];
-  return [...own, ...propertyBundles(wearer === undefined ? { state, item } : { state, item, wearer })];
+  return gearBundleParts(state, wearer, item).map((p) => p.bundle);
 }
 
-/** Every worn item's bundles, credited to the item's def id, in slot order. */
+/**
+ * `gearBundles` with how `getStat` credits each one: a property's bundle may name another source
+ * and a label (ETH-082's weapon scaling credits the wielder's attributes).
+ */
+export function gearBundleParts(state: RunState, wearer: Entity | undefined, item: ItemInstance): ItemBundle[] {
+  const bundle = itemDef(item).bundle;
+  const own: ItemBundle[] = bundle === undefined ? [] : [{ bundle }];
+  return [...own, ...propertyBundleParts(wearer === undefined ? { state, item } : { state, item, wearer })];
+}
+
+/** Every worn item's bundles, credited to the item's def id (or the source a property names), in slot order. */
 export const SOURCE_EQUIPPED: BundleSource = {
   id: 'items.equipped',
   visit(state, entity, visit) {
     for (const { item } of wornItems(entity)) {
-      for (const bundle of gearBundles(state, entity, item)) visit(bundle, item.def, 1);
+      for (const part of gearBundleParts(state, entity, item)) visit(part.bundle, part.source ?? item.def, 1, part.label);
     }
   },
 };
@@ -182,9 +193,23 @@ export function bestUpgrade(state: RunState, entity: Entity): GearUpgrade | null
   return null;
 }
 
-/** "Damage +2, Accuracy +1": an item's stat modifiers (as `wearer` would wear it) in words, or `null` if it has none. */
+/**
+ * "Damage +2, Accuracy +1": an item's stat modifiers (as `wearer` would wear it) in words, or
+ * `null` if it has none. Modifiers of one stat and op are summed into one (weapon scaling's
+ * parts net into the damage, ETH-082), and one that sums to nothing is left out.
+ */
 export function gearStatsText(state: RunState, wearer: Entity | undefined, item: ItemInstance): string | null {
-  return bundleStatsText(gearBundles(state, wearer, item));
+  const totals = new Map<string, Pick<Modifier, 'stat' | 'op' | 'value'>>();
+  for (const bundle of gearBundles(state, wearer, item)) {
+    for (const m of bundle.modifiers ?? []) {
+      const key = `${m.op}:${m.stat}`;
+      const before = totals.get(key);
+      const value = before === undefined ? m.value : m.op === 'mul' ? before.value * m.value : before.value + m.value;
+      totals.set(key, { stat: m.stat, op: m.op, value });
+    }
+  }
+  const parts = [...totals.values()].filter((m) => m.value !== (m.op === 'mul' ? 1 : 0)).map(modifierText);
+  return parts.length === 0 ? null : parts.join(', ');
 }
 
 /** "Damage +2, Accuracy +1": the stat modifiers of `bundles` in words, or `null` if there are none. The Codex uses it on a def's bundle. */

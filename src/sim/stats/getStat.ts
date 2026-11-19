@@ -73,9 +73,9 @@ export function forEachBundle(state: RunState, entity: Entity, visit: BundleVisi
 
 function collect(state: RunState, entity: Entity, stat: StatId, sink: StatSink): void {
   for (const provider of STAT_PROVIDERS) provider.contribute(state, entity, stat, sink);
-  forEachBundle(state, entity, (bundle, sourceId, potency) => {
+  forEachBundle(state, entity, (bundle, sourceId, potency, label) => {
     for (const m of bundle.modifiers ?? []) {
-      if (m.stat === stat) sink(m.op, scaleModifier(m.op, m.value, potency), sourceId);
+      if (m.stat === stat) sink(m.op, scaleModifier(m.op, m.value, potency), sourceId, label);
     }
   });
 }

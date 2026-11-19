@@ -5,6 +5,7 @@
  *
  * - `instance.ts`: `ItemInstance`, the plain-data item, and stacking.
  * - `properties.ts`: item properties (ETH-118), the per-instance fields and their kinds.
+ * - `scaling.ts`: weapon scaling (ETH-082), the derived property that swaps a weapon's attribute into damage.
  * - `name.ts`: `itemName`, an item's display name with its properties' parts.
  * - `value.ts`: `itemValue` / `unitValue`, the one scoring function, extended by `ITEM_VALUE_HOOKS`.
  * - `inventory.ts`: floor items, packs, `carryWeight`, `wantsItem` and the party's item memory.
@@ -27,13 +28,14 @@ import { registerInvariant } from '../invariants';
 import { defineChronicleKind, momentAt } from '../run/chronicle';
 import type { ChronicleRules } from '../run/chronicle';
 import { partyVisible } from '../perception';
-import type { EntityId, FloorId, RunConfig } from '../state';
+import type { Entity, EntityId, FloorId, RunConfig } from '../state';
 import { ITEMS_ACTIONS } from './actions';
 import type { ItemsRequest } from './actions';
 import { SOURCE_EQUIPPED, wornItems } from './equipment';
 import { instanceProblem, itemDef, itemWeight } from './instance';
 import { itemName } from './name';
 import { propertyProblems } from './properties';
+import { weaponScalingText } from './scaling';
 import type { InventoryPart, ItemInstance } from './instance';
 import { carryLimit, carryWeight, floorItems, inventoryOf, noticeItems } from './inventory';
 import type { KnownItems } from './inventory';
@@ -43,6 +45,7 @@ import { itemValue } from './value';
 
 export * from './instance';
 export * from './properties';
+export * from './scaling';
 export * from './name';
 export * from './equipment';
 export * from './value';
@@ -107,6 +110,8 @@ export interface ItemView {
   /** `itemValue` of the whole stack. */
   value: number;
   usable: boolean;
+  /** For a weapon, how its attribute changes this member's damage (`weaponScalingText`, ETH-082); absent when it changes nothing. */
+  scaling?: string;
 }
 
 /** One worn item, for the UI (ETH-043). */
@@ -117,6 +122,8 @@ export interface WornView {
   name: string;
   weight: number;
   value: number;
+  /** For a weapon, how its attribute changes the wearer's damage (`weaponScalingText`, ETH-082); absent when it changes nothing. */
+  scaling?: string;
 }
 
 /** A party member's pack and worn gear, for the UI. */
@@ -174,6 +181,12 @@ export function initItems(_config: RunConfig): ItemsState {
   return { gold: 0, known: {} };
 }
 
+/** `{ scaling }` for a view, when the weapon's attribute changes `member`'s damage (ETH-082). */
+function scalingField(member: Entity, item: ItemInstance): { scaling?: string } {
+  const text = weaponScalingText(member, item);
+  return text === null ? {} : { scaling: text };
+}
+
 /** The snapshot slice. Shares nothing with the state. */
 export function itemsSnapshot({ state, floor }: SnapshotCtx): ItemsSnapshot {
   const members: Record<EntityId, InventoryView> = {};
@@ -188,6 +201,7 @@ export function itemsSnapshot({ state, floor }: SnapshotCtx): ItemsSnapshot {
         weight: itemWeight(item),
         value: itemValue(state, item),
         usable: isUsable(itemDef(item)),
+        ...scalingField(e, item),
       })),
       equipped: wornItems(e).map(({ slot, item }) => ({
         slot,
@@ -195,6 +209,7 @@ export function itemsSnapshot({ state, floor }: SnapshotCtx): ItemsSnapshot {
         name: itemName(state, item, e),
         weight: itemWeight(item),
         value: itemValue(state, item),
+        ...scalingField(e, item),
       })),
       weight: carryWeight(state, e),
       carry: carryLimit(state, e),

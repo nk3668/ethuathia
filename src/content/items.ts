@@ -97,19 +97,26 @@ export interface GearTypeInfo {
   readonly category: 'weapon' | 'armor' | 'jewelry';
   readonly description: string;
   /**
-   * The attribute a weapon type's damage scales with (ETH-082: swords and daggers Finesse, axes
-   * and maces Brawn, staves Wits). Not set or applied yet: until ETH-082 a blow uses the `damage`
-   * stat alone.
+   * The attribute a weapon type's damage scales with (ETH-082): swords and daggers Finesse, axes
+   * and maces Brawn, staves Wits. Set on every weapon type and nothing else. Wielding one, the
+   * wielder's damage comes from this attribute instead of `UNARMED_ATTRIBUTE` (the weapon
+   * scaling item property, `src/sim/items/scaling.ts`).
    */
   readonly scalesWith?: AttributeId;
 }
 
+/**
+ * The attribute an attack scales with when no weapon that names one is wielded: fists, teeth and
+ * claws hit with Brawn (ETH-082). The damage row of `ATTRIBUTE_FORMULAS` uses it.
+ */
+export const UNARMED_ATTRIBUTE: AttributeId = 'brawn';
+
 export const GEAR_TYPE_INFO: Readonly<Record<GearType, GearTypeInfo>> = {
-  sword: { label: 'Sword', slots: ['mainHand'], category: 'weapon', description: 'A straight blade, quick and accurate.' },
-  dagger: { label: 'Dagger', slots: ['mainHand'], category: 'weapon', description: 'A short blade: light and precise, never heavy-hitting.' },
-  axe: { label: 'Axe', slots: ['mainHand'], category: 'weapon', description: 'A hafted blade that hits hard.' },
-  mace: { label: 'Mace', slots: ['mainHand'], category: 'weapon', description: 'A club or flanged head that crushes rather than cuts.' },
-  staff: { label: 'Staff', slots: ['mainHand'], category: 'weapon', description: 'A long shaft of wood, good for keeping foes at bay.' },
+  sword: { label: 'Sword', slots: ['mainHand'], category: 'weapon', scalesWith: 'finesse', description: 'A straight blade, quick and accurate.' },
+  dagger: { label: 'Dagger', slots: ['mainHand'], category: 'weapon', scalesWith: 'finesse', description: 'A short blade: light and precise, never heavy-hitting.' },
+  axe: { label: 'Axe', slots: ['mainHand'], category: 'weapon', scalesWith: 'brawn', description: 'A hafted blade that hits hard.' },
+  mace: { label: 'Mace', slots: ['mainHand'], category: 'weapon', scalesWith: 'brawn', description: 'A club or flanged head that crushes rather than cuts.' },
+  staff: { label: 'Staff', slots: ['mainHand'], category: 'weapon', scalesWith: 'wits', description: 'A long shaft of wood, good for keeping foes at bay.' },
   shield: { label: 'Shield', slots: ['offHand'], category: 'armor', description: 'Held in the off hand to turn blows aside.' },
   helm: { label: 'Helm', slots: ['head'], category: 'armor', description: 'Protection for the head.' },
   lightArmor: { label: 'Light armor', slots: ['body'], category: 'armor', description: 'Cloth or leather: a little protection, no hindrance.' },

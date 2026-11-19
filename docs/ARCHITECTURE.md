@@ -759,8 +759,8 @@ Content in `src/content/items.ts`, sim in `src/sim/items/equipment.ts` and `acti
   `gear: { type }`, and nothing else may. `GEAR_TYPE_INFO[type]` = `{ label, slots, category,
   description, scalesWith? }` (sword, dagger, axe, mace, staff; shield, helm, light/medium/heavy
   armor, gloves, boots; amulet; ring). `slots` lists every slot the type fits: one for most, both
-  ring slots for `ring` (`gearSlots(def)`, empty for non-gear). `scalesWith` (an `AttributeId`) is declared for ETH-082 and not set or
-  read yet. Gear never stacks and has no `effects`. Its **base stats are `bundle.modifiers`**.
+  ring slots for `ring` (`gearSlots(def)`, empty for non-gear). `scalesWith` (an `AttributeId`) is set on every weapon type
+  and nothing else (ETH-082, "Weapon scaling" in "Item properties (ETH-118)"). Gear never stacks and has no `effects`. Its **base stats are `bundle.modifiers`**.
 - **Worn items** sit in `inventory.equipped: Partial<Record<EquipSlot, ItemInstance>>` (qty 1; the
   field is left out while nothing is worn). They are not pack entries and don't count in
   `carryWeight` (Carry limits the pack; counting worn armor crowded out potions in the sim
@@ -846,10 +846,29 @@ per-instance item data adds an `ItemPropertyKind`, not its own edits to `gearBun
   equip like any field. ETH-069 sets it on heirlooms, ETH-109 uses `note`.
 - **State version:** a new optional field changes no existing save, so adding a kind needs no
   `STATE_VERSION` bump unless it also changes existing data.
+- **Derived properties** (`ItemDerivedProperty = { id, bundles(ctx) -> ItemBundle[] }`,
+  `ITEM_DERIVED_PROPERTIES`): own no field, so they never touch stacking, value, naming or
+  validation; their bundles follow the field kinds'. An `ItemBundle` is `{ bundle, source?, label? }`:
+  `getStat` credits it to `source` (default the item's def) under `label` (default the source's
+  name). `gearBundleParts` returns the credited form, `gearBundles` the bare bundles, and
+  `BundleVisitor` takes an optional `label` as its fourth argument.
+- **Weapon scaling (ETH-082, `scaling.ts`, `prop.weapon_scaling`):** a weapon's damage uses its
+  type's `scalesWith` (sword, dagger Finesse; axe, mace Brawn; staff Wits) instead of
+  `UNARMED_ATTRIBUTE` (Brawn, content), which the attribute provider's `DAMAGE_FORMULA` row
+  (`(attr - 10) x 0.5`) uses. For a wearer with attributes and a weapon whose attribute isn't
+  Brawn, it adds two bundles: `+formula(weapon attribute)` credited to that attribute ("Finesse 14
+  (Arming sword)") and `-formula(Brawn)` credited to Brawn ("Brawn 12 (unused with Arming
+  sword)"). So `getStat` parts show the breakdown, the party card's attribute chips sum their
+  parts per stat (Brawn nets to nothing), and `compareGear` weighs the weapon by the difference the
+  wielder's attributes make (still Pareto only; ETH-112's weighted score is tabled).
+  `gearStatsText` sums modifiers per stat and op. `ItemView.scaling` / `WornView.scaling` carry
+  `weaponScalingText` ("Damage scales with Finesse 14 instead of Brawn 12: +1 damage"), shown as
+  the item tooltip's `note`; the Codex item card has a "Scales with" field. Spells (ETH-037)
+  should scale with Wits through the same `DAMAGE_FORMULA` when they exist.
 - **Planned kinds:** ETH-044 `enchant` (bundle scaled by the number, value up), `blessing`
   (`blessed` / `cursed`; a cursed item refuses `unequip` in `validate`), `identified` (drives
   `known`); ETH-045 `affixes` (a bundle and a prefix or suffix each; artifacts are fixed affixes);
-  ETH-082 scaling (a derived kind that reads `ctx.wearer`); ETH-096 `charges { n, max }`.
+  ETH-096 `charges { n, max }`.
 
 ### Content kinds
 

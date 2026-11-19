@@ -54,6 +54,7 @@ export {
   ATTRIBUTE_FORMULAS,
   ATTRIBUTE_NEUTRAL,
   attributeValue,
+  DAMAGE_FORMULA,
   formulasFor,
   getAttribute,
   getAttributes,
