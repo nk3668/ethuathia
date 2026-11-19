@@ -2,7 +2,7 @@
 id: ETH-078
 title: Remove the unused empty texts from SidePanel TAB_INFO
 type: chore
-status: pending-review
+status: done
 priority: P3
 milestone: M1
 epic: ui-shell
@@ -25,3 +25,4 @@ Dead code left behind by ETH-048. Follow-up.
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-19: Implemented by Gemini; removed unused `empty` entries for town, codex and options in `SidePanel` `TAB_INFO`; marked pending-review (PR opened, not merged).
+- 2026-11-19: Reviewed by Claude and merged as PR #69. Done.
