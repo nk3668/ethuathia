@@ -301,6 +301,7 @@ export const MONSTER_GLOAM_RAT = defineMonster({
   description:
     'A lean grey rat that lives where the lamplight gives out. It nips and darts away again, and bolts for good as ' +
     'soon as it is badly hurt.',
+  hint: 'Scratching claws at the edge of the lantern’s circle, quick to bite and quicker to bolt.',
   tags: ['beast'],
   glyph: { ch: 'r', color: '#b8a48c' },
   stats: { hp: 3, damage: 0, accuracy: 0, evasion: 1, armor: 0, speed: 110 },
@@ -316,6 +317,7 @@ export const MONSTER_MOSSLING = defineMonster({
   description:
     'A knee-high creature of the damp tunnels with a beard of living moss. Mosslings go about in crowds and ' +
     'think nothing of standing on each other’s feet, so several can share one spot.',
+  hint: 'Damp, knee-high folk of the upper tunnels that crowd three deep on a single stone.',
   tags: ['small_folk'],
   glyph: { ch: 'g', color: '#7fae5a' },
   stats: { hp: 4, damage: 0, accuracy: 0, evasion: 0, armor: 0, speed: 100 },
@@ -332,6 +334,7 @@ export const MONSTER_MOSS_TENDER = defineMonster({
   description:
     'An old mossling whose beard has grown down to its toes. It keeps to the back of a crowd of its kin, packing ' +
     'their cuts with moss and croaking them on.',
+  hint: 'A hoarse croak from behind the mob, binding its kin’s wounds with wet green moss.',
   tags: ['small_folk'],
   glyph: { ch: 'h', color: '#a8c76a' },
   stats: { hp: 4, damage: 0, accuracy: 0, evasion: 1, armor: 0, speed: 100 },
@@ -350,6 +353,7 @@ export const MONSTER_MIRE_TOAD = defineMonster({
   description:
     'A slow, warty toad the size of a dog, with skin thick enough to turn a careless blow. It spits bog-slime from ' +
     'across a room and shuffles away from anyone who comes close.',
+  hint: 'A wet croak across the chamber before a gob of bog-slime splatters against a shield.',
   tags: ['beast'],
   glyph: { ch: 't', color: '#8fa34a' },
   stats: { hp: 6, damage: 0, accuracy: 0, evasion: 0, armor: 1, speed: 80 },
@@ -366,6 +370,7 @@ export const MONSTER_ASHMITE_SWARM = defineMonster({
   description:
     'A drifting cloud of biting mites the colour of old ash. Swarms flow together and through one another, ' +
     'so they can pile onto one spot.',
+  hint: 'A grey, humming haze of tiny mandibles drifting like disturbed hearth-ash.',
   tags: ['swarm'],
   glyph: { ch: 'w', color: '#c9b9a6' },
   stats: { hp: 3, damage: 0, accuracy: 0, evasion: 2, armor: 0, speed: 120 },
@@ -380,6 +385,7 @@ export const MONSTER_BONE_GNAWER = defineMonster({
   id: 'monster.bone_gnawer',
   name: 'Bone gnawer',
   description: 'A hunched scavenger with a jaw built for cracking marrow, and no patience for the living.',
+  hint: 'The dry crack of split marrow echoing from a darkened corner.',
   tags: ['beast'],
   glyph: { ch: 'G', color: '#d8cfb0' },
   stats: { hp: 8, damage: 0, accuracy: 0, evasion: 0, armor: 0, speed: 100 },
@@ -395,6 +401,7 @@ export const MONSTER_SLATE_HOUND = defineMonster({
   description:
     'A long-legged hound with a hide like split stone. It runs its prey down, snaps, and wheels away before the ' +
     'answering blow.',
+  hint: 'Stone-grey flanks loping through the mid-levels, snapping once and wheeling out of reach.',
   tags: ['beast'],
   glyph: { ch: 'd', color: '#8a9bb0' },
   stats: { hp: 7, damage: 0, accuracy: 0, evasion: 1, armor: 0, speed: 110 },
@@ -409,6 +416,7 @@ export const MONSTER_CAVERN_BRUTE = defineMonster({
   name: 'Cavern brute',
   description:
     'A heavy-shouldered hulk that lives in the deepest halls, slow to move and slow to fall, and its blows land like dropped stone.',
+  hint: 'Slow, deliberate footsteps in the deep halls that shake dust from the vaulting.',
   tags: ['giant'],
   glyph: { ch: 'B', color: '#c7714f' },
   stats: { hp: 10, damage: 1, accuracy: 0, evasion: 0, armor: 0, speed: 80 },

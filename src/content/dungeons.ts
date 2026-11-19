@@ -41,6 +41,7 @@ export const DUNGEON_OLD_DELVE = defineDungeon({
   description:
     'A worked-out mine below the town, ten levels of cut halls that something has moved back into. ' +
     'Every new company starts here.',
+  hint: 'Ten levels of abandoned workings directly beneath the town.',
   tags: ['dungeon'],
   depth: 10,
   floorType: 'floor.halls',

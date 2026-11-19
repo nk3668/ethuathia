@@ -104,9 +104,9 @@ describe('MapCanvas', () => {
     expect(tooltip.textContent).toBe('Oren (party 2)FloorIn view');
     expect(canvas().getAttribute('aria-describedby')).toBe(tooltip.id);
 
-    // A feature or monster is also explained from its Codex entry (ETH-065).
+    // A feature or monster is also explained from its Codex entry (ETH-065; riddle hint until discovered, ETH-091).
     fireEvent.pointerMove(canvas(), point(4, 1));
-    expect(screen.getByRole('tooltip').textContent).toBe(`Door (closed)FloorIn view${FEATURE_DOOR.description}`);
+    expect(screen.getByRole('tooltip').textContent).toBe(`Door (closed)FloorIn view${FEATURE_DOOR.hint}`);
     fireEvent.pointerMove(canvas(), point(8, 2));
     expect(screen.getByRole('tooltip').textContent).toBe('Unexplored');
 

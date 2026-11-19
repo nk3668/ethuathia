@@ -6,6 +6,7 @@ import {
   CLASS_KIND,
   CLASSES,
   checkContent,
+  checkDefHints,
   checkKinds,
   ContentError,
   CONTENT_KINDS,
@@ -14,6 +15,7 @@ import {
   FLOOR_TYPE_KIND,
   findDef,
   findGlyph,
+  HINT_REQUIRED_KINDS,
   RACE_KIND,
   RACES,
   TERRAIN,
@@ -50,13 +52,19 @@ describe('shipped content', () => {
     expect(RACES.all().map((d) => d.id)).toEqual(['race.human']);
   });
 
-  it('gives every def a name and Codex description', () => {
+  it('gives every def a name, Codex description and (for discoverable kinds) a riddle hint', () => {
     for (const kind of CONTENT_KINDS) {
       for (const def of kind.registry.all()) {
         expect(def.name.trim(), def.id).not.toBe('');
         expect(def.description.trim().length, def.id).toBeGreaterThan(20);
+        if (HINT_REQUIRED_KINDS.has(kind.registry.kind)) {
+          expect(def.hint?.trim().length ?? 0, `${def.id} hint`).toBeGreaterThan(10);
+        }
       }
     }
+    expect(checkDefHints([withDefs(CLASS_KIND, [vanguard])])).toEqual([
+      'class "class.test": hint: must not be empty',
+    ]);
   });
 });
 
