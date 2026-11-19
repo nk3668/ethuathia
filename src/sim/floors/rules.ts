@@ -8,7 +8,7 @@ import type { Pos } from '../../core';
 import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, RuleActionDef } from '../ai/types';
-import { actorAt } from '../entities';
+import { actorsAt } from '../entities';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { getMemory } from '../perception';
 import type { ActorEntity, FloorId, RunState } from '../state';
@@ -113,6 +113,16 @@ export function stairsGathering(state: RunState, floorId: FloorId, pos: Pos, dir
   return gathering;
 }
 
+/**
+ * True if a living party member stands at `pos` on `floorId`. Gathered members wait for the
+ * stairs only while a party member holds them: that member takes them once everyone is there.
+ * Anyone else on the stairs (a monster that never moves, ETH-113) won't, so the party walks up
+ * to it, and fights it if it is hostile, rather than waiting for it forever.
+ */
+export function partyMemberAt(state: RunState, floorId: FloorId, pos: Pos): boolean {
+  return actorsAt(state, floorId, pos).some((e) => state.party.includes(e.id));
+}
+
 /** "Mira", "Mira and Oren", "Brannoc, Mira and Oren". */
 export function names(actors: readonly ActorEntity[]): string {
   const list = actors.map(nameOf);
@@ -206,7 +216,7 @@ export const ACT_DESCEND = defineRuleAction({
         const others = gathered.length > 1 ? 'the party is gathered; ' : '';
         return { request: { id: 'stairs', dir: 'down' }, detail: `${others}taking the stairs down to floor ${depth}` };
       }
-      const occupied = actorAt(state, actor.floor, stairs) !== undefined;
+      const occupied = partyMemberAt(state, actor.floor, stairs);
       if (occupied && gathered.some((g) => g.id === actor.id)) return null;
     } else if (onStairs) {
       return { request: { id: 'stairs', dir: 'down' }, detail: `taking the stairs down to floor ${depth}` };
@@ -246,7 +256,8 @@ export const ACT_GATHER = defineRuleAction({
   name: 'Gather at the stairs',
   description:
     'Wait at the stairs until the rest of the party on this floor has caught up, so everyone takes them together. ' +
-    'At the way out of the dungeon, wait for the whole party.',
+    'At the way out of the dungeon, wait for the whole party. After a long wait with nobody in the party ' +
+    'moving, give up for a while (the log says so).',
   idle: true,
   parse: parseGather,
   resolve({ state, actor }: AiCtx, { dir }): Resolved | null {

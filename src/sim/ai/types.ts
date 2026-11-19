@@ -54,6 +54,11 @@ export interface ProgressMark {
   pos: Pos;
   /** Floor tiles of `floor` the party had seen (`explored(...).seen`). */
   seen: number;
+  /**
+   * Where every living party member stood (floor and tile), as a key: waiting counts toward
+   * being stuck only while nobody in the party moves (ETH-113).
+   */
+  party: string;
 }
 
 /** A goal given up on after stuck detection. Its rule is skipped until `until`. */
@@ -78,6 +83,11 @@ export interface AiMemory {
   last: ProgressMark | null;
   /** Decisions in a row at which `last` had not changed while working toward a goal. */
   still: number;
+  /**
+   * Decisions in a row spent waiting by an idle rule other than the plain `act.wait` (gathering
+   * at the stairs, say) while nobody in the party moved (ETH-113).
+   */
+  waited: number;
   /** The goal stuck detection last dropped, while it is still being skipped. */
   dropped: DroppedGoal | null;
   /**
@@ -99,7 +109,7 @@ export interface AiPart {
 
 /** A fresh AI part with no rules and an empty memory. */
 export function newAiPart(rules: Rule[] = []): AiPart {
-  return { rules, memory: { intent: null, last: null, still: 0, dropped: null, waitingFor: null } };
+  return { rules, memory: { intent: null, last: null, still: 0, waited: 0, dropped: null, waitingFor: null } };
 }
 
 // ---------------------------------------------------------------------------------------------

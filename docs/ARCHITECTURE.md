@@ -1361,9 +1361,11 @@ As built in `src/sim/ai/` (ETH-009):
   - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
     default) a member on the stairs takes them only when every living member on that floor is
     gathered (`gatheringAt`: within `GATHER_RADIUS`, 2, of the stairs or of a gathered member,
-    so a queue in a corridor counts), and a gathered member doesn't crowd stairs someone stands
-    on. Members on other floors are not waited for. It can't be done before the stairs down
-    are seen or on the bottom floor.
+    so a queue in a corridor counts), and a gathered member doesn't crowd stairs a party member
+    stands on (`partyMemberAt`). Anyone else on the stairs is walked up to, and fought if
+    hostile, since only a party member will ever take them and move off (ETH-113; `act.retreat_run`
+    does the same on the stairs up). Members on other floors are not waited for. It can't be
+    done before the stairs down are seen or on the bottom floor.
   - `act.gather` (`idle`) waits at the stairs meanwhile: "waiting at the stairs down for Mira".
   - `cond.floor_overstayed` holds once the party has been on the floor `floorTurnCap` game
     turns (default `FLOOR_TURN_CAP`, 1000), the safety net: the baseline then heads down
@@ -1391,6 +1393,12 @@ As built in `src/sim/ai/` (ETH-009):
   none of them changing while the last rule fired was not `idle`, that rule becomes
   `memory.dropped` and is skipped for `DROP_TURNS` (20) turns, a `stuck` event says why, and
   `cond.stuck` holds meanwhile, so the actor backs off and then waits until the goal comes back.
+  Waiting counts too (ETH-113): `memory.last.party` keys where every living party member stands,
+  and `memory.waited` counts decisions in a row that wait by an `idle` rule other than the plain
+  `act.wait` (gathering at the stairs, say) while that key is unchanged. At `WAIT_STUCK_TURNS`
+  (50) that rule is dropped the same way, with a `stuck` event ("Waited 50 turns with nobody in
+  the party moving (...)"), and the walk chooses again at once. A straggler still on the move
+  resets the count, so gathering for the party is never cut short.
 - **Speed:** a lone adventurer explores a generated Hewn Halls floor in about 200 party turns
   (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite. A
   ten-floor dungeon takes a lone adventurer about 2,400 turns and a party of four about 1,200.
