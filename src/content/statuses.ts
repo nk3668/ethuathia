@@ -73,6 +73,7 @@ export const STATUS_HASTED = defineStatus({
   id: 'status.hasted',
   name: 'Hasted',
   description: 'Moving in a blur: acts half again as often. Reapplying refreshes the duration.',
+  hint: 'A sudden quickening of breath and stride.',
   tags: ['buff'],
   bundle: { modifiers: [{ stat: 'speed', op: 'mul', value: 1.5 }] },
   stacking: 'refresh',
@@ -84,6 +85,7 @@ export const STATUS_REGENERATING = defineStatus({
   id: 'status.regenerating',
   name: 'Regenerating',
   description: 'Wounds close on their own: heals 1 HP at the start of each turn. Reapplying refreshes the duration.',
+  hint: 'Flesh that knits itself together turn by turn.',
   tags: ['buff'],
   bundle: { triggers: [{ on: 'trigger.turn_start', effects: [{ kind: 'heal', amount: 1 }] }] },
   stacking: 'refresh',
@@ -95,6 +97,7 @@ export const STATUS_POISONED = defineStatus({
   id: 'status.poisoned',
   name: 'Poisoned',
   description: 'Venom in the blood: loses 1 HP at the start of each turn. Each new dose stacks, up to 3.',
+  hint: 'A burning venom that saps strength with every heartbeat.',
   tags: ['debuff'],
   bundle: { triggers: [{ on: 'trigger.turn_start', effects: [{ kind: 'damage', amount: 1 }] }] },
   stacking: 'stack',
@@ -108,6 +111,7 @@ export const STATUS_KEEN_EYED = defineStatus({
   id: 'status.keen_eyed',
   name: 'Keen-eyed',
   description: 'The dark seems thinner: sees 2 tiles further. Reapplying refreshes the duration.',
+  hint: 'Eyes that pierce a few steps deeper into the gloom.',
   tags: ['buff'],
   bundle: { modifiers: [{ stat: 'sight', op: 'add', value: 2 }] },
   stacking: 'refresh',
@@ -120,6 +124,7 @@ export const STATUS_QUEASY = defineStatus({
   id: 'status.queasy',
   name: 'Queasy',
   description: 'A sour, rolling stomach: acts a little more slowly (speed ×0.85). Reapplying refreshes the duration.',
+  hint: 'A turning stomach from foul water that slows the step.',
   tags: ['debuff'],
   bundle: { modifiers: [{ stat: 'speed', op: 'mul', value: 0.85 }] },
   stacking: 'refresh',
@@ -131,6 +136,7 @@ export const STATUS_DAZZLED = defineStatus({
   id: 'status.dazzled',
   name: 'Dazzled',
   description: 'Spots before the eyes: sees 3 tiles less far. More of it lasts longer.',
+  hint: 'Dancing spots that draw the darkness closer around the lantern.',
   tags: ['debuff'],
   bundle: { modifiers: [{ stat: 'sight', op: 'add', value: -3 }] },
   stacking: 'extend',
@@ -144,6 +150,7 @@ export const STATUS_EMBOLDENED = defineStatus({
   description:
     'Spurred on by a companion: +1 accuracy and +1 damage. Monsters that tend their kin hand it out in a fight. ' +
     'Reapplying refreshes the duration.',
+  hint: 'A fierce war-cry or chant that steadies the hand in battle.',
   tags: ['buff'],
   bundle: {
     modifiers: [

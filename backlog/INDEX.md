@@ -113,7 +113,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-085](town-meta/ETH-085-depth-weighted-renown.md) | Depth-weighted Renown rewards | town-meta | M2 | P2 | ready | S |
 | [ETH-086](town-meta/ETH-086-foundations-and-tactics-trees.md) | Split upgrade trees into permanent Foundations and free Tactics | town-meta | M2 | P2 | ready | M |
 | [ETH-087](characters/ETH-087-class-mastery-levels.md) | Class Mastery: a shared level per class that earns tree points | characters | M2 | P2 | idea | M |
-| [ETH-091](codex-tooltips/ETH-091-codex-hints-kill-tiers.md) | Codex hints for undiscovered entries and kill-count tiers | codex-tooltips | M2 | P2 | ready | M |
+| [ETH-091](codex-tooltips/ETH-091-codex-hints-kill-tiers.md) | Codex hints for undiscovered entries and kill-count tiers | codex-tooltips | M2 | P2 | pending-review | M |
 | [ETH-092](codex-tooltips/ETH-092-codex-two-pane-modal.md) | Codex as a wide two-pane modal | codex-tooltips | M2 | P2 | pending-review | M |
 | [ETH-093](town-meta/ETH-093-building-unlock-quests.md) | Unlock town buildings by finishing a quest for each | town-meta | M2 | P2 | idea | M |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |

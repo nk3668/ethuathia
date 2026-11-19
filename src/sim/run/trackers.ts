@@ -144,15 +144,29 @@ export function trophiesForKill(difficulty: number): number {
   return TROPHIES_PER_DIFFICULTY * Math.max(1, difficulty);
 }
 
+/** State of `KILLS_TRACKER` (`track.kills`). */
+export interface KillsTrackerState {
+  readonly kills: number;
+  readonly trophies: number;
+  /** Kills by the party per monster content id (`monster.*`), for the Codex kill-count tiers (ETH-091). */
+  readonly byMonster: Readonly<Record<string, number>>;
+}
+
 /**
  * `track.kills`: monsters the party killed and the Trophies they are worth, from the combat
  * domain's `killed` events: `trophiesForKill(threat)` per kill by a party member.
  */
-export const KILLS_TRACKER: RunTracker<{ kills: number; trophies: number }> = {
+export const KILLS_TRACKER: RunTracker<KillsTrackerState> = {
   id: 'track.kills',
-  init: () => ({ kills: 0, trophies: 0 }),
+  init: () => ({ kills: 0, trophies: 0, byMonster: {} }),
   reduce: (s, e) =>
-    e.type === 'killed' && e.byParty && e.threat > 0 ? { kills: s.kills + 1, trophies: s.trophies + trophiesForKill(e.threat) } : s,
+    e.type === 'killed' && e.byParty && e.threat > 0
+      ? {
+          kills: s.kills + 1,
+          trophies: s.trophies + trophiesForKill(e.threat),
+          byMonster: { ...s.byMonster, [e.victimDef]: (s.byMonster[e.victimDef] ?? 0) + 1 },
+        }
+      : s,
   rewards: (s) => ({ [TROPHIES]: s.trophies }),
 };
 

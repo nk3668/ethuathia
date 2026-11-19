@@ -1,15 +1,19 @@
 /**
- * `Explain` (docs/ARCHITECTURE.md §8.5): any mention of a content id, with a tooltip showing what
- * it is, rendered from the kind's Codex renderer. `ExplainCard` is the tooltip's body, also used
- * by the Codex tab and the map's tile inspector.
+ * `Explain` (docs/ARCHITECTURE.md §8.5, ETH-091): any mention of a content id, with a tooltip
+ * showing what it is, rendered from the kind's Codex renderer. Undiscovered entries show only
+ * their glyph and riddle-like hint (`def.hint`); tiered entries (monsters) reveal their fields and
+ * lore according to the player's kill count.
  */
 import type { ReactNode } from 'react';
 import type { Glyph } from '../../content';
 import { cx } from '../kit/cx';
 import { Tooltip } from '../kit';
 import styles from './Explain.module.css';
-import { codexEntry, entryGlyph } from './registry';
+import { codexEntry, entryGlyph, entryMarks } from './registry';
 import type { CodexEntry } from './registry';
+import { monsterKillCount, useDiscovered, useMonsterKills } from './useDiscovered';
+
+const DEFAULT_HINT = 'Not discovered yet.';
 
 /** An entry's glyph in its map color, or a muted `?` for an unknown one. Decorative. */
 export function GlyphMark({ glyph, className }: { glyph: Glyph | undefined | null; className?: string }) {
@@ -62,19 +66,46 @@ function EntryCard({
   note?: string | undefined;
   className?: string | undefined;
 }) {
+  const discovered = useDiscovered();
+  const kills = useMonsterKills();
   const { def, renderer } = entry;
+  const marks = entryMarks(entry, discovered);
   const group = renderer.group?.(def);
-  const rows = (renderer.fields?.(def) ?? []).filter((f) => fields === 'all' || f.key === true);
+  const glyph = entryGlyph(entry);
+  const hintText = def.hint ?? renderer.hint ?? DEFAULT_HINT;
+
+  // Undiscovered entries show only their glyph and riddle-like hint (ETH-091).
+  if (marks === null) {
+    return (
+      <div className={cx(styles.card, className)}>
+        {heading && (
+          <div className={styles.heading}>
+            <GlyphMark glyph={glyph ?? null} />
+            <span className={styles.name}>???</span>
+            <span className={styles.kind}>{group ?? renderer.registry.kind}</span>
+          </div>
+        )}
+        <p className={styles.description}>{hintText}</p>
+      </div>
+    );
+  }
+
+  const killCount = monsterKillCount(def.id, discovered, kills);
+  const loreReady = renderer.loreKills === undefined || killCount >= renderer.loreKills;
+  const bodyText = loreReady ? def.description : hintText;
+  const rows = (renderer.fields?.(def) ?? []).filter(
+    (f) => (fields === 'all' || f.key === true) && (f.minKills ?? 0) <= killCount,
+  );
   return (
     <div className={cx(styles.card, className)}>
       {heading && (
         <div className={styles.heading}>
-          <GlyphMark glyph={entryGlyph(entry)} />
+          <GlyphMark glyph={glyph} />
           <span className={styles.name}>{name ?? def.name}</span>
           <span className={styles.kind}>{group ?? renderer.registry.kind}</span>
         </div>
       )}
-      <p className={styles.description}>{def.description}</p>
+      <p className={styles.description}>{bodyText}</p>
       {rows.length > 0 && (
         <dl className={styles.fields}>
           {rows.map((f) => (

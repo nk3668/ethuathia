@@ -30,8 +30,8 @@ export { decodeSave, decodeSaveWith, encodeSave, MAX_SAVE_LENGTH, SAVE_FORMAT, S
 export type { DecodeResult, StoredSlice } from './save';
 export { defineSlice } from './slice';
 export type { ProfileSlice, SliceMigration, SliceState } from './slice';
-export { discoveriesSchema } from './slices/codex';
-export type { Codex } from './slices/codex';
+export { discoveriesSchema, mergeMonsterKills, monsterKillsSchema } from './slices/codex';
+export type { Codex, MonsterKills } from './slices/codex';
 export { HISTORY_LIMIT, recordMoments, RUN_RECORD_MOMENTS, runRecord } from './slices/history';
 export type { History, RunRecord, RunRecordContract, RunRecordMember } from './slices/history';
 export type { Upgrades } from './slices/upgrades';

@@ -2,7 +2,17 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CLASS_VANGUARD, CLASSES, CONTENT_KINDS, FEATURE_DOOR, MONSTER_GLOAM_RAT, STATUS_POISONED, TERRAIN_WALL } from '../../src/content';
+import {
+  CLASS_VANGUARD,
+  CLASSES,
+  CONTENT_KINDS,
+  FEATURE_DOOR,
+  ITEM_FLANGED_MACE,
+  ITEM_OWL_EYE_RING,
+  MONSTER_GLOAM_RAT,
+  STATUS_POISONED,
+  TERRAIN_WALL,
+} from '../../src/content';
 import { applyRunResult, newProfile } from '../../src/meta';
 import { emptyRunResult } from '../../src/sim';
 import { CodexModal, CodexPanel, CodexTab } from '../../src/ui/codex/CodexPanel';
@@ -39,9 +49,15 @@ afterEach(() => {
   delete (window as Partial<Window>).matchMedia;
 });
 
-/** Banks a run that discovered `entries`, as ETH-062 will at run end. */
-function bank(entries: Record<string, string[]>) {
-  const result = { ...emptyRunResult('retreat' as const), extras: { 'track.codex': entries } };
+/** Banks a run that discovered `entries` and optionally recorded monster `kills`. */
+function bank(entries: Record<string, string[]>, kills: Record<string, number> = {}) {
+  const result = {
+    ...emptyRunResult('retreat' as const),
+    extras: {
+      'track.codex': entries,
+      ...(Object.keys(kills).length > 0 ? { 'track.kills': { kills: 0, trophies: 0, byMonster: kills } } : {}),
+    },
+  };
   act(() => useProfileStore.setState({ profile: applyRunResult(newProfile(), result) }));
 }
 
@@ -68,12 +84,19 @@ describe('Codex renderers', () => {
 });
 
 describe('CodexPanel', () => {
-  it('shows undiscovered entries as ??? with a hint, and always-known terrain by name', () => {
+  it('shows undiscovered entries as ??? with their glyph and riddle hint, and always-known terrain by name', () => {
     render(<CodexPanel />);
     const classes = section('Classes');
     expect(within(classes).getByText('???')).toBeTruthy();
+    expect(within(classes).getByText(CLASS_VANGUARD.hint ?? '')).toBeTruthy();
     expect(within(classes).queryByText(CLASS_VANGUARD.name)).toBeNull();
     expect(within(classes).getByText('0 / 1')).toBeTruthy();
+
+    // Undiscovered entries with a glyph (such as Door or Gloam rat) show their glyph and riddle hint.
+    const features = section('Dungeon features');
+    expect(within(features).getByText(FEATURE_DOOR.glyph.ch)).toBeTruthy();
+    expect(within(features).getByText(FEATURE_DOOR.hint ?? '')).toBeTruthy();
+
     expect(within(section('Terrain')).getByText(TERRAIN_WALL.name)).toBeTruthy();
   });
 
@@ -91,6 +114,51 @@ describe('CodexPanel', () => {
     expect(within(detail).getByText(CLASS_VANGUARD.description)).toBeTruthy();
     expect(within(detail).getByText('Grit').nextSibling?.textContent).toBe(String(CLASS_VANGUARD.attributes.grit));
     expect(within(detail).getByText('Attributes').nextSibling?.textContent).toBe('BRN 11 · FIN 9 · WIT 4 · GRT 13');
+  });
+
+  it('reveals monster entries in tiers at 0 (seen), 1 (basics), 10 (full stats) and 50 (lore and drops) kills (ETH-091)', async () => {
+    const user = userEvent.setup();
+
+    // Tier 0: seen only (0 kills) — name and riddle hint shown, no stats or full lore yet.
+    bank({ [MONSTER_GLOAM_RAT.id]: ['seen'] });
+    render(<CodexPanel />);
+    await user.click(within(section('Monsters')).getByRole('button', { name: new RegExp(MONSTER_GLOAM_RAT.name) }));
+    let detail = detailPane();
+    expect(within(detail).getByText(MONSTER_GLOAM_RAT.hint ?? '')).toBeTruthy();
+    expect(within(detail).queryByText(MONSTER_GLOAM_RAT.description)).toBeNull();
+    expect(within(detail).queryByText('HP')).toBeNull();
+    expect(within(detail).getByLabelText('Encounter record').textContent).toContain('Next tier at 1 kill (basics)');
+
+    // Tier 1: 1 kill — reveals basics (Role, HP, Damage, Speed, Found on), still hides full stats and lore/drops.
+    bank({ [MONSTER_GLOAM_RAT.id]: ['seen', 'killed'] }, { [MONSTER_GLOAM_RAT.id]: 1 });
+    detail = detailPane();
+    expect(within(detail).getByText('Role').nextSibling?.textContent).toBe('Skirmisher');
+    expect(within(detail).getByText('HP').nextSibling?.textContent).toBe(String(MONSTER_GLOAM_RAT.stats.hp));
+    expect(within(detail).getByText('Damage').nextSibling?.textContent).toBe('1–3 + 0');
+    expect(within(detail).getByText('Speed').nextSibling?.textContent).toBe(String(MONSTER_GLOAM_RAT.stats.speed));
+    expect(within(detail).getByText('Found on').nextSibling?.textContent).toBe('Floors 1–4');
+    expect(within(detail).queryByText('Evasion')).toBeNull();
+    expect(within(detail).queryByText('Behavior')).toBeNull();
+    expect(within(detail).queryByText('Drops')).toBeNull();
+    expect(within(detail).queryByText(MONSTER_GLOAM_RAT.description)).toBeNull();
+    expect(within(detail).getByLabelText('Encounter record').textContent).toContain('Next tier at 10 kills (full stats)');
+
+    // Tier 2: 10 kills — reveals full stats (Accuracy, Evasion, Armor, Threat, Crowds, Behavior, Variants met), still hides lore/drops.
+    bank({ [MONSTER_GLOAM_RAT.id]: ['seen', 'killed'] }, { [MONSTER_GLOAM_RAT.id]: 10 });
+    detail = detailPane();
+    expect(within(detail).getByText('Evasion').nextSibling?.textContent).toBe(String(MONSTER_GLOAM_RAT.stats.evasion));
+    expect(within(detail).getByText('Threat').nextSibling?.textContent).toBe(String(MONSTER_GLOAM_RAT.threat));
+    expect(within(detail).getByText('Behavior')).toBeTruthy();
+    expect(within(detail).queryByText('Drops')).toBeNull();
+    expect(within(detail).queryByText(MONSTER_GLOAM_RAT.description)).toBeNull();
+    expect(within(detail).getByLabelText('Encounter record').textContent).toContain('Next tier at 50 kills (lore and drops)');
+
+    // Tier 3: 50 kills — reveals full lore description and Drops.
+    bank({ [MONSTER_GLOAM_RAT.id]: ['seen', 'killed'] }, { [MONSTER_GLOAM_RAT.id]: 50 });
+    detail = detailPane();
+    expect(within(detail).getByText(MONSTER_GLOAM_RAT.description)).toBeTruthy();
+    expect(within(detail).getByText('Drops').nextSibling?.textContent).toContain('1 Trophy on kill');
+    expect(within(detail).getByLabelText('Encounter record').textContent).toContain('All tiers unlocked');
   });
 
   it('fills in live from the running sim before the run ends, including kill and death counts', async () => {
@@ -294,8 +362,22 @@ describe('CodexModal', () => {
 });
 
 describe('Explain', () => {
-  it('names a def and explains it in a tooltip on focus, with its key fields', async () => {
+  it('shows only glyph and riddle hint for an undiscovered entry (ETH-091)', async () => {
     const user = userEvent.setup();
+    render(<Explain id={ITEM_FLANGED_MACE.id} />);
+    expect(screen.getByText(ITEM_FLANGED_MACE.name)).toBeTruthy();
+    await user.tab();
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toContain('???');
+    expect(tip.textContent).toContain(ITEM_FLANGED_MACE.glyph.ch);
+    expect(tip.textContent).toContain(ITEM_FLANGED_MACE.hint ?? '');
+    expect(tip.textContent).not.toContain(ITEM_FLANGED_MACE.description);
+    expect(tip.textContent).not.toContain('StatsDamage +3');
+  });
+
+  it('names a discovered def and explains it in a tooltip on focus, with its key fields', async () => {
+    const user = userEvent.setup();
+    bank({ [CLASS_VANGUARD.id]: ['seen'] });
     render(<Explain id={CLASS_VANGUARD.id} />);
     expect(screen.getByText(CLASS_VANGUARD.name)).toBeTruthy();
     await user.tab();
@@ -304,18 +386,20 @@ describe('Explain', () => {
     expect(tip.textContent).toContain('AttributesBRN 11 · FIN 9 · WIT 4 · GRT 13');
   });
 
-  it('shows a piece of gear’s slot, base type and stats (ETH-043)', async () => {
+  it('shows a discovered piece of gear’s slot, base type and stats (ETH-043)', async () => {
     const user = userEvent.setup();
-    render(<Explain id="item.flanged_mace" />);
+    bank({ [ITEM_FLANGED_MACE.id]: ['seen'] });
+    render(<Explain id={ITEM_FLANGED_MACE.id} />);
     await user.tab();
     const tip = await screen.findByRole('tooltip');
     expect(tip.textContent).toContain('WornMain hand · Mace');
     expect(tip.textContent).toContain('StatsDamage +3, Accuracy −1');
   });
 
-  it('shows that a ring fits either ring slot (ETH-111)', async () => {
+  it('shows that a discovered ring fits either ring slot (ETH-111)', async () => {
     const user = userEvent.setup();
-    render(<Explain id="item.owl_eye_ring" />);
+    bank({ [ITEM_OWL_EYE_RING.id]: ['seen'] });
+    render(<Explain id={ITEM_OWL_EYE_RING.id} />);
     await user.tab();
     const tip = await screen.findByRole('tooltip');
     expect(tip.textContent).toContain('WornLeft ring or Right ring · Ring');

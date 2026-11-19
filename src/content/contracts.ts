@@ -74,6 +74,7 @@ export const ITEM_EMBER_RELIQUARY = defineItem({
   description:
     'A palm-sized casket of blackened bronze, warm to the touch, with a coal-red glow behind its lattice. ' +
     'The town wants it back from the bottom of the dungeon. It is never dropped.',
+  hint: 'A coal-warm bronze casket waiting on the lowest floor.',
   tags: ['relic', 'contract'],
   glyph: { ch: '&', color: '#ffb347', bold: true },
   category: 'relic',
@@ -88,6 +89,7 @@ export const CONTRACT_RECOVER_RELIC = defineContract({
   description:
     'The Ember Reliquary lies somewhere on the bottom floor of the dungeon. Find it, carry it, and walk back out ' +
     'of the dungeon with it. If its bearer falls, the contract is no longer complete.',
+  hint: 'A guild writ to bring a lost bronze reliquary back from the bottom floor.',
   tags: ['contract'],
   objective: { kind: 'recover', item: ITEM_EMBER_RELIQUARY.id },
   reward: { renown: 100 },
