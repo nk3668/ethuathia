@@ -5,8 +5,9 @@
  * - `monsters.ts`: monster entities from their defs, `spawnMonster`, the `gen.monsters` step.
  * - `rules.ts`: the conditions and rule actions for fighting, fleeing and wandering.
  * - `death.ts`: `killActor`, `reapDead` and `isPartyWiped`.
- * - Here: the events, the `attack` action, the state and snapshot slices, the turn hooks
- *   (death sweep, sightings, recovery) and the invariants.
+ * - `roles.ts`: the conditions and rule actions behind monster roles (ETH-040).
+ * - Here: the events, the `attack`, `bolt` and `aid` actions, the state and snapshot slices, the
+ *   turn hooks (death sweep, sightings, recovery) and the invariants.
  *
  * Never import `domains.ts` or `index.ts` from this folder.
  */
@@ -21,23 +22,28 @@ import { actorsAt, getFloor } from '../entities';
 import { registerInvariant } from '../invariants';
 import { fieldOfView, sightRadius } from '../perception';
 import type { ActorEntity, EntityId, FloorId, RunConfig, RunState } from '../state';
-import { fireTrigger } from '../stats/effects';
+import type { Emit } from '../events';
+import { fireTrigger, runEffect } from '../stats/effects';
+import { applyStatus } from '../stats/statuses';
 import { statValue } from '../stats/getStat';
 import type { TriggerKindDef } from '../stats/types';
 import { actorName, killActor, reapDead } from './death';
 import { GEN_MONSTERS } from './monsters';
 import type { MonsterPart } from './monsters';
-import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, isHostile } from './rules';
+import { boltable, canSee, isAlly, rolePowers, ROLE_CONDITIONS, ROLE_RULE_ACTIONS } from './roles';
+import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, hpPercent, isHostile } from './rules';
 
 export * from './death';
 export * from './monsters';
+export * from './roles';
 export * from './rules';
 
 /** The events this domain emits (bodies, without `turn`). Each has wording in `ui/shell/logText/combat.ts`. */
 export type CombatEvent =
   /**
    * `actor` hit `target` for `damage`, leaving it at `hp` of `maxHp`. `floor` and `pos` are the
-   * target's place. The defs name both sides for the log after either has died.
+   * target's place. The defs name both sides for the log after either has died. `ranged` is set
+   * for a bolt from a distance (ETH-040).
    */
   | {
       type: 'attacked';
@@ -50,9 +56,24 @@ export type CombatEvent =
       maxHp: number;
       floor: FloorId;
       pos: Pos;
+      ranged?: boolean;
     }
-  /** `actor` swung at `target` and missed. */
-  | { type: 'missed'; actor: EntityId; actorDef: string; target: EntityId; targetDef: string }
+  /** `actor` swung at (or, `ranged`, bolted) `target` and missed. */
+  | { type: 'missed'; actor: EntityId; actorDef: string; target: EntityId; targetDef: string; ranged?: boolean }
+  /**
+   * `actor` used a support power on its ally `target` (ETH-040): `mend` heals it (a `healed`
+   * event follows), `bolster` gives it a status (a `statusApplied` follows).
+   */
+  | {
+      type: 'aided';
+      actor: EntityId;
+      actorDef: string;
+      target: EntityId;
+      targetDef: string;
+      power: AidPower;
+      floor: FloorId;
+      pos: Pos;
+    }
   /**
    * A monster (`actor`, def `def`, called `name`) died at `pos` and left the run, from `cause` (a
    * content id: the killer's def, a status, or `combat.unknown`). A party member at 0 HP falls
@@ -95,8 +116,24 @@ export interface AttackRequest {
   dir: Pos;
 }
 
+/** Attack an enemy from a distance with the actor's bolt power (casters, ETH-040). */
+export interface BoltRequest {
+  id: 'bolt';
+  target: EntityId;
+}
+
+/** A support power: `mend` heals an ally, `bolster` spurs one on. */
+export type AidPower = 'mend' | 'bolster';
+
+/** Use a support power on an ally (supports, ETH-040). */
+export interface AidRequest {
+  id: 'aid';
+  target: EntityId;
+  power: AidPower;
+}
+
 /** The action requests this domain defines. */
-export type CombatRequest = AttackRequest;
+export type CombatRequest = AttackRequest | BoltRequest | AidRequest;
 
 /** The commands this domain accepts. */
 export type CombatCommand = never;
@@ -181,37 +218,118 @@ export const COMBAT_ACTIONS: ActionRecord<CombatRequest> = {
     validate: ({ state, actor }, { dir }) => (targetAt(state, actor, dir) === undefined ? 'There is no enemy there' : null),
     execute: ({ state, actor, emit }, { dir }) => {
       const target = targetAt(state, actor, dir);
-      if (target === undefined) return;
-      const rng = new Rng(state.rng.combat);
-      const chance = hitChance(statValue(state, actor, 'accuracy'), statValue(state, target, 'evasion'));
-      if (!rng.chance(chance)) {
-        emit({ type: 'missed', actor: actor.id, actorDef: actor.def, target: target.id, targetDef: target.def });
-        return;
-      }
-      const dealt = Math.min(target.actor.hp, afterArmor(rollDamage(rng, statValue(state, actor, 'damage')), statValue(state, target, 'armor')));
-      target.actor.hp -= dealt;
+      if (target !== undefined) strike(state, actor, target, emit, false);
+    },
+  },
+  bolt: {
+    id: 'bolt',
+    name: 'Bolt',
+    description:
+      'Attack an enemy in sight from a distance, up to the attacker’s bolt range. Hits and damage are worked out ' +
+      'as for a blow; creatures in between don’t block it. Only creatures with a ranged attack (casters) can do this.',
+    tags: [],
+    cost: 100,
+    parse: (raw) => (isEntityId(raw.target) ? { id: 'bolt', target: raw.target } : 'The target must be an entity id'),
+    validate: ({ state, actor }, { target }) => {
+      const { bolt } = rolePowers(actor);
+      if (bolt === undefined) return 'Only creatures with a ranged attack can do that';
+      const t = state.entities[target];
+      if (t === undefined || !boltable(actor, t)) return 'There is no enemy to bolt there';
+      if (distance(t.pos, actor.pos) > bolt.range || !canSee(state, actor, t)) return 'That enemy is out of sight or range';
+      return null;
+    },
+    execute: ({ state, actor, emit }, { target }) => {
+      const t = state.entities[target];
+      if (t?.actor !== undefined) strike(state, actor, t as ActorEntity, emit, true);
+    },
+  },
+  aid: {
+    id: 'aid',
+    name: 'Aid',
+    description:
+      'Use a support power on an ally in sight and within reach: mend heals them, bolster spurs them on with a ' +
+      'status. Only creatures with that power (supports) can do this.',
+    tags: [],
+    cost: 100,
+    parse: (raw) => {
+      if (!isEntityId(raw.target)) return 'The target must be an entity id';
+      return raw.power === 'mend' || raw.power === 'bolster'
+        ? { id: 'aid', target: raw.target, power: raw.power }
+        : 'The power must be "mend" or "bolster"';
+    },
+    validate: ({ state, actor }, { target, power }) => {
+      const powers = rolePowers(actor);
+      const reach = power === 'mend' ? powers.mend?.range : powers.bolster?.range;
+      if (reach === undefined) return `Only creatures that can ${power} can do that`;
+      const t = state.entities[target];
+      if (t === undefined || !isAlly(actor, t)) return 'There is no ally there';
+      if (distance(t.pos, actor.pos) > reach || !canSee(state, actor, t)) return 'That ally is out of sight or reach';
+      if (power === 'mend' && hpPercent(state, t as ActorEntity) >= 100) return 'That ally isn’t hurt';
+      return null;
+    },
+    execute: ({ state, actor, emit }, { target, power }) => {
+      const t = state.entities[target];
+      if (t === undefined) return;
       emit({
-        type: 'attacked',
+        type: 'aided',
         actor: actor.id,
         actorDef: actor.def,
-        target: target.id,
-        targetDef: target.def,
-        damage: dealt,
-        hp: target.actor.hp,
-        maxHp: statValue(state, target, 'hp'),
-        floor: target.floor,
-        pos: { x: target.pos.x, y: target.pos.y },
+        target: t.id,
+        targetDef: t.def,
+        power,
+        floor: t.floor,
+        pos: { x: t.pos.x, y: t.pos.y },
       });
-      if (target.actor.hp > 0) fireTrigger(state, target, TRIGGER_STRUCK.id, emit, actor.id);
-      if (actor.actor.hp > 0) fireTrigger(state, actor, TRIGGER_HIT.id, emit, target.id);
-      const floor = actor.floor;
-      if (state.entities[target.id] !== undefined && target.actor.hp <= 0) {
-        killActor(state, target, emit, { cause: actor.def, killer: actor });
+      const { mend, bolster } = rolePowers(actor);
+      if (power === 'mend' && mend !== undefined) {
+        runEffect({ state, emit, self: actor.id, other: t.id, source: actor.def, potency: 1 }, { kind: 'heal', amount: mend.amount, to: 'other' });
+      } else if (power === 'bolster' && bolster !== undefined) {
+        applyStatus(state, t, bolster.status, bolster.turns, emit);
       }
-      reapDead(state, floor, emit);
     },
   },
 };
+
+function isEntityId(value: unknown): value is EntityId {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
+/**
+ * One blow (or, `ranged`, one bolt) from `actor` at `target`: the hit roll, damage after armor,
+ * the hit and struck triggers, and death. Draws from the combat stream: one roll to hit, one for
+ * damage when it lands.
+ */
+function strike(state: RunState, actor: ActorEntity, target: ActorEntity, emit: Emit, ranged: boolean): void {
+  const rng = new Rng(state.rng.combat);
+  const how = ranged ? { ranged: true } : {};
+  const chance = hitChance(statValue(state, actor, 'accuracy'), statValue(state, target, 'evasion'));
+  if (!rng.chance(chance)) {
+    emit({ type: 'missed', actor: actor.id, actorDef: actor.def, target: target.id, targetDef: target.def, ...how });
+    return;
+  }
+  const dealt = Math.min(target.actor.hp, afterArmor(rollDamage(rng, statValue(state, actor, 'damage')), statValue(state, target, 'armor')));
+  target.actor.hp -= dealt;
+  emit({
+    type: 'attacked',
+    actor: actor.id,
+    actorDef: actor.def,
+    target: target.id,
+    targetDef: target.def,
+    damage: dealt,
+    hp: target.actor.hp,
+    maxHp: statValue(state, target, 'hp'),
+    floor: target.floor,
+    pos: { x: target.pos.x, y: target.pos.y },
+    ...how,
+  });
+  if (target.actor.hp > 0) fireTrigger(state, target, TRIGGER_STRUCK.id, emit, actor.id);
+  if (actor.actor.hp > 0) fireTrigger(state, actor, TRIGGER_HIT.id, emit, target.id);
+  const floor = actor.floor;
+  if (state.entities[target.id] !== undefined && target.actor.hp <= 0) {
+    killActor(state, target, emit, { cause: actor.def, killer: actor });
+  }
+  reapDead(state, floor, emit);
+}
 
 export const COMBAT_COMMANDS: CommandRecord<CombatCommand> = {};
 
@@ -312,8 +430,8 @@ export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
   commands: COMBAT_COMMANDS,
   init: initCombat,
   snapshot: combatSnapshot,
-  conditions: COMBAT_CONDITIONS,
-  ruleActions: COMBAT_RULE_ACTIONS,
+  conditions: [...COMBAT_CONDITIONS, ...ROLE_CONDITIONS],
+  ruleActions: [...COMBAT_RULE_ACTIONS, ...ROLE_RULE_ACTIONS],
   genSteps: [GEN_MONSTERS],
   triggers: [TRIGGER_HIT, TRIGGER_STRUCK],
   turnStart: combatTurnStart,
