@@ -2,7 +2,7 @@
 id: ETH-115
 title: Run-wide modifiers: a run-level BundleSource with sources, scopes, flags and tooltips
 type: feature
-status: ready
+status: done
 priority: P1
 milestone: M2
 epic: risk-omens
@@ -27,28 +27,28 @@ and the upgrade engine has `run`-scope bundle grants with no consumer yet (§6.3
 avoids six parallel versions. See `CLAUDE.md` §6 and the "Shared systems" list.
 
 ## Acceptance criteria
-- [ ] Config and state: `RunConfig.runModifiers?: RunModifierConfig[]` and, in the stats slice,
+- [x] Config and state: `RunConfig.runModifiers?: RunModifierConfig[]` and, in the stats slice,
       `state.domains.stats.runModifiers: RunModifier[]`, each `{ key, source: { id, label },
       scope: 'party' | 'monsters' | 'all', bundle?: bundle id, potency, flags?: string[],
       rewardBonus?: number, until?: { floor } | { turn } }`. `addRunModifier(state, mod, emit)`
       and `removeRunModifier(state, key, emit)` change it mid-run, emitting `runModifierAdded` /
       `runModifierRemoved` (log text, Codex `seen`). Invariant `stats.runModifiers`.
       `STATE_VERSION` + 1.
-- [ ] `BundleSource` `stats.run` (in the stats domain's `bundleSources`, after `stats.statuses`)
+- [x] `BundleSource` `stats.run` (in the stats domain's `bundleSources`, after `stats.statuses`)
       visits each modifier whose scope matches the entity (`party` = party members, `monsters`
       = monster faction), credited to `source.id` with `source.label`, so `getStat` parts read
       "Gloom (Omen, rank 2) −2" and triggers fire through it.
-- [ ] Flags: `runFlag(state, flag)` and the run-scope condition `cond.run_flag { flag }`
+- [x] Flags: `runFlag(state, flag)` and the run-scope condition `cond.run_flag { flag }`
       (ETH-121) let rules and code read a named switch (`doctrine.seek_stairs`,
       `omen.dry_wells`) without a bundle.
-- [ ] Rewards: `rewardMultiplier(state)` = 1 + the sum of `rewardBonus`; `reduceTrackers`
+- [x] Rewards: `rewardMultiplier(state)` = 1 + the sum of `rewardBonus`; `reduceTrackers`
       applies it when it sums `rewards.atRisk` (the order base → ×multiplier → −25% from
       "Rewards" in `docs/ARCHITECTURE.md`). With no modifiers it is exactly 1 (sim compare: no
       behavior change).
-- [ ] Meta: `buildRunConfig` turns every owned upgrade's `{ kind: 'bundle', scope: 'run' }` grant
+- [x] Meta: `buildRunConfig` turns every owned upgrade's `{ kind: 'bundle', scope: 'run' }` grant
       into a run modifier (source = node id and name), the first consumer of that grant. The
       snapshot's `domains.stats.runModifiers` lists them for a HUD strip and tooltips.
-- [ ] Tests: a party-scope and a monster-scope modifier change only their side's stats, with the
+- [x] Tests: a party-scope and a monster-scope modifier change only their side's stats, with the
       right tooltip part; a modifier added mid-run and one expiring on a floor change; the
       multiplier scales at-risk rewards and the wipe loss follows it; save/load round-trip.
 
@@ -77,3 +77,10 @@ Open decisions:
 - 2026-11-19: Created in the shared-systems pass (foundation for ETH-067, 070, 071, 105, 107 and Tavern veterans).
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
+- 2026-11-19: Started (in-progress).
+- 2026-11-19: Done. `src/sim/stats/runModifiers.ts`: `RunModifier` in the stats slice, `stats.run` BundleSource, `addRunModifier` / `removeRunModifier` (events, log text, Codex `seen`), `runFlag` and `cond.run_flag`, `rewardMultiplier` in `trackerRewards` (so the wipe loss follows it), `until` expiry, invariant `stats.runModifiers`; meta `upgradeRunModifiers`. STATE_VERSION 23.
+- 2026-11-19: (default) A run-scope upgrade grant becomes a `party`-scope modifier — alternatives: `all`, or a scope field on the grant.
+- 2026-11-19: (default) The multiplier applies to the whole run's at-risk total using the modifiers in force now, so a bonus added mid-run counts for earlier earnings too and one removed or expired stops counting — alternative: bank bonus per earning when it is earned (needs per-tracker bookkeeping).
+- 2026-11-19: (default) `party` / `monsters` scope is by actor faction (`party` / `monster`), so later party-faction allies (ETH-123) share party modifiers — alternative: `state.party` members only.
+- 2026-11-19: (default) A modifier added with a key already in force replaces it (`replaced: true`) — alternative: throw.
+- 2026-11-19: (default) Config modifiers are announced as `runModifierAdded { atStart }` on the first turn (log line, Codex) — alternative: silent.

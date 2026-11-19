@@ -48,7 +48,7 @@ export { chosenDungeon } from './prepare/dungeon';
 export type { DungeonChoice } from './prepare/dungeon';
 export { availableContracts, BASE_CONTRACT_SLOTS, chosenContracts, contractSlots } from './prepare/contracts';
 export type { ContractsChoice } from './prepare/contracts';
-export { buildRunConfig, checkRunConfig, PREPARE_STREAM, upgradePartyBundles } from './prepare/build';
+export { buildRunConfig, checkRunConfig, PREPARE_STREAM, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
 export {
   canAfford,
   canPurchase,

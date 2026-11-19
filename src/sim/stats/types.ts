@@ -100,7 +100,7 @@ export interface StatProvider {
 
 /**
  * Receives one bundle active on an entity, credited to `sourceId`. `label` names the part in a tooltip when the source's def name alone would mislead (ETH-082's
- * weapon scaling: "Finesse 14 (Arming sword)"); left out, the label is the source's name.
+ * weapon scaling: "Finesse 14 (Arming sword)"; a run modifier's "Gloom (Omen, rank 2)", ETH-115); left out, the label is the source's name.
  */
 export type BundleVisitor = (bundle: Bundle, sourceId: string, potency: number, label?: string) => void;
 

@@ -140,7 +140,8 @@ Rules:
 | Data kept between runs | a profile slice in `src/meta/slices/`, one line in `PROFILE_SLICES` (see "Profile slices") |
 | An invariant | `registerInvariant('<domain>.name', …)` in the domain module (§11.1) |
 | A stat derivation (attributes, level) | a `StatProvider` in the domain's `statProviders` (Contracts, "Stats") |
-| Bundles from a new place (gear, Omens) | a `BundleSource` in the domain's `bundleSources` |
+| Bundles from a new place (gear) | a `BundleSource` in the domain's `bundleSources` |
+| Something that changes the whole run (an Omen, a blessing, a curse, a floor event, doctrine) | a run modifier: `RunConfig.runModifiers` or `addRunModifier` ("Run-wide modifiers (ETH-115)") |
 | A trigger kind | a `TriggerKindDef` in the domain's `triggers`, fired with `fireTrigger` |
 | Work at the start or end of every actor's turn | the domain's `turnStart` / `turnEnd` hook |
 | An effect kind | `Effect` and `effectSchema` in `content/bundles.ts`, one case in `runEffect` |
@@ -417,10 +418,11 @@ only current `hp` and `mp` (plus energy, faction, queued).
   2. **Bundle sources** (`BUNDLE_SOURCES`): every active bundle's `modifiers` for that stat, scaled
      by potency (`add`: value × potency; `mul`: 1 + (value − 1) × potency). The stats domain has
      `stats.attached` (`stats.bundles`) and `stats.statuses`; the items domain has
-     `items.equipped` (worn gear, ETH-043). **Run-wide Omens and
-     blessings (ETH-067/070) add a `BundleSource`** (`{ id, visit(state, entity, visit) }`, calling
-     `visit(bundle, sourceId, potency)`) in their domain's `bundleSources`, so their triggers fire
-     too.
+     `items.equipped` (worn gear, ETH-043), and `stats.run` (run-wide modifiers, ETH-115) comes
+     after the statuses. A new place bundles come from is a `BundleSource` (`{ id, visit(state,
+     entity, visit) }`, calling `visit(bundle, sourceId, potency, label?)`) in its domain's
+     `bundleSources`, so its triggers fire too. **Omens, blessings and other run-wide effects
+     don't add one: they add a run modifier** ("Run-wide modifiers (ETH-115)").
 - After anything that may lower a maximum, call `clampVitals(state, entity)`; the attach,
   detach, status and expiry helpers already do. `fillVitals` sets HP and MP to full.
 - Entities that act carry a `stats` part (`newStatsPart(base?)`): `{ base, bundles, statuses }`.
@@ -538,10 +540,13 @@ sim events ──► RunTrackers ──► state.domains.run.rewards.atRisk ─�
                                                                      share)
 ```
 
-**Order: base → ×Omen → −25%.** The Omen multiplier (ETH-067) belongs inside `rewards.atRisk`
-(applied in `reduceTrackers` when the sum is taken), so `RunResult.atRisk` is already
-multiplied and the wipe loss is taken from the multiplied amount. Until Omens exist the
-multiplier is 1.
+**Order: base → ×Omen → −25%.** The reward multiplier (`rewardMultiplier(state)`, ETH-115: 1 +
+the sum of the run modifiers' `rewardBonus`, never below 0) is applied inside `rewards.atRisk`:
+`trackerRewards` and `projectedRewards` sum the trackers, then multiply each currency and round
+down (`applyRewardMultiplier`). So `RunResult.atRisk` is already multiplied and the wipe loss is
+taken from the multiplied amount. With no bonuses it is exactly 1 and nothing changes. It uses
+the modifiers in force now, over the whole run's total: a bonus added mid-run counts for earlier
+earnings too, and one that ends stops counting.
 
 **The wipe loss (ETH-023, `src/sim/run/wipeLoss.ts`).** `WIPE_LOSS_SHARE` (0.25, final per
 Nate) is the one constant. `wipeLoss(atRisk, outcome)` is empty for a victory or a retreat; on a
@@ -566,8 +571,8 @@ at-risk currency (ETH-083 converts it).
   record that later trackers write under their own id (`'track.kills'`).
 - `applyRunResult` in meta (§6.4) checks the result (it throws a `RangeError` on a malformed
   one), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
-  `atRisk - lost`, the `history` slice records the run. The Omen multiplier is not applied yet;
-  ETH-067 adds it inside `rewards.atRisk` (see the order above), so the loss follows it.
+  `atRisk - lost`, the `history` slice records the run. The reward multiplier is already in
+  `atRisk` (see the order above), so the loss follows it.
 - **Run end to profile (ETH-062):** the host calls `onRunEnded(report)` once, right after the
   update with the run's last events (`HostMessage` `runEnded` from the worker). `App` then calls
   `profileStore.applyRunResult(report.result)`, saves, and opens the run summary through
@@ -609,8 +614,9 @@ slice's trackers and run end), ETH-072 10 (the `fountain` feature part), ETH-061
 (`inventory.equipped`), ETH-110 16 (`growth.gained`, the rolled level-up gains), ETH-111
 17 (the ring and neck slots), ETH-113 18 (`AiMemory.waited`), ETH-066 19 (`ai.possessed`) and
 ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
-(`RunConfig.watchRequirements` and the `track.requirements` tracker state) and ETH-120 22 (the
-`track.chronicle` tracker state).
+(`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
+`track.chronicle` tracker state) and ETH-115 23 (the stats slice's `runModifiers` and
+`runModifiersAnnounced`).
 
 ### Contracts in the run (ETH-024)
 
@@ -944,6 +950,54 @@ vocabulary.
   hold; ETH-104 checks an actor-scope requirement with an `AiCtx` on an event. A new run-level
   check is a run-scope condition in its domain's `conditions`, never a new predicate type.
 
+### Run-wide modifiers (ETH-115)
+
+All in `src/sim/stats/runModifiers.ts` (stats domain). The one way to change the run as a whole:
+**Omens (ETH-067), blessings (ETH-070), cursed modifiers (ETH-105), dungeon events (ETH-107),
+doctrine (ETH-071) and Tavern veterans add a run modifier, not their own `BundleSource`, flag
+store or reward math.**
+
+- **Shape:** `RunModifier = { key, source: { id, label }, scope: 'party' | 'monsters' | 'all',
+  bundle?, potency, flags?, rewardBonus?, until? }`, plain data. `key` is unique in the run.
+  `source.id` is credited in stat tooltips and discovered in the Codex (when it is a content id);
+  `source.label` is the tooltip text ("Gloom (Omen, rank 2)"). `bundle` is any def with a bundle
+  (`bundleOf`) or an upgrade node id, whose `run`-scope grants are used (`runBundleOf`).
+  `until` is `{ floor: FloorId }` (ends when a party member first takes the stairs off that
+  floor) or `{ turn }` (ends at the first actor turn on or after that game turn); left out, the
+  whole run.
+- **State and config:** `state.domains.stats.runModifiers` (in the order added) and
+  `runModifiersAnnounced`. `RunConfig.runModifiers?: RunModifierConfig[]` (same, `potency`
+  optional, default 1) starts the list; `createRun` throws on a malformed one
+  (`runModifierListProblems`, also in meta's `checkRunConfig`). Invariant `stats.runModifiers`.
+- **Changing it mid-run:** `addRunModifier(state, config, emit)` (a key already in force is
+  replaced) and `removeRunModifier(state, key, emit, reason = 'removed')` → boolean. Both emit
+  (`runModifierAdded { key, source, scope, rewardBonus?, atStart?, replaced? }`,
+  `runModifierRemoved { key, source, reason: 'removed' | 'expired' }`; log text in
+  `logText/stats.ts`, category `system`) and clamp current HP and MP to lowered maxima (a raised
+  maximum doesn't heal; a monster spawned later starts at its def's HP). The config's modifiers
+  are announced as `runModifierAdded { atStart: true }` on the run's first actor turn. Expiry runs
+  in the stats turn hooks (`until.turn` at turn start, `until.floor` at the end of the turn a
+  party member left the floor).
+- **Bundles:** the `stats.run` `BundleSource` (after `stats.statuses`) visits each modifier with
+  a bundle whose scope includes the entity: `party` = `party`-faction actors (later allies too),
+  `monsters` = `monster`-faction actors, `all` = every actor. It passes `source.label`, so
+  `getStat` parts read `{ source: { id: 'omen.gloom', label: 'Gloom (Omen, rank 2)' } }`, and
+  `fireTrigger` fires its triggers at the modifier's potency.
+- **Flags:** `runFlag(state, flag)` is true while some modifier lists `flag`
+  (`doctrine.seek_stairs`, `omen.dry_wells`). Rules and data `Requirement`s use the run-scope
+  condition `cond.run_flag { flag }`.
+- **Rewards:** `rewardMultiplier(state)` = max(0, 1 + Σ `rewardBonus`), additive across sources
+  ("Rewards" above for the order and rounding).
+- **Snapshot:** `snapshot.domains.stats.runModifiers` (`RunModifierView` = the modifier plus
+  `text`, `describeRunModifier`: "The party: Sight −2. Rewards +50%. Ends when the party leaves
+  floor 3.") and `rewardMultiplier`, for a HUD strip and its tooltips. Helpers for wording:
+  `scopeWords`, `rewardBonusText`.
+- **Meta:** `upgradeRunModifiers(profile)` (`meta/prepare/build.ts`), used by `buildRunConfig`.
+- **For later items:** an Omen rank is a modifier with `source.label` naming the rank, a bundle
+  and/or a flag, and a `rewardBonus`; a blessing a `party` modifier credited to the deity; a curse
+  `addRunModifier` from an encounter outcome; a dungeon event a modifier with `until: { floor }`;
+  doctrine a flag-only modifier read with `runFlag`; a veteran a `party` modifier.
+
 ### Shared systems
 
 Foundations that many later features share. **New features must use or extend these, not build
@@ -954,7 +1008,7 @@ the features that use it.
 | System | Item | Status | Purpose |
 |---|---|---|---|
 | Objective engine | ETH-114 | planned | One `Objective` union, progress kinds (`OBJECTIVE_KINDS`) and tracked objectives with an owner, lifted from ETH-024's `contractProgress`: contracts, bounties, conducts, taboos, building quests, achievements |
-| Run-wide modifiers | ETH-115 | planned | Run modifiers with a source, scope (party / monsters / all), bundle, flags and reward bonus; one `stats.run` `BundleSource`, the reward multiplier and the consumer of `run`-scope upgrade grants: Omens, blessings, curses, dungeon events, doctrine, veterans |
+| Run-wide modifiers | ETH-115 | built | Run modifiers with a source, scope (party / monsters / all), bundle, flags and reward bonus; one `stats.run` `BundleSource`, the reward multiplier and the consumer of `run`-scope upgrade grants: Omens, blessings, curses, dungeon events, doctrine, veterans. See "Run-wide modifiers (ETH-115)" above |
 | Dungeon encounters | ETH-116 | planned | An `encounter` kind and feature part placed by a `FLOOR_PLAN_HOOKS` entry, one `interact { choice? }` action, data outcomes, log and Codex text; fountains folded in: altars, graves, merchants, bounty encounters, recruits, cursed wells, vaults |
 | Monster templates | ETH-117 | planned | `MonsterOverlay` (templates, name, title, stats, bundles, threat, loot tier) layered on a `MonsterDef` at `spawnMonster`: uniques, elites, mini-bosses, nemeses, heirloom carriers, families |
 | Item properties | ETH-118 | built | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling. See "Item properties (ETH-118)" |
@@ -1815,8 +1869,10 @@ As built (ETH-064, `src/meta/prepare/`):
   with a `party` bundle grant is added to `partyBundles` by **node id**
   (`upgradePartyBundles`); the sim's `bundleOf` reads an upgrade node's party bundle grants
   (`upgradeBundle` in content), so stat tooltips credit the upgrade ("Hardy Recruits").
-  `run`-scope bundle grants have no consumer yet. The result passes `checkRunConfig` (party
-  1–`MAX_PARTY_SIZE`, known classes, races and bundles, a valid depth) or it throws a
+  Every owned node with a `run`-scope bundle grant becomes a run modifier
+  (`upgradeRunModifiers`, ETH-115: key, source id and bundle are the node id, label its name,
+  scope `party`) in `RunConfig.runModifiers`. The result passes `checkRunConfig` (party
+  1–`MAX_PARTY_SIZE`, known classes, races and bundles, well-formed run modifiers, a valid depth) or it throws a
   `RangeError`; `App` shows that on the Prepare screen (`runStore.startFailed`).
 - **Choice sections** are composed like profile slices: `RUN_CHOICES` (`prepare/index.ts`) maps
   a key to `defineRunChoice({ schema, init, apply(ctx, choice) })`. `RunChoices` is derived from

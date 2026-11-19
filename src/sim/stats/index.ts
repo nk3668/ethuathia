@@ -6,7 +6,7 @@
  * Everything this domain adds lives in this folder (docs/ARCHITECTURE.md, Contracts). The root
  * files only compose what is exported here. Never import `domains.ts` or `index.ts` from this folder.
  */
-import { isAttributeId, RACES, STATUSES } from '../../content';
+import { findDef, isAttributeId, RACES, STATUSES } from '../../content';
 import type { AttributeId } from '../../content';
 import type { ActionRecord } from '../actions';
 import type { CommandRecord } from '../commands';
@@ -26,6 +26,19 @@ import { isStatId, STAT_IDS, STAT_INFO } from './statIds';
 import type { StatId } from './statIds';
 import { growthProblems, levelView, XP_TRACKER } from './leveling';
 import type { GrowthPart, LevelingEvent, LevelView } from './leveling';
+import {
+  announceRunModifiers,
+  COND_RUN_FLAG,
+  describeRunModifier,
+  expireFloorModifiers,
+  expireTurnModifiers,
+  noteTurnFloor,
+  rewardMultiplier,
+  runModifierListProblems,
+  SOURCE_RUN,
+  toRunModifier,
+} from './runModifiers';
+import type { RunModifier, RunModifierConfig, RunModifierEvent } from './runModifiers';
 import { applyStatus, tickStatuses } from './statuses';
 import type { StatusApplyMode } from './statuses';
 import type { BundleSource, StatProvider, StatResult, StatsPart, TriggerKindDef } from './types';
@@ -83,6 +96,36 @@ export {
   XP_TRACKER,
   xpForLevel,
 } from './leveling';
+export {
+  addRunModifier,
+  announceRunModifiers,
+  applyRewardMultiplier,
+  COND_RUN_FLAG,
+  describeRunModifier,
+  removeRunModifier,
+  rewardBonusText,
+  rewardMultiplier,
+  RUN_MODIFIER_SCOPES,
+  runBundleOf,
+  runFlag,
+  runModifierListProblems,
+  runModifierProblems,
+  runModifiers,
+  runScopeIncludes,
+  scopeWords,
+  SOURCE_RUN,
+  toRunModifier,
+} from './runModifiers';
+export type {
+  RunFlagParams,
+  RunModifier,
+  RunModifierConfig,
+  RunModifierEndReason,
+  RunModifierEvent,
+  RunModifierScope,
+  RunModifierSource,
+  RunModifierUntil,
+} from './runModifiers';
 export type { GrowthGains, GrowthPart, LevelingEvent, LevelView, XpReason, XpRecord, XpTrackerState } from './leveling';
 
 /** The events this domain emits (bodies, without `turn`). Each needs a formatter in `ui/shell/logText/stats.ts`. */
@@ -110,7 +153,9 @@ export type StatsEvent =
   /** An effect took `amount` HP. `source` is the content id it came from. */
   | { type: 'damaged'; actor: EntityId; amount: number; source: string }
   /** XP and level-ups (ETH-034, `leveling.ts`): `xpGained`, `leveledUp`. */
-  | LevelingEvent;
+  | LevelingEvent
+  /** Run-wide modifiers (ETH-115, `runModifiers.ts`): `runModifierAdded`, `runModifierRemoved`. */
+  | RunModifierEvent;
 
 /** The action requests this domain defines. Each needs an entry in `STATS_ACTIONS`. */
 export type StatsRequest = never;
@@ -119,7 +164,16 @@ export type StatsRequest = never;
 export type StatsCommand = never;
 
 /** This domain's slice of the run state, at `state.domains.stats`. Plain data. */
-export interface StatsState {}
+export interface StatsState {
+  /**
+   * Run-wide modifiers (ETH-115, `runModifiers.ts`), in the order they were added: Omens,
+   * blessings, curses, dungeon events, doctrine, veterans, run-scope upgrade grants. Change them
+   * only with `addRunModifier` / `removeRunModifier`.
+   */
+  runModifiers: RunModifier[];
+  /** Whether the config's modifiers have been announced (`runModifierAdded` with `atStart`, on the first turn). */
+  runModifiersAnnounced: boolean;
+}
 
 /** A timed status as the party card shows it. Look the def up in `STATUSES` for its name and badge. */
 export interface StatusView {
@@ -140,10 +194,20 @@ export interface MemberStatsView {
   level: LevelView;
 }
 
+/** A run modifier as the HUD strip and its tooltip show it (ETH-115). */
+export interface RunModifierView extends RunModifier {
+  /** One line for the tooltip: what it does, to whom, the reward bonus and when it ends (`describeRunModifier`). */
+  text: string;
+}
+
 /** This domain's slice of the snapshot, at `snapshot.domains.stats`. Plain data. */
 export interface StatsSnapshot {
   /** Per party member, keyed by entity id. */
   members: Record<EntityId, MemberStatsView>;
+  /** The run-wide modifiers in force, in the order they were added. */
+  runModifiers: RunModifierView[];
+  /** 1 + the sum of their reward bonuses: what at-risk earnings are multiplied by. */
+  rewardMultiplier: number;
 }
 
 /** Optional parts this domain adds to `Entity`. */
@@ -170,6 +234,11 @@ export interface StatsConfig {
   partyBundles?: string[];
   /** Statuses every party member starts with (bought buffs). */
   partyStatuses?: StartingStatus[];
+  /**
+   * Run-wide modifiers in force from the start (ETH-115): Omens, the patron's blessing, doctrine,
+   * owned upgrades' `run`-scope bundle grants. Keys must be unique.
+   */
+  runModifiers?: RunModifierConfig[];
 }
 
 /** This domain's row in `DomainTypes` (`src/sim/domain.ts`). */
@@ -186,8 +255,8 @@ export const STATS_ACTIONS: ActionRecord<StatsRequest> = {};
 export const STATS_COMMANDS: CommandRecord<StatsCommand> = {};
 
 /** The state slice for a new run. */
-export function initStats(_config: RunConfig): StatsState {
-  return {};
+export function initStats(config: RunConfig): StatsState {
+  return { runModifiers: (config.runModifiers ?? []).map(toRunModifier), runModifiersAnnounced: false };
 }
 
 /**
@@ -199,6 +268,8 @@ export function startPartyStats(state: RunState, emit: Emit): void {
   const { partyBundles = [], partyStatuses = [] } = state.config;
   for (const id of partyBundles) if (!hasBundle(id)) throw new Error(`Unknown party bundle "${id}"`);
   for (const s of partyStatuses) if (!STATUSES.has(s.status)) throw new Error(`Unknown party status "${s.status}"`);
+  const modProblems = runModifierListProblems(state.domains.stats.runModifiers);
+  if (modProblems.length > 0) throw new Error(`Invalid run modifiers: ${modProblems.join('; ')}`);
   for (const id of state.party) {
     const entity = state.entities[id];
     if (entity?.actor === undefined) continue;
@@ -222,7 +293,8 @@ export function statsSnapshot({ state }: SnapshotCtx): StatsSnapshot {
       level: levelView(entity),
     };
   }
-  return { members };
+  const runModifiers = state.domains.stats.runModifiers.map((m) => ({ ...toRunModifier(m), text: describeRunModifier(m, state) }));
+  return { members, runModifiers, rewardMultiplier: rewardMultiplier(state) };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -282,13 +354,23 @@ export const TRIGGER_TURN_END: TriggerKindDef = {
   tags: [],
 };
 
-/** Turn start: `trigger.turn_start` triggers (regeneration, poison). */
+/**
+ * Turn start: the config's run modifiers are announced on the run's first turn and timed ones
+ * end (ETH-115), then `trigger.turn_start` triggers (regeneration, poison).
+ */
 function statsTurnStart({ state, actor, emit }: TurnCtx): void {
+  announceRunModifiers(state, emit);
+  expireTurnModifiers(state, emit);
+  noteTurnFloor(state, actor);
   fireTrigger(state, actor, TRIGGER_TURN_START.id, emit);
 }
 
-/** Turn end: `trigger.turn_end` triggers, then statuses tick down and expire. */
+/**
+ * Turn end: run modifiers bound to a floor a party member just left end (ETH-115), then
+ * `trigger.turn_end` triggers, then statuses tick down and expire.
+ */
 function statsTurnEnd({ state, actor, emit }: TurnCtx): void {
+  expireFloorModifiers(state, actor, emit);
   if (actor.actor.hp <= 0) return;
   fireTrigger(state, actor, TRIGGER_TURN_END.id, emit);
   tickStatuses(state, actor, emit);
@@ -350,9 +432,28 @@ registerInvariant('stats.parts', (state) => {
  */
 registerInvariant('stats.growth', (state) => Object.values(state.entities).flatMap(growthProblems));
 
-/** Codex discoveries: a status is seen the first time it lands on anyone. */
+/**
+ * Run modifiers are well formed (ETH-115): unique keys, a source, known scopes and bundles, a
+ * finite potency above 0, a finite reward bonus and a valid end.
+ */
+registerInvariant('stats.runModifiers', (state) => {
+  const slice = state.domains.stats;
+  if (!Array.isArray(slice.runModifiers)) return ['the run modifier list is missing'];
+  const problems = runModifierListProblems(slice.runModifiers);
+  slice.runModifiers.forEach((m, i) => {
+    if (typeof m.potency !== 'number') problems.push(`run modifier ${i} ("${m.key}") has no potency`);
+  });
+  if (typeof slice.runModifiersAnnounced !== 'boolean') problems.push('runModifiersAnnounced is not a boolean');
+  return problems;
+});
+
+/**
+ * Codex discoveries: a status is seen the first time it lands on anyone; a run modifier's
+ * source (an Omen, a deity, an upgrade) is seen when it takes effect (ETH-115).
+ */
 export const STATS_DISCOVERIES: DiscoveryRules = {
   statusApplied: (e) => (STATUSES.has(e.status) ? [{ id: e.status, mark: 'seen' }] : []),
+  runModifierAdded: (e) => (findDef(e.source.id) === undefined ? [] : [{ id: e.source.id, mark: 'seen' }]),
 };
 
 /** A run chronicle moment (ETH-120): an adventurer gained a level. `amount` is the level reached. */
@@ -370,7 +471,8 @@ export const STATS_DOMAIN: SimDomain<StatsTypes> = {
   init: initStats,
   snapshot: statsSnapshot,
   statProviders: [PROVIDER_BASE, PROVIDER_CLASS_RACE, PROVIDER_ATTRIBUTES],
-  bundleSources: [SOURCE_ATTACHED, SOURCE_STATUSES],
+  bundleSources: [SOURCE_ATTACHED, SOURCE_STATUSES, SOURCE_RUN],
+  conditions: [COND_RUN_FLAG],
   triggers: [TRIGGER_TURN_START, TRIGGER_TURN_END],
   turnStart: statsTurnStart,
   turnEnd: statsTurnEnd,

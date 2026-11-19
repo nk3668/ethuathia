@@ -28,4 +28,4 @@ The player can opt into harder runs for a visible reward multiplier, and is paid
 More items are added when M4 becomes the current milestone.
 - [ ] [ETH-067 Omens with ranks, the reward multiplier and conduct tracking](ETH-067-omens-conducts-core.md)
 - [ ] [ETH-105 Cursed modifiers found in the dungeon](ETH-105-cursed-modifiers-mid-run.md)
-- [ ] [ETH-115 Run-wide modifiers: a run-level BundleSource with sources, scopes, flags and tooltips](ETH-115-run-wide-modifiers.md)
+- [x] [ETH-115 Run-wide modifiers: a run-level BundleSource with sources, scopes, flags and tooltips](ETH-115-run-wide-modifiers.md)
