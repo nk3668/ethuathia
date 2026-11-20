@@ -8,17 +8,17 @@ import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applyRunResult, newProfile, runRecord } from '../../src/meta';
-import { emptyRunResult, favorKey, InlineHost } from '../../src/sim';
-import type { RunReport } from '../../src/sim';
+import { createRun, emptyRunResult, favorKey, InlineHost } from '../../src/sim';
+import type { RunConfig, RunReport } from '../../src/sim';
 import { App } from '../../src/ui/App';
-import { RunSummary } from '../../src/ui/shell/RunSummary';
+import { REMATCH_TOOLTIP, RunOverBanner, RunSummary } from '../../src/ui/shell/RunSummary';
 import { OptionsPanel } from '../../src/ui/shell/OptionsPanel';
 import { currencyName, currencyRows, epitaph, lossNote, NO_CAUSE, reportFromRecord, unlockLines } from '../../src/ui/shell/runSummaryText';
 import { describe as describe_ } from '../../src/ui/shell/text';
 import { StatsPanel } from '../../src/ui/stats/StatsPanel';
 import { resetProfileStore, useProfileStore } from '../../src/ui/stores/profileStore';
 import { AUTO_RESTART_MS, setRunStarter, useRunStore, watchAutoRestart } from '../../src/ui/stores/runStore';
-import type { RestartTimers } from '../../src/ui/stores/runStore';
+import type { RestartTimers, StartRunOptions } from '../../src/ui/stores/runStore';
 import { useSimStore } from '../../src/ui/stores/simStore';
 
 HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
@@ -100,6 +100,42 @@ describe('RunSummary', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'Start next run' }));
     expect(started).toBe(1);
+    off();
+  });
+
+  it('offers Rematch with an explanatory tooltip on the summary and run-over banner (ETH-084)', async () => {
+    const user = userEvent.setup();
+    const calls: (StartRunOptions | undefined)[] = [];
+    const off = setRunStarter((options) => calls.push(options));
+    render(
+      <>
+        <RunOverBanner />
+        <RunSummary />
+      </>,
+    );
+
+    act(() => useRunStore.getState().runEnded(WIPE));
+    const dialog = screen.getByRole('dialog', { name: /Wipe/ });
+    const buttons = within(dialog).getAllByRole('button').map((b) => b.textContent);
+    expect(buttons).toEqual(['Review log', 'Rematch', 'Start next run', 'Continue']);
+
+    const rematchBtn = within(dialog).getByRole('button', { name: 'Rematch' });
+    act(() => rematchBtn.focus());
+    const tip = screen.getByRole('tooltip');
+    expect(tip.textContent).toBe(REMATCH_TOOLTIP);
+    expect(tip.textContent).toContain('layout repeats');
+    expect(tip.textContent).toContain('outcomes may differ');
+
+    await user.click(rematchBtn);
+    await user.click(within(dialog).getByRole('button', { name: 'Start next run' }));
+    expect(calls).toEqual([{ sameSeed: true }, undefined]);
+
+    // Closing the summary leaves RunOverBanner with Rematch as well.
+    await user.click(within(dialog).getByRole('button', { name: 'Review log' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const bannerRematch = screen.getByRole('button', { name: 'Rematch' });
+    await user.click(bannerRematch);
+    expect(calls).toEqual([{ sameSeed: true }, undefined, { sameSeed: true }]);
     off();
   });
 
@@ -198,6 +234,7 @@ describe('run history (ETH-048)', () => {
     expect(dialog.textContent).toContain('Mira fell on floor 3.');
     expect(within(dialog).getByRole('region', { name: 'The party' }).textContent).toContain('Oren survived');
     expect(within(dialog).queryByRole('checkbox')).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'Rematch' })).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'Start next run' })).toBeNull();
 
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
@@ -240,9 +277,9 @@ describe('watchAutoRestart', () => {
 
   it('starts the next run after the countdown while the setting is on, unless cancelled or switched off', () => {
     const { timers, pending, fire } = fakeTimers();
-    let started = 0;
-    const off = setRunStarter(() => {
-      started++;
+    const starts: (StartRunOptions | undefined)[] = [];
+    const off = setRunStarter((options) => {
+      starts.push(options);
       useRunStore.getState().runStarted();
     });
     const unwatch = watchAutoRestart(timers);
@@ -252,12 +289,12 @@ describe('watchAutoRestart', () => {
     expect(pending.size).toBe(0);
     expect(useRunStore.getState().restartAt).toBeNull();
 
-    // Turning it on starts the countdown at once.
+    // Turning it on starts the countdown at once; auto-restart rolls a fresh seed (not rematch).
     useProfileStore.getState().updateSettings({ autoRestart: true });
     expect(pending.size).toBe(1);
     expect(useRunStore.getState().restartAt).toBe(1000 + AUTO_RESTART_MS);
     fire();
-    expect(started).toBe(1);
+    expect(starts).toEqual([undefined]);
     expect(useRunStore.getState().report).toBeNull();
 
     // Cancelling stops this run's countdown only.
@@ -273,7 +310,7 @@ describe('watchAutoRestart', () => {
     // Switching it off drops the pending restart.
     useProfileStore.getState().updateSettings({ autoRestart: false });
     expect(pending.size).toBe(0);
-    expect(started).toBe(1);
+    expect(starts).toHaveLength(1);
 
     unwatch();
     off();
@@ -323,5 +360,92 @@ describe('App', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(useRunStore.getState().screen).toBe('prepare');
     expect(screen.getByRole('button', { name: 'Descend' })).toBeTruthy();
+  });
+
+  it('replays the same seed and dungeon layout on Rematch while applying upgrades bought between runs (ETH-084)', async () => {
+    const user = userEvent.setup();
+    const starts: { config: RunConfig; seed: number }[] = [];
+    class RecordingHost extends InlineHost {
+      override start(config: RunConfig, seed: number): void {
+        starts.push({ config, seed });
+        super.start(config, seed);
+      }
+    }
+
+    const startAt = (index: number) => {
+      const entry = starts[index];
+      if (entry === undefined) throw new Error(`Expected start #${index}`);
+      return entry;
+    };
+
+    const layoutOf = (config: RunConfig, seed: number) => {
+      const state = createRun(config, seed);
+      const floor = state.floors[state.dungeon.entry];
+      if (floor === undefined) throw new Error('Missing entry floor');
+      const features = floor.entities.flatMap((id) => {
+        const entity = state.entities[id];
+        return entity?.feature === undefined ? [] : [{ def: entity.def, pos: entity.pos, feature: entity.feature }];
+      });
+      return { terrain: floor.terrain, features };
+    };
+
+    let host: RecordingHost | undefined;
+    render(<App createHost={() => (host = new RecordingHost())} seed={5} />);
+    if (host === undefined) throw new Error('App did not create a host');
+    const started = host;
+
+    // First run starts with seed 5 and one adventurer.
+    await user.click(screen.getByRole('button', { name: 'Descend' }));
+    expect(starts).toHaveLength(1);
+    const first = startAt(0);
+    expect(first.seed).toBe(5);
+    expect(first.config.party).toHaveLength(1);
+    const firstHp = useSimStore.getState().snapshot?.party[0]?.maxHp ?? 0;
+    const firstLayout = layoutOf(first.config, first.seed);
+
+    act(() => {
+      started.run(6000);
+    });
+    expect(screen.getByRole('dialog', { name: /Victory/ })).toBeTruthy();
+
+    // Buy upgrades between runs (second party slot + Hardy Recruits +2 HP).
+    act(() => {
+      // Ensure enough Renown for both tier-1 and tier-2 Guild Hall upgrades.
+      useProfileStore.getState().applyRunResult({ ...emptyRunResult('retreat'), atRisk: { renown: 200 } });
+      expect(useProfileStore.getState().purchase('upgrade.second_berth')).toBe(true);
+      expect(useProfileStore.getState().purchase('upgrade.hardy_recruits')).toBe(true);
+    });
+
+    // Rematch replays seed 5 with the exact same dungeon layout, while applying the new upgrades.
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Rematch' }));
+    expect(starts).toHaveLength(2);
+    const second = startAt(1);
+    expect(second.seed).toBe(5);
+    expect(useSimStore.getState().snapshot?.seed).toBe(5);
+    expect(layoutOf(second.config, second.seed)).toEqual(firstLayout);
+    expect(second.config.party).toHaveLength(2);
+    expect(second.config.partyBundles).toContain('upgrade.hardy_recruits');
+    expect(useSimStore.getState().snapshot?.party[0]?.maxHp).toBe(firstHp + 2);
+
+    // Rematch from the closed-summary banner keeps replaying seed 5.
+    act(() => {
+      started.run(6000);
+    });
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Review log' }));
+    await user.click(screen.getByRole('button', { name: 'Rematch' }));
+    expect(starts).toHaveLength(3);
+    const third = startAt(2);
+    expect(third.seed).toBe(5);
+    expect(layoutOf(third.config, third.seed)).toEqual(firstLayout);
+
+    // Start next run rolls a fresh seed (6) and builds a different dungeon layout.
+    act(() => {
+      started.run(6000);
+    });
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Start next run' }));
+    expect(starts).toHaveLength(4);
+    const fourth = startAt(3);
+    expect(fourth.seed).toBe(6);
+    expect(layoutOf(fourth.config, fourth.seed).terrain).not.toEqual(firstLayout.terrain);
   });
 });

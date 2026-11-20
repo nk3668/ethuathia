@@ -8,6 +8,7 @@ import { AppShell } from './shell/AppShell';
 import { watchAutoPause } from './shell/autoPause';
 import { bindSaveStore, useProfileStore } from './stores/profileStore';
 import { setRunStarter, useRunStore, watchAutoRestart } from './stores/runStore';
+import type { StartRunOptions } from './stores/runStore';
 import { bindHost, useSimStore } from './stores/simStore';
 import { useUiStore } from './stores/uiStore';
 
@@ -55,13 +56,21 @@ export function App({ createHost = createWorkerHost, seed, createSaveStore: make
       void profile.save();
       useRunStore.getState().runEnded(report);
     });
-    // Every run (Descend, Start next run, auto-restart, after a sim error) is built from the
-    // profile's remembered Prepare choices. A fixed `seed` (tests) is the first run's and counts
-    // up from there; otherwise every run gets a fresh one. The seed also draws random recruits.
+    // Every run (Descend, Start next run, Rematch, auto-restart, after a sim error) is built from
+    // the profile's remembered Prepare choices. A fixed `seed` (tests) is the first run's and
+    // counts up from there; otherwise every run gets a fresh one. Rematch (ETH-084) reuses the
+    // previous run's seed without advancing the counter. The seed also draws random recruits.
     let nextSeed = seed;
-    const startRun = () => {
-      const runSeed = nextSeed ?? Date.now() % 2 ** 31;
-      if (nextSeed !== undefined) nextSeed = (nextSeed + 1) % 2 ** 31;
+    let lastSeed: number | null = null;
+    const freshSeed = (): number => {
+      if (nextSeed !== undefined) return nextSeed;
+      const now = Date.now() % 2 ** 31;
+      return now === lastSeed ? (now + 1) % 2 ** 31 : now;
+    };
+    const startRun = (options?: StartRunOptions) => {
+      const rematchSeed = options?.sameSeed === true ? lastSeed : null;
+      const runSeed = rematchSeed ?? freshSeed();
+      const sameSeed = rematchSeed !== null;
       const { profile } = useProfileStore.getState();
       let config: RunConfig;
       try {
@@ -70,6 +79,8 @@ export function App({ createHost = createWorkerHost, seed, createSaveStore: make
         useRunStore.getState().startFailed(error instanceof Error ? error.message : String(error));
         return;
       }
+      if (!sameSeed && nextSeed !== undefined) nextSeed = (nextSeed + 1) % 2 ** 31;
+      lastSeed = runSeed;
       useSimStore.getState().reset();
       useRunStore.getState().runStarted();
       host.start(config, runSeed);

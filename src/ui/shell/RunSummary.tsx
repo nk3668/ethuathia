@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { formatNumber } from '../../core';
 import type { RunReport } from '../../sim';
-import { Button } from '../kit';
+import { Button, Tooltip } from '../kit';
 import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
 import { useSimStore } from '../stores/simStore';
@@ -13,11 +13,16 @@ import { contentName, momentLine } from './text';
 /** Turn counts in full, as in the top bar. */
 const TURN_FORMAT = new Intl.NumberFormat('en-US');
 
+/** Tooltip for the Rematch button (ETH-084): explains what repeats and what can still change. */
+export const REMATCH_TOOLTIP =
+  'Replay this dungeon with the same seed and current Prepare settings. The layout repeats, but outcomes may differ if upgrades, rules, or choices changed.';
+
 /**
  * The run summary modal (docs/VISUAL-DESIGN.md §6.2): the outcome and its cause, each
  * adventurer's fate, the currency breakdown (earned at risk, lost to a wipe, banked), the Codex
  * discoveries, an epitaph, and the way on: Continue to the Prepare screen, start the next run at
- * once with the same choices, review the log, or let auto-restart count down.
+ * once with the same choices, Rematch the same seed (ETH-084), review the log, or let auto-restart
+ * count down.
  */
 export function RunSummary() {
   const report = useRunStore((s) => s.report);
@@ -36,6 +41,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const setSummaryOpen = useRunStore((s) => s.setSummaryOpen);
   const showPastRun = useRunStore((s) => s.showPastRun);
   const startNext = useRunStore((s) => s.startNext);
+  const rematch = useRunStore((s) => s.rematch);
   const past = run !== undefined;
   const close = () => (past ? showPastRun(null) : setSummaryOpen(false));
   const liveParty = useSimStore((s) => s.snapshot?.party);
@@ -173,6 +179,11 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
               <Button variant="ghost" onClick={close}>
                 Review log
               </Button>
+              <Tooltip content={REMATCH_TOOLTIP}>
+                <Button variant="secondary" onClick={rematch}>
+                  Rematch
+                </Button>
+              </Tooltip>
               <Button variant="secondary" onClick={startNext}>
                 Start next run
               </Button>
@@ -248,12 +259,13 @@ export function AutoRestart() {
   );
 }
 
-/** Over the map once a run has ended and the summary is closed: show it again, go to Prepare, or start the next run. */
+/** Over the map once a run has ended and the summary is closed: show it again, rematch, start the next run, or go to Prepare. */
 export function RunOverBanner() {
   const report = useRunStore((s) => s.report);
   const open = useRunStore((s) => s.summaryOpen);
   const setSummaryOpen = useRunStore((s) => s.setSummaryOpen);
   const startNext = useRunStore((s) => s.startNext);
+  const rematch = useRunStore((s) => s.rematch);
   const openPrepare = useRunStore((s) => s.openPrepare);
   if (report === null || open) return null;
   const look = OUTCOME_LOOK[report.end.outcome];
@@ -266,6 +278,11 @@ export function RunOverBanner() {
       <Button variant="ghost" onClick={() => setSummaryOpen(true)}>
         Show summary
       </Button>
+      <Tooltip content={REMATCH_TOOLTIP}>
+        <Button variant="secondary" onClick={rematch}>
+          Rematch
+        </Button>
+      </Tooltip>
       <Button variant="secondary" onClick={startNext}>
         Start next run
       </Button>
