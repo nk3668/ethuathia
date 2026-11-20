@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
-import { CodexPanel } from '../codex/CodexPanel';
+import { CodexTab } from '../codex/CodexPanel';
 import { Button, Panel, Tabs } from '../kit';
 import type { TabItem } from '../kit';
 import { StatsPanel } from '../stats/StatsPanel';
@@ -24,7 +24,7 @@ const TAB_INFO: Readonly<Record<SideTab, { label: string; empty?: string }>> = {
 /** Tabs whose feature has landed: one line per tab. The rest show their `empty` line. */
 const TAB_CONTENT: Partial<Record<SideTab, ReactNode>> = {
   town: <TownPanel />,
-  codex: <CodexPanel />,
+  codex: <CodexTab />,
   stats: <StatsPanel />,
   options: (
     <>
@@ -61,6 +61,8 @@ export function SidePanel({ className }: { className?: string }) {
 
 export interface SideDrawerProps {
   id: string;
+  /** True while a higher modal (e.g. `CodexModal`) covers the drawer, keeping focus inside it. */
+  inert?: boolean;
   onClose(): void;
 }
 
@@ -69,7 +71,7 @@ export interface SideDrawerProps {
  * makes everything behind it inert, Escape and the backdrop close it, and focus starts on its
  * close button.
  */
-export function SideDrawer({ id, onClose }: SideDrawerProps) {
+export function SideDrawer({ id, inert, onClose }: SideDrawerProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeRef.current?.focus();
@@ -83,7 +85,7 @@ export function SideDrawer({ id, onClose }: SideDrawerProps) {
   };
 
   return (
-    <div className={styles.overlay}>
+    <div className={styles.overlay} inert={inert || undefined}>
       <div className={styles.backdrop} aria-hidden="true" onClick={onClose} />
       <div
         id={id}

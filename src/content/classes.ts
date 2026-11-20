@@ -74,6 +74,7 @@ export const CLASS_VANGUARD = defineClass({
   description:
     'A shield-bearer who walks at the head of the party and takes the first blow. Hardy, steady and ' +
     'nearly deaf to magic.',
+  hint: 'The first shield into the dark, built to take what the hall throws first.',
   tags: ['martial'],
   attributes: { brawn: 11, finesse: 9, wits: 4, grit: 13 },
   // Each level, on average: Brawn +1, Grit +1.5, Finesse +0.5, Wits +0.25 (a point one level in four).

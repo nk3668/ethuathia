@@ -52,6 +52,7 @@ export function App({ createHost = createWorkerHost, seed, createSaveStore: make
     const offEnded = host.onRunEnded((report) => {
       const profile = useProfileStore.getState();
       profile.applyRunResult(report.result);
+      useSimStore.getState().markBanked();
       void profile.save();
       useRunStore.getState().runEnded(report);
     });

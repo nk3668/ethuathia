@@ -12,6 +12,8 @@ export interface Def {
   readonly id: string;
   readonly name: string;
   readonly description: string;
+  /** Riddle-like Codex hint shown while the entry is undiscovered (ETH-091). */
+  readonly hint?: string;
   readonly tags: readonly string[];
 }
 

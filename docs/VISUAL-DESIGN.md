@@ -461,17 +461,27 @@ A two-pane view: category list and search on the left, entry on the right. An en
 glyph at large size in its map color, the description, a stat table, and where it has been
 seen. Undiscovered entries appear as `???` with a hint.
 
-**As built (ETH-065).** The side panel is too narrow for two panes, so the Codex is one column:
-a search box, a row of section toggle buttons (`All`, then one per kind, `aria-pressed`), then a
-section per kind with a `known / total` count. Entries sit in a bordered list; a discovered one
-is a disclosure row (glyph in its map color, name, and how it was met: `Seen · Slain · Used`)
-that opens to the description and stat table. An undiscovered one shows a faint `?`, `???` and
-its hint. Search matches only discovered entries. `Explain` links are underlined with a dotted
-`--text-faint` line, the same as the kit tooltip trigger.
-
-**Planned.** ETH-092 moves the Codex into a wide two-pane modal, as designed above. ETH-091 makes
-undiscovered entries show only their glyph and a hint (also in Explain tooltips), and reveals
-monster entries in tiers at 1, 10 and 50 kills.
+**As built (ETH-065, ETH-091, ETH-092).** The Codex side tab shows overall discovery progress (`known /
+total entries discovered`) and an **Open Codex** button that launches the wide two-pane Codex
+modal (`role="dialog"`, `aria-modal="true"`, backdrop and Escape/Close dismissal with focus
+returned to the trigger). The left pane holds the search box, section toggle buttons (`All`, then
+one per kind, `aria-pressed`), and a section per kind with a `known / total` count and selectable
+entry rows (`aria-current="true"` on the active row; `ArrowUp`, `ArrowDown`, `Home` and `End`
+step through rows across sections). The right pane (`Codex entry`) is a field-journal entry page:
+a large `44×44` glyph box in the entry's map color, the entry title, kind/group and discovery
+marks (`Seen · Slain · Used`), the lore description, an encounter record (`Slain`,
+`Adventurers lost` and `Knowledge` tier progress for combat entries), and the stat table. At
+tablet width (`NARROW_QUERY`, under 1000px) the view collapses to one pane at a time: selecting an
+entry opens its page with a **← Back to list** button that returns to the list and restores focus
+to that entry. Undiscovered entries show their map glyph, `???` and their riddle-like `def.hint`
+in the list, on their entry page and in `Explain` tooltips (without their full description or
+stats). A monster that has only been seen (`0` kills) counts as discovered so its name appears in
+the list and page heading, while its page still shows its riddle hint and no stat fields until the
+first kill. Monster entries then reveal more as the player slays more of them (`profile.codex.kills`
+plus current-run kills): basic stats (`Role`, `HP`, `Damage`, `Speed`, `Found on`) at 1 kill, full
+stats and behavior at 10 kills, and full lore (`def.description`) plus `Drops` at 50 kills. Search
+matches only discovered entries. `Explain` links are underlined with a dotted `--text-faint` line,
+the same as the kit tooltip trigger.
 
 ### 5.4 Graveyard
 

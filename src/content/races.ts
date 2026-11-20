@@ -40,6 +40,7 @@ export const RACE_HUMAN = defineRace({
   description:
     'Restless folk from the river towns, quick to learn and slow to give up. They have no great gift, ' +
     'and no great failing either.',
+  hint: 'Restless river-town folk who turn their hand to any trade.',
   tags: [],
   attributes: { brawn: 1, finesse: 1, wits: 1, grit: 1 },
   speed: 100,

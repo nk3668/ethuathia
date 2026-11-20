@@ -155,6 +155,7 @@ export const TEMPLATE_VENOMOUS = defineMonsterTemplate({
   description:
     'Its bite or sting carries a venom that keeps working after the blow: every hit that lands poisons the ' +
     'one it struck for a few turns.',
+  hint: 'Green-flecked fangs that leave a lingering burn in the wound.',
   tags: ['trait'],
   prefix: 'Venomous',
   bundle: { triggers: [{ on: 'trigger.hit', effects: [{ kind: 'applyStatus', status: 'status.poisoned', turns: 4, to: 'other' }] }] },
@@ -169,6 +170,7 @@ export const TEMPLATE_SWIFT = defineMonsterTemplate({
   id: 'template.swift',
   name: 'Swift',
   description: 'Lean and quick on its feet: it moves and strikes a third again as often as others of its kind.',
+  hint: 'A creature leaner and quicker on the turn than the rest of its litter.',
   tags: ['trait'],
   prefix: 'Swift',
   stats: { mul: { speed: 1.3 } },
@@ -182,6 +184,7 @@ export const TEMPLATE_HULKING = defineMonsterTemplate({
   id: 'template.hulking',
   name: 'Hulking',
   description: 'Half again the size of its kin, with the hide and the heft to match: more HP and heavier blows.',
+  hint: 'Broad-backed and scarred, towering a head above its fellows.',
   tags: ['trait'],
   prefix: 'Hulking',
   stats: { mul: { hp: 1.5 }, add: { damage: 1 } },
@@ -197,6 +200,7 @@ export const TEMPLATE_HEXSPITTING = defineMonsterTemplate({
   description:
     'Something in the deep dark taught it to spit a sour hex from across a room. It fights as a caster: it keeps ' +
     'its distance and backs away from anyone who closes in.',
+  hint: 'Crackling violet spittle hurled from the far side of a chamber.',
   tags: ['trait'],
   prefix: 'Hexspitting',
   role: 'caster',

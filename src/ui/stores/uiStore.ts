@@ -46,6 +46,8 @@ export interface UiStoreState {
   tab: SideTab;
   /** At narrow widths the side panel is a drawer; this says whether it is open. */
   drawerOpen: boolean;
+  /** Whether the wide two-pane Codex modal (ETH-092) is open. */
+  codexOpen: boolean;
   logHeight: number;
   logFilter: LogFilter;
   /** Whether the map follows the selected adventurer or fits the whole floor. */
@@ -62,6 +64,7 @@ export interface UiStoreState {
   select(id: EntityId | null): void;
   openTab(tab: SideTab): void;
   setDrawerOpen(open: boolean): void;
+  setCodexOpen(open: boolean): void;
   setLogHeight(height: number): void;
   setMapCamera(mode: CameraMode): void;
   setLogFilter(filter: LogFilter): void;
@@ -145,6 +148,7 @@ export const useUiStore = create<UiStoreState>()(
       selected: null,
       tab: 'rules',
       drawerOpen: false,
+      codexOpen: false,
       logHeight: LOG_HEIGHT.default,
       logFilter: 'all',
       mapCamera: 'follow',
@@ -154,6 +158,7 @@ export const useUiStore = create<UiStoreState>()(
       select: (selected) => set({ selected, mapFocus: null }),
       openTab: (tab) => set({ tab }),
       setDrawerOpen: (drawerOpen) => set({ drawerOpen }),
+      setCodexOpen: (codexOpen) => set({ codexOpen }),
       setLogHeight: (height) => set({ logHeight: clampLogHeight(height) }),
       setMapCamera: (mapCamera) => set({ mapCamera, mapFocus: null }),
       setLogFilter: (logFilter) => set({ logFilter }),

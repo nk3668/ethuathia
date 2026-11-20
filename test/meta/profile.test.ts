@@ -112,17 +112,34 @@ describe('the codex slice', () => {
   const codex = (found: unknown) => result({ extras: { 'track.codex': found } });
 
   it('starts empty', () => {
-    expect(newProfile().codex).toEqual({ entries: {} });
+    expect(newProfile().codex).toEqual({ entries: {}, kills: {} });
   });
 
-  it('merges the run discovery tracker output from extras', () => {
-    let profile = applyRunResult(newProfile(), codex({ 'feature.door': ['used'], 'monster.rat': ['killed'] }));
-    profile = applyRunResult(profile, codex({ 'feature.door': ['seen'], 'class.vanguard': ['seen'] }));
+  it('merges the run discovery tracker output and per-monster kill counts from extras', () => {
+    let profile = applyRunResult(
+      newProfile(),
+      result({
+        extras: {
+          'track.codex': { 'feature.door': ['used'], 'monster.gloam_rat': ['killed'] },
+          'track.kills': { kills: 3, trophies: 3, byMonster: { 'monster.gloam_rat': 3 } },
+        },
+      }),
+    );
+    profile = applyRunResult(
+      profile,
+      result({
+        extras: {
+          'track.codex': { 'feature.door': ['seen'], 'class.vanguard': ['seen'] },
+          'track.kills': { kills: 7, trophies: 7, byMonster: { 'monster.gloam_rat': 7 } },
+        },
+      }),
+    );
     expect(profile.codex.entries).toEqual({
       'feature.door': ['seen', 'used'],
-      'monster.rat': ['killed'],
+      'monster.gloam_rat': ['killed'],
       'class.vanguard': ['seen'],
     });
+    expect(profile.codex.kills).toEqual({ 'monster.gloam_rat': 10 });
     expect(checkProfile(profile)).toEqual([]);
   });
 
@@ -137,8 +154,15 @@ describe('the codex slice', () => {
     expect(() => applyRunResult(newProfile(), codex(['feature.door']))).toThrow(RangeError);
   });
 
+  it('throws on malformed track.kills output rather than silently ignoring it', () => {
+    const kills = (raw: unknown) => result({ extras: { 'track.kills': raw } });
+    expect(() => applyRunResult(newProfile(), kills('bad'))).toThrow(RangeError);
+    expect(() => applyRunResult(newProfile(), kills({ byMonster: { 'monster.gloam_rat': -1 } }))).toThrow(/track\.kills/);
+    expect(() => applyRunResult(newProfile(), kills({ byMonster: { 'monster.gloam_rat': 1.5 } }))).toThrow(RangeError);
+  });
+
   it('rejects a saved codex with marks out of order', () => {
-    const bad = { ...newProfile(), codex: { entries: { 'feature.door': ['used', 'used'] } } };
+    const bad = { ...newProfile(), codex: { entries: { 'feature.door': ['used', 'used'] }, kills: {} } };
     expect(checkProfile(bad)).toEqual([expect.stringMatching(/^codex\.entries\.feature\.door: /)]);
   });
 });

@@ -5,7 +5,7 @@
  * host, never by touching state.
  */
 import { create } from 'zustand';
-import { CHRONICLE_TRACKER, CODEX_TRACKER } from '../../sim';
+import { CHRONICLE_TRACKER, CODEX_TRACKER, KILLS_TRACKER } from '../../sim';
 import type { Chronicle, CodexDiscoveries, Command, SimEvent, SimHost, Snapshot, Speed, Unsubscribe } from '../../sim';
 
 /**
@@ -47,6 +47,16 @@ export interface SimStoreState {
    * log's Highlights filter shows it.
    */
   chronicle: Chronicle;
+  /**
+   * True once this run's final result has been banked into `profileStore` (`onRunEnded`), until
+   * `reset()` starts the next run. Prevents Codex live tallies from double-counting banked results.
+   */
+  banked: boolean;
+  /**
+   * Kills by the party per monster content id so far this run (`KILLS_TRACKER`), so Codex kill
+   * tiers update live without rolling off the event buffer (ETH-091).
+   */
+  monsterKills: Readonly<Record<string, number>>;
   /** The speed last sent to the host. 0 is paused. */
   speed: Speed;
   /** The speed resuming goes back to: the last running speed chosen. */
@@ -72,6 +82,8 @@ export interface SimStoreState {
   send(command: Command): void;
   /** Records that the host stopped the run on an error and paused it. Sends nothing. */
   hostFailed(message: string): void;
+  /** Marks the current run's result as banked into the profile so live tallies stop adding to it. */
+  markBanked(): void;
   /** Forgets the snapshot, events, discoveries, chronicle and error, e.g. when a new run starts. The speed is kept. */
   reset(): void;
 }
@@ -82,6 +94,8 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
   nextSeq: 0,
   discoveries: CODEX_TRACKER.init(),
   chronicle: CHRONICLE_TRACKER.init(),
+  banked: false,
+  monsterKills: KILLS_TRACKER.init().byMonster,
   speed: DEFAULT_SPEED,
   resumeSpeed: DEFAULT_SPEED,
   error: null,
@@ -95,7 +109,8 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
       const events = [...state.events, ...added].slice(-EVENT_BUFFER_SIZE);
       const discoveries = incoming.reduce(CODEX_TRACKER.reduce, state.discoveries);
       const chronicle = incoming.reduce(CHRONICLE_TRACKER.reduce, state.chronicle);
-      return { events, nextSeq: state.nextSeq + incoming.length, discoveries, chronicle };
+      const killsState = incoming.reduce(KILLS_TRACKER.reduce, { kills: 0, trophies: 0, byMonster: state.monsterKills });
+      return { events, nextSeq: state.nextSeq + incoming.length, discoveries, chronicle, monsterKills: killsState.byMonster };
     }),
   setSpeed: (speed) => {
     if (speed !== 0 && get().error !== null) return;
@@ -110,8 +125,18 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
     if (get().error === null) boundHost?.send(command);
   },
   hostFailed: (message) => set({ speed: 0, error: message }),
+  markBanked: () => set({ banked: true }),
   reset: () =>
-    set({ snapshot: null, events: [], nextSeq: 0, discoveries: CODEX_TRACKER.init(), chronicle: CHRONICLE_TRACKER.init(), error: null }),
+    set({
+      snapshot: null,
+      events: [],
+      nextSeq: 0,
+      discoveries: CODEX_TRACKER.init(),
+      chronicle: CHRONICLE_TRACKER.init(),
+      banked: false,
+      monsterKills: KILLS_TRACKER.init().byMonster,
+      error: null,
+    }),
 }));
 
 /**
