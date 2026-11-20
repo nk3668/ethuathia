@@ -166,6 +166,8 @@ export interface Resolved {
   waitingFor?: EntityId;
   /** The tile the action is heading for or targeting, if any (`Intent.goal`, ETH-019). */
   goal?: Pos;
+  /** Optional note explaining a closer/alternative option skipped while taking this action (ETH-094). */
+  skipped?: string;
 }
 
 /**
