@@ -8,12 +8,22 @@ import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applyRunResult, newProfile, runRecord } from '../../src/meta';
-import { createRun, emptyRunResult, favorKey, InlineHost } from '../../src/sim';
+import { createRun, depthRenown, emptyRunResult, favorKey, InlineHost, renownForFloor, turnsRenown } from '../../src/sim';
 import type { RunConfig, RunReport } from '../../src/sim';
 import { App } from '../../src/ui/App';
 import { REMATCH_TOOLTIP, RunOverBanner, RunSummary } from '../../src/ui/shell/RunSummary';
 import { OptionsPanel } from '../../src/ui/shell/OptionsPanel';
-import { currencyName, currencyRows, epitaph, lossNote, NO_CAUSE, reportFromRecord, unlockLines } from '../../src/ui/shell/runSummaryText';
+import {
+  currencyName,
+  currencyRows,
+  epitaph,
+  lossNote,
+  NO_CAUSE,
+  RENOWN_FORMULA_TEXT,
+  renownBreakdown,
+  reportFromRecord,
+  unlockLines,
+} from '../../src/ui/shell/runSummaryText';
 import { describe as describe_ } from '../../src/ui/shell/text';
 import { StatsPanel } from '../../src/ui/stats/StatsPanel';
 import { resetProfileStore, useProfileStore } from '../../src/ui/stores/profileStore';
@@ -73,6 +83,48 @@ describe('run summary text', () => {
     const lost = { type: 'earningsLost', lost: { renown: 30, trophies: 1 }, atRisk: { renown: 120, trophies: 4 }, share: 0.25, depth: 3, turn: 812 } as const;
     expect(describe_(lost, () => '?').text).toBe('The wipe costs 25% of this run’s earnings: 30 Renown and 1 Trophies lost. The rest is banked.');
   });
+
+  it('breaks earned Renown down by floor, turns, completed contracts and other bonuses (ETH-085)', () => {
+    expect(renownBreakdown(WIPE)).toEqual({
+      floors: [
+        { depth: 2, renown: renownForFloor(2) },
+        { depth: 3, renown: renownForFloor(3) },
+      ],
+      depth: depthRenown(3),
+      turns: turnsRenown(812),
+      turnCount: 812,
+      contracts: 0,
+      other: 120 - (depthRenown(3) + turnsRenown(812)),
+    });
+
+    const withContract: RunReport = {
+      result: {
+        ...emptyRunResult('victory'),
+        atRisk: { renown: depthRenown(4) + turnsRenown(500) + 100 },
+        turns: 500,
+        deepestDepth: 4,
+        extras: {
+          'track.contracts': [
+            { contract: 'contract.recover_relic', complete: true, reward: { renown: 100 } },
+            { contract: 'contract.other', complete: false, reward: { renown: 50 } },
+          ],
+        },
+      },
+      end: { outcome: 'victory', turn: 500, cause: 'Won.', depth: 4 },
+    };
+    expect(renownBreakdown(withContract)).toEqual({
+      floors: [
+        { depth: 2, renown: renownForFloor(2) },
+        { depth: 3, renown: renownForFloor(3) },
+        { depth: 4, renown: renownForFloor(4) },
+      ],
+      depth: depthRenown(4),
+      turns: 10,
+      turnCount: 500,
+      contracts: 100,
+      other: 0,
+    });
+  });
 });
 
 describe('RunSummary', () => {
@@ -95,8 +147,25 @@ describe('RunSummary', () => {
     expect(dialog.textContent).toContain('Here lies Mira');
     // Waiting is the default: no countdown.
     expect(within(dialog).queryByRole('status')).toBeNull();
+    // Per-floor Renown breakdown and formula tooltip (ETH-085).
+    const floorItems = within(dialog)
+      .getByRole('list', { name: 'Renown per floor' })
+      .querySelectorAll('li');
+    expect([...floorItems].map((li) => li.textContent)).toEqual([
+      `Floor 2+${renownForFloor(2)}`,
+      `Floor 3+${renownForFloor(3)}`,
+    ]);
+    expect(dialog.textContent).toContain(`Depth: +${depthRenown(3)}`);
+    expect(dialog.textContent).toContain(`Turns (812): +${turnsRenown(812)}`);
     // Continue (to the Prepare screen) is the default way on.
     expect(document.activeElement?.textContent).toBe('Continue');
+
+    // Focusing the Renown label opens the tooltip explaining the formula.
+    const renownTrigger = within(dialog).getByText('Renown');
+    act(() => renownTrigger.focus());
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip.textContent).toContain(RENOWN_FORMULA_TEXT);
+    expect(tooltip.textContent).toContain(`Floor 10: ${renownForFloor(10)}`);
 
     await user.click(within(dialog).getByRole('button', { name: 'Start next run' }));
     expect(started).toBe(1);
@@ -238,6 +307,14 @@ describe('run history (ETH-048)', () => {
     const dialog = screen.getByRole('dialog', { name: 'Run 1 · Wipe' });
     expect(dialog.textContent).toContain('Mira fell on floor 3.');
     expect(within(dialog).getByRole('region', { name: 'The party' }).textContent).toContain('Oren survived');
+    // Past runs reopened from Run History show the same per-floor Renown breakdown (ETH-085).
+    const pastFloors = within(dialog)
+      .getByRole('list', { name: 'Renown per floor' })
+      .querySelectorAll('li');
+    expect([...pastFloors].map((li) => li.textContent)).toEqual([
+      `Floor 2+${renownForFloor(2)}`,
+      `Floor 3+${renownForFloor(3)}`,
+    ]);
     expect(within(dialog).queryByRole('checkbox')).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'Rematch' })).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'Start next run' })).toBeNull();

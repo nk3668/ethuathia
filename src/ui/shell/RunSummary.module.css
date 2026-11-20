@@ -132,6 +132,61 @@
   border-top: var(--border-width) solid var(--border);
 }
 
+/* Per-floor Renown breakdown beneath the currencies table (ETH-085). */
+.renownBreakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  background: var(--bg-panel);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdownHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--text-muted);
+}
+
+.breakdownTotal {
+  color: var(--renown);
+  font-weight: var(--font-weight-medium);
+}
+
+.floorList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.floorItem {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.floorLabel {
+  color: var(--text-muted);
+}
+
+.floorAmount {
+  color: var(--renown);
+}
+
+.breakdownSources {
+  color: var(--text-muted);
+}
+
 .note {
   margin-top: var(--space-1);
   color: var(--text-muted);

@@ -14,7 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { floorTurns } from './headless';
+import { bankedRenown, floorTurns, renownPerHour } from './headless';
 import type { Outcome, SeedResult } from './headless';
 import type { RunOutcome } from '../src/sim';
 
@@ -133,7 +133,13 @@ export const METRICS: Metric[] = [
   { name: 'trophies lost to wipes, mean', value: (rs) => mean(present(rs.map((r) => (r.lost === undefined ? undefined : (r.lost.trophies ?? 0))))), digits: 1 },
   {
     name: 'renown banked, mean',
-    value: (rs) => mean(present(rs.map((r) => (r.lost === undefined ? undefined : (r.atRisk?.renown ?? 0) - (r.lost.renown ?? 0))))),
+    value: (rs) => mean(present(rs.map((r) => bankedRenown(r) ?? undefined))),
+    digits: 1,
+  },
+  // Banked Renown per hour at 1x speed (ETH-085). Reports before ETH-023 or without steps read '-'.
+  {
+    name: 'renown/hr (1x), banked',
+    value: (rs) => renownPerHour(rs),
     digits: 1,
   },
   // Reports from before ETH-061 had no items, so these read '-'.
