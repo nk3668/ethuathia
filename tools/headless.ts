@@ -7,7 +7,7 @@
  */
 import { parseArgs } from 'node:util';
 import { CLASS_VANGUARD, CONTRACT_RECOVER_RELIC, RACE_HUMAN } from '../src/content';
-import { ACT_WAIT, CHRONICLE_TRACKER, DROP_TURNS, floorIdAt, RUN_OUTCOMES, SimSession } from '../src/sim';
+import { ACT_WAIT, CHRONICLE_TRACKER, DROP_TURNS, floorIdAt, RUN_OUTCOMES, SimSession, TURNS_PER_SECOND } from '../src/sim';
 import type { AdventurerConfig, Explored, RewardAmounts, RunConfig, RunOutcome, Snapshot } from '../src/sim';
 
 /**
@@ -278,6 +278,35 @@ export function floorTurns(results: readonly SeedResult[]): number[] {
   return results.flatMap((r) => r.floors?.map((f) => f.turns) ?? [r.turns]);
 }
 
+/** Party turns (steps) per hour of real time at 1× speed (`TURNS_PER_SECOND` steps/s). */
+export const STEPS_PER_HOUR_AT_1X = TURNS_PER_SECOND * 3600;
+
+/** Banked Renown of one run (`atRisk - lost`), or `null` for reports made before ETH-023. */
+export function bankedRenown(r: SeedResult): number | null {
+  if (r.lost === undefined) return null;
+  return (r.atRisk?.renown ?? 0) - (r.lost.renown ?? 0);
+}
+
+/**
+ * Banked Renown per hour at 1× speed (`TURNS_PER_SECOND` steps/s), computed over all runs that
+ * report banked Renown and took at least one step: total banked Renown divided by total hours.
+ * Returns `null` when no runs have both banked Renown and elapsed steps.
+ */
+export function renownPerHour(results: readonly SeedResult[]): number | null {
+  let totalRenown = 0;
+  let totalSteps = 0;
+  let count = 0;
+  for (const r of results) {
+    const banked = bankedRenown(r);
+    if (banked === null || r.steps <= 0) continue;
+    totalRenown += banked;
+    totalSteps += r.steps;
+    count++;
+  }
+  if (count === 0 || totalSteps === 0) return null;
+  return (totalRenown / totalSteps) * STEPS_PER_HOUR_AT_1X;
+}
+
 /** The report as text, for the console: one row per seed, a summary, then the flagged seeds. */
 export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_CAP): string {
   const header = ['seed', 'turns', 'depth', 'explored', 'stuck', 'result', 'state hash'];
@@ -338,6 +367,14 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     `Kills per run: mean ${(kills.reduce((a, b) => a + b, 0) / Math.max(1, kills.length)).toFixed(1)}. ` +
     `Deaths: ${deaths}${deaths === 0 ? '' : ` (${causeText})`}.`;
 
+  const banked = results.map(bankedRenown).filter((n): n is number => n !== null);
+  const perHour = renownPerHour(results);
+  const renownLine =
+    banked.length === 0 || perHour === null
+      ? ''
+      : `Renown banked per run: mean ${(banked.reduce((a, b) => a + b, 0) / banked.length).toFixed(1)}, ` +
+        `${perHour.toFixed(1)}/hr at 1x (${TURNS_PER_SECOND} steps/s).`;
+
   const flagged = results.flatMap((r) => {
     const reason = flagReason(r, cap);
     return reason === null ? [] : [`  seed ${r.seed}: ${reason}`];
@@ -351,6 +388,7 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     ...(endLine === '' ? [] : [endLine]),
     ...(turnLine === '' ? [] : [turnLine]),
     ...(results.length === 0 ? [] : [depthLine, lootLine, combatLine]),
+    ...(renownLine === '' ? [] : [renownLine]),
     flagged.length === 0 ? 'Flagged seeds: none.' : `Flagged seeds:\n${flagged.join('\n')}`,
   ].join('\n');
 }

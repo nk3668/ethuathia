@@ -9,10 +9,14 @@ import {
   createRun,
   DEATHS_TRACKER,
   DEPTH_TRACKER,
+  depthRenown,
   deserialize,
   getEntity,
   InlineHost,
+  RENOWN_DEPTH_EXPONENT,
   RENOWN_PER_FLOOR,
+  renownByFloor,
+  renownForFloor,
   RUN_TRACKERS,
   runResult,
   serialize,
@@ -21,6 +25,7 @@ import {
   step,
   TROPHIES,
   TURNS_PER_RENOWN,
+  turnsRenown,
   TURNS_TRACKER,
   VICTORY_CHECKS,
   waitDecide,
@@ -102,7 +107,7 @@ describe('run end', () => {
     const { state } = setup();
     runToEnd(state);
     const result = runResult(state);
-    const renown = RENOWN_PER_FLOOR * 2 + Math.floor(state.turn / TURNS_PER_RENOWN);
+    const renown = depthRenown(3) + turnsRenown(state.turn);
     expect(result).toMatchObject({ outcome: 'retreat', atRisk: { renown }, lost: {}, turns: state.turn, deepestDepth: 3 });
     expect(result.atRisk[TROPHIES]).toBeUndefined();
     expect(Object.keys(result.extras)).toEqual([...RUN_TRACKERS.map((t) => t.id), 'run.end', 'run.party']);
@@ -225,7 +230,8 @@ describe('run trackers', () => {
     expect(start).toEqual({ deepest: 1 });
     expect(deeper).toEqual({ deepest: 3 });
     expect(DEPTH_TRACKER.reduce(deeper, e({ type: 'floorEntered', actor: 1, floor: 'd2', depth: 2, firstVisit: false, floorType: null }))).toBe(deeper);
-    expect(DEPTH_TRACKER.rewards?.(deeper)).toEqual({ renown: 2 * RENOWN_PER_FLOOR });
+    expect(DEPTH_TRACKER.rewards?.(start)).toEqual({ renown: 0 });
+    expect(DEPTH_TRACKER.rewards?.(deeper)).toEqual({ renown: depthRenown(3) });
 
     const turns = TURNS_TRACKER.reduce(TURNS_TRACKER.init(), e({ type: 'waited', actor: 1 }, 3 * TURNS_PER_RENOWN + 1));
     expect(turns).toEqual({ turns: 3 * TURNS_PER_RENOWN + 1 });
@@ -239,12 +245,40 @@ describe('run trackers', () => {
     expect(fell).toEqual({ fallen: [{ actor: 2, name: 'Mira', depth: 2, turn: 5, killer: hound, how: 'was slain by a slate hound' }] });
   });
 
+  it('scales Renown per floor by depth^1.3 (ETH-085)', () => {
+    expect(RENOWN_PER_FLOOR).toBe(10);
+    expect(RENOWN_DEPTH_EXPONENT).toBe(1.3);
+    expect(renownForFloor(0)).toBe(0);
+    expect(renownForFloor(1)).toBe(0);
+    expect(renownForFloor(2)).toBe(Math.round(10 * 2 ** 1.3));
+    expect(renownForFloor(3)).toBe(Math.round(10 * 3 ** 1.3));
+    expect(renownForFloor(10)).toBe(Math.round(10 * 10 ** 1.3));
+    expect(renownForFloor(10)).toBeGreaterThan(renownForFloor(5));
+    expect(renownForFloor(5)).toBeGreaterThan(renownForFloor(2));
+
+    expect(renownByFloor(1)).toEqual([]);
+    expect(renownByFloor(4)).toEqual([
+      { depth: 2, renown: renownForFloor(2) },
+      { depth: 3, renown: renownForFloor(3) },
+      { depth: 4, renown: renownForFloor(4) },
+    ]);
+    // `depthRenown` equals the sum of the per-floor breakdown so UI totals match exactly.
+    for (const d of [1, 2, 3, 5, 10]) {
+      const sum = renownByFloor(d).reduce((acc, f) => acc + f.renown, 0);
+      expect(depthRenown(d)).toBe(sum);
+    }
+    expect(DEPTH_TRACKER.rewards?.({ deepest: 5 })).toEqual({ renown: depthRenown(5) });
+    expect(turnsRenown(0)).toBe(0);
+    expect(turnsRenown(TURNS_PER_RENOWN - 1)).toBe(0);
+    expect(turnsRenown(3 * TURNS_PER_RENOWN + 12)).toBe(3);
+  });
+
   it('keep rewards.atRisk the sum of every tracker’s rewards after each step', () => {
     const { state } = setup();
     for (let i = 0; i < 40; i++) step(state, []);
     expect(state.domains.floors.deepest).toBeGreaterThan(1);
     // `track.turns` counts the last event's turn, which is this step's.
-    const renown = RENOWN_PER_FLOOR * (state.domains.floors.deepest - 1) + Math.floor(state.turn / TURNS_PER_RENOWN);
+    const renown = depthRenown(state.domains.floors.deepest) + turnsRenown(state.turn);
     expect(state.domains.run.rewards.atRisk.renown).toBe(renown);
     expect(checkInvariants(state)).toEqual([]);
   });

@@ -10,7 +10,7 @@ import { favorDeity, RENOWN, TROPHIES } from '../../sim';
 import type { RewardAmounts } from '../../sim';
 import { totalFavor, useProfileStore } from '../stores/profileStore';
 import { useSimStore } from '../stores/simStore';
-import { WIPE_LOSS_PERCENT } from './runSummaryText';
+import { RENOWN_FORMULA_EXAMPLES, RENOWN_FORMULA_TEXT, WIPE_LOSS_PERCENT } from './runSummaryText';
 import { SpeedControls } from './SpeedControls';
 import styles from './TopBar.module.css';
 
@@ -77,7 +77,20 @@ function Currencies() {
   const favorAtRisk = Object.entries(atRisk).reduce((sum, [key, n]) => (favorDeity(key) === null ? sum : sum + n), 0);
   return (
     <ul className={styles.currencies} aria-label="Currencies">
-      <Currency icon="♛" id="renown" tone={styles.renown} value={renown} atRisk={atRisk[RENOWN] ?? 0} />
+      <Currency
+        icon="♛"
+        id="renown"
+        tone={styles.renown}
+        value={renown}
+        atRisk={atRisk[RENOWN] ?? 0}
+        detail={
+          <>
+            Formula: {RENOWN_FORMULA_TEXT}
+            <br />
+            {RENOWN_FORMULA_EXAMPLES}
+          </>
+        }
+      />
       <Currency icon="☠" id="trophies" tone={styles.trophies} value={trophies} atRisk={atRisk[TROPHIES] ?? 0} />
       <Currency
         icon="♨"

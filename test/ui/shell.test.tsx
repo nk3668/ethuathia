@@ -7,6 +7,7 @@ import type { EntityId, SimEvent, Snapshot } from '../../src/sim';
 import { App } from '../../src/ui/App';
 import { AppShell } from '../../src/ui/shell/AppShell';
 import { LOG_RESIZE_STEP } from '../../src/ui/shell/LogResizer';
+import { RENOWN_FORMULA_TEXT } from '../../src/ui/shell/runSummaryText';
 import { contentName, describe as describeEvent, logLines, ruleLabel } from '../../src/ui/shell/text';
 import { useSimStore } from '../../src/ui/stores/simStore';
 import { LOG_HEIGHT, UI_STORAGE_KEY, useUiStore } from '../../src/ui/stores/uiStore';
@@ -160,12 +161,16 @@ describe('AppShell at desktop width', () => {
     expect(map.getByRole('group', { name: 'Map camera' })).toBeTruthy();
   });
 
-  it('shows currencies with names and run position in the top bar', () => {
+  it('shows currencies with names and run position in the top bar', async () => {
     useSimStore.getState().receiveSnapshot(SNAPSHOT);
     render(<AppShell />);
     const bar = screen.getByRole('banner', { name: 'Top bar' });
-    expect(within(bar).getByRole('list', { name: 'Currencies' }).textContent).toBe('♛Renown0☠Trophies0♨Favor0');
+    const list = within(bar).getByRole('list', { name: 'Currencies' });
+    expect(list.textContent).toBe('♛Renown0☠Trophies0♨Favor0');
     expect(bar.textContent).toContain('Floor 3/10 · Turn 4,812');
+    const renownPill = within(list).getByText('Renown').closest('[tabindex="0"]') as HTMLElement;
+    act(() => renownPill.focus());
+    expect((await screen.findByRole('tooltip')).textContent).toContain(RENOWN_FORMULA_TEXT);
   });
 
   it('shows this run’s at-risk earnings beside the banked totals, until the run ends (ETH-023)', () => {
