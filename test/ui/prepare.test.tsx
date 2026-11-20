@@ -2,6 +2,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { CLASS_VANGUARD, RACE_HUMAN } from '../../src/content';
 import type { RaceDef } from '../../src/content';
 import { buildRunConfig } from '../../src/meta';
 import { raceOptionLabel, slotAttributePreview } from '../../src/ui/prepare/components/attributePreview';
@@ -83,6 +84,26 @@ describe('PrepareScreen', () => {
 
     await user.selectOptions(classSelect, '');
     expect(party.getByText('BRN +1 · FIN +1 · WIT +1 · GRT +1 (before class)')).toBeTruthy();
+  });
+
+  it('shows full descriptions for unlocked classes and races on Prepare even with an empty Codex', async () => {
+    const user = userEvent.setup();
+    render(<PrepareScreen />);
+
+    const party = within(screen.getByTestId('prepare-party'));
+    await user.selectOptions(party.getByRole('combobox', { name: 'Class' }), CLASS_VANGUARD.id);
+    await user.selectOptions(party.getByRole('combobox', { name: 'Race' }), RACE_HUMAN.id);
+
+    const classLink = party.getByText(CLASS_VANGUARD.name);
+    await user.click(classLink);
+    const classTip = await screen.findByRole('tooltip');
+    expect(classTip.textContent).toContain(CLASS_VANGUARD.description);
+    expect(classTip.textContent).not.toContain('???');
+
+    await user.tab();
+    const raceTip = await screen.findByRole('tooltip');
+    expect(raceTip.textContent).toContain(RACE_HUMAN.description);
+    expect(raceTip.textContent).not.toContain('???');
   });
 
   it('omits modifier parentheses and describes zero-modifier races cleanly', () => {
