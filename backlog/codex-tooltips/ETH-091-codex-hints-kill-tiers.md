@@ -9,7 +9,7 @@ epic: codex-tooltips
 size: M
 depends_on: [ETH-065]
 created: 2026-11-18
-updated: 2026-11-19
+updated: 2026-11-23
 ---
 
 ## Summary
@@ -27,3 +27,4 @@ Makes the Codex a collection to fill in. Decided in Nate's interview answers (20
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-19: Implemented by Gemini (`hint` field on `Def` and `defShape` with load-time `checkDefHints` validation across all discoverable content defs; `KILLS_TRACKER.byMonster` and `codexSlice` v2 `kills` with v1→v2 migration; `Explain` tooltips and `CodexPanel` showing only map glyph and riddle hint for undiscovered entries; monster kill-count tiers at 1/10/50 in `src/ui/codex/renderers/monster.tsx`; bumped `STATE_VERSION` to 27). Pending review.
+- 2026-11-23: Rebased onto main (STATE_VERSION 30; added Codex hints for ETH-044 scrolls and enchantments) and merged to main (PR #79); PENDING REVIEW.

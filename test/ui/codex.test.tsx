@@ -13,6 +13,7 @@ import {
   MONSTER_GLOAM_RAT,
   STATUS_POISONED,
   TERRAIN_WALL,
+  UPGRADES,
 } from '../../src/content';
 import { applyRunResult, newProfile } from '../../src/meta';
 import { emptyRunResult } from '../../src/sim';
@@ -402,6 +403,18 @@ describe('Explain', () => {
     expect(tip.textContent).toContain('HP');
     expect(tip.textContent).toContain(MONSTER_GLOAM_RAT.hint ?? '');
     expect(tip.textContent).not.toContain(MONSTER_GLOAM_RAT.description);
+  });
+
+  it('shows the description (not ???) for a Codex-hidden town upgrade even with an empty Codex', async () => {
+    const user = userEvent.setup();
+    const upgrade = UPGRADES.get('upgrade.hardy_recruits');
+    render(<Explain id={upgrade.id} />);
+    expect(screen.getByText(upgrade.name)).toBeTruthy();
+    await user.tab();
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toContain(upgrade.name);
+    expect(tip.textContent).toContain(upgrade.description);
+    expect(tip.textContent).not.toContain('???');
   });
 
   it('shows only glyph and riddle hint for an undiscovered entry (ETH-091)', async () => {

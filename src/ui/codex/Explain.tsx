@@ -58,6 +58,7 @@ function EntryCard({
   fields,
   name,
   note,
+  reveal = false,
   className,
 }: {
   entry: CodexEntry;
@@ -65,6 +66,7 @@ function EntryCard({
   fields: 'key' | 'all';
   name?: string | undefined;
   note?: string | undefined;
+  reveal?: boolean | undefined;
   className?: string | undefined;
 }) {
   const discovered = useDiscovered();
@@ -75,8 +77,9 @@ function EntryCard({
   const glyph = entryGlyph(entry);
   const hintText = def.hint ?? renderer.hint ?? DEFAULT_HINT;
 
-  // Undiscovered entries show only their glyph and riddle-like hint (ETH-091).
-  if (marks === null) {
+  // Undiscovered entries show only their glyph and riddle-like hint (ETH-091), unless the caller
+  // explicitly reveals an already-unlocked choice (such as classes and races on Prepare).
+  if (marks === null && !reveal) {
     return (
       <div className={cx(styles.card, className)}>
         {heading && (
@@ -140,6 +143,11 @@ export interface ExplainProps {
    * unidentified potion, scroll or jewelry never spoils what it is.
    */
   unidentified?: { readonly name: string; readonly category: string };
+  /**
+   * Reveal the full description and key fields even if the entry is not yet in the Codex (e.g.
+   * unlocked classes and races on Prepare, so the player isn't picking blind).
+   */
+  reveal?: boolean;
   /** The text shown; defaults to `name`, else the def's name. */
   children?: ReactNode;
 }
@@ -148,7 +156,7 @@ export interface ExplainProps {
  * A content mention with a hover and focus tooltip explaining it. An id no kind knows renders
  * its text (or the id) plainly.
  */
-export function Explain({ id, name, note, unidentified, children }: ExplainProps) {
+export function Explain({ id, name, note, unidentified, reveal, children }: ExplainProps) {
   const entry = codexEntry(id);
   if (unidentified !== undefined) {
     const label = children ?? unidentified.name;
@@ -174,7 +182,7 @@ export function Explain({ id, name, note, unidentified, children }: ExplainProps
   const text = children ?? name ?? entry?.def.name ?? id;
   if (entry === undefined) return <>{text}</>;
   return (
-    <Tooltip content={<EntryCard entry={entry} heading fields="key" name={name} note={note} />}>
+    <Tooltip content={<EntryCard entry={entry} heading fields="key" name={name} note={note} reveal={reveal} />}>
       <span tabIndex={0} className={styles.link} data-explain={id}>
         {text}
       </span>
