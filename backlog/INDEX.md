@@ -109,7 +109,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-054](combat-items/ETH-054-food-buffs.md) | Food as consumables that grant short-term buffs | combat-items | M2 | P2 | idea | M |
 | [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Guild Hall doctrine: prioritize clearing floors or prioritize the stairs | town-meta | M2 | P2 | ready | S |
 | [ETH-083](town-meta/ETH-083-gold-to-trophies.md) | Leftover gold converts to Trophies when the party exits | town-meta | M2 | P2 | ready | S |
-| [ETH-084](ui-shell/ETH-084-rematch-same-seed.md) | Rematch button on the run summary replays the same seed | ui-shell | M2 | P2 | ready | S |
+| [ETH-084](ui-shell/ETH-084-rematch-same-seed.md) | Rematch button on the run summary replays the same seed | ui-shell | M2 | P2 | done | S |
 | [ETH-085](town-meta/ETH-085-depth-weighted-renown.md) | Depth-weighted Renown rewards | town-meta | M2 | P2 | ready | S |
 | [ETH-086](town-meta/ETH-086-foundations-and-tactics-trees.md) | Split upgrade trees into permanent Foundations and free Tactics | town-meta | M2 | P2 | ready | M |
 | [ETH-087](characters/ETH-087-class-mastery-levels.md) | Class Mastery: a shared level per class that earns tree points | characters | M2 | P2 | idea | M |

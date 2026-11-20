@@ -544,10 +544,12 @@ sentence; a past run shows the five its record kept), a currency table (Earned, 
 multiplier column arrives with ETH-067, between Earned and Lost, so it reads base → ×Omen → −25%)
 with a muted line under it saying how the outcome treated the earnings (ETH-023), "Met this run" (the Codex discoveries), a placeholder epitaph in
 italics, the Auto-restart checkbox with "Next run in N s" and Cancel while counting down, and
-the buttons **Review log** (ghost; closes it, Escape too), **Start next run** (secondary; the
-same choices again at once) and **Continue** (primary, focused; to the Prepare screen, ETH-064).
-With the modal closed, a banner at the bottom of the map says the run is over and offers
-**Show summary**, **Start next run** and **Continue**.
+the buttons **Review log** (ghost; closes it, Escape too), **Rematch** (secondary, ETH-084;
+replays the previous run's seed with your current upgrades and rules, with a tooltip
+explaining that the layout repeats while outcomes may differ), **Start next run** (secondary; the
+same choices again at once with a fresh seed) and **Continue** (primary, focused; to the Prepare
+screen, ETH-064). With the modal closed, a banner at the bottom of the map says the run is over
+and offers **Show summary**, **Rematch**, **Start next run** and **Continue**.
 A past run reopened from the Stats tab (ETH-048) uses the same modal titled "Run N · Outcome",
 without the auto-restart toggle, and with one primary **Close** button.
 

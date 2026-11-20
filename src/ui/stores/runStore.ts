@@ -5,9 +5,10 @@
  * When the host reports a run end, `App` banks the result in the profile and calls `runEnded`,
  * which opens the run summary. Waiting for the player is the default: **Continue** goes back to
  * the Prepare screen (`openPrepare`), where Descend starts the next run; "Start next run" starts
- * one at once with the same choices. With the profile's `settings.autoRestart` on,
- * `watchAutoRestart` starts it after `AUTO_RESTART_MS` instead, unless the player cancels that
- * countdown or goes back to Prepare.
+ * one at once with the same choices and a fresh seed; **Rematch** (ETH-084) replays the previous
+ * run's seed with the current profile and Prepare choices. With the profile's
+ * `settings.autoRestart` on, `watchAutoRestart` starts a fresh-seed run after `AUTO_RESTART_MS`
+ * instead, unless the player cancels that countdown or goes back to Prepare.
  *
  * Every start goes through the starter `App` registers (`setRunStarter`), which builds the
  * config from the profile's remembered Prepare choices with `buildRunConfig` (ETH-064).
@@ -48,8 +49,10 @@ export interface RunStoreState {
   showPastRun(record: RunRecord | null): void;
   /** Cancels the pending auto-restart for this run only (the setting stays on). */
   cancelRestart(): void;
-  /** Starts the next run from the remembered Prepare choices, through the starter `App` registered. */
+  /** Starts the next run from the remembered Prepare choices with a fresh seed, through `App`'s starter. */
   startNext(): void;
+  /** Starts the next run from the remembered Prepare choices reusing the previous run's seed (ETH-084). */
+  rematch(): void;
   /** Forgets the finished run: a new run has started. Shows the run. */
   runStarted(): void;
   /** Goes to the Prepare screen. Forgets the finished run, so no auto-restart is pending. */
@@ -58,11 +61,17 @@ export interface RunStoreState {
   startFailed(message: string): void;
 }
 
-/** Starts a new run; registered by `App`, which owns the host. */
-let starter: (() => void) | null = null;
+/** Options passed to the run starter registered by `App`. */
+export interface StartRunOptions {
+  /** Replay the previous run's seed (ETH-084 Rematch) instead of rolling a fresh one. */
+  sameSeed?: boolean;
+}
 
-/** Registers what `startNext` calls, until the returned function is called. */
-export function setRunStarter(start: () => void): Unsubscribe {
+/** Starts a new run; registered by `App`, which owns the host. */
+let starter: ((options?: StartRunOptions) => void) | null = null;
+
+/** Registers what `startNext` and `rematch` call, until the returned function is called. */
+export function setRunStarter(start: (options?: StartRunOptions) => void): Unsubscribe {
   starter = start;
   return () => {
     if (starter === start) starter = null;
@@ -82,6 +91,7 @@ export const useRunStore = create<RunStoreState>()((set) => ({
   showPastRun: (pastRun) => set({ pastRun }),
   cancelRestart: () => set({ restartCancelled: true, restartAt: null }),
   startNext: () => starter?.(),
+  rematch: () => starter?.({ sameSeed: true }),
   runStarted: () => set({ screen: 'run', startError: null, report: null, summaryOpen: false, restartAt: null, restartCancelled: false }),
   openPrepare: () => set({ screen: 'prepare', report: null, summaryOpen: false, restartAt: null, restartCancelled: false }),
   startFailed: (message) =>
