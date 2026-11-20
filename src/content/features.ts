@@ -74,7 +74,7 @@ export const FEATURE_FOUNTAIN = defineFeature({
     'A stone basin fed by a spring deep in the rock. Anyone standing on it can drink, and each drink is a draught ' +
     'of chance: most often it mends wounds, sometimes it sharpens the eyes or turns the stomach, and sometimes it ' +
     'is only water. A fountain holds a few draughts before it runs dry. Adventurers drink when hurt and carrying ' +
-    'no healing potion, and skip draughts they know to be harmful.',
+    'no healing potion, and skip fountains whose last tasted draught was harmful.',
   tags: ['fountain'],
   glyph: FOUNTAIN_FLOWING,
   states: { flowing: FOUNTAIN_FLOWING, dry: { ch: '{', color: '#5b6573' } },

@@ -699,8 +699,8 @@ What later items build on, all exported from `src/sim/floors/`:
   it `seen` from this event.
 - **State:** `state.domains.floors` holds `deepest`, `arrived` (the turn the party first
   reached each floor), `respawns` (wave count per floor), `stirAnnounced`, `lastVacated` (ETH-025)
-  and `identifiedDraughts` (ETH-094: draught ids identified by drinking this run, or pre-seeded via
-  `RunConfig.identifiedDraughts`).
+  and `observedFountains` (ETH-094: the last draught id the party observed by drinking from each
+  fountain, keyed by fountain entity id).
 - **Return-trip repopulation (ETH-025, `floors/respawn.ts`, `combat/monsters.ts`):** when a party
   member re-enters an already-built floor that currently has no living party members on it
   (`!firstVisit && wasEmpty`, unless `monsters: false` or `respawn.enabled: false`), `maybeRespawnFloor`
@@ -1791,9 +1791,10 @@ As built in `src/sim/ai/` (ETH-009):
   thing (as many of a stack as it takes to get within carry); `act.pick_up` picks up a wanted
   item on the tile, or walks to the nearest remembered wanted one within `maxDetour` steps.
   `act.drink_fountain` (ETH-072, ETH-094, `src/sim/floors/fountains.ts`) walks to the nearest
-  remembered fountain that isn't dry and whose next draught is not identified as harmful
-  (`outcome === 'bane'` in `floors.identifiedDraughts`), explaining any skipped harmful fountain in
-  the trace, and drinks. The heading-out ones (ETH-062) are in
+  remembered fountain that isn't dry and whose last observed draught in `floors.observedFountains`
+  is not harmful (`outcome === 'bane'`), without peeking at untouched fountains' hidden draughts,
+  explaining any skipped harmful fountain in the trace, and drinks. The heading-out ones (ETH-062)
+  are in
   `src/sim/run/rules.ts`; the floors ones (ETH-058) in `src/sim/floors/rules.ts`:
   - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
     default) a member on the stairs takes them only when every living member on that floor is
