@@ -39,9 +39,11 @@ export type {
   ParamParser,
   ProgressMark,
   Resolved,
+  ResolveResult,
   Rule,
   RuleActionDef,
   RulePart,
   RuleRef,
+  RuleSkipped,
   RunCtx,
 } from './types';
