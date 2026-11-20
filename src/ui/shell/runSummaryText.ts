@@ -91,15 +91,18 @@ export interface RenownBreakdown {
 /**
  * Breaks a finished run's earned Renown down into per-floor depth rewards, turns survived,
  * completed contracts and any remaining bonus (such as run modifiers). Works identically for
- * live runs and past runs rebuilt from Run History (`reportFromRecord`).
+ * live runs and past runs rebuilt from Run History (`reportFromRecord`). Returns `null` when
+ * the current formula's components exceed the recorded earned Renown (e.g. a past run saved
+ * before ETH-085's depth-weighted formula), rather than showing numbers that contradict the total.
  */
-export function renownBreakdown(report: RunReport): RenownBreakdown {
+export function renownBreakdown(report: RunReport): RenownBreakdown | null {
   const floors = renownByFloor(report.result.deepestDepth);
   const depth = depthRenown(report.result.deepestDepth);
   const turns = turnsRenown(report.result.turns);
   const contracts = contractsOf(report).reduce((sum, c) => sum + (c.complete ? (c.reward[RENOWN] ?? 0) : 0), 0);
   const earned = report.result.atRisk[RENOWN] ?? 0;
-  const other = Math.max(0, earned - (depth + turns + contracts));
+  const other = earned - (depth + turns + contracts);
+  if (other < 0) return null;
   return { floors, depth, turns, turnCount: report.result.turns, contracts, other };
 }
 

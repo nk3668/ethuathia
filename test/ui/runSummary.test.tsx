@@ -124,6 +124,18 @@ describe('run summary text', () => {
       contracts: 100,
       other: 0,
     });
+
+    // A pre-ETH-085 past run whose earned Renown is below the new formula returns null rather than contradicting Earned.
+    const legacyPast: RunReport = {
+      result: {
+        ...emptyRunResult('victory'),
+        atRisk: { renown: 250 },
+        turns: 3000,
+        deepestDepth: 10,
+      },
+      end: { outcome: 'victory', turn: 3000, cause: 'Won.', depth: 10 },
+    };
+    expect(renownBreakdown(legacyPast)).toBeNull();
   });
 });
 
@@ -160,8 +172,9 @@ describe('RunSummary', () => {
     // Continue (to the Prepare screen) is the default way on.
     expect(document.activeElement?.textContent).toBe('Continue');
 
-    // Focusing the Renown label opens the tooltip explaining the formula.
+    // Focusing the Renown label opens the tooltip explaining the formula; the breakdown heading is not a duplicate tab stop.
     const renownTrigger = within(dialog).getByText('Renown');
+    expect(within(dialog).getByText('Renown breakdown').getAttribute('tabindex')).toBeNull();
     act(() => renownTrigger.focus());
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip.textContent).toContain(RENOWN_FORMULA_TEXT);
@@ -280,6 +293,11 @@ describe('run history (ETH-048)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.activeElement).toBe(runs[1]);
+
+    // A pre-ETH-085 past run whose earned Renown is below the new formula omits the per-floor breakdown.
+    await user.click(runs[0] as HTMLElement);
+    const legacyDialog = screen.getByRole('dialog', { name: 'Run 2 · Retreat' });
+    expect(within(legacyDialog).queryByRole('list', { name: 'Renown per floor' })).toBeNull();
   });
 
   it("shows a past run's own unlocks, not the latest run's", () => {
