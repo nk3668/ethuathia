@@ -2,7 +2,7 @@
 id: ETH-092
 title: Codex as a wide two-pane modal
 type: feature
-status: pending-review
+status: done
 priority: P2
 milestone: M2
 epic: codex-tooltips
@@ -27,3 +27,4 @@ The single column is cramped. Decided in Nate's interview answers (2026-11-18). 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-19: Implemented by Gemini (`CodexModal`, `CodexTab` and two-pane `CodexPanel` in `src/ui/codex/CodexPanel.tsx` with Up/Down/Home/End list keyboard navigation, focus return on modal dismissal, single-pane tablet collapse under `NARROW_QUERY` with a `Back to list` button, and field-journal detail page showing large map-colored glyph, lore, encounter record with kill/death counts, and full stat table). Updated `docs/VISUAL-DESIGN.md` §5.3. Pending review.
+- 2026-11-20: Review fixes (post-run double-count guard via `simStore.banked`, inert drawer behind the modal, legacy death-line fallback scoped to old records) landed; reviewed by Nate and Claude and merged as PR #78. Done.
