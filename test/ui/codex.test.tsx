@@ -7,6 +7,7 @@ import {
   CLASSES,
   CONTENT_KINDS,
   FEATURE_DOOR,
+  HINT_REQUIRED_KINDS,
   ITEM_FLANGED_MACE,
   ITEM_OWL_EYE_RING,
   MONSTER_GLOAM_RAT,
@@ -80,6 +81,14 @@ describe('Codex renderers', () => {
   it('look up any def by id with its renderer', () => {
     expect(codexEntry(CLASS_VANGUARD.id)?.renderer.label).toBe('Classes');
     expect(codexEntry('monster.nothing')).toBeUndefined();
+  });
+
+  it('require hints for every Codex kind that can appear undiscovered', () => {
+    for (const r of ALL_RENDERERS) {
+      if (r.hidden !== true && r.alwaysKnown !== true) {
+        expect(HINT_REQUIRED_KINDS.has(r.registry.kind), r.registry.kind).toBe(true);
+      }
+    }
   });
 });
 
@@ -289,6 +298,24 @@ describe('CodexPanel', () => {
     expect(within(detailPane()).queryByLabelText('Encounter record')).toBeNull();
   });
 
+  it('does not double-count kills or unlock tiers early once the run is banked (ETH-091)', async () => {
+    const user = userEvent.setup();
+    bank({ [MONSTER_GLOAM_RAT.id]: ['seen', 'killed'] }, { [MONSTER_GLOAM_RAT.id]: 5 });
+    act(() => {
+      // The ended run's live kills still sit in simStore after onRunEnded banked them.
+      useSimStore.setState({ monsterKills: { [MONSTER_GLOAM_RAT.id]: 5 }, banked: true });
+    });
+
+    render(<CodexPanel />);
+    await user.click(within(section('Monsters')).getByRole('button', { name: new RegExp(MONSTER_GLOAM_RAT.name) }));
+    const detail = detailPane();
+    const record = within(detail).getByLabelText('Encounter record');
+    expect(record.textContent).toContain('Slain5');
+    expect(record.textContent).toContain('Next tier at 10 kills (full stats)');
+    expect(within(detail).getByText('HP')).toBeTruthy();
+    expect(within(detail).queryByText('Evasion')).toBeNull();
+  });
+
   it('omits the Slain row for non-monster entries that caused adventurer deaths', async () => {
     const user = userEvent.setup();
     const poisonDeath = {
@@ -362,6 +389,21 @@ describe('CodexModal', () => {
 });
 
 describe('Explain', () => {
+  it('does not double-count kills in Explain once the run is banked (ETH-091)', async () => {
+    const user = userEvent.setup();
+    bank({ [MONSTER_GLOAM_RAT.id]: ['seen', 'killed'] }, { [MONSTER_GLOAM_RAT.id]: 25 });
+    act(() => {
+      useSimStore.setState({ monsterKills: { [MONSTER_GLOAM_RAT.id]: 25 }, banked: true });
+    });
+
+    render(<Explain id={MONSTER_GLOAM_RAT.id} />);
+    await user.tab();
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toContain('HP');
+    expect(tip.textContent).toContain(MONSTER_GLOAM_RAT.hint ?? '');
+    expect(tip.textContent).not.toContain(MONSTER_GLOAM_RAT.description);
+  });
+
   it('shows only glyph and riddle hint for an undiscovered entry (ETH-091)', async () => {
     const user = userEvent.setup();
     render(<Explain id={ITEM_FLANGED_MACE.id} />);

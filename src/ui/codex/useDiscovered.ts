@@ -17,13 +17,15 @@ export function useDiscovered(): CodexDiscoveries {
 }
 
 /**
- * Lifetime plus current-run kill counts per monster content id (`monster.*`), for the Codex
- * kill-count tiers (ETH-091).
+ * Lifetime plus current-run (while unbanked) kill counts per monster content id (`monster.*`), for
+ * the Codex kill-count tiers (ETH-091). Once the run's result has been banked into `profileStore`,
+ * live kills are excluded so the final run is never counted twice.
  */
 export function useMonsterKills(): MonsterKills {
   const banked = useProfileStore((s) => s.profile.codex.kills);
   const live = useSimStore((s) => s.monsterKills);
-  return useMemo(() => mergeMonsterKills(banked, live), [banked, live]);
+  const runBanked = useSimStore((s) => s.banked);
+  return useMemo(() => (runBanked ? banked : mergeMonsterKills(banked, live)), [banked, live, runBanked]);
 }
 
 /**

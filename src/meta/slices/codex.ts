@@ -77,7 +77,13 @@ export const codexSlice = defineSlice<Codex>({
     const rawKills = result.extras[KILLS_TRACKER.id];
     if (rawKills !== undefined) {
       const parsedKills = runKillsExtrasSchema.safeParse(rawKills);
-      if (parsedKills.success && parsedKills.data.byMonster !== undefined) {
+      if (!parsedKills.success) {
+        const issue = parsedKills.error.issues[0];
+        throw new RangeError(
+          `Malformed RunResult: extras.${KILLS_TRACKER.id}: ${issue?.path.join('.') ?? ''} ${issue?.message ?? ''}`.trim(),
+        );
+      }
+      if (parsedKills.data.byMonster !== undefined) {
         kills = mergeMonsterKills(kills, parsedKills.data.byMonster);
         for (const [id, count] of Object.entries(parsedKills.data.byMonster)) {
           if (count > 0 && /^monster\.[a-z][a-z0-9_]*$/.test(id)) {

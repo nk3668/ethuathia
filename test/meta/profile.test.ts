@@ -154,6 +154,13 @@ describe('the codex slice', () => {
     expect(() => applyRunResult(newProfile(), codex(['feature.door']))).toThrow(RangeError);
   });
 
+  it('throws on malformed track.kills output rather than silently ignoring it', () => {
+    const kills = (raw: unknown) => result({ extras: { 'track.kills': raw } });
+    expect(() => applyRunResult(newProfile(), kills('bad'))).toThrow(RangeError);
+    expect(() => applyRunResult(newProfile(), kills({ byMonster: { 'monster.gloam_rat': -1 } }))).toThrow(/track\.kills/);
+    expect(() => applyRunResult(newProfile(), kills({ byMonster: { 'monster.gloam_rat': 1.5 } }))).toThrow(RangeError);
+  });
+
   it('rejects a saved codex with marks out of order', () => {
     const bad = { ...newProfile(), codex: { entries: { 'feature.door': ['used', 'used'] }, kills: {} } };
     expect(checkProfile(bad)).toEqual([expect.stringMatching(/^codex\.entries\.feature\.door: /)]);
