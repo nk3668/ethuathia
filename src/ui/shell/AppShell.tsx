@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react';
 import type { CSSProperties } from 'react';
+import { CodexModal } from '../codex/CodexPanel';
 import { useKeymap } from '../input/useKeymap';
 import { PrepareScreen } from '../prepare/PrepareScreen';
 import { useRunStore } from '../stores/runStore';
@@ -26,6 +27,7 @@ export function AppShell() {
   const narrow = useMediaQuery(NARROW_QUERY);
   const logHeight = useUiStore((s) => s.logHeight);
   const drawerOpen = useUiStore((s) => s.drawerOpen);
+  const codexOpen = useUiStore((s) => s.codexOpen);
   const screen = useRunStore((s) => s.screen);
   const setDrawerOpen = useUiStore((s) => s.setDrawerOpen);
   const drawerId = useId();
@@ -43,7 +45,7 @@ export function AppShell() {
     wasShown.current = drawerShown;
   }, [drawerShown]);
 
-  const behindDrawer = drawerShown || undefined;
+  const behindDrawer = drawerShown || codexOpen || undefined;
   const gridStyle = { '--log-height': `${logHeight}px` } as CSSProperties;
 
   return (
@@ -84,7 +86,8 @@ export function AppShell() {
           </div>
         )}
       </main>
-      {drawerShown && <SideDrawer id={drawerId} onClose={() => setDrawerOpen(false)} />}
+      {drawerShown && <SideDrawer id={drawerId} inert={codexOpen} onClose={() => setDrawerOpen(false)} />}
+      <CodexModal />
       <RunSummary />
     </div>
   );

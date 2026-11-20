@@ -47,6 +47,11 @@ export interface SimStoreState {
    * log's Highlights filter shows it.
    */
   chronicle: Chronicle;
+  /**
+   * True once this run's final result has been banked into `profileStore` (`onRunEnded`), until
+   * `reset()` starts the next run. Prevents Codex live tallies from double-counting banked results.
+   */
+  banked: boolean;
   /** The speed last sent to the host. 0 is paused. */
   speed: Speed;
   /** The speed resuming goes back to: the last running speed chosen. */
@@ -72,6 +77,8 @@ export interface SimStoreState {
   send(command: Command): void;
   /** Records that the host stopped the run on an error and paused it. Sends nothing. */
   hostFailed(message: string): void;
+  /** Marks the current run's result as banked into the profile so live tallies stop adding to it. */
+  markBanked(): void;
   /** Forgets the snapshot, events, discoveries, chronicle and error, e.g. when a new run starts. The speed is kept. */
   reset(): void;
 }
@@ -82,6 +89,7 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
   nextSeq: 0,
   discoveries: CODEX_TRACKER.init(),
   chronicle: CHRONICLE_TRACKER.init(),
+  banked: false,
   speed: DEFAULT_SPEED,
   resumeSpeed: DEFAULT_SPEED,
   error: null,
@@ -110,8 +118,17 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
     if (get().error === null) boundHost?.send(command);
   },
   hostFailed: (message) => set({ speed: 0, error: message }),
+  markBanked: () => set({ banked: true }),
   reset: () =>
-    set({ snapshot: null, events: [], nextSeq: 0, discoveries: CODEX_TRACKER.init(), chronicle: CHRONICLE_TRACKER.init(), error: null }),
+    set({
+      snapshot: null,
+      events: [],
+      nextSeq: 0,
+      discoveries: CODEX_TRACKER.init(),
+      chronicle: CHRONICLE_TRACKER.init(),
+      banked: false,
+      error: null,
+    }),
 }));
 
 /**
