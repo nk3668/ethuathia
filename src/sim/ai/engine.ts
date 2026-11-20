@@ -102,6 +102,8 @@ export interface Choice {
   waitingFor: EntityId | null;
   /** The tile the action is heading for or targeting, if any (`Intent.goal`, ETH-019). */
   goal?: Pos;
+  /** Reasons earlier rules (or skipped options on this rule) passed (ETH-094). */
+  skipped?: readonly string[];
 }
 
 /**
@@ -141,6 +143,7 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
     condition: choice.condition,
     action: choice.action,
     detail: choice.detail,
+    ...(choice.skipped === undefined ? {} : { skipped: choice.skipped }),
   });
   return choice.request;
 };
@@ -152,6 +155,7 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
  */
 export function chooseRule(ctx: AiCtx): Choice | null {
   const { state, actor } = ctx;
+  const notes: string[] = [];
   for (const [rule, ref] of rulesOf(actor)) {
     if (!rule.enabled || isDropped(state, actor.ai.memory, ref)) continue;
     if (!CONDITIONS.has(rule.condition.id) || !RULE_ACTIONS.has(rule.action.id)) continue;
@@ -160,16 +164,26 @@ export function chooseRule(ctx: AiCtx): Choice | null {
     if (!held.ok) continue;
     const action = RULE_ACTIONS.get(rule.action.id);
     const resolved = action.resolve(ctx, rule.action.params);
-    if (resolved === null || validateAction(state, actor, resolved.request) !== null) continue;
+    if (resolved === null) continue;
+    if (!('request' in resolved)) {
+      if (resolved.skipped !== '' && !notes.includes(resolved.skipped)) notes.push(resolved.skipped);
+      continue;
+    }
+    if (validateAction(state, actor, resolved.request) !== null) continue;
+    if (resolved.skipped !== undefined && resolved.skipped !== '' && !notes.includes(resolved.skipped)) {
+      notes.push(resolved.skipped);
+    }
     const because = held.detail === '' ? '' : ` (${held.detail})`;
+    const skipped = notes.length === 0 ? '' : `; ${notes.join('; ')}`;
     return {
       rule: ref,
       condition: condition.id,
       action: action.id,
       request: resolved.request,
-      detail: `${action.name}: ${resolved.detail}${because}`,
+      detail: `${action.name}: ${resolved.detail}${because}${skipped}`,
       waitingFor: resolved.waitingFor ?? null,
       ...(resolved.goal === undefined ? {} : { goal: { x: resolved.goal.x, y: resolved.goal.y } }),
+      ...(notes.length === 0 ? {} : { skipped: notes }),
     };
   }
   return null;

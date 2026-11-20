@@ -8,7 +8,7 @@ import { QUESTS_LOG_TEXT } from '../../src/ui/shell/logText/quests';
 import { RUN_DOMAIN_LOG_TEXT } from '../../src/ui/shell/logText/run';
 import { STATS_LOG_TEXT } from '../../src/ui/shell/logText/stats';
 import type { LogTextRecord } from '../../src/ui/shell/logText/types';
-import { describe as describeEvent, LOG_TEXT } from '../../src/ui/shell/text';
+import { describe as describeEvent, LOG_TEXT, logLines } from '../../src/ui/shell/text';
 
 const DOMAIN_TEXT = [
   CORE_LOG_TEXT,
@@ -115,5 +115,54 @@ describe('log text', () => {
 
     const singleFloor: RunStartedEvent = { type: 'runStarted', turn: 0, party, depth: 1, floorType: null };
     expect(RUN_DOMAIN_LOG_TEXT.runStarted.text(singleFloor, () => 'Mira')).toBe('Mira enters the dungeon, 1 floor deep.');
+  });
+
+  it('logs ruleFired skip explanations even when the fallback rule did not change, and folds repeats (ETH-094)', () => {
+    const rule = { set: 'baseline' as const, index: 6 };
+    const events: { seq: number; event: SimEvent }[] = [
+      {
+        seq: 1,
+        event: {
+          type: 'ruleFired',
+          turn: 10,
+          actor: 1,
+          rule,
+          condition: 'cond.always',
+          action: 'act.explore',
+          detail: 'Explore: heading for unexplored ground',
+        },
+      },
+      {
+        seq: 2,
+        event: {
+          type: 'ruleFired',
+          turn: 11,
+          actor: 1,
+          rule,
+          condition: 'cond.always',
+          action: 'act.explore',
+          detail: 'Explore: heading for unexplored ground; skipped fountain (brackish water is harmful)',
+          skipped: ['skipped fountain (brackish water is harmful)'],
+        },
+      },
+      {
+        seq: 3,
+        event: {
+          type: 'ruleFired',
+          turn: 12,
+          actor: 1,
+          rule,
+          condition: 'cond.always',
+          action: 'act.explore',
+          detail: 'Explore: heading for unexplored ground; skipped fountain (brackish water is harmful)',
+          skipped: ['skipped fountain (brackish water is harmful)'],
+        },
+      },
+    ];
+    const lines = logLines(events, () => 'Mira');
+    expect(lines).toHaveLength(2);
+    expect(lines[0]?.text).toBe('Mira: Explore: heading for unexplored ground (baseline #7)');
+    expect(lines[1]?.text).toBe('Mira: Explore: heading for unexplored ground; skipped fountain (brackish water is harmful) (baseline #7)');
+    expect(lines[1]?.repeat).toEqual({ count: 2, lastTurn: 12 });
   });
 });

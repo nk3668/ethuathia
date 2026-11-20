@@ -31,10 +31,11 @@ export type CoreEvent =
   | { type: 'actionFailed'; actor: EntityId; action: string; reason: string }
   /**
    * The AI trace: the decision engine took `rule` for `actor`. `condition` and `action` are the
-   * rule's condition and rule action ids, and `detail` is the readable reason, e.g.
-   * "Explore: heading for unexplored ground 6 turns away".
+   * rule's condition and rule action ids, `detail` is the readable reason, e.g.
+   * "Explore: heading for unexplored ground 6 turns away", and `skipped` lists any earlier rules
+   * whose condition held that chose to pass (ETH-094).
    */
-  | { type: 'ruleFired'; actor: EntityId; rule: RuleRef; condition: string; action: string; detail: string }
+  | { type: 'ruleFired'; actor: EntityId; rule: RuleRef; condition: string; action: string; detail: string; skipped?: readonly string[] }
   /**
    * Stuck detection: `actor` neither moved nor saw anything new for `turns` decisions while
    * following `rule` (rule action `action`), so that goal is dropped for a while. `detail` says so.
