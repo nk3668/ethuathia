@@ -2,7 +2,7 @@
 id: ETH-122
 title: Seeded text generator: grammar templates for names, titles, epitaphs, ballads and backstories
 type: feature
-status: ready
+status: done
 priority: P1
 milestone: M5
 epic: content
@@ -26,21 +26,21 @@ each feature would write its own template code with its own determinism bugs. Se
 (Attachment), §7 and the "Shared systems" list in `docs/ARCHITECTURE.md`.
 
 ## Acceptance criteria
-- [ ] Engine in `src/core/textGen.ts` (no dependencies, our own syntax): a `Grammar` is
+- [x] Engine in `src/core/textGen.ts` (no dependencies, our own syntax): a `Grammar` is
       `Record<symbol, (string | { text, weight })[]>`; `{symbol}` expands a symbol, `{$var}`
       inserts a variable, `{symbol|cap}` / `{$var|a}` apply a small set of filters (capitalize,
       article, plural). `expand(grammar, symbol, rng, vars) → string`. Recursion depth is capped
       and a missing variable is an error in tests, a visible `[?var]` in release.
-- [ ] Content: a `grammar` kind (`src/content/grammars.ts`, `grammar.*`) holding grammars as data,
+- [x] Content: a `grammar` kind (`src/content/grammars.ts`, `grammar.*`) holding grammars as data,
       validated at load time: every referenced symbol exists, every variable used is declared in
       the def's `vars`, no symbol is unreachable, and expansion terminates.
-- [ ] Determinism: `textRng(seed, purpose, key)` = `Rng.seeded(seed, 'text/<purpose>/<key>')`;
+- [x] Determinism: `textRng(seed, purpose, key)` = `Rng.seeded(seed, 'text/<purpose>/<key>')`;
       generation never draws from a sim stream, so adding a grammar never changes a run. The same
       seed, purpose and key always give the same text.
-- [ ] First grammars: `grammar.adventurer_name` (replacing the flat `RECRUIT_NAMES` pick in
+- [x] First grammars: `grammar.adventurer_name` (replacing the flat `RECRUIT_NAMES` pick in
       `prepare/party`, keeping the old list as one of its alternatives), `grammar.title` and
       `grammar.epitaph` (variables: name, class, depth, cause, killer). All text original.
-- [ ] Tests: deterministic output per key; filters; validation errors for a missing symbol, an
+- [x] Tests: deterministic output per key; filters; validation errors for a missing symbol, an
       undeclared variable and an infinite grammar; a property test that 1,000 expansions of each
       shipped grammar contain no `{` or `[?`.
 
@@ -104,3 +104,5 @@ To keep the engine fast, deterministic, dependency-free and strictly validated:
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
 - 2026-11-19: Implementation instructions drafted by Antigravity; reviewed and amended by Claude (bugs fixed, open either/or choices decided, missing cases added). Ready to build.
+- 2026-11-19: Implemented by Gemini (`src/core/textGen.ts`, `src/content/grammars.ts`, `src/ui/codex/renderers/grammar.tsx`, and `recruitName` in `src/meta/prepare/party.ts` using `textRng(seed, 'recruit-name', slot + '/' + attempt)`). Kept all `(default)` choices: engine in `src/core/` with content in `src/content/`, custom `{symbol}` / `{$var|filter}` syntax, and generated text stored once made. Pending review.
+- 2026-11-19: Review fixes (no article on named killers, `epitaph` root no longer needs `killer`, data cleanups) landed; reviewed by Nate and Claude and merged as PR #77. Done.

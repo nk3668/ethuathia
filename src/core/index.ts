@@ -11,3 +11,5 @@ export { Registry } from './registry';
 export type { Def } from './registry';
 export { isRngState, Rng, seedState, seedStreams } from './rng';
 export type { RngState } from './rng';
+export { checkGrammar, expand, MAX_GRAMMAR_DEPTH, parseTemplate, TEXT_FILTERS, textRng } from './textGen';
+export type { ExpandOptions, Grammar, GrammarRule, GrammarSpec, ParseTemplateResult, TemplatePart, TextFilter, TextVars } from './textGen';

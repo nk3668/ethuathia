@@ -6,9 +6,9 @@
  * Picking named adventurers from a roster joins this section with the roster (M5).
  */
 import { z } from 'zod';
-import { RECRUIT_NAMES } from '../../content';
+import { generateText, GRAMMAR_ADVENTURER_NAME } from '../../content';
 import { idSchema } from '../../content/schema';
-import type { Rng } from '../../core';
+import { textRng } from '../../core';
 import type { Profile } from '../profile';
 import { capacity } from '../upgrades';
 import { availableClasses, availableRaces } from './available';
@@ -40,17 +40,27 @@ export function partySize(profile: Profile): number {
   return Math.min(MAX_PARTY_SIZE, Math.max(1, capacity(profile, 'partySize', BASE_PARTY_SIZE)));
 }
 
-/** Draws a name not yet in `taken` (any name once the list runs out, with a number added). */
-function recruitName(rng: Rng, taken: readonly string[]): string {
-  const free = RECRUIT_NAMES.filter((n) => !taken.includes(n));
-  if (free.length > 0) return rng.pick(free);
-  return `${rng.pick(RECRUIT_NAMES)} ${taken.length + 1}`;
+const MAX_NAME_ATTEMPTS = 16;
+
+/**
+ * Generates an adventurer name for `slot` not yet in `taken` from `grammar.adventurer_name`,
+ * using `textRng(seed, 'recruit-name', slot + '/' + attempt)` so name generation never draws
+ * from the `prepare` RNG stream. Falls back to numbering after `MAX_NAME_ATTEMPTS` tries.
+ */
+export function recruitName(seed: number, slot: number, taken: readonly string[]): string {
+  let last = '';
+  for (let attempt = 0; attempt < MAX_NAME_ATTEMPTS; attempt++) {
+    const name = generateText(GRAMMAR_ADVENTURER_NAME.id, textRng(seed, 'recruit-name', `${slot}/${attempt}`), {}, { strict: true });
+    if (!taken.includes(name)) return name;
+    last = name;
+  }
+  return `${last} ${taken.length + 1}`;
 }
 
 export const PARTY_CHOICE = defineRunChoice<PartyChoice>({
   schema: z.object({ slots: z.array(pickSchema).max(MAX_PARTY_SIZE) }),
   init: () => ({ slots: [] }),
-  apply: ({ profile, rng, config }, choice) => {
+  apply: ({ profile, seed, rng, config }, choice) => {
     const classes = availableClasses(profile).map((d) => d.id);
     const races = availableRaces(profile).map((d) => d.id);
     if (classes.length === 0 || races.length === 0) throw new RangeError('No class or race is available to recruit from');
@@ -60,7 +70,7 @@ export const PARTY_CHOICE = defineRunChoice<PartyChoice>({
       // A pick the profile no longer allows is a random recruit instead.
       const classId = pick.classId !== null && classes.includes(pick.classId) ? pick.classId : rng.pick(classes);
       const raceId = pick.raceId !== null && races.includes(pick.raceId) ? pick.raceId : rng.pick(races);
-      const name = recruitName(rng, config.party.map((m) => m.name));
+      const name = recruitName(seed, i, config.party.map((m) => m.name));
       config.party.push({ name, classId, raceId });
     }
   },

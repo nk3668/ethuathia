@@ -14,6 +14,7 @@ import { DRAUGHT_KIND } from './draughts';
 import { DUNGEON_KIND } from './dungeons';
 import { FEATURE_KIND, FEATURES } from './features';
 import { FLOOR_TYPE_KIND } from './floors';
+import { GRAMMAR_KIND } from './grammars';
 import { ITEM_KIND, ITEMS } from './items';
 import { checkKinds, ContentError } from './kind';
 import type { ContentKind, RefTarget } from './kind';
@@ -49,6 +50,7 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
   DOCTRINE_KIND,
   BUILDING_KIND,
   UPGRADE_KIND,
+  GRAMMAR_KIND,
 ];
 
 /**
