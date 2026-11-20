@@ -2,7 +2,7 @@
 id: ETH-122
 title: Seeded text generator: grammar templates for names, titles, epitaphs, ballads and backstories
 type: feature
-status: pending-review
+status: done
 priority: P1
 milestone: M5
 epic: content
@@ -105,3 +105,4 @@ To keep the engine fast, deterministic, dependency-free and strictly validated:
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
 - 2026-11-19: Implementation instructions drafted by Antigravity; reviewed and amended by Claude (bugs fixed, open either/or choices decided, missing cases added). Ready to build.
 - 2026-11-19: Implemented by Gemini (`src/core/textGen.ts`, `src/content/grammars.ts`, `src/ui/codex/renderers/grammar.tsx`, and `recruitName` in `src/meta/prepare/party.ts` using `textRng(seed, 'recruit-name', slot + '/' + attempt)`). Kept all `(default)` choices: engine in `src/core/` with content in `src/content/`, custom `{symbol}` / `{$var|filter}` syntax, and generated text stored once made. Pending review.
+- 2026-11-19: Review fixes (no article on named killers, `epitaph` root no longer needs `killer`, data cleanups) landed; reviewed by Nate and Claude and merged as PR #77. Done.

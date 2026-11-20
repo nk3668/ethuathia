@@ -135,7 +135,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-094](adventurer-ai/ETH-094-fountain-avoid-harmful.md) | The AI avoids fountain draughts known to be harmful | adventurer-ai | M4 | P3 | ready | S |
 | [ETH-097](bestiary/ETH-097-sleeping-monsters-stealth.md) | Sleeping monsters and stealth | bestiary | M4 | P3 | idea | M |
 | [ETH-105](risk-omens/ETH-105-cursed-modifiers-mid-run.md) | Cursed modifiers found in the dungeon | risk-omens | M4 | P3 | idea | M |
-| [ETH-122](content/ETH-122-seeded-text-generator.md) | Seeded text generator: grammar templates for names, titles, epitaphs, ballads and backstories | content | M5 | P1 | pending-review | M |
+| [ETH-122](content/ETH-122-seeded-text-generator.md) | Seeded text generator: grammar templates for names, titles, epitaphs, ballads and backstories | content | M5 | P1 | done | M |
 | [ETH-123](combat-items/ETH-123-allied-creatures.md) | Allied non-party creatures: actors that fight with the party without being members | combat-items | M5 | P1 | ready | M |
 | [ETH-051](lineage/ETH-051-gravestone-interactions.md) | Gravestone interactions: minor loot, a patron boon and an epitaph | lineage | M5 | P2 | idea | M |
 | [ETH-068](lineage/ETH-068-roster-lineage-core.md) | Persistent roster, graveyard and Graveyard tab | lineage | M5 | P2 | idea | M |
