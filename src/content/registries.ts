@@ -63,6 +63,7 @@ export const HINT_REQUIRED_KINDS: ReadonlySet<string> = new Set([
   'race',
   'floor type',
   'dungeon',
+  'bundle',
   'status',
   'draught',
   'monster',

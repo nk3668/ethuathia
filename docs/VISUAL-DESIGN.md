@@ -475,8 +475,10 @@ tablet width (`NARROW_QUERY`, under 1000px) the view collapses to one pane at a 
 entry opens its page with a **← Back to list** button that returns to the list and restores focus
 to that entry. Undiscovered entries show their map glyph, `???` and their riddle-like `def.hint`
 in the list, on their entry page and in `Explain` tooltips (without their full description or
-stats). Monster entries reveal more as the player slays more of them (`profile.codex.kills` plus
-current-run kills): basic stats (`Role`, `HP`, `Damage`, `Speed`, `Found on`) at 1 kill, full
+stats). A monster that has only been seen (`0` kills) counts as discovered so its name appears in
+the list and page heading, while its page still shows its riddle hint and no stat fields until the
+first kill. Monster entries then reveal more as the player slays more of them (`profile.codex.kills`
+plus current-run kills): basic stats (`Role`, `HP`, `Damage`, `Speed`, `Found on`) at 1 kill, full
 stats and behavior at 10 kills, and full lore (`def.description`) plus `Drops` at 50 kills. Search
 matches only discovered entries. `Explain` links are underlined with a dotted `--text-faint` line,
 the same as the kit tooltip trigger.
