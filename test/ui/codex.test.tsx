@@ -2,13 +2,14 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CLASS_VANGUARD, CLASSES, CONTENT_KINDS, FEATURE_DOOR, MONSTER_GLOAM_RAT, TERRAIN_WALL } from '../../src/content';
+import { CLASS_VANGUARD, CLASSES, CONTENT_KINDS, FEATURE_DOOR, MONSTER_GLOAM_RAT, STATUS_POISONED, TERRAIN_WALL } from '../../src/content';
 import { applyRunResult, newProfile } from '../../src/meta';
 import { emptyRunResult } from '../../src/sim';
 import { CodexModal, CodexPanel, CodexTab } from '../../src/ui/codex/CodexPanel';
 import { Explain } from '../../src/ui/codex/Explain';
 import { ALL_RENDERERS, CODEX_RENDERERS, codexEntry, collectRenderers } from '../../src/ui/codex/registry';
 import { defineCodexRenderer } from '../../src/ui/codex/types';
+import { AppShell } from '../../src/ui/shell/AppShell';
 import { LogPanel } from '../../src/ui/shell/LogPanel';
 import { resetProfileStore, useProfileStore } from '../../src/ui/stores/profileStore';
 import { useSimStore } from '../../src/ui/stores/simStore';
@@ -181,6 +182,73 @@ describe('CodexPanel', () => {
     expect(screen.getByRole('searchbox', { name: 'Search the Codex' })).toBeTruthy();
     expect((document.activeElement as HTMLElement | null)?.getAttribute('data-entry')).toBe(TERRAIN_WALL.id);
   });
+
+  it('does not double-count adventurers lost once the run is banked, and avoids substring fallback on modern runs', async () => {
+    const user = userEvent.setup();
+    const fellMoment = {
+      kind: 'adventurerFell',
+      turn: 12,
+      floor: 'd1',
+      pos: { x: 2, y: 1 },
+      depth: 1,
+      actors: [1],
+      ids: [MONSTER_GLOAM_RAT.id],
+    };
+    const result = {
+      ...emptyRunResult('wipe' as const),
+      extras: {
+        'track.codex': { [MONSTER_GLOAM_RAT.id]: ['seen'], [STATUS_POISONED.id]: ['seen'] },
+        'track.chronicle': [fellMoment],
+        'run.party': [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }],
+        'track.deaths': {
+          fallen: [{ actor: 1, depth: 1, turn: 12, how: 'was slain by a poisoned gloam rat' }],
+        },
+      },
+    };
+    act(() => {
+      useProfileStore.setState({ profile: applyRunResult(newProfile(), result) });
+      // Same chronicle still sits in simStore after run end, marked banked.
+      useSimStore.setState({ chronicle: { entries: [fellMoment] }, banked: true });
+    });
+
+    render(<CodexPanel />);
+    await user.click(within(section('Monsters')).getByRole('button', { name: new RegExp(MONSTER_GLOAM_RAT.name) }));
+    const ratRecord = within(detailPane()).getByLabelText('Encounter record');
+    expect(ratRecord.textContent).toContain('Adventurers lost1');
+
+    // Modern run has `moments.length > 0` naming gloam rat, not status.poisoned: no substring false positive.
+    await user.click(within(section('Statuses')).getByRole('button', { name: new RegExp(STATUS_POISONED.name) }));
+    expect(within(detailPane()).queryByLabelText('Encounter record')).toBeNull();
+  });
+
+  it('omits the Slain row for non-monster entries that caused adventurer deaths', async () => {
+    const user = userEvent.setup();
+    const poisonDeath = {
+      kind: 'adventurerFell',
+      turn: 15,
+      floor: 'd2',
+      pos: { x: 1, y: 1 },
+      depth: 2,
+      actors: [1],
+      ids: [STATUS_POISONED.id],
+    };
+    const result = {
+      ...emptyRunResult('wipe' as const),
+      extras: {
+        'track.codex': { [STATUS_POISONED.id]: ['seen'] },
+        'track.chronicle': [poisonDeath],
+      },
+    };
+    act(() => {
+      useProfileStore.setState({ profile: applyRunResult(newProfile(), result) });
+    });
+
+    render(<CodexPanel />);
+    await user.click(within(section('Statuses')).getByRole('button', { name: new RegExp(STATUS_POISONED.name) }));
+    const record = within(detailPane()).getByLabelText('Encounter record');
+    expect(record.textContent).toContain('Adventurers lost1');
+    expect(record.textContent).not.toContain('Slain');
+  });
 });
 
 describe('CodexModal', () => {
@@ -203,6 +271,25 @@ describe('CodexModal', () => {
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'Codex' })).toBeNull();
     expect(document.activeElement).toBe(openBtn);
+  });
+
+  it('makes the narrow SideDrawer inert behind the Codex modal and restores it on close', async () => {
+    setNarrow(true);
+    const user = userEvent.setup();
+    useUiStore.setState({ drawerOpen: false, codexOpen: false, tab: 'rules' });
+    render(<AppShell />);
+
+    await user.click(screen.getByRole('button', { name: /Panels/ }));
+    const drawer = screen.getByRole('dialog', { name: 'Side panel' });
+    await user.click(within(drawer).getByRole('tab', { name: 'Codex' }));
+    await user.click(within(drawer).getByRole('button', { name: 'Open Codex' }));
+
+    expect(screen.getByRole('dialog', { name: 'Codex' })).toBeTruthy();
+    expect(drawer.closest('[inert]')).not.toBeNull();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Codex' })).toBeNull();
+    expect(drawer.closest('[inert]')).toBeNull();
   });
 });
 

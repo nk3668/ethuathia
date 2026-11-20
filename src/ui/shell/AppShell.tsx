@@ -86,7 +86,7 @@ export function AppShell() {
           </div>
         )}
       </main>
-      {drawerShown && <SideDrawer id={drawerId} onClose={() => setDrawerOpen(false)} />}
+      {drawerShown && <SideDrawer id={drawerId} inert={codexOpen} onClose={() => setDrawerOpen(false)} />}
       <CodexModal />
       <RunSummary />
     </div>

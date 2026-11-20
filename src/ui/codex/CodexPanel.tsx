@@ -14,6 +14,7 @@
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
+import { HISTORY_LIMIT } from '../../meta';
 import type { CodexDiscoveries, CodexMark } from '../../sim';
 import { Button } from '../kit';
 import { NARROW_QUERY, useMediaQuery } from '../shell/useMediaQuery';
@@ -92,44 +93,53 @@ function flattenRows(sections: readonly Section[]): Row[] {
 
 /**
  * Combat record for an entry: how many times the party has slain it, and how many party members
- * have fallen to it across recorded history and the live run.
+ * have fallen to it across recorded history and the live run (while unbanked).
  */
-function useEncounterRecord(entry: CodexEntry, marks: readonly CodexMark[] | null): { kills: number; deaths: number } | null {
+function useEncounterRecord(
+  entry: CodexEntry,
+  marks: readonly CodexMark[] | null,
+): { kills: number; deaths: number; showKills: boolean } | null {
   const id = entry.def.id;
   const nameLower = entry.def.name.toLowerCase();
   const profile = useProfileStore((s) => s.profile);
   const events = useSimStore((s) => s.events);
   const chronicle = useSimStore((s) => s.chronicle);
+  const runBanked = useSimStore((s) => s.banked);
 
   return useMemo(() => {
     const profileKillsRecord = (profile.codex as { kills?: Readonly<Record<string, number>> }).kills;
     const bankedKills = profileKillsRecord?.[id] ?? 0;
     let liveKills = 0;
-    for (const { event } of events) {
-      if (event.type === 'killed' && event.byParty && event.victimDef === id) liveKills++;
+    if (!runBanked) {
+      for (const { event } of events) {
+        if (event.type === 'killed' && event.byParty && event.victimDef === id) liveKills++;
+      }
     }
     const minFromMark = marks?.includes('killed') === true ? 1 : 0;
     const kills = Math.max(bankedKills + liveKills, minFromMark);
 
     let deaths = 0;
     for (const run of profile.history.recent) {
-      const momentDeaths = run.moments.filter((m) => m.kind === 'adventurerFell' && m.ids.includes(id)).length;
-      if (momentDeaths > 0) {
-        deaths += momentDeaths;
+      if (run.moments.length > 0) {
+        deaths += run.moments.filter((m) => m.kind === 'adventurerFell' && m.ids.includes(id)).length;
       } else {
+        // Legacy pre-v4 history records have no chronicle moments; fall back to the death line.
         for (const member of run.party) {
           if (member.fell?.how?.toLowerCase().includes(nameLower) === true) deaths++;
         }
       }
     }
-    for (const moment of chronicle.entries) {
-      if (moment.kind === 'adventurerFell' && moment.ids.includes(id)) deaths++;
+    if (!runBanked) {
+      for (const moment of chronicle.entries) {
+        if (moment.kind === 'adventurerFell' && moment.ids.includes(id)) deaths++;
+      }
     }
 
     const isCombatKind = entry.renderer.registry.kind === 'monster';
-    if (!isCombatKind && kills === 0 && deaths === 0) return null;
-    return { kills, deaths };
-  }, [id, nameLower, profile, events, chronicle, marks, entry.renderer.registry.kind]);
+    const showKills = isCombatKind || kills > 0;
+    if (!showKills && deaths === 0) return null;
+    return { kills, deaths, showKills };
+  }, [id, nameLower, profile, events, chronicle, runBanked, marks, entry.renderer.registry.kind]);
 }
 
 export function CodexPanel() {
@@ -409,11 +419,16 @@ function CodexEntryPage({ row }: { row: Row }) {
 
       {record !== null && (
         <dl className={styles.record} aria-label="Encounter record">
-          <div className={styles.recordItem}>
-            <dt>Slain</dt>
-            <dd>{record.kills}</dd>
-          </div>
-          <div className={styles.recordItem}>
+          {record.showKills && (
+            <div className={styles.recordItem}>
+              <dt>Slain</dt>
+              <dd>{record.kills}</dd>
+            </div>
+          )}
+          <div
+            className={styles.recordItem}
+            title={`Adventurers lost to this across the last ${HISTORY_LIMIT} runs and the current run.`}
+          >
             <dt>Adventurers lost</dt>
             <dd>{record.deaths}</dd>
           </div>
