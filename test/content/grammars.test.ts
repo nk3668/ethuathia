@@ -26,7 +26,7 @@ const SAMPLE_VARS: Readonly<Record<string, string | number>> = {
   race: 'Human',
   depth: 4,
   cause: 'a crushing blow',
-  killer: 'ash-wight',
+  killer: 'an ash-wight',
 };
 
 function varsFor(def: GrammarDef): TextVars {
@@ -47,15 +47,19 @@ describe('shipped grammars', () => {
     ]);
   });
 
-  it('expands 1,000 samples of every shipped grammar with no leftover braces or missing variables', () => {
+  it('expands 1,000 samples of every shipped grammar entry with no leftover braces or missing variables', () => {
     for (const def of GRAMMARS.all()) {
       const vars = varsFor(def);
-      for (let i = 0; i < 1000; i++) {
-        const text = generateText(def.id, textRng(1000 + i, def.id, i), vars, { strict: true });
-        expect(text.trim().length, `${def.id} #${i}`).toBeGreaterThan(0);
-        expect(text, `${def.id} #${i}`).not.toContain('{');
-        expect(text, `${def.id} #${i}`).not.toContain('}');
-        expect(text, `${def.id} #${i}`).not.toContain('[?');
+      const root = def.root ?? 'root';
+      const symbols = [root, ...(def.entries ?? []).filter((e) => e !== root)];
+      for (const symbol of symbols) {
+        for (let i = 0; i < 1000; i++) {
+          const text = generateText(def.id, textRng(1000 + i, `${def.id}/${symbol}`, i), vars, { symbol, strict: true });
+          expect(text.trim().length, `${def.id}:${symbol} #${i}`).toBeGreaterThan(0);
+          expect(text, `${def.id}:${symbol} #${i}`).not.toContain('{');
+          expect(text, `${def.id}:${symbol} #${i}`).not.toContain('}');
+          expect(text, `${def.id}:${symbol} #${i}`).not.toContain('[?');
+        }
       }
     }
   });
@@ -73,25 +77,49 @@ describe('shipped grammars', () => {
     expect(sawCoined).toBe(true);
   });
 
-  it('supports both slain (with killer) and fell (without killer) entry symbols on grammar.epitaph', () => {
+  it('supports slain (with common or proper-named killer), fell, and default root without killer on grammar.epitaph', () => {
     const slain = generateText(
       GRAMMAR_EPITAPH.id,
       textRng(12, 'epitaph', 'adv.1'),
-      { name: 'Oren', class: 'Vanguard', race: 'Human', depth: 3, cause: 'a poisoned fang', killer: 'gloam rat' },
+      { name: 'Oren', class: 'Vanguard', race: 'Human', depth: 3, cause: 'a poisoned fang', killer: 'a gloam rat' },
       { symbol: 'slain', strict: true },
     );
     expect(slain).toContain('Oren');
     expect(slain).toContain('a gloam rat');
 
-    // No killer variable passed; expanding `fell` in strict mode succeeds without error.
+    // Proper-named killer must not receive an indefinite article ("Ethan the Unready", never "an Ethan the Unready").
+    for (let i = 0; i < 50; i++) {
+      const namedSlain = generateText(
+        GRAMMAR_EPITAPH.id,
+        textRng(200 + i, 'epitaph', `named-${i}`),
+        { name: 'Mira', class: 'Vanguard', race: 'Human', depth: 6, cause: 'a wild swing', killer: 'Ethan the Unready' },
+        { symbol: 'slain', strict: true },
+      );
+      expect(namedSlain).toContain('Ethan the Unready');
+      expect(namedSlain).not.toMatch(/\ban? Ethan the Unready\b/i);
+    }
+
+    // Default root (no symbol passed) and `fell` both succeed in strict mode with no `killer` variable.
+    for (let i = 0; i < 50; i++) {
+      const fromRoot = generateText(
+        GRAMMAR_EPITAPH.id,
+        textRng(300 + i, 'epitaph', `root-${i}`),
+        { name: 'Tamsin', class: 'Vanguard', race: 'Human', depth: 2, cause: 'poison' },
+        { strict: true },
+      );
+      expect(fromRoot).toContain('Tamsin');
+      expect(fromRoot).toContain('poison');
+      expect(fromRoot).not.toContain('[?');
+    }
+
     const fell = generateText(
       GRAMMAR_EPITAPH.id,
       textRng(12, 'epitaph', 'adv.2'),
-      { name: 'Tamsin', class: 'Vanguard', race: 'Human', depth: 2, cause: 'hunger' },
+      { name: 'Tamsin', class: 'Vanguard', race: 'Human', depth: 2, cause: 'poison' },
       { symbol: 'fell', strict: true },
     );
     expect(fell).toContain('Tamsin');
-    expect(fell).toContain('hunger');
+    expect(fell).toContain('poison');
 
     const title = generateText(
       GRAMMAR_TITLE.id,

@@ -103,9 +103,9 @@ export const GRAMMAR_ADVENTURER_NAME = defineGrammar({
     three_part: ['{onset}{bridge}{ending}', '{vowel_lead}{bridge}{ending}'],
     onset: [
       'Al', 'Br', 'Cal', 'Cor', 'Dal', 'Dr', 'Fal', 'Fen', 'Gar', 'Hal',
-      'Jor', 'Kel', 'Lor', 'Mar', 'Mor', 'Nor', 'pel', 'Ren', 'Sar', 'Tal',
+      'Jor', 'Kel', 'Lor', 'Mar', 'Mor', 'Nor', 'Pel', 'Ren', 'Sar', 'Tal',
       'Tor', 'Val', 'Ver', 'Vor', 'Wren',
-    ].map((s) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`),
+    ],
     vowel_lead: ['Ad', 'El', 'Er', 'Id', 'Il', 'Is', 'Ol', 'Or', 'Ul', 'Ys'],
     bridge: ['a', 'e', 'i', 'o', 'u', 'ar', 'el', 'en', 'ir', 'or'],
     coda: [
@@ -140,13 +140,20 @@ export const GRAMMAR_TITLE = defineGrammar({
       'Black Mortar', 'Outer Pale', 'Weeping Stair',
     ],
     mantle: [
-      'Pathfinder', 'Warden', 'Delver', 'Torchbearer', 'Shield-Mate', ' Oathkeeper'.trim(),
+      'Pathfinder', 'Warden', 'Delver', 'Torchbearer', 'Shield-Mate', 'Oathkeeper',
     ],
     adj: ['Ashen', 'Hollow', 'Steadfast', 'Silent', 'Gilded', 'Riven', 'Sunken', 'Dusk'],
     noun: ['Blade', 'Lantern', 'Sentinel', 'Anvil', 'Watch', 'Pillar', 'Hound', 'Crown'],
   },
 });
 
+/**
+ * Memorial inscriptions for fallen adventurers.
+ * - `root` expands `{fell}` and never requires `killer`; pass `{ symbol: 'slain' }` when there is one.
+ * - `killer` is the full display phrase supplied by the caller (e.g. `"a slate hound"`,
+ *   `"Ethan the Unready"`), so templates never prepend an article.
+ * - `cause` is a short noun phrase (e.g. `"a crushing blow"`, `"poison"`).
+ */
 export const GRAMMAR_EPITAPH = defineGrammar({
   id: 'grammar.epitaph',
   name: 'Epitaph',
@@ -155,15 +162,15 @@ export const GRAMMAR_EPITAPH = defineGrammar({
   entries: ['slain', 'fell'],
   vars: ['name', 'class', 'race', 'depth', 'cause', 'killer'],
   rules: {
-    root: ['{slain}', '{fell}'],
+    root: ['{fell}'],
     slain: [
-      { text: 'Here lies {$name}, {$race} {$class|lower}, brought down on the {$depth|ord} floor by {$killer|a}. {closing}', weight: 3 },
-      { text: 'In memory of {$name} ({$class}), who met {$cause} at the hands of {$killer|a} on floor {$depth}. {closing}', weight: 2 },
-      { text: '{$name}, {$race|lower} {$class|lower}, stood to the last against {$killer|a} on the {$depth|ord} floor ({$cause}).', weight: 2 },
+      { text: 'Here lies {$name}, {$race|lower} {$class|lower}, brought down on the {$depth|ord} floor by {$killer}. {closing}', weight: 3 },
+      { text: 'In memory of {$name}, {$race|lower} {$class|lower}, who met {$cause} at the hands of {$killer} on floor {$depth}. {closing}', weight: 2 },
+      { text: '{$name}, {$race|lower} {$class|lower}, stood to the last against {$killer} on the {$depth|ord} floor ({$cause}).', weight: 2 },
     ],
     fell: [
-      { text: 'Here lies {$name}, {$race} {$class|lower}, lost on the {$depth|ord} floor to {$cause}. {closing}', weight: 3 },
-      { text: 'In memory of {$name} ({$class}), claimed by {$cause} on floor {$depth}. {closing}', weight: 2 },
+      { text: 'Here lies {$name}, {$race|lower} {$class|lower}, lost on the {$depth|ord} floor to {$cause}. {closing}', weight: 3 },
+      { text: 'In memory of {$name}, {$race|lower} {$class|lower}, claimed by {$cause} on floor {$depth}. {closing}', weight: 2 },
       { text: '{$name}, {$race|lower} {$class|lower}, went no further than the {$depth|ord} floor ({$cause}).', weight: 2 },
     ],
     closing: [
