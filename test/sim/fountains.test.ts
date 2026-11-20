@@ -18,9 +18,9 @@ import {
   generateFloor,
   getEntity,
   getFloor,
-  isDraughtIdentified,
+  isFountainKnownHarmful,
   isHarmfulDraught,
-  isKnownHarmfulDraught,
+  observedFountainDraught,
   performAction,
   planFloor,
   serialize,
@@ -255,24 +255,24 @@ describe('baseline drinking', () => {
   });
 });
 
-describe('avoiding identified harmful draughts (ETH-094)', () => {
-  it('drinks an unidentified harmful draught once, identifies it, and then skips further harmful draughts with a trace', () => {
+describe('avoiding fountains observed as harmful (ETH-094)', () => {
+  it('drinks from an untouched harmful fountain once, remembers it, and skips further drinks with a trace', () => {
     const { state, hero, fountain } = setup();
     draughtsOf(fountain).splice(0, 3, 'draught.brackish', 'draught.brackish');
     hero.actor.hp = 1;
     expect(isHarmfulDraught('draught.brackish')).toBe(true);
-    expect(isDraughtIdentified(state, 'draught.brackish')).toBe(false);
-    expect(isKnownHarmfulDraught(state, 'draught.brackish')).toBe(false);
+    expect(observedFountainDraught(state, fountain.id)).toBeUndefined();
+    expect(isFountainKnownHarmful(state, fountain.id)).toBe(false);
 
-    // Walks over and drinks the unidentified brackish draught.
+    // Walks over and drinks from the untouched fountain without peeking at draughts[0].
     const events: SimEvent[] = [];
     for (let i = 0; i < 12 && !events.some((e) => e.type === 'drankFountain'); i++) events.push(...step(state, []));
     expect(events.filter((e) => e.type === 'drankFountain')).toHaveLength(1);
-    expect(isDraughtIdentified(state, 'draught.brackish')).toBe(true);
-    expect(isKnownHarmfulDraught(state, 'draught.brackish')).toBe(true);
+    expect(observedFountainDraught(state, fountain.id)).toBe('draught.brackish');
+    expect(isFountainKnownHarmful(state, fountain.id)).toBe(true);
     expect(draughtsOf(fountain)).toEqual(['draught.brackish']);
 
-    // Still hurt and standing right on the fountain, the second brackish draught is skipped and the trace says why.
+    // Still hurt and standing right on the fountain, the second drink is skipped and the trace says why.
     const after = step(state, []);
     expect(after.some((e) => e.type === 'drankFountain')).toBe(false);
     expect(after.some((e) => e.type === 'ruleFired' && e.action === 'act.drink_fountain')).toBe(false);
@@ -283,9 +283,46 @@ describe('avoiding identified harmful draughts (ETH-094)', () => {
     expect(checkInvariants(state)).toEqual([]);
   });
 
-  it('skips a distant fountain known to be harmful and explains the skip in the trace', () => {
-    const { state, hero, fountain } = setup(ROOM, { identifiedDraughts: ['draught.brackish'] });
+  it('does not peek at an untouched fountain with a hidden harmful draught[0], even after tasting brackish water elsewhere', () => {
+    const TWO_FOUNTAINS = ['###########', '#@.{....{.#', '#.........#', '###########'];
+    const state = createRun({ party: [HERO], floorText: TWO_FOUNTAINS, depth: 1 }, 7);
+    const hero = getEntity(state, state.party[0] as EntityId) as ActorEntity;
+    const fountains = Object.values(state.entities)
+      .filter((e) => e.feature?.kind === 'fountain')
+      .sort((a, b) => a.pos.x - b.pos.x);
+    const near = fountains[0] as Entity;
+    const far = fountains[1] as Entity;
+    draughtsOf(near).splice(0, 3, 'draught.brackish', 'draught.brackish');
+    draughtsOf(far).splice(0, 3, 'draught.brackish', 'draught.mending');
+
+    // Taste brackish water at the near fountain; the far fountain is still untouched.
+    drink(state, hero, near);
+    hero.pos = { x: 1, y: 1 };
+    hero.actor.hp = 1;
+    expect(isFountainKnownHarmful(state, near.id)).toBe(true);
+    expect(observedFountainDraught(state, far.id)).toBeUndefined();
+    expect(isFountainKnownHarmful(state, far.id)).toBe(false);
+
+    // Skips near, but does NOT peek at far's hidden brackish draught[0]: walks to far and drinks it.
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 15 && !events.some((e) => e.type === 'drankFountain'); i++) events.push(...step(state, []));
+    expect(events.find((e) => e.type === 'drankFountain')).toMatchObject({ fountain: far.id, draught: 'draught.brackish' });
+    expect(hero.pos).toEqual(far.pos);
+    expect(isFountainKnownHarmful(state, far.id)).toBe(true);
+    expect(draughtsOf(near)).toEqual(['draught.brackish']);
+    expect(draughtsOf(far)).toEqual(['draught.mending']);
+
+    // Now both fountains are observed as harmful, so the hero stops drinking (doesn't peek at far's mending water).
+    const after = step(state, []);
+    expect(after.some((e) => e.type === 'drankFountain')).toBe(false);
+    expect(after.find((e) => e.type === 'ruleFired')?.detail).toContain('skipped fountain (brackish water is harmful)');
+  });
+
+  it('skips a distant fountain whose last observed draught was harmful and explains the skip in the trace', () => {
+    const { state, hero, fountain } = setup(ROOM);
     draughtsOf(fountain).splice(0, 3, 'draught.brackish', 'draught.mending');
+    drink(state, hero, fountain);
+    hero.pos = { x: 1, y: 1 };
     hero.actor.hp = 1;
 
     const events: SimEvent[] = [];
@@ -297,17 +334,19 @@ describe('avoiding identified harmful draughts (ETH-094)', () => {
     expect(hero.pos).toEqual({ x: 1, y: 1 });
   });
 
-  it('bypasses a closer identified harmful fountain to drink from a farther safe fountain, noting the skip', () => {
+  it('bypasses a closer fountain observed as harmful to drink from a farther untouched fountain, noting the skip', () => {
     const TWO_FOUNTAINS = ['###########', '#@.{....{.#', '#.........#', '###########'];
-    const state = createRun({ party: [HERO], floorText: TWO_FOUNTAINS, depth: 1, identifiedDraughts: ['draught.brackish'] }, 7);
+    const state = createRun({ party: [HERO], floorText: TWO_FOUNTAINS, depth: 1 }, 7);
     const hero = getEntity(state, state.party[0] as EntityId) as ActorEntity;
     const fountains = Object.values(state.entities)
       .filter((e) => e.feature?.kind === 'fountain')
       .sort((a, b) => a.pos.x - b.pos.x);
     const near = fountains[0] as Entity;
     const far = fountains[1] as Entity;
-    draughtsOf(near).splice(0, 3, 'draught.brackish');
+    draughtsOf(near).splice(0, 3, 'draught.brackish', 'draught.brackish');
     draughtsOf(far).splice(0, 3, 'draught.mending');
+    drink(state, hero, near);
+    hero.pos = { x: 1, y: 1 };
     hero.actor.hp = 1;
 
     const first = step(state, []);
@@ -322,24 +361,41 @@ describe('avoiding identified harmful draughts (ETH-094)', () => {
     expect(draughtsOf(near)).toEqual(['draught.brackish']);
   });
 
-  it('still drinks safe or plain draughts below 50% HP even after identifying them, and stops at a harmful next draught', () => {
-    const { state, hero, fountain } = setup(ROOM, {
-      identifiedDraughts: ['draught.mending', 'draught.bright', 'draught.still', 'draught.brackish'],
-    });
-    draughtsOf(fountain).splice(0, 3, 'draught.still', 'draught.bright', 'draught.brackish');
+  it('keeps drinking through safe/plain draughts without peeking ahead, and stops once a harmful draught is observed', () => {
+    const { state, hero, fountain } = setup(ROOM);
+    draughtsOf(fountain).splice(0, 3, 'draught.still', 'draught.bright', 'draught.brackish', 'draught.mending');
     hero.actor.hp = 1;
 
     const events: SimEvent[] = [];
     for (let i = 0; i < 15; i++) events.push(...step(state, []));
     const drinks = events.filter((e): e is Extract<SimEvent, { type: 'drankFountain' }> => e.type === 'drankFountain');
-    expect(drinks.map((d) => d.draught)).toEqual(['draught.still', 'draught.bright']);
-    expect(draughtsOf(fountain)).toEqual(['draught.brackish']);
+    expect(drinks.map((d) => d.draught)).toEqual(['draught.still', 'draught.bright', 'draught.brackish']);
+    expect(draughtsOf(fountain)).toEqual(['draught.mending']);
+    expect(observedFountainDraught(state, fountain.id)).toBe('draught.brackish');
     expect(hero.ai?.memory.intent?.detail).toContain('skipped fountain (brackish water is harmful)');
   });
 
+  it('resumes using a fountain if a later drink observes a non-harmful draught', () => {
+    const { state, hero, fountain } = setup(ROOM);
+    draughtsOf(fountain).splice(0, 3, 'draught.brackish', 'draught.still', 'draught.mending');
+    drink(state, hero, fountain);
+    expect(isFountainKnownHarmful(state, fountain.id)).toBe(true);
+
+    // A later drink (e.g. player-ordered) observes still water, clearing the harmful impression.
+    drink(state, hero, fountain);
+    expect(observedFountainDraught(state, fountain.id)).toBe('draught.still');
+    expect(isFountainKnownHarmful(state, fountain.id)).toBe(false);
+
+    hero.actor.hp = 1;
+    const events = step(state, []);
+    expect(events.find((e) => e.type === 'drankFountain')).toMatchObject({ fountain: fountain.id, draught: 'draught.mending' });
+  });
+
   it('does not add a skip note when healthy or carrying a healing potion', () => {
-    const { state, hero, fountain } = setup(ROOM, { identifiedDraughts: ['draught.brackish'] });
-    draughtsOf(fountain).splice(0, 3, 'draught.brackish');
+    const { state, hero, fountain } = setup(ROOM);
+    draughtsOf(fountain).splice(0, 3, 'draught.brackish', 'draught.brackish');
+    drink(state, hero, fountain);
+    hero.pos = { x: 1, y: 1 };
 
     const healthy = step(state, []).find((e): e is Extract<SimEvent, { type: 'ruleFired' }> => e.type === 'ruleFired');
     expect(healthy?.detail).not.toContain('skipped fountain');
@@ -350,19 +406,18 @@ describe('avoiding identified harmful draughts (ETH-094)', () => {
     expect(withPotion?.detail).not.toContain('skipped fountain');
   });
 
-  it('validates identifiedDraughts in config, persists across save/load, and enforces the invariant', () => {
-    expect(() => createRun({ party: [HERO], identifiedDraughts: ['draught.nope'] }, 1)).toThrow(/identifiedDraughts/);
-
+  it('persists observedFountains across save/load and enforces the invariant', () => {
     const { state, hero, fountain } = setup();
-    draughtsOf(fountain).splice(0, 3, 'draught.brackish');
+    draughtsOf(fountain).splice(0, 3, 'draught.brackish', 'draught.mending');
     drink(state, hero, fountain);
     const copy = deserialize(serialize(state));
-    expect(copy.domains.floors.identifiedDraughts).toEqual(['draught.brackish']);
+    expect(copy.domains.floors.observedFountains).toEqual({ [fountain.id]: 'draught.brackish' });
     expect(checkInvariants(copy)).toEqual([]);
 
-    copy.domains.floors.identifiedDraughts.push('draught.brackish');
-    expect(checkInvariants(copy).join('\n')).toMatch(/identified twice/);
-    copy.domains.floors.identifiedDraughts = ['draught.unknown'];
+    copy.domains.floors.observedFountains[9999] = 'draught.brackish';
+    expect(checkInvariants(copy).join('\n')).toMatch(/not a fountain/);
+    Reflect.deleteProperty(copy.domains.floors.observedFountains, 9999);
+    copy.domains.floors.observedFountains[fountain.id] = 'draught.unknown';
     expect(checkInvariants(copy).join('\n')).toMatch(/unknown draught "draught\.unknown"/);
   });
 });

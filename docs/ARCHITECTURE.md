@@ -620,7 +620,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
 `quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`) and
-ETH-094 27 (`floors.identifiedDraughts`).
+ETH-094 27 (`floors.observedFountains`).
 
 ### Contracts in the run (ETH-024)
 
@@ -697,8 +697,8 @@ What later items build on, all exported from `src/sim/floors/`:
   is built from (`floorTypeOf(state, floor)`), or `null` for a hand-built floor; the Codex marks
   it `seen` from this event.
 - **State:** `state.domains.floors` holds `deepest`, `arrived` (the turn the party first
-  reached each floor) and `identifiedDraughts` (ETH-094: draught ids identified by drinking this
-  run, or pre-seeded via `RunConfig.identifiedDraughts`).
+  reached each floor) and `observedFountains` (ETH-094: the last draught id the party observed by
+  drinking from each fountain, keyed by fountain entity id).
 - **Party:** `gatheringAt(state, floor, pos)` says who is gathered at a place (chained within
   `GATHER_RADIUS`) and who is missing; `partyOnFloor` lists the living members on a floor.
 - **Fountains (ETH-072, `floors/fountains.ts`):** a core feature part
@@ -1762,9 +1762,10 @@ As built in `src/sim/ai/` (ETH-009):
   thing (as many of a stack as it takes to get within carry); `act.pick_up` picks up a wanted
   item on the tile, or walks to the nearest remembered wanted one within `maxDetour` steps.
   `act.drink_fountain` (ETH-072, ETH-094, `src/sim/floors/fountains.ts`) walks to the nearest
-  remembered fountain that isn't dry and whose next draught is not identified as harmful
-  (`outcome === 'bane'` in `floors.identifiedDraughts`), explaining any skipped harmful fountain in
-  the trace, and drinks. The heading-out ones (ETH-062) are in
+  remembered fountain that isn't dry and whose last observed draught in `floors.observedFountains`
+  is not harmful (`outcome === 'bane'`), without peeking at untouched fountains' hidden draughts,
+  explaining any skipped harmful fountain in the trace, and drinks. The heading-out ones (ETH-062)
+  are in
   `src/sim/run/rules.ts`; the floors ones (ETH-058) in `src/sim/floors/rules.ts`:
   - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
     default) a member on the stairs takes them only when every living member on that floor is
