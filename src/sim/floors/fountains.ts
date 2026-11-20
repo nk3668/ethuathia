@@ -8,16 +8,17 @@
  * - `RunConfig.maxFountains` caps fountains per floor (the Dry Wells Omen, ETH-067, sets it to 0);
  *   `planFloor` applies it after generation, so the rest of the floor doesn't change.
  * - The `drink` action (in `index.ts`) drinks the fountain the actor stands on.
- * - `act.drink_fountain` walks to the nearest known fountain that isn't dry and drinks;
- *   `cond.hurt_no_healing` is the baseline's reason to: HP below a share of the maximum and no
- *   healing potion carried.
+ * - `act.drink_fountain` walks to the nearest known fountain that isn't dry or known to be harmful
+ *   (ETH-094: skips any fountain whose next draught is identified in `floors.identifiedDraughts`
+ *   with `outcome === 'bane'`, explaining the skip in the trace) and drinks; `cond.hurt_no_healing`
+ *   is the baseline's reason to: HP below a share of the maximum and no healing potion carried.
  */
 import { DRAUGHTS, healAmount, ITEMS } from '../../content';
 import type { DraughtDef } from '../../content';
 import type { Pos, Rng } from '../../core';
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
-import type { AiCtx, ConditionDef, ParamParser, Resolved, RuleActionDef } from '../ai/types';
+import type { AiCtx, ConditionDef, ParamParser, ResolveResult, RuleActionDef } from '../ai/types';
 import { featureAt } from '../entities';
 import { readParams } from '../gen/params';
 import { defineGenStep, rectTiles } from '../gen/types';
@@ -120,6 +121,20 @@ export function configMaxFountains(max: number | undefined): number | undefined 
   return max;
 }
 
+/**
+ * The starting identified draughts a config asks for (ETH-094): validated against `DRAUGHTS` and
+ * deduplicated in order. Throws on any unknown draught id.
+ */
+export function configIdentifiedDraughts(ids: readonly string[] | undefined): string[] {
+  if (ids === undefined) return [];
+  const out: string[] = [];
+  for (const id of ids) {
+    if (!DRAUGHTS.has(id)) throw new RangeError(`identifiedDraughts contains unknown draught "${id}"`);
+    if (!out.includes(id)) out.push(id);
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Reading fountains
 
@@ -129,17 +144,57 @@ export function fountainAt(state: RunState, floorId: FloorId, pos: Pos): (Entity
   return e?.feature?.kind === 'fountain' ? (e as Entity & { feature: FountainPart }) : undefined;
 }
 
-/** Where the party remembers fountains that weren't dry when last seen on `floorId`, in tile order. */
-export function knownFlowingFountains(state: RunState, floorId: FloorId): Pos[] {
+/** A remembered flowing fountain on a floor, with its next draught id. */
+interface KnownFountain {
+  pos: Pos;
+  nextDraught: string;
+}
+
+/** Remembered fountains on `floorId` that weren't dry when last seen, in tile order. */
+function rememberedFlowingFountains(state: RunState, floorId: FloorId): KnownFountain[] {
   const memory = getMemory(state, floorId);
   const { width } = memory.terrain;
-  const out: Pos[] = [];
+  const out: KnownFountain[] = [];
   for (const key of Object.keys(memory.features)) {
     const i = Number(key);
     const f = memory.features[i]?.feature;
-    if (f?.kind === 'fountain' && f.draughts.length > 0) out.push({ x: i % width, y: Math.floor(i / width) });
+    if (f?.kind === 'fountain' && f.draughts.length > 0) {
+      out.push({ pos: { x: i % width, y: Math.floor(i / width) }, nextDraught: f.draughts[0] as string });
+    }
   }
   return out;
+}
+
+/** Where the party remembers fountains that weren't dry when last seen on `floorId`, in tile order. */
+export function knownFlowingFountains(state: RunState, floorId: FloorId): Pos[] {
+  return rememberedFlowingFountains(state, floorId).map((f) => f.pos);
+}
+
+/** True if `draughtId` is a known draught def whose outcome is harmful (`bane`, ETH-094). */
+export function isHarmfulDraught(draughtId: string): boolean {
+  return DRAUGHTS.has(draughtId) && DRAUGHTS.get(draughtId).outcome === 'bane';
+}
+
+/** True if the party has identified `draughtId` this run (ETH-094). */
+export function isDraughtIdentified(state: RunState, draughtId: string): boolean {
+  return state.domains.floors.identifiedDraughts.includes(draughtId);
+}
+
+/** True if `draughtId` has been identified by the party and its outcome is harmful (`bane`, ETH-094). */
+export function isKnownHarmfulDraught(state: RunState, draughtId: string): boolean {
+  return isDraughtIdentified(state, draughtId) && isHarmfulDraught(draughtId);
+}
+
+/** Lowercase draught names joined for a trace: "brackish water", "brackish water and bitter water". */
+function draughtNames(ids: readonly string[]): string {
+  const list = ids.map((id) => (DRAUGHTS.has(id) ? DRAUGHTS.get(id).name.toLowerCase() : id));
+  return list.length <= 1 ? (list[0] ?? '') : `${list.slice(0, -1).join(', ')} and ${list.at(-1) as string}`;
+}
+
+/** Trace phrase explaining why one or more fountains were skipped (ETH-094). */
+function describeSkippedFountains(draughtIds: readonly string[]): string {
+  const verb = draughtIds.length === 1 ? 'is' : 'are';
+  return `skipped fountain (${draughtNames(draughtIds)} ${verb} harmful)`;
 }
 
 /**
@@ -184,27 +239,58 @@ export const COND_HURT_NO_HEALING = defineCondition({
   describe: ({ below }) => `HP below ${below}% and no healing potion`,
 });
 
-/** Walk to the nearest known fountain that isn't dry and drink from it. */
+/** Walk to the nearest known fountain that isn't dry or known to be harmful, and drink from it. */
 export const ACT_DRINK_FOUNTAIN = defineRuleAction({
   id: 'act.drink_fountain',
   name: 'Drink from a fountain',
   description:
     'Walk to the nearest fountain on this floor that the party has seen and that isn’t dry, and drink from it. ' +
-    'Most draughts mend wounds, but some do nothing and a few sit badly. Can’t be done before a fountain is found.',
+    'Most draughts mend wounds, but some do nothing and a few sit badly. Skips any fountain whose next draught ' +
+    'has been identified as harmful. Can’t be done before a usable fountain is found.',
   parse: noParams,
-  resolve(ctx: AiCtx): Resolved | null {
+  resolve(ctx: AiCtx): ResolveResult {
     const { state, actor } = ctx;
     const here = fountainAt(state, actor.floor, actor.pos);
+    let skippedHere: string | null = null;
     if (here !== undefined && here.feature.draughts.length > 0) {
-      return { request: { id: 'drink' }, detail: 'drinking from the fountain' };
+      const next = here.feature.draughts[0] as string;
+      if (!isKnownHarmfulDraught(state, next)) {
+        return { request: { id: 'drink' }, detail: 'drinking from the fountain' };
+      }
+      skippedHere = next;
     }
-    const goals = knownFlowingFountains(state, actor.floor);
-    if (goals.length === 0) return null;
+
+    const remembered = rememberedFlowingFountains(state, actor.floor);
+    const safe: Pos[] = [];
+    const harmful: KnownFountain[] = [];
+    for (const f of remembered) {
+      if (f.pos.x === actor.pos.x && f.pos.y === actor.pos.y) continue;
+      if (isKnownHarmfulDraught(state, f.nextDraught)) harmful.push(f);
+      else safe.push(f.pos);
+    }
+    if (safe.length === 0 && harmful.length === 0 && skippedHere === null) return null;
+
     const paths = aiPathGrid(ctx);
-    const map = buildGoalMap(paths, goals);
-    const cost = map.get(actor.pos.x, actor.pos.y);
-    if (cost === UNREACHABLE) return null;
-    return followMap(ctx, paths, map, `heading for a fountain, ${cost} ${cost === 1 ? 'turn' : 'turns'} away`);
+    const safeMap = safe.length > 0 ? buildGoalMap(paths, safe) : null;
+    const safeCost = safeMap === null ? UNREACHABLE : safeMap.get(actor.pos.x, actor.pos.y);
+
+    const skippedDraughts: string[] = [];
+    const note = (id: string) => {
+      if (!skippedDraughts.includes(id)) skippedDraughts.push(id);
+    };
+    if (skippedHere !== null) note(skippedHere);
+    for (const f of harmful) {
+      const cost = buildGoalMap(paths, [f.pos]).get(actor.pos.x, actor.pos.y);
+      if (cost !== UNREACHABLE && (safeCost === UNREACHABLE || cost <= safeCost)) note(f.nextDraught);
+    }
+
+    if (safeMap !== null && safeCost !== UNREACHABLE) {
+      const base = `heading for a fountain, ${safeCost} ${safeCost === 1 ? 'turn' : 'turns'} away`;
+      const detail = skippedDraughts.length === 0 ? base : `${base}; ${describeSkippedFountains(skippedDraughts)}`;
+      return followMap(ctx, paths, safeMap, detail);
+    }
+
+    return skippedDraughts.length > 0 ? { skipped: describeSkippedFountains(skippedDraughts) } : null;
   },
   describe: () => 'drink from the nearest fountain',
 });
@@ -216,8 +302,8 @@ export const FOUNTAIN_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_DRINK_FOUNTA
 // Invariants
 
 /**
- * Every fountain holds only known draught ids, sits on a floor tile, and no floor has more
- * fountains than `RunConfig.maxFountains`.
+ * Every fountain holds only known draught ids, sits on a floor tile, no floor has more
+ * fountains than `RunConfig.maxFountains`, and `identifiedDraughts` holds unique known draught ids.
  */
 registerInvariant('floors.fountains', (state) => {
   const problems: string[] = [];
@@ -237,6 +323,13 @@ registerInvariant('floors.fountains', (state) => {
     for (const [floor, n] of Object.entries(counts)) {
       if (n > max) problems.push(`floor "${floor}" has ${n} fountains, the config allows ${max}`);
     }
+  }
+  const identified = state.domains.floors.identifiedDraughts;
+  if (!Array.isArray(identified)) {
+    problems.push('floors state has no identifiedDraughts list');
+  } else {
+    if (new Set(identified).size !== identified.length) problems.push('a draught is recorded as identified twice');
+    for (const id of identified) if (!DRAUGHTS.has(id)) problems.push(`identifiedDraughts holds unknown draught "${id}"`);
   }
   return problems;
 });
