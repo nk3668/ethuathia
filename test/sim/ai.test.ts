@@ -186,6 +186,7 @@ describe('decision engine', () => {
         rule: { set: 'own', index: 4 },
         action: 'act.test_step',
         detail: 'Test step: stepping (0, 1); skipped bad fountain',
+        skipped: ['skipped bad fountain'],
       },
     ]);
     expect(hero.ai.memory.intent?.detail).toBe('Test step: stepping (0, 1); skipped bad fountain');

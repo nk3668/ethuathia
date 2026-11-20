@@ -284,13 +284,15 @@ export const ACT_DRINK_FOUNTAIN = defineRuleAction({
       if (cost !== UNREACHABLE && (safeCost === UNREACHABLE || cost <= safeCost)) note(f.nextDraught);
     }
 
+    const skippedNote = skippedDraughts.length > 0 ? describeSkippedFountains(skippedDraughts) : undefined;
     if (safeMap !== null && safeCost !== UNREACHABLE) {
       const base = `heading for a fountain, ${safeCost} ${safeCost === 1 ? 'turn' : 'turns'} away`;
-      const detail = skippedDraughts.length === 0 ? base : `${base}; ${describeSkippedFountains(skippedDraughts)}`;
-      return followMap(ctx, paths, safeMap, detail);
+      const step = followMap(ctx, paths, safeMap, base);
+      if (step === null) return skippedNote === undefined ? null : { skipped: skippedNote };
+      return skippedNote === undefined ? step : { ...step, skipped: skippedNote };
     }
 
-    return skippedDraughts.length > 0 ? { skipped: describeSkippedFountains(skippedDraughts) } : null;
+    return skippedNote === undefined ? null : { skipped: skippedNote };
   },
   describe: () => 'drink from the nearest fountain',
 });
