@@ -15,7 +15,7 @@ const TURN_FORMAT = new Intl.NumberFormat('en-US');
 
 /** Tooltip for the Rematch button (ETH-084): explains what repeats and what can still change. */
 export const REMATCH_TOOLTIP =
-  'Replay this dungeon with the same seed and current Prepare settings. The layout repeats, but outcomes may differ if upgrades, rules, or choices changed.';
+  'Replay this dungeon with the same seed and your current upgrades and rules. The layout repeats, but outcomes may differ if upgrades or rules changed.';
 
 /**
  * The run summary modal (docs/VISUAL-DESIGN.md §6.2): the outcome and its cause, each

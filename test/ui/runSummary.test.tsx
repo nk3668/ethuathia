@@ -126,6 +126,11 @@ describe('RunSummary', () => {
     expect(tip.textContent).toContain('layout repeats');
     expect(tip.textContent).toContain('outcomes may differ');
 
+    // Pressing Escape while the tooltip is open dismisses only the tooltip, keeping the dialog open.
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    expect(screen.getByRole('dialog', { name: /Wipe/ })).toBeTruthy();
+
     await user.click(rematchBtn);
     await user.click(within(dialog).getByRole('button', { name: 'Start next run' }));
     expect(calls).toEqual([{ sameSeed: true }, undefined]);

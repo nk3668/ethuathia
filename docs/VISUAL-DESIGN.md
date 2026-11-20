@@ -539,7 +539,7 @@ multiplier column arrives with ETH-067, between Earned and Lost, so it reads bas
 with a muted line under it saying how the outcome treated the earnings (ETH-023), "Met this run" (the Codex discoveries), a placeholder epitaph in
 italics, the Auto-restart checkbox with "Next run in N s" and Cancel while counting down, and
 the buttons **Review log** (ghost; closes it, Escape too), **Rematch** (secondary, ETH-084;
-replays the previous run's seed with the current profile and Prepare settings, with a tooltip
+replays the previous run's seed with your current upgrades and rules, with a tooltip
 explaining that the layout repeats while outcomes may differ), **Start next run** (secondary; the
 same choices again at once with a fresh seed) and **Continue** (primary, focused; to the Prepare
 screen, ETH-064). With the modal closed, a banner at the bottom of the map says the run is over
