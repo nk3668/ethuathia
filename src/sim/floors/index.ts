@@ -25,7 +25,7 @@ import { grantDepthXp } from '../stats/leveling';
 import type { EntityId, FloorId, RunConfig } from '../state';
 import { arrivalStairs, arrivalTile, dungeonDepth, floorIdAt, floorNode, floorTypeOf, stairsOn, stairsTarget } from './dungeon';
 import type { StairsDir } from './dungeon';
-import { fountainAt, FOUNTAIN_CONDITIONS, FOUNTAIN_GEN_STEPS, FOUNTAIN_RULE_ACTIONS } from './fountains';
+import { configIdentifiedDraughts, fountainAt, FOUNTAIN_CONDITIONS, FOUNTAIN_GEN_STEPS, FOUNTAIN_RULE_ACTIONS } from './fountains';
 import { maybeRespawnFloor } from './respawn';
 import type { RespawnConfig } from './respawn';
 import { FLOORS_CONDITIONS, FLOORS_RULE_ACTIONS, names, partyOnFloor, stairsGathering } from './rules';
@@ -105,6 +105,12 @@ export interface FloorsState {
   stirAnnounced: boolean;
   /** Game turn the last living party member left each floor, for constant-respawn cooldowns (ETH-025). */
   lastVacated: Record<FloorId, number>;
+  /**
+   * Draught ids (`draught.*`) the party has identified this run (ETH-094), in discovery order.
+   * Drinking a draught identifies its type; the baseline AI skips fountains whose next draught is
+   * identified as harmful (`outcome === 'bane'`).
+   */
+  identifiedDraughts: string[];
 }
 
 /** This domain's slice of the snapshot, at `snapshot.domains.floors`. Plain data. */
@@ -137,6 +143,11 @@ export interface FloorsConfig {
   maxFountains?: number;
   /** Tunable return-trip floor repopulation settings (ETH-025). */
   respawn?: RespawnConfig;
+  /**
+   * Draught ids (`draught.*`) already identified when the run starts (ETH-094). Leave out to
+   * start with none identified (the party learns each draught type by drinking it).
+   */
+  identifiedDraughts?: readonly string[];
 }
 
 /** This domain's row in `DomainTypes` (`src/sim/domain.ts`). */
@@ -222,6 +233,9 @@ export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {
       const floor = actor.floor;
       const pos = { x: fountain.pos.x, y: fountain.pos.y };
       const left = fountain.feature.draughts.length;
+      if (actor.actor.faction === 'party' && DRAUGHTS.has(draught) && !state.domains.floors.identifiedDraughts.includes(draught)) {
+        state.domains.floors.identifiedDraughts.push(draught);
+      }
       emit({ type: 'drankFountain', actor: actor.id, fountain: fountain.id, draught, left, floor, pos });
       if (DRAUGHTS.has(draught)) {
         runEffects({ state, emit, self: actor.id, source: draught, potency: 1 }, DRAUGHTS.get(draught).bundle.effects ?? []);
@@ -234,8 +248,15 @@ export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {
 export const FLOORS_COMMANDS: CommandRecord<FloorsCommand> = {};
 
 /** The state slice for a new run: the party starts on the first floor at turn 0. */
-export function initFloors(_config: RunConfig): FloorsState {
-  return { deepest: 1, arrived: { [floorIdAt(1)]: 0 }, respawns: {}, stirAnnounced: false, lastVacated: {} };
+export function initFloors(config: RunConfig): FloorsState {
+  return {
+    deepest: 1,
+    arrived: { [floorIdAt(1)]: 0 },
+    respawns: {},
+    stirAnnounced: false,
+    lastVacated: {},
+    identifiedDraughts: configIdentifiedDraughts(config.identifiedDraughts),
+  };
 }
 
 /** The snapshot slice. Shares nothing with the state. */

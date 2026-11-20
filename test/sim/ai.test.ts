@@ -105,6 +105,19 @@ RULE_ACTIONS.register(
     describe: () => 'nothing',
   }),
 );
+RULE_ACTIONS.register(
+  defineRuleAction<{ reason: string }>({
+    id: 'act.test_skip',
+    name: 'Test skip',
+    description: 'Skips with a trace reason.',
+    parse: (raw) =>
+      typeof raw === 'object' && raw !== null && 'reason' in raw && typeof (raw as { reason: unknown }).reason === 'string'
+        ? { reason: (raw as { reason: string }).reason }
+        : 'Need a skip reason',
+    resolve: (_ctx, { reason }) => ({ skipped: reason }),
+    describe: ({ reason }) => `skip (${reason})`,
+  }),
+);
 
 const rule = (condition: string, action: string, params?: unknown, enabled = true): Rule => ({
   condition: { id: condition },
@@ -157,6 +170,25 @@ describe('decision engine', () => {
       { rule: { set: 'baseline', index: BASELINE_RULES.length - 1 }, action: 'act.wait', detail: 'Wait: nothing else to do' },
     ]);
     expect(hero.ai.memory.intent?.goal).toBeUndefined();
+  });
+
+  it('appends skip reasons from earlier rules whose condition held to the fired trace (ETH-094)', () => {
+    const { state, hero } = setup(ROOM);
+    hero.ai = newAiPart([
+      rule('cond.test_never', 'act.test_skip', { reason: 'should not appear' }),
+      rule('cond.always', 'act.test_skip', { reason: 'skipped bad fountain' }),
+      rule('cond.always', 'act.test_skip', { reason: 'skipped bad fountain' }), // duplicate note ignored
+      rule('cond.always', 'act.test_skip', { reason: '' }), // empty note ignored
+      rule('cond.always', 'act.test_step', { x: 0, y: 1 }),
+    ]);
+    expect(fired(step(state, []))).toMatchObject([
+      {
+        rule: { set: 'own', index: 4 },
+        action: 'act.test_step',
+        detail: 'Test step: stepping (0, 1); skipped bad fountain',
+      },
+    ]);
+    expect(hero.ai.memory.intent?.detail).toBe('Test step: stepping (0, 1); skipped bad fountain');
   });
 
   it('lets actors without an AI part wait, with no trace', () => {
