@@ -5,8 +5,24 @@
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets, RUN_RECORD_MOMENTS } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
 import { defName, DEITIES, describeMilestoneMet } from '../../content';
-import { CHRONICLE_TRACKER, describeRequirement, favorDeity, favorKey, RENOWN, topMoments, TROPHIES, WIPE_LOSS_SHARE } from '../../sim';
-import type { ChronicleEntry, ContractRecord, FallenRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
+import {
+  CHRONICLE_TRACKER,
+  depthRenown,
+  describeRequirement,
+  favorDeity,
+  favorKey,
+  RENOWN,
+  RENOWN_DEPTH_EXPONENT,
+  RENOWN_PER_FLOOR,
+  renownByFloor,
+  renownForFloor,
+  topMoments,
+  TROPHIES,
+  TURNS_PER_RENOWN,
+  turnsRenown,
+  WIPE_LOSS_SHARE,
+} from '../../sim';
+import type { ChronicleEntry, ContractRecord, FallenRecord, FloorRenown, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
 
 /** Each outcome's heading and icon, so it never rests on color alone. */
 export const OUTCOME_LOOK: Readonly<Record<RunOutcome, { title: string; icon: string }>> = {
@@ -47,6 +63,48 @@ export function currencyRows(report: RunReport): CurrencyRow[] {
 
 /** The wipe loss as a whole percentage: "25%". */
 export const WIPE_LOSS_PERCENT = `${Math.round(WIPE_LOSS_SHARE * 100)}%`;
+
+/** The Renown formula shown in tooltips, derived from the tuneable constants in `trackers.ts` (ETH-085). */
+export const RENOWN_FORMULA_TEXT =
+  `${RENOWN_PER_FLOOR} × floor^${RENOWN_DEPTH_EXPONENT} (rounded) per floor below floor 1, ` +
+  `plus 1 per ${TURNS_PER_RENOWN} turns survived.`;
+
+/** Concrete per-floor sample amounts for the Renown formula tooltip, derived from `renownForFloor`. */
+export const RENOWN_FORMULA_EXAMPLES = [2, 5, 10].map((d) => `Floor ${d}: ${renownForFloor(d)}`).join(' · ');
+
+/** How a run's earned Renown breaks down by floor, turns, contracts and other bonuses (ETH-085). */
+export interface RenownBreakdown {
+  /** Per-floor depth Renown for floors `2..deepestDepth` (empty when `deepestDepth <= 1`). */
+  readonly floors: readonly FloorRenown[];
+  /** Sum of `floors`. */
+  readonly depth: number;
+  /** Renown from turns survived (`turnsRenown(turns)`). */
+  readonly turns: number;
+  /** Total turns survived, for the label. */
+  readonly turnCount: number;
+  /** Renown from completed contracts. */
+  readonly contracts: number;
+  /** Remaining earned Renown (e.g. run-wide reward multipliers), when positive. */
+  readonly other: number;
+}
+
+/**
+ * Breaks a finished run's earned Renown down into per-floor depth rewards, turns survived,
+ * completed contracts and any remaining bonus (such as run modifiers). Works identically for
+ * live runs and past runs rebuilt from Run History (`reportFromRecord`). Returns `null` when
+ * the current formula's components exceed the recorded earned Renown (e.g. a past run saved
+ * before ETH-085's depth-weighted formula), rather than showing numbers that contradict the total.
+ */
+export function renownBreakdown(report: RunReport): RenownBreakdown | null {
+  const floors = renownByFloor(report.result.deepestDepth);
+  const depth = depthRenown(report.result.deepestDepth);
+  const turns = turnsRenown(report.result.turns);
+  const contracts = contractsOf(report).reduce((sum, c) => sum + (c.complete ? (c.reward[RENOWN] ?? 0) : 0), 0);
+  const earned = report.result.atRisk[RENOWN] ?? 0;
+  const other = earned - (depth + turns + contracts);
+  if (other < 0) return null;
+  return { floors, depth, turns, turnCount: report.result.turns, contracts, other };
+}
 
 /** The line under the currency table: how this outcome treated the run's at-risk earnings. */
 export function lossNote(outcome: RunOutcome): string {

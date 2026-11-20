@@ -25,14 +25,51 @@ import type { RewardAmounts } from './result';
 // ---------------------------------------------------------------------------------------------
 // Tunable reward constants (provisional; check changes with `npm run sim`)
 
-/** Renown for each floor reached below the first. */
+/** Base Renown coefficient for each floor reached below the first (`RENOWN_PER_FLOOR × floor^RENOWN_DEPTH_EXPONENT`). */
 export const RENOWN_PER_FLOOR = 10;
+
+/** Depth scaling exponent for per-floor Renown (ETH-085). */
+export const RENOWN_DEPTH_EXPONENT = 1.3;
 
 /** Game turns survived per point of Renown. */
 export const TURNS_PER_RENOWN = 50;
 
 /** Trophies per kill, times the monster's difficulty (at least 1). Used once kills exist (ETH-060). */
 export const TROPHIES_PER_DIFFICULTY = 1;
+
+/** Per-floor depth Renown entry, for the run summary breakdown (ETH-085). */
+export interface FloorRenown {
+  readonly depth: number;
+  readonly renown: number;
+}
+
+/**
+ * Renown earned for reaching floor `depth`: `0` on floor 1, and
+ * `Math.round(RENOWN_PER_FLOOR × depth^RENOWN_DEPTH_EXPONENT)` for each floor below the first.
+ */
+export function renownForFloor(depth: number): number {
+  if (depth <= 1) return 0;
+  return Math.round(RENOWN_PER_FLOOR * depth ** RENOWN_DEPTH_EXPONENT);
+}
+
+/** Per-floor Renown for each floor reached below the first (`2..deepest`), empty when `deepest <= 1`. */
+export function renownByFloor(deepest: number): FloorRenown[] {
+  const out: FloorRenown[] = [];
+  for (let d = 2; d <= deepest; d++) out.push({ depth: d, renown: renownForFloor(d) });
+  return out;
+}
+
+/** Total depth Renown for reaching `deepest`: the sum of `renownForFloor(d)` for floors `2..deepest`. */
+export function depthRenown(deepest: number): number {
+  let total = 0;
+  for (let d = 2; d <= deepest; d++) total += renownForFloor(d);
+  return total;
+}
+
+/** Renown earned for surviving `turns` game turns: 1 per `TURNS_PER_RENOWN`. */
+export function turnsRenown(turns: number): number {
+  return Math.floor(Math.max(0, turns) / TURNS_PER_RENOWN);
+}
 
 // ---------------------------------------------------------------------------------------------
 // The framework
@@ -123,12 +160,12 @@ export function trackerExtras(state: RunState): Record<string, unknown> {
 // ---------------------------------------------------------------------------------------------
 // The base trackers
 
-/** `track.depth`: the deepest floor reached, worth `RENOWN_PER_FLOOR` Renown per floor below the first. */
+/** `track.depth`: the deepest floor reached, worth `depthRenown(deepest)` Renown (ETH-085). */
 export const DEPTH_TRACKER: RunTracker<{ deepest: number }> = {
   id: 'track.depth',
   init: () => ({ deepest: 1 }),
   reduce: (s, e) => (e.type === 'floorEntered' && e.depth > s.deepest ? { deepest: e.depth } : s),
-  rewards: (s) => ({ [RENOWN]: RENOWN_PER_FLOOR * (s.deepest - 1) }),
+  rewards: (s) => ({ [RENOWN]: depthRenown(s.deepest) }),
 };
 
 /** `track.turns`: game turns survived (the last event's turn), one Renown per `TURNS_PER_RENOWN`. */
@@ -136,7 +173,7 @@ export const TURNS_TRACKER: RunTracker<{ turns: number }> = {
   id: 'track.turns',
   init: () => ({ turns: 0 }),
   reduce: (s, e) => (e.turn > s.turns ? { turns: e.turn } : s),
-  rewards: (s) => ({ [RENOWN]: Math.floor(s.turns / TURNS_PER_RENOWN) }),
+  rewards: (s) => ({ [RENOWN]: turnsRenown(s.turns) }),
 };
 
 /** Trophies for one kill of a monster of `difficulty`. */
