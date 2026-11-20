@@ -71,13 +71,16 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const contracts = contractsOf(report);
   const moments = momentsOf(report);
   const renown = renownBreakdown(report);
-  const renownSources = [
-    renown.floors.length === 0 && (renown.turns > 0 || renown.contracts > 0 || renown.other > 0) ? 'Floor 1: 0' : null,
-    renown.turns > 0 ? `Turns (${TURN_FORMAT.format(renown.turnCount)}): +${formatNumber(renown.turns)}` : null,
-    renown.contracts > 0 ? `Contracts: +${formatNumber(renown.contracts)}` : null,
-    renown.other > 0 ? `Modifiers & other: +${formatNumber(renown.other)}` : null,
-  ].filter((line): line is string => line !== null);
-  const showRenownBreakdown = renown.floors.length > 0 || renownSources.length > 0;
+  const renownSources =
+    renown === null
+      ? []
+      : [
+          renown.floors.length === 0 && (renown.turns > 0 || renown.contracts > 0 || renown.other > 0) ? 'Floor 1: 0' : null,
+          renown.turns > 0 ? `Turns (${TURN_FORMAT.format(renown.turnCount)}): +${formatNumber(renown.turns)}` : null,
+          renown.contracts > 0 ? `Contracts: +${formatNumber(renown.contracts)}` : null,
+          renown.other > 0 ? `Modifiers & other: +${formatNumber(renown.other)}` : null,
+        ].filter((line): line is string => line !== null);
+  const showRenownBreakdown = renown !== null && (renown.floors.length > 0 || renownSources.length > 0);
   const nameOf = (id: number) => party?.find((m) => m.id === id)?.name ?? 'Someone';
 
   useEffect(() => next.current?.focus(), []);
@@ -184,10 +187,10 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
               ))}
             </tbody>
           </table>
-          {showRenownBreakdown && (
+          {showRenownBreakdown && renown !== null && (
             <div className={styles.renownBreakdown}>
               <div className={styles.breakdownHead}>
-                <Tooltip content={<RenownFormulaContent />}>Renown breakdown</Tooltip>
+                <span>Renown breakdown</span>
                 {renown.floors.length > 0 && <span className={styles.breakdownTotal}>Depth: +{formatNumber(renown.depth)}</span>}
               </div>
               {renown.floors.length > 0 && (
