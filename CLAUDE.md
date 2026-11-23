@@ -281,7 +281,7 @@ Imports only point downward in this list: `core` imports nothing, `ui` may impor
 
 ## 10. Roadmap
 
-The milestones are broken down into work items in the backlog (§11).
+The milestones are broken down into work items in the backlog (§11). Every milestone, and every major content addition, ends with a balance check item (`docs/DIFFICULTY_PHILOSOPHY.md` §9.1).
 
 1. **M0 – Skeleton:** scaffold the project; sim core with one floor, one adventurer, baseline exploration and canvas map; pause and speed controls.
 2. **M1 – A full run:** multiple floors, stairs, combat, items, death, run summary, auto-restart; the Recover-relic contract and the return trip; attributes, leveling, monster roles, equipment slots, enchantment and identification.

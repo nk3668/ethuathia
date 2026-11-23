@@ -2,7 +2,7 @@
 epic: tools-balance
 title: Test and balance tooling
 status: active
-milestones: [M0, M1, M1.5, M1.6, M2]
+milestones: [M0, M1, M1.5, M1.6, M2, M3]
 ---
 
 ## Goal
@@ -31,3 +31,5 @@ Confidence that the sim is deterministic and that balance changes are measured, 
 - [ ] [ETH-080 Systemic monster, loot and progression balance pass (M1.5 capstone)](ETH-080-monster-balance-pass.md)
 - [x] [ETH-131 Cross-domain contract and property-based test guards](ETH-131-contract-and-property-guards.md)
 - [ ] [ETH-143 Content check that every discoverable def can actually appear in a run](ETH-143-content-spawn-reachability-check.md)
+- [ ] [ETH-145 Fix the party-size inversion so solo is the hardest way to play](ETH-145-party-size-ordering.md)
+- [ ] [ETH-146 Composition and rules balance pass (M3 milestone balance check)](ETH-146-composition-balance-pass.md)
