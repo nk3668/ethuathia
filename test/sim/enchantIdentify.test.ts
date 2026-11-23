@@ -26,6 +26,7 @@ import {
   canStack,
   carriesHealingPotion,
   checkInvariants,
+  chooseRule,
   compareGear,
   createRun,
   deserialize,
@@ -47,7 +48,7 @@ import {
   waitDecide,
   wantsItem,
 } from '../../src/sim';
-import type { ActionRequest, ActorEntity, Command, EntityId, ItemInstance, RunState, SimEvent } from '../../src/sim';
+import type { ActionRequest, ActorEntity, AiActor, Command, EntityId, ItemInstance, RunState, SimEvent } from '../../src/sim';
 
 const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
 const HATCHET = 'item.iron_hatchet';
@@ -439,5 +440,106 @@ describe('identification and appearances', () => {
     // `identified: true` is rejected by the `items.properties` invariant (absent means known).
     h2.inventory.items.push({ def: POTION, qty: 1, identified: true as unknown as false });
     expect(checkInvariants(s2).join('\n')).toContain('identified');
+  });
+});
+
+describe('AI information-leak guards (ETH-131)', () => {
+  const decisionOf = (state: RunState, hero: ActorEntity) => {
+    const choice = chooseRule({ state, actor: hero as AiActor });
+    return { action: choice?.action ?? null, request: choice?.request ?? null };
+  };
+
+  it('makes identical decisions regardless of hidden fields or unknown-type item identity', () => {
+    // 1. Hurt with fountain in view (HP 9/20 = 45%, between 35% quaff threshold and 50% fountain threshold):
+    //    carriesHealingPotion must not peek at an unidentified Mending draught.
+    const fountainDecisions = (['blessed', undefined, 'cursed'] as const).flatMap((blessing) =>
+      [POTION, 'item.quickstep_tonic'].map((def) => {
+        const s = createRun({ party: [HERO], depth: 1, floorText: ['#####', '#@.{#', '#####'], monsters: false }, 19);
+        const h = getEntity(s, s.party[0] as EntityId) as ActorEntity;
+        h.actor.hp = 9;
+        h.inventory = { items: [{ def, qty: 1, identified: false, ...(blessing === undefined ? {} : { blessing }) }] };
+        return decisionOf(s, h);
+      }),
+    );
+    expect(fountainDecisions[0]?.action).toBe('act.drink_fountain');
+    for (const d of fountainDecisions) expect(d).toEqual(fountainDecisions[0]);
+
+    // 2. Critically wounded (HP 4/20 = 20% < 35%): unidentified healing vs speed potion & hidden beatitude choose identically.
+    const urgentDecisions = (['blessed', undefined, 'cursed'] as const).flatMap((blessing) =>
+      [POTION, 'item.quickstep_tonic'].map((def) => {
+        const { state: s, hero: h } = setup(19);
+        h.actor.hp = 4;
+        h.inventory = { items: [{ def, qty: 1, identified: false, ...(blessing === undefined ? {} : { blessing }) }] };
+        return decisionOf(s, h);
+      }),
+    );
+    expect(urgentDecisions[0]).toEqual({ action: 'act.quaff_healing', request: { id: 'use', index: 0 } });
+    for (const d of urgentDecisions) expect(d).toEqual(urgentDecisions[0]);
+
+    // 3. Overloaded pack: dropping lowest-value unknown potion or scroll must not leak hidden base value or blessing.
+    const heavyArmor = { def: 'item.riveted_mail', qty: 4 };
+    const dropPotionVariants: [ItemInstance, ItemInstance][] = [
+      [{ def: POTION, qty: 1, identified: false }, { def: 'item.quickstep_tonic', qty: 1, identified: false }],
+      [{ def: 'item.quickstep_tonic', qty: 1, blessing: 'blessed', identified: false }, { def: POTION, qty: 1, blessing: 'cursed', identified: false }],
+    ];
+    const dropDecisions = dropPotionVariants.map((pair) => {
+      const { state: s, hero: h } = setup(23);
+      h.inventory = { items: [heavyArmor, ...pair] };
+      return decisionOf(s, h);
+    });
+    expect(dropDecisions[0]).toEqual({ action: 'act.drop_lowest', request: { id: 'drop', index: 2, qty: 1 } });
+    expect(dropDecisions[1]).toEqual(dropDecisions[0]);
+
+    const dropScrollVariants: [ItemInstance, ItemInstance][] = [
+      [{ def: SCROLL_ID, qty: 1, identified: false }, { def: SCROLL_UNCURSE, qty: 1, identified: false }],
+      [{ def: SCROLL_UNCURSE, qty: 1, blessing: 'blessed', identified: false }, { def: SCROLL_ID, qty: 1, blessing: 'cursed', identified: false }],
+    ];
+    const scrollDropDecisions = dropScrollVariants.map((pair) => {
+      const { state: s, hero: h } = setup(23);
+      h.inventory = { items: [heavyArmor, ...pair] };
+      return decisionOf(s, h);
+    });
+    expect(scrollDropDecisions[0]).toEqual({ action: 'act.drop_lowest', request: { id: 'drop', index: 2, qty: 1 } });
+    expect(scrollDropDecisions[1]).toEqual(scrollDropDecisions[0]);
+
+    // 4a. Unidentified weapon: hidden +N, blessing, and special enchantments change neither equip nor pickup decisions.
+    const weaponVariants: ItemInstance[] = [
+      { def: HATCHET, qty: 1, identified: false },
+      { def: HATCHET, qty: 1, enchant: 3, blessing: 'blessed', enchantments: [{ id: ENCHANT_KEEN.id, level: 2 }], identified: false },
+      { def: HATCHET, qty: 1, enchant: -2, blessing: 'cursed', identified: false },
+    ];
+    const packWeaponDecisions = weaponVariants.map((variant) => {
+      const { state: s, hero: h } = setup(29);
+      h.inventory = { items: [variant], equipped: { mainHand: { def: HATCHET, qty: 1 } } };
+      return decisionOf(s, h);
+    });
+    for (const d of packWeaponDecisions) expect(d).toEqual(packWeaponDecisions[0]);
+
+    const floorWeaponDecisions = weaponVariants.map((variant) => {
+      const { state: s, hero: h } = setup(29);
+      placeItem(s, 'd1', h.pos, variant);
+      return decisionOf(s, h);
+    });
+    for (const d of floorWeaponDecisions) expect(d).toEqual(floorWeaponDecisions[0]);
+
+    // 4b. Unidentified jewelry: swapping defs of same weight and adding hidden props changes neither equip nor pickup.
+    const jewelryVariants: ItemInstance[] = [
+      { def: BAND, qty: 1, identified: false },
+      { def: 'item.owl_eye_ring', qty: 1, enchant: 2, blessing: 'blessed', identified: false },
+      { def: 'item.owl_eye_ring', qty: 1, blessing: 'cursed', identified: false },
+    ];
+    const jewelryPackDecisions = jewelryVariants.map((variant) => {
+      const { state: s, hero: h } = setup(31);
+      h.inventory = { items: [variant] };
+      return decisionOf(s, h);
+    });
+    for (const d of jewelryPackDecisions) expect(d).toEqual(jewelryPackDecisions[0]);
+
+    const jewelryFloorDecisions = jewelryVariants.map((variant) => {
+      const { state: s, hero: h } = setup(31);
+      placeItem(s, 'd1', h.pos, variant);
+      return decisionOf(s, h);
+    });
+    for (const d of jewelryFloorDecisions) expect(d).toEqual(jewelryFloorDecisions[0]);
   });
 });

@@ -3,20 +3,25 @@ import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  baseEnchantmentFor,
   CLASS_VANGUARD,
   CLASSES,
   CONTENT_KINDS,
+  enchantmentFits,
   FEATURE_DOOR,
   HINT_REQUIRED_KINDS,
   ITEM_FLANGED_MACE,
   ITEM_OWL_EYE_RING,
+  ITEMS,
   MONSTER_GLOAM_RAT,
   STATUS_POISONED,
   TERRAIN_WALL,
   UPGRADES,
 } from '../../src/content';
+import type { EnchantmentDef, ItemDef } from '../../src/content';
 import { applyRunResult, newProfile } from '../../src/meta';
-import { emptyRunResult } from '../../src/sim';
+import { discoveriesOf, emptyRunResult, itemEnchantmentIds } from '../../src/sim';
+import type { ItemInstance, SimEvent } from '../../src/sim';
 import { CodexModal, CodexPanel, CodexTab } from '../../src/ui/codex/CodexPanel';
 import { Explain } from '../../src/ui/codex/Explain';
 import { ALL_RENDERERS, CODEX_RENDERERS, codexEntry, collectRenderers } from '../../src/ui/codex/registry';
@@ -491,5 +496,59 @@ describe('Explain', () => {
     const { container } = render(<LogPanel />);
     const link = container.querySelector(`[data-explain="${FEATURE_DOOR.id}"]`);
     expect(link?.textContent).toBe('door');
+  });
+});
+
+describe('Codex discoverability / reachability (ETH-131)', () => {
+  it('reaches every non-alwaysKnown, non-hidden Codex entry through real discovery events', () => {
+    const pos = { x: 1, y: 1 };
+    const gearDefs = ITEMS.all().filter((i): i is ItemDef & { gear: NonNullable<ItemDef['gear']> } => i.gear !== undefined);
+
+    const eventsForEnchantment = (ench: EnchantmentDef): SimEvent[] => {
+      const host = gearDefs.find((g) => (ench.kind === 'base' ? baseEnchantmentFor(g)?.id === ench.id : enchantmentFits(ench, g)));
+      expect(host, `no fitting gear for ${ench.id}`).toBeDefined();
+      const gear = host as ItemDef;
+      const instance: ItemInstance =
+        ench.kind === 'base' ? { def: gear.id, qty: 1, enchant: 1 } : { def: gear.id, qty: 1, enchantments: [{ id: ench.id, level: 1 }] };
+      const enchantments = itemEnchantmentIds(instance);
+      return [
+        { type: 'itemIdentified', turn: 1, actor: 1, item: gear.id, name: gear.name, was: gear.name, method: 'effect', enchantments, floor: 'd1', pos },
+        { type: 'equipped', turn: 2, actor: 1, item: gear.id, slot: 'mainHand', replaced: null, enchantments, floor: 'd1', pos },
+      ];
+    };
+
+    const probesByKind: Readonly<Record<string, (id: string, def: unknown) => readonly SimEvent[]>> = {
+      class: (id) => [{ type: 'runStarted', turn: 0, party: [{ actor: 1, name: 'Mira', classId: id, raceId: 'race.human' }], depth: 1, floorType: null }],
+      race: (id) => [{ type: 'runStarted', turn: 0, party: [{ actor: 1, name: 'Mira', classId: CLASS_VANGUARD.id, raceId: id }], depth: 1, floorType: null }],
+      'floor type': (id) => [{ type: 'floorEntered', turn: 1, actor: 1, floor: 'd2', depth: 2, firstVisit: true, floorType: id }],
+      feature: (id) => {
+        if (id === 'feature.door') return [{ type: 'doorOpened', turn: 1, actor: 1, door: 2, pos }];
+        if (id === 'feature.stairs_up') return [{ type: 'tookStairs', turn: 1, actor: 1, dir: 'up', from: 'd2', to: 'd1', depth: 1, pos }];
+        if (id === 'feature.stairs_down') return [{ type: 'tookStairs', turn: 1, actor: 1, dir: 'down', from: 'd1', to: 'd2', depth: 2, pos }];
+        if (id === 'feature.fountain') return [{ type: 'drankFountain', turn: 1, actor: 1, fountain: 3, draught: 'draught.clear', left: 0, floor: 'd1', pos }];
+        return [];
+      },
+      draught: (id) => [{ type: 'drankFountain', turn: 1, actor: 1, fountain: 3, draught: id, left: 0, floor: 'd1', pos }],
+      monster: (id) => [{ type: 'monsterSighted', turn: 1, actor: 1, monster: 5, def: id, floor: 'd1', pos }],
+      template: (id) => [{ type: 'monsterSighted', turn: 1, actor: 1, monster: 5, def: MONSTER_GLOAM_RAT.id, templates: [id], floor: 'd1', pos }],
+      status: (id) => [{ type: 'statusApplied', turn: 1, actor: 1, status: id, turns: 2, potency: 1, mode: 'new' }],
+      item: (id, def) =>
+        (def as ItemDef).category === 'gold'
+          ? [{ type: 'goldPickedUp', turn: 1, actor: 1, item: id, amount: 10, floor: 'd1', pos }]
+          : [{ type: 'pickedUp', turn: 1, actor: 1, item: id, qty: 1, value: 10, floor: 'd1', pos }],
+      enchantment: (_id, def) => eventsForEnchantment(def as EnchantmentDef),
+    };
+
+    for (const renderer of ALL_RENDERERS) {
+      if (renderer.alwaysKnown === true || renderer.hidden === true) continue;
+      const defs = renderer.registry.all();
+      if (defs.length === 0) continue;
+      const probe = probesByKind[renderer.registry.kind];
+      expect(probe, `no discovery probe for Codex kind "${renderer.registry.kind}"`).toBeDefined();
+      for (const def of defs) {
+        const marks = (probe as NonNullable<typeof probe>)(def.id, def).flatMap(discoveriesOf).filter((d) => d.id === def.id);
+        expect(marks.length, `Codex entry "${def.id}" (${renderer.registry.kind}) is unreachable`).toBeGreaterThan(0);
+      }
+    }
   });
 });

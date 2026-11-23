@@ -9,6 +9,7 @@ export type { GridBuffer, GridCells, GridData, GridKind, Pos } from './grid';
 export { assertPlainData, clonePlain, findNonPlain } from './plain';
 export { Registry } from './registry';
 export type { Def } from './registry';
+export { clampRange } from './range';
 export { isRngState, Rng, seedState, seedStreams } from './rng';
 export type { RngState } from './rng';
 export { checkGrammar, expand, MAX_GRAMMAR_DEPTH, parseTemplate, TEXT_FILTERS, textRng } from './textGen';

@@ -117,6 +117,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-092](codex-tooltips/ETH-092-codex-two-pane-modal.md) | Codex as a wide two-pane modal | codex-tooltips | M2 | P2 | done | M |
 | [ETH-093](town-meta/ETH-093-building-unlock-quests.md) | Unlock town buildings by finishing a quest for each | town-meta | M2 | P2 | idea | M |
 | [ETH-129](town-meta/ETH-129-guild-hall-constant-respawn.md) | Guild Hall upgrade: constant floor respawns on revisit | town-meta | M2 | P2 | idea | S |
+| [ETH-131](tools-balance/ETH-131-contract-and-property-guards.md) | Cross-domain contract and property-based test guards (honesty, secrecy, potency, discoverability) | tools-balance | M2 | P2 | pending-review | S |
 | [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rescale Guild Hall Renown costs for depth-weighted rewards | town-meta | M2 | P2 | idea | S |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |

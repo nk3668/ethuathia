@@ -127,7 +127,8 @@ export const PROP_ORIGIN: ItemPropertyKind<ItemOrigin> = {
       run: z.number().int().positive().optional(),
       note: z.string().min(1).max(500).optional(),
     })
-    .strict(),
+    .strict()
+    .refine((o) => o.by !== undefined || o.run !== undefined || o.note !== undefined, 'origin must set at least one field'),
   stacks: 'never',
 };
 

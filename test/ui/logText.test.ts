@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { ITEMS } from '../../src/content';
+import { CHRONICLE_TRACKER, discoveriesOf } from '../../src/sim';
 import type { SimEvent, SimEventType } from '../../src/sim';
 import { COMBAT_LOG_TEXT } from '../../src/ui/shell/logText/combat';
 import { CORE_LOG_TEXT } from '../../src/ui/shell/logText/core';
@@ -8,7 +10,7 @@ import { QUESTS_LOG_TEXT } from '../../src/ui/shell/logText/quests';
 import { RUN_DOMAIN_LOG_TEXT } from '../../src/ui/shell/logText/run';
 import { STATS_LOG_TEXT } from '../../src/ui/shell/logText/stats';
 import type { LogTextRecord } from '../../src/ui/shell/logText/types';
-import { describe as describeEvent, LOG_TEXT, logLines } from '../../src/ui/shell/text';
+import { describe as describeEvent, highlightOf, LOG_TEXT, logLines } from '../../src/ui/shell/text';
 
 const DOMAIN_TEXT = [
   CORE_LOG_TEXT,
@@ -193,5 +195,41 @@ describe('log text', () => {
     expect(lines[0]?.text).toBe('Mira: Explore: heading for unexplored ground (baseline #7)');
     expect(lines[1]?.text).toBe('Mira: Explore: heading for unexplored ground; skipped fountain (brackish water is harmful) (baseline #7)');
     expect(lines[1]?.repeat).toEqual({ count: 2, lastTurn: 12 });
+  });
+});
+
+describe('non-spoiling unidentified item sweep (ETH-131)', () => {
+  it('never leaks def refs, Codex discoveries, highlights, or chronicle entries for unidentified items', () => {
+    const defId = 'item.quickstep_tonic';
+    const realName = ITEMS.get(defId).name;
+    const alias = 'Cloudy red vial';
+    const events: SimEvent[] = [
+      { type: 'itemSighted', turn: 1, actor: 1, item: defId, name: alias, identified: false, qty: 1, floor: 'd1', pos: { x: 1, y: 1 } },
+      { type: 'pickedUp', turn: 2, actor: 1, item: defId, name: alias, identified: false, qty: 1, value: 60, floor: 'd1', pos: { x: 1, y: 1 } },
+      { type: 'dropped', turn: 3, actor: 1, item: defId, name: alias, identified: false, qty: 1, floor: 'd1', pos: { x: 1, y: 1 } },
+      {
+        type: 'died',
+        turn: 4,
+        actor: 2,
+        def: 'monster.gloam_rat',
+        name: 'Gloam rat',
+        cause: 'actor.adventurer',
+        killer: 1,
+        floor: 'd1',
+        pos: { x: 2, y: 1 },
+        drops: [{ item: defId, qty: 1, name: alias, identified: false }],
+      },
+    ];
+
+    for (const event of events) {
+      const desc = describeEvent(event, () => 'Mira');
+      const spoiledMentions = desc.parts.filter((p) => typeof p !== 'string' && p.ref === defId);
+      expect(spoiledMentions, event.type).toEqual([]);
+      expect(desc.text, event.type).not.toContain(realName);
+      expect(desc.text, event.type).toContain(alias);
+      expect(highlightOf(event), event.type).toBeUndefined();
+      expect(discoveriesOf(event).some((d) => d.id === defId), event.type).toBe(false);
+      expect(CHRONICLE_TRACKER.reduce(CHRONICLE_TRACKER.init(), event).entries, event.type).toEqual([]);
+    }
   });
 });

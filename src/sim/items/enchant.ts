@@ -18,12 +18,13 @@ import {
   BLESSING_INFO,
   enchantmentFits,
   ENCHANTMENTS,
+  isAppearanceCategory,
   ITEM_BLESSINGS,
   ITEM_STATE_INFO,
   ITEMS,
   scaleBundle,
 } from '../../content';
-import type { ItemBlessing } from '../../content';
+import type { AppearanceCategory, ItemBlessing } from '../../content';
 import type { Entity, RunState } from '../state';
 import { isItemIdentified, isInstanceTypeKnown } from './identify';
 import type { ItemEnchantment, ItemInstance } from './instance';
@@ -141,11 +142,23 @@ export const PROP_ENCHANTMENTS: ItemPropertyKind<ItemEnchantment[]> = {
   stacks: 'equal',
 };
 
+/** Uniform perceived worth of an appearance-category item whose base type is still unknown (ETH-044, ETH-131). */
+export const UNKNOWN_TYPE_VALUE: Readonly<Record<AppearanceCategory, number>> = {
+  potion: 30,
+  scroll: 30,
+  jewelry: 20,
+};
+
 /** Identification flag (`prop.identified`): absent means known; `false` hides properties until identified. */
 export const PROP_IDENTIFIED: ItemPropertyKind<false> = {
   id: 'prop.identified',
   field: 'identified',
   schema: z.literal(false),
+  value({ state, item }, _flag, base) {
+    if (isInstanceTypeKnown(state, item) || !ITEMS.has(item.def)) return base;
+    const category = ITEMS.get(item.def).category;
+    return isAppearanceCategory(category) ? UNKNOWN_TYPE_VALUE[category] : base;
+  },
   known: ({ state, item }) => isItemIdentified(state, item),
   stacks: 'equal',
 };

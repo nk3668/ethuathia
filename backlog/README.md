@@ -92,3 +92,7 @@ Every PR must pass these before it is opened. They catch a broken game, not just
    `npm run soak -- --seeds 200 --cap 2000` (about 5 minutes).
 4. **UI changes:** run `npm run dev`, look at the change in the browser and check the console has
    no errors.
+5. **Contract and property guards for critical services:** when adding or updating an AI rule over
+   hidden state, a secret-bearing event/chronicle/log line, an `Effect` kind, a Codex content kind
+   or entry, an `ItemPropertyKind`, or a `{ min?, max? }` config range, extend the corresponding
+   guard required by [`../docs/ARCHITECTURE.md` §11.6](../docs/ARCHITECTURE.md#116-contract--property-guard-criteria-eth-131).

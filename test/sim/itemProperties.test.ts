@@ -62,6 +62,8 @@ const PROP_VEILED: ItemPropertyKind<boolean> = {
   stacks: 'never',
 };
 
+const BUILT_IN_PROPERTIES = [...ITEM_PROPERTIES];
+
 const removers: (() => void)[] = [];
 beforeAll(() => {
   removers.push(registerItemProperty(PROP_EDGE), registerItemProperty(PROP_VEILED));
@@ -200,5 +202,25 @@ describe('the items.properties invariant', () => {
     expect(problems).toContain('bad origin');
     expect(problems).toContain('bad testEdge');
     expect(problems).toContain('unknown field "mystery"');
+  });
+});
+
+describe('canonical property value invariant (ETH-131)', () => {
+  const CANONICAL_REJECTED: Readonly<Record<string, readonly unknown[]>> = {
+    'prop.enchant': [0],
+    'prop.blessing': ['uncursed', ''],
+    'prop.enchantments': [[]],
+    'prop.identified': [true],
+    'prop.origin': [{}],
+  };
+
+  it('rejects default/no-op values on every built-in ItemPropertyKind schema', () => {
+    for (const kind of BUILT_IN_PROPERTIES) {
+      const rejected = CANONICAL_REJECTED[kind.id];
+      expect(rejected, `missing canonical rejection cases for ${kind.id}`).toBeDefined();
+      for (const sample of rejected as readonly unknown[]) {
+        expect(kind.schema.safeParse(sample).success, `${kind.id} accepted ${JSON.stringify(sample)}`).toBe(false);
+      }
+    }
   });
 });
