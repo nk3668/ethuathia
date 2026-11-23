@@ -218,10 +218,10 @@ describe('the baseline descent', () => {
     const events = step(state, []);
     expect(new Set(fired(events).map((e) => e.actor))).toEqual(new Set([a, b]));
 
-    // The snapshot shows whichever member the UI follows.
+    // The snapshot shows whichever member the UI follows (and hides depth until bottom reached).
     expect(snapshot(state, { follow: a }).floor.id).toBe('d2');
     expect(snapshot(state, { follow: b }).floor.id).toBe('d1');
-    expect(snapshot(state).domains.floors).toEqual({ depth: 3, deepest: 2 });
+    expect(snapshot(state).domains.floors).toEqual({ depth: null, deepest: 2, depthRange: { min: 3, max: 3 } });
 
     // And a save taken now carries on the same.
     const copy = deserialize(serialize(state));

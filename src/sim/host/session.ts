@@ -8,6 +8,7 @@ import type { Command } from '../commands';
 import type { SimEvent } from '../events';
 import { possessedMember } from '../ai/possession';
 import { createRun } from '../createRun';
+import { dungeonDepth } from '../floors/dungeon';
 import { runOver, runReport } from '../run/end';
 import type { RunReport } from '../run/end';
 import { stateHash } from '../serialize';
@@ -86,5 +87,13 @@ export class SimSession {
    */
   stateHash(): string {
     return stateHash(this.state);
+  }
+
+  /**
+   * The true rolled dungeon depth for headless tools (`tools/headless.ts`) and tests. Never
+   * exposed on `Snapshot` while depth is hidden (`ETH-133`).
+   */
+  debugDungeonDepth(): number {
+    return dungeonDepth(this.state);
   }
 }

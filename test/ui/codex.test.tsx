@@ -18,7 +18,7 @@ import {
   TERRAIN_WALL,
   UPGRADES,
 } from '../../src/content';
-import type { EnchantmentDef, ItemDef } from '../../src/content';
+import type { EnchantmentDef, ItemDef, MonsterDef } from '../../src/content';
 import { applyRunResult, newProfile } from '../../src/meta';
 import { discoveriesOf, emptyRunResult, itemEnchantmentIds } from '../../src/sim';
 import type { ItemInstance, SimEvent } from '../../src/sim';
@@ -151,7 +151,7 @@ describe('CodexPanel', () => {
     expect(within(detail).getByText('HP').nextSibling?.textContent).toBe(String(MONSTER_GLOAM_RAT.stats.hp));
     expect(within(detail).getByText('Damage').nextSibling?.textContent).toBe('1–3 + 0');
     expect(within(detail).getByText('Speed').nextSibling?.textContent).toBe(String(MONSTER_GLOAM_RAT.stats.speed));
-    expect(within(detail).getByText('Found on').nextSibling?.textContent).toBe('Floors 1–4');
+    expect(within(detail).getByText('Found on').nextSibling?.textContent).toBe('Danger 1–4');
     expect(within(detail).queryByText('Evasion')).toBeNull();
     expect(within(detail).queryByText('Behavior')).toBeNull();
     expect(within(detail).queryByText('Drops')).toBeNull();
@@ -174,6 +174,22 @@ describe('CodexPanel', () => {
     expect(within(detail).getByText(MONSTER_GLOAM_RAT.description)).toBeTruthy();
     expect(within(detail).getByText('Drops').nextSibling?.textContent).toContain('1 Trophy on kill');
     expect(within(detail).getByLabelText('Encounter record').textContent).toContain('All tiers unlocked');
+
+    // Innate monster bundle traits render in the full-stats kill tier (ETH-133).
+    const sampleWithBundle: MonsterDef = {
+      ...MONSTER_GLOAM_RAT,
+      bundle: { modifiers: [{ stat: 'armor', op: 'add', value: 1 }] },
+    };
+    const monsterFields = codexEntry(MONSTER_GLOAM_RAT.id)?.renderer.fields?.(sampleWithBundle);
+    expect(monsterFields?.find((f) => f.label === 'Traits')).toMatchObject({
+      value: 'Armor +1',
+      minKills: 10,
+    });
+
+    // Dungeon Codex entry displays variable depth range and Danger curve without leaking a rolled depth.
+    await user.click(within(section('Dungeons')).getByRole('button', { name: /The Old Delve/ }));
+    expect(within(detailPane()).getByText('Depth').nextSibling?.textContent).toBe('6–10 floors');
+    expect(within(detailPane()).getByText('Danger').nextSibling?.textContent).toBe('1 (+1/floor)');
   });
 
   it('fills in live from the running sim before the run ends, including kill and death counts', async () => {

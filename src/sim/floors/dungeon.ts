@@ -7,9 +7,10 @@
  * visited never changes any floor: `d3` of seed 7 is the same whether the party reaches it on
  * turn 500 or turn 5,000, and whatever was generated before it.
  */
-import { DIRS_8, Grid, Rng, seedState } from '../../core';
+import { clampRange, DIRS_8, Grid, Rng, seedState } from '../../core';
 import type { Pos, RngState } from '../../core';
-import { FLOOR_HALLS, FLOOR_TYPES } from '../../content';
+import { DUNGEON_OLD_DELVE, DUNGEONS, FLOOR_HALLS, FLOOR_TYPES } from '../../content';
+import type { DungeonDef } from '../../content';
 import { actorAt, addFloor, featureAt, getFloor } from '../entities';
 import { parseFloorText } from '../floorText';
 import type { FloorPlan } from '../floorText';
@@ -18,9 +19,16 @@ import { capFountains, configMaxFountains } from './fountains';
 import { FLOOR_PLAN_HOOKS } from '../registries';
 import { Terrain } from '../state';
 import type { DungeonGraph, Entity, Floor, FloorId, FloorNode, RunConfig, RunState } from '../state';
+import { runFlag } from '../stats/runModifiers';
 
 /** How many floors a run's dungeon has when the config doesn't say (CLAUDE.md §2). */
 export const DEFAULT_DEPTH = 10;
+
+/** The dungeon variant used when `RunConfig.dungeonId` is omitted. */
+export const DEFAULT_DUNGEON_ID = DUNGEON_OLD_DELVE.id;
+
+/** Run-modifier flag (e.g. Cartographer upgrade) revealing rolled dungeon depth from turn 0. */
+export const FLAG_REVEAL_DEPTH = 'floors.reveal_depth';
 
 /** The deepest dungeon a config may ask for. */
 export const MAX_DEPTH = 99;
@@ -36,13 +44,72 @@ export function floorIdAt(depth: number): FloorId {
   return `d${depth}`;
 }
 
-/** The dungeon depth a config asks for. Throws on anything but a whole number from 1 to `MAX_DEPTH`. */
-export function configDepth(config: RunConfig): number {
-  const depth = config.depth ?? DEFAULT_DEPTH;
-  if (!Number.isInteger(depth) || depth < 1 || depth > MAX_DEPTH) {
-    throw new RangeError(`The dungeon depth must be a whole number from 1 to ${MAX_DEPTH}, got ${String(depth)}`);
+function validateDepthNumber(value: unknown, label: string): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > MAX_DEPTH) {
+    throw new RangeError(`The dungeon ${label} must be a whole number from 1 to ${MAX_DEPTH}, got ${String(value)}`);
   }
-  return depth;
+  return value;
+}
+
+/** The dungeon variant a config points to (`DEFAULT_DUNGEON_ID` when omitted). Throws `RangeError` if unknown. */
+export function configDungeon(config: RunConfig): DungeonDef {
+  const id = config.dungeonId ?? DEFAULT_DUNGEON_ID;
+  if (!DUNGEONS.has(id)) throw new RangeError(`Unknown dungeon id "${id}"`);
+  return DUNGEONS.get(id);
+}
+
+/**
+ * Validated `{ min, max }` floor bounds for a run config, resolving omitted fields against
+ * `configDungeon(config).depth` via `clampRange`. Throws `RangeError` on invalid bounds or unknown `dungeonId`.
+ */
+export function configDepthRange(config: RunConfig): { min: number; max: number } {
+  const dungeon = configDungeon(config);
+  const { depth } = config;
+  if (depth === undefined) return clampRange(undefined, dungeon.depth, 1);
+  if (typeof depth === 'number') {
+    validateDepthNumber(depth, 'depth');
+    return { min: depth, max: depth };
+  }
+  if (typeof depth !== 'object' || depth === null || Array.isArray(depth)) {
+    throw new RangeError(`The dungeon depth must be a whole number or { min?, max? } from 1 to ${MAX_DEPTH}`);
+  }
+  if (depth.min !== undefined) validateDepthNumber(depth.min, 'depth.min');
+  if (depth.max !== undefined) validateDepthNumber(depth.max, 'depth.max');
+  if (depth.min !== undefined && depth.max !== undefined && depth.min > depth.max) {
+    throw new RangeError(`The dungeon depth min (${depth.min}) must not be above max (${depth.max})`);
+  }
+  return clampRange(depth, dungeon.depth, 1);
+}
+
+/**
+ * Deterministic rolled dungeon depth for `config` and `seed`: returns `min` directly when fixed,
+ * else draws from `seedState(seed, 'dungeon/depth')` so Rematch (`ETH-084`) reproduces the exact
+ * depth without shifting shared RNG streams.
+ */
+export function resolveRunDepth(config: RunConfig, seed: number): number {
+  const { min, max } = configDepthRange(config);
+  return min === max ? min : new Rng(seedState(seed, 'dungeon/depth')).int(min, max);
+}
+
+/** The maximum dungeon depth a config validates to (`configDepthRange(config).max`). */
+export function configDepth(config: RunConfig): number {
+  return configDepthRange(config).max;
+}
+
+/** The `DungeonDef` for an active run (`RunState`). */
+export function runDungeon(state: RunState): DungeonDef {
+  return configDungeon(state.config);
+}
+
+/** Effective Danger on floor `depth` (`1`-indexed) from the run's dungeon Danger curve. */
+export function floorDanger(state: RunState, depth: number): number {
+  const { start, perFloor } = runDungeon(state).danger;
+  return start + (depth - 1) * perFloor;
+}
+
+/** True once the party has reached the bottom floor or carries `FLAG_REVEAL_DEPTH`. */
+export function depthRevealed(state: RunState): boolean {
+  return state.domains.floors.deepest >= dungeonDepth(state) || runFlag(state, FLAG_REVEAL_DEPTH);
 }
 
 /**
@@ -130,6 +197,8 @@ export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
       ? parseFloorText(text)
       : generateFloor(FLOOR_TYPES.get(DEFAULT_FLOOR_TYPE), new Rng(floorRngState(state.seed, floorId)), {
           depth: node.depth,
+          danger: floorDanger(state, node.depth),
+          dungeon: runDungeon(state),
           loot: new Rng(lootRngState(state.seed, floorId)),
         });
   if (node.down.length === 0) {

@@ -234,7 +234,7 @@ All in `src/sim/run/`:
   (party ids in the order they fell) and `end` (`null` while running, then
   `RunEnd { outcome, turn, cause, depth }`). Once `end` is set, `step` returns `[]` and changes
   nothing.
-- **Events:** `runStarted { party: { actor, name, classId, raceId }[], depth, floorType }` is the
+- **Events:** `runStarted { party: { actor, name, classId, raceId }[], depth, floorType }` (`depth` is `number | null`, hidden as `null` until bottom floor or `FLAG_REVEAL_DEPTH`, ETH-133) is the
   first event of the first step (the Codex discovers the party's classes, races and first floor
   type from it, ETH-079);
   `turnedBack { actor | null, reason }`; `fell { actor, name, floor, pos, depth, killer }` when a
@@ -622,7 +622,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`) and ETH-091 30 (`track.kills.byMonster`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), and ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth).
 
 ### Contracts in the run (ETH-024)
 

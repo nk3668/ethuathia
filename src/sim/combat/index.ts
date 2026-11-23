@@ -36,7 +36,7 @@ import { FLEE_ACTION } from './flee';
 import type { FleeRequest } from './flee';
 import { GEN_MONSTERS } from './monsters';
 import type { MonsterPart } from './monsters';
-import { namesOf, overlayProblems, PROVIDER_OVERLAY, SOURCE_TEMPLATES, templateMetKey, templatesField } from './overlay';
+import { namesOf, overlayProblems, PROVIDER_OVERLAY, SOURCE_MONSTER_INNATE, SOURCE_TEMPLATES, templateMetKey, templatesField } from './overlay';
 import type { ShownName } from './overlay';
 import { boltable, canSee, isAlly, rolePowers, ROLE_CONDITIONS, ROLE_RULE_ACTIONS } from './roles';
 import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, hpPercent, isHostile } from './rules';
@@ -518,7 +518,7 @@ export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
   genSteps: [GEN_MONSTERS],
   triggers: [TRIGGER_HIT, TRIGGER_STRUCK],
   statProviders: [PROVIDER_OVERLAY],
-  bundleSources: [SOURCE_TEMPLATES],
+  bundleSources: [SOURCE_MONSTER_INNATE, SOURCE_TEMPLATES],
   turnStart: combatTurnStart,
   turnEnd: combatTurnEnd,
   discoveries: {

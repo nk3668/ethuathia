@@ -82,7 +82,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-076](tools-balance/ETH-076-sim-compare-stale-base-warning.md) | Sim compare warns when its base has moved since the branch was cut | tools-balance | M1 | P3 | done | S |
 | [ETH-078](ui-shell/ETH-078-remove-unused-tab-empty-texts.md) | Remove the unused empty texts from SidePanel TAB_INFO | ui-shell | M1 | P3 | done | S |
 | [ETH-079](sim-core/ETH-079-run-started-floor-type.md) | runStarted carries the first floor's type | sim-core | M1 | P3 | done | S |
-| [ETH-133](dungeon-gen/ETH-133-extensible-danger-and-hidden-depth.md) | Extensible Danger scale, innate monster Bundles, and variable hidden dungeon depth | dungeon-gen | M1.5 | P1 | ready | M |
+| [ETH-133](dungeon-gen/ETH-133-extensible-danger-and-hidden-depth.md) | Extensible Danger scale, innate monster Bundles, and variable hidden dungeon depth | dungeon-gen | M1.5 | P1 | done | M |
 | [ETH-134](bestiary/ETH-134-expand-old-delve-bestiary-and-templates.md) | Expand The Old Delve bestiary and templates across Danger bands | bestiary | M1.5 | P1 | ready | M |
 | [ETH-135](dungeon-gen/ETH-135-density-encounters-groups-and-patrols.md) | Threat-budget room encounters, cohesive group engagement, and corridor patrols | dungeon-gen | M1.5 | P1 | ready | M |
 | [ETH-136](quests/ETH-136-return-trip-deep-surge.md) | Return-trip deep surge: lower-floor threats and hunter patrols on ascent | quests | M1.5 | P1 | ready | S |

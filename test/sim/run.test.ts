@@ -43,11 +43,20 @@ describe('createRun', () => {
     expect(state.seed).toBe(7);
     expect(state.turn).toBe(0);
     expect(Object.keys(state.floors)).toEqual(['d1']);
-    // A straight line of the default ten floors, of which only the first is built.
+    // A straight line of the rolled dungeon depth (6-10 for The Old Delve), of which only the first is built.
     expect(state.dungeon.entry).toBe('d1');
-    expect(Object.keys(state.dungeon.nodes)).toEqual(['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9', 'd10']);
+    const nodeIds = Object.keys(state.dungeon.nodes);
+    expect(nodeIds.length).toBeGreaterThanOrEqual(6);
+    expect(nodeIds.length).toBeLessThanOrEqual(10);
+    expect(nodeIds).toEqual(Array.from({ length: nodeIds.length }, (_, i) => `d${i + 1}`));
     expect(state.dungeon.nodes.d1).toEqual({ id: 'd1', depth: 1, up: null, down: ['d2'] });
-    expect(state.dungeon.nodes.d10).toEqual({ id: 'd10', depth: 10, up: 'd9', down: [] });
+    const bottomId = nodeIds.at(-1) as string;
+    expect(state.dungeon.nodes[bottomId]).toEqual({
+      id: bottomId,
+      depth: nodeIds.length,
+      up: `d${nodeIds.length - 1}`,
+      down: [],
+    });
 
     expect(state.party).toHaveLength(1);
     const hero = getEntity(state, state.party[0] as number);

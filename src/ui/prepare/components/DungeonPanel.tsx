@@ -31,7 +31,8 @@ export function DungeonPanel({ profile, choices, update }: PreparePanelProps) {
                 <Explain id={d.id} />
               </span>
               <span className={styles.note}>
-                {d.depth} floors · <Explain id={d.floorType}>{findDef(d.floorType)?.name ?? d.floorType}</Explain>
+                {d.depth.min === d.depth.max ? `${d.depth.min} ${d.depth.min === 1 ? 'floor' : 'floors'}` : `${d.depth.min}–${d.depth.max} floors`} ·{' '}
+                <Explain id={d.floorType}>{findDef(d.floorType)?.name ?? d.floorType}</Explain>
                 {!open && ' · locked: unlocked by an upgrade'}
               </span>
             </span>

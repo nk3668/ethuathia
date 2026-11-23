@@ -1,7 +1,7 @@
 /**
  * The dungeon section (CLAUDE.md §2, step 6): which dungeon variant the run descends into
- * (`src/content/dungeons.ts`). It sets the run's depth; a variant the profile can't use falls
- * back to the first available one.
+ * (`src/content/dungeons.ts`). It sets the run's `dungeonId`; a variant the profile can't use
+ * falls back to the first available one.
  */
 import { z } from 'zod';
 import { DUNGEON_OLD_DELVE } from '../../content';
@@ -28,6 +28,6 @@ export const DUNGEON_CHOICE = defineRunChoice<DungeonChoice>({
   schema: z.object({ dungeonId: idSchema('dungeon') }),
   init: () => ({ dungeonId: DUNGEON_OLD_DELVE.id }),
   apply: ({ profile, config }, choice) => {
-    config.depth = chosenDungeon(profile, choice).depth;
+    config.dungeonId = chosenDungeon(profile, choice).id;
   },
 });
