@@ -2,7 +2,7 @@
 epic: quests
 title: Quests: contracts and bounties
 status: active
-milestones: [M1, M2, M3, M4, M5]
+milestones: [M1, M1.5, M2, M3, M4, M5]
 ---
 
 ## Goal
@@ -35,3 +35,5 @@ Every run has a clear goal. The player picks contracts (main quests) that define
 - [ ] [ETH-031 Quest rule conditions and objective weighting in the AI](ETH-031-quest-rule-conditions-ai.md)
 - [ ] [ETH-032 Rescue contract](ETH-032-rescue-contract.md)
 - [x] [ETH-114 Objective engine: reusable objectives with progress, generalized from contracts](ETH-114-objective-engine.md)
+- [ ] [ETH-136 Return-trip deep surge: lower-floor threats and hunter patrols on ascent](ETH-136-return-trip-deep-surge.md)
+- [ ] [ETH-141 Scale contract rewards by completion depth and balance M2 payouts](ETH-141-scale-contract-rewards-by-depth.md)

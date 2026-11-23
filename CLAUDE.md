@@ -285,12 +285,13 @@ The milestones are broken down into work items in the backlog (§11).
 
 1. **M0 – Skeleton:** scaffold the project; sim core with one floor, one adventurer, baseline exploration and canvas map; pause and speed controls.
 2. **M1 – A full run:** multiple floors, stairs, combat, items, death, run summary, auto-restart; the Recover-relic contract and the return trip; attributes, leveling, monster roles, equipment slots, enchantment and identification.
-3. **M2 – Meta layer:** currencies, Town with Guild Hall and Smithy, saves, Codex; more contract types, contract slots, the bounty board; proficiencies and aptitudes, class unlocks, uniques, monster families, elites and mini-bosses, affixes and artifacts, food buffs; highlights feed, run history.
-4. **M3 – Behavior rules:** rules editor, Library, presets, AI trace in the log; quest rule conditions, class abilities and class-aware AI roles.
-5. **M4 – Risk:** Omens, conducts, reward multiplier; bounty encounters, traps and searching.
-6. **M5 – Lineage:** roster, gravestones and grave interactions, heirlooms, retirement, Ossuary and Tavern; the Rescue contract.
-7. **M6 – Depth:** deities, altars, floor types, route forks, offline progress, dungeon merchants.
-8. **Later:** tileset, more content, achievements, cosmetics, balance passes.
+3. **M1.5 – Living Dungeon & Balance:** extensible Danger scale and hidden variable dungeon depth, expanded starter bestiary and templates across Danger bands, threat-budget room encounters with group engagement and corridor patrols, return-trip deep surge, and the systemic balance pass (`ETH-080`, see `docs/DIFFICULTY_PHILOSOPHY.md`).
+4. **M2 – Meta layer:** currencies, Town with Guild Hall and Smithy, saves, Codex; more contract types, contract slots, the bounty board; proficiencies and aptitudes, class unlocks, uniques, monster families, elites and mini-bosses, affixes and artifacts, food buffs; highlights feed, run history.
+5. **M3 – Behavior rules:** rules editor, Library, presets, AI trace in the log; quest rule conditions, class abilities and class-aware AI roles.
+6. **M4 – Risk:** Omens, conducts, reward multiplier; bounty encounters, traps and searching.
+7. **M5 – Lineage:** roster, gravestones and grave interactions, heirlooms, retirement, Ossuary and Tavern; the Rescue contract.
+8. **M6 – Depth:** deities, altars, floor types, route forks, offline progress, dungeon merchants.
+9. **Later:** tileset, more content, achievements, cosmetics, balance passes.
 
 ---
 

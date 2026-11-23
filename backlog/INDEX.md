@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-133**
+**Next ID: ETH-142**
 
 **Assigned to Antigravity** (low risk; pick any whose dependencies are done): ETH-090, ETH-077, ETH-019, then ETH-094, ETH-085, ETH-084.
 
@@ -12,7 +12,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 |---|---|---|---|
 | [project-setup](project-setup/_epic.md) | Project setup and tooling | active | M0 |
 | [sim-core](sim-core/_epic.md) | Simulation core | active | M0, M1, M2 |
-| [dungeon-gen](dungeon-gen/_epic.md) | Dungeon generation | active | M0, M1, M4, M5, M6, later |
+| [dungeon-gen](dungeon-gen/_epic.md) | Dungeon generation | active | M0, M1, M1.5, M4, M5, M6, later |
 | [adventurer-ai](adventurer-ai/_epic.md) | Decision engine and baseline AI | active | M0, M1, M4 |
 | [behavior-rules](behavior-rules/_epic.md) | Behavior rules | active | M2, M3 |
 | [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M2, M5, later |
@@ -25,10 +25,10 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ui-shell](ui-shell/_epic.md) | UI shell and kit | active | M0, M1, M2 |
 | [map-renderer](map-renderer/_epic.md) | Map renderer | active | M0, M1 |
 | [codex-tooltips](codex-tooltips/_epic.md) | Codex and tooltips | active | M2 |
-| [tools-balance](tools-balance/_epic.md) | Test and balance tooling | active | M0, M1 |
-| [quests](quests/_epic.md) | Quests: contracts and bounties | active | M1, M2, M3, M4, M5 |
+| [tools-balance](tools-balance/_epic.md) | Test and balance tooling | active | M0, M1, M1.5, M2 |
+| [quests](quests/_epic.md) | Quests: contracts and bounties | active | M1, M1.5, M2, M3, M4, M5 |
 | [characters](characters/_epic.md) | Characters: attributes, classes and races | active | M1, M2, M3, M5 |
-| [bestiary](bestiary/_epic.md) | Bestiary: monsters, uniques and elites | active | M1, M2, M4, M5, later |
+| [bestiary](bestiary/_epic.md) | Bestiary: monsters, uniques and elites | active | M1, M1.5, M2, M4, M5, later |
 
 ## Items
 
@@ -75,7 +75,6 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-066](ui-shell/ETH-066-possession.md) | Possess an adventurer and play them directly | ui-shell | M1 | P2 | done | M |
 | [ETH-073](ui-shell/ETH-073-collapse-repeated-trace-lines.md) | Collapse repeated identical AI trace lines in the log | ui-shell | M1 | P2 | done | S |
 | [ETH-075](combat-items/ETH-075-killer-named-death-line.md) | Name the killer in the death log line and the wipe summary | combat-items | M1 | P2 | done | S |
-| [ETH-080](tools-balance/ETH-080-monster-balance-pass.md) | Monster and loot balance pass at the end of M1 | tools-balance | M1 | P2 | idea | M |
 | [ETH-081](characters/ETH-081-attribute-secondary-jobs.md) | Give each attribute a second job | characters | M1 | P2 | done | M |
 | [ETH-090](ui-shell/ETH-090-qe-cycle-keys.md) | Q and E cycle adventurers; diagonals while possessed | ui-shell | M1 | P2 | done | S |
 | [ETH-022](tools-balance/ETH-022-validate-content-cli.md) | Run content validation as a tsx command | tools-balance | M1 | P3 | done | S |
@@ -83,6 +82,11 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-076](tools-balance/ETH-076-sim-compare-stale-base-warning.md) | Sim compare warns when its base has moved since the branch was cut | tools-balance | M1 | P3 | done | S |
 | [ETH-078](ui-shell/ETH-078-remove-unused-tab-empty-texts.md) | Remove the unused empty texts from SidePanel TAB_INFO | ui-shell | M1 | P3 | done | S |
 | [ETH-079](sim-core/ETH-079-run-started-floor-type.md) | runStarted carries the first floor's type | sim-core | M1 | P3 | done | S |
+| [ETH-133](dungeon-gen/ETH-133-extensible-danger-and-hidden-depth.md) | Extensible Danger scale, innate monster Bundles, and variable hidden dungeon depth | dungeon-gen | M1.5 | P1 | ready | M |
+| [ETH-134](bestiary/ETH-134-expand-old-delve-bestiary-and-templates.md) | Expand The Old Delve bestiary and templates across Danger bands | bestiary | M1.5 | P1 | ready | M |
+| [ETH-135](dungeon-gen/ETH-135-density-encounters-groups-and-patrols.md) | Threat-budget room encounters, cohesive group engagement, and corridor patrols | dungeon-gen | M1.5 | P1 | ready | M |
+| [ETH-136](quests/ETH-136-return-trip-deep-surge.md) | Return-trip deep surge: lower-floor threats and hunter patrols on ascent | quests | M1.5 | P1 | ready | S |
+| [ETH-080](tools-balance/ETH-080-monster-balance-pass.md) | Systemic monster, loot and progression balance pass (M1.5 capstone) | tools-balance | M1.5 | P1 | ready | M |
 | [ETH-059](saves-platform/ETH-059-profile-saves.md) | Profile, banked currencies and versioned local saves | saves-platform | M2 | P0 | done | M |
 | [ETH-023](town-meta/ETH-023-at-risk-run-currency.md) | Track run earnings as at-risk currency and lose 25% on a wipe | town-meta | M2 | P1 | done | M |
 | [ETH-063](town-meta/ETH-063-upgrade-engine-town.md) | Upgrade engine and the Town screen with a Guild Hall | town-meta | M2 | P1 | done | M |
@@ -124,6 +128,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-077](ui-shell/ETH-077-prepare-attribute-previews.md) | Show attribute previews in the Prepare screen's class and race selects | ui-shell | M2 | P3 | done | S |
 | [ETH-109](bestiary/ETH-109-ethan-rare-boss.md) | Ethan, an extremely rare and very weak boss | bestiary | M2 | P3 | idea | S |
 | [ETH-130](combat-items/ETH-130-more-enchantments.md) | Expand the enchantment pool with additional effects and triggers | combat-items | M2 | P3 | idea | M |
+| [ETH-141](quests/ETH-141-scale-contract-rewards-by-depth.md) | Scale contract rewards by completion depth and balance M2 payouts | quests | M2 | P3 | idea | S |
 | [ETH-110](characters/ETH-110-leveling-followup.md) | Rolled growth, shared kill XP and uncapped levels | characters | M1 | P1 | done | M |
 | [ETH-031](quests/ETH-031-quest-rule-conditions-ai.md) | Quest rule conditions and objective weighting in the AI | quests | M3 | P2 | idea | M |
 | [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M3 | P2 | idea | M |
@@ -159,6 +164,10 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-049](dungeon-gen/ETH-049-dungeon-merchants.md) | Dungeon merchants | dungeon-gen | M6 | P3 | idea | M |
 | [ETH-098](dungeon-gen/ETH-098-hand-made-vaults.md) | Hand-made room vaults | dungeon-gen | M6 | P3 | idea | M |
 | [ETH-107](dungeon-gen/ETH-107-dungeon-events.md) | Rare floor-wide dungeon events | dungeon-gen | M6 | P3 | idea | M |
+| [ETH-137](dungeon-gen/ETH-137-themed-dungeon-drowned-cisterns.md) | Themed dungeon: The Drowned Cisterns | dungeon-gen | M6 | P3 | idea | M |
+| [ETH-138](dungeon-gen/ETH-138-themed-dungeon-mycelial-warren.md) | Themed dungeon: The Mycelial Warren | dungeon-gen | M6 | P3 | idea | M |
+| [ETH-139](dungeon-gen/ETH-139-themed-dungeon-ash-kilns.md) | Themed dungeon: The Ash Kilns | dungeon-gen | M6 | P3 | idea | M |
+| [ETH-140](dungeon-gen/ETH-140-themed-dungeon-salt-catacombs.md) | Themed dungeon: The Salt Catacombs | dungeon-gen | M6 | P3 | idea | M |
 | [ETH-018](ui-shell/ETH-018-trim-font-bundle.md) | Ship only the font files the app needs | ui-shell | later | P3 | done | S |
 | [ETH-050](combat-items/ETH-050-summons-pets.md) | Summons and pets | combat-items | later | P3 | idea | M |
 | [ETH-096](combat-items/ETH-096-rechargeable-wands.md) | Wands that recharge on each new floor | combat-items | later | P3 | idea | M |
