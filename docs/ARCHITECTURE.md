@@ -1915,6 +1915,15 @@ As built (ETH-015):
   that loots within its depth range. It counts only a dungeon's own floors (`1..depth.max`), not
   return-trip shifts or OOD boosts. It lives in `tools/` because `src/content` can't import
   `src/sim`. Every problem names the def and why.
+- **Codex kill tiers (ETH-144):** a monster's Codex reveals its basics, full stats and lore at
+  kill counts `MONSTER_KILL_TIERS` (1 / 10 / 50 by default). `MonsterDef.codexTiers` (`{ basics,
+  stats, lore }`, strictly increasing, checked at load) overrides them, and `killTiersFor(def)`
+  is the one reader (the monster renderer's fields, `killTiers` and `loreKills`, so the Codex
+  page, its tier note and the `Explain` tooltip all follow it). Content guidance: set it on
+  anything that can't realistically reach 50 kills. A unique or boss (killed at most once a
+  run) uses about `1 / 2 / 3`; a very rare spawn or an out-of-depth monster keeps its basics and
+  stats tiers and lowers its lore tier (say `1 / 5 / 15`). Anything that spawns freely keeps the
+  default.
 - **Lookups:** `findDef(id)` finds a def of any kind (the UI's `contentName` uses it, falling back
   to the id for things without defs yet); `findGlyph(glyphId)` gives the map look for a terrain or
   feature id, or a feature id plus a state (`feature.door.open`) from the feature's `states`,
@@ -2253,7 +2262,9 @@ it.
   returns the stat table (`{ label, value, hint?, key? }`); `key` fields also show in `Explain`.
   `group` is the subheading (a monster's family). `registry.ts` collects the files with
   `import.meta.glob`, so a new or richer kind is one file and no edit to the tab; a kind with no
-  file gets a plain section. Two renderers for one kind throw at load.
+  file gets a plain section. Two renderers for one kind throw at load. Kinds with kill tiers
+  (monsters) give the renderer `killTiers(def)` and `loreKills(def)`, both per def, so a def's own
+  tiers (`killTiersFor`, ETH-144) apply.
 - **Discovered** = the profile's `codex` entries plus `simStore.discoveries` (`useDiscovered`).
   Undiscovered entries show `???` and the renderer's `hint`; search only matches discovered
   entries, so names never leak.

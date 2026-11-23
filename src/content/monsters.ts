@@ -206,6 +206,27 @@ export interface MonsterDef extends Def {
    * content reachability check (ETH-143) does not expect it to spawn in a dungeon.
    */
   readonly handPlaced?: boolean;
+  /**
+   * Kill counts at which the Codex reveals this monster's basics, full stats and lore (ETH-144).
+   * Strictly increasing. Absent means `MONSTER_KILL_TIERS`. Set it on monsters that can't
+   * realistically reach 50 kills: uniques and bosses, very rare spawns, out-of-depth monsters.
+   */
+  readonly codexTiers?: MonsterKillTiers;
+}
+
+/** Kill counts that unlock each Codex tier of a monster. */
+export interface MonsterKillTiers {
+  readonly basics: number;
+  readonly stats: number;
+  readonly lore: number;
+}
+
+/** The default Codex kill tiers (ETH-091): basics at 1 kill, full stats at 10, lore and drops at 50. */
+export const MONSTER_KILL_TIERS: MonsterKillTiers = { basics: 1, stats: 10, lore: 50 };
+
+/** The Codex kill tiers for a monster: its own `codexTiers`, or the defaults. The one reader of them. */
+export function killTiersFor(def: MonsterDef): MonsterKillTiers {
+  return def.codexTiers ?? MONSTER_KILL_TIERS;
 }
 
 /** A monster's role powers: what it can do beyond a blow. */
@@ -291,6 +312,11 @@ export const MONSTER_KIND: ContentKind<MonsterDef> = {
       threat: positiveInt,
       sharesTile: z.boolean().optional(),
       handPlaced: z.boolean().optional(),
+      codexTiers: z.strictObject({ basics: positiveInt, stats: positiveInt, lore: positiveInt }).optional(),
+    })
+    .refine((def) => def.codexTiers === undefined || (def.codexTiers.basics < def.codexTiers.stats && def.codexTiers.stats < def.codexTiers.lore), {
+      message: 'codexTiers must be strictly increasing (basics < stats < lore)',
+      path: ['codexTiers'],
     })
     .refine((def) => def.danger.min <= def.danger.max, { message: 'danger.min must not be above danger.max', path: ['danger'] })
     .refine((def) => def.danger.peak === undefined || (def.danger.peak >= def.danger.min && def.danger.peak <= def.danger.max), {

@@ -1,25 +1,18 @@
 /**
  * Codex view of monsters (ETH-060, ETH-091): their numbers, their role (ETH-040), where they live,
  * how they behave, and their lore and drops. Revealed in kill-count tiers:
- * - 1 kill (`MONSTER_KILL_TIERS.basics`): basic stats (Role, HP, Damage, Speed, Found on).
- * - 10 kills (`MONSTER_KILL_TIERS.stats`): full stats (Accuracy, Evasion, Armor, role powers,
+ * - 1 kill (`killTiersFor(def).basics`): basic stats (Role, HP, Damage, Speed, Found on).
+ * - 10 kills (`killTiersFor(def).stats`): full stats (Accuracy, Evasion, Armor, role powers,
  *   Threat, Crowds, Behavior, Variants met).
- * - 50 kills (`MONSTER_KILL_TIERS.lore`): full lore (`def.description`) and drops (`Drops`).
+ * - 50 kills (`killTiersFor(def).lore`): full lore (`def.description`) and drops (`Drops`).
  */
-import { MONSTERS, monsterRules, ROLE_INFO, STATUSES } from '../../../content';
+import { killTiersFor, MONSTERS, monsterRules, ROLE_INFO, STATUSES } from '../../../content';
 import type { MonsterDef } from '../../../content';
 import { trophiesForKill } from '../../../sim';
 import { defineCodexRenderer } from '../types';
 import { VariantsMet } from '../VariantsMet';
 import type { CodexField } from '../types';
 import { bundleText } from './status';
-
-/** Monster kill-count tiers (ETH-091). */
-export const MONSTER_KILL_TIERS = {
-  basics: 1,
-  stats: 10,
-  lore: 50,
-} as const;
 
 /** How a monster's rule set reads, from the rule actions it can take. */
 function behaviorText(def: MonsterDef): string {
@@ -52,12 +45,13 @@ function dropsText(def: MonsterDef): string {
 /** Rows for the role powers a def has (revealed at the full-stats tier). */
 function powerFields(def: MonsterDef): CodexField[] {
   const rows: CodexField[] = [];
+  const tiers = killTiersFor(def);
   if (def.bolt !== undefined) {
     rows.push({
       label: 'Ranged',
       value: `${def.bolt.range} tiles`,
       hint: `Hurls a ${def.bolt.name} at an adventurer it can see this far away, with the same hit and damage as a blow.`,
-      minKills: MONSTER_KILL_TIERS.stats,
+      minKills: tiers.stats,
     });
   }
   if (def.mend !== undefined) {
@@ -65,7 +59,7 @@ function powerFields(def: MonsterDef): CodexField[] {
       label: 'Mends',
       value: `${def.mend.amount} HP`,
       hint: `Heals a hurt ally it can see within ${def.mend.range} tiles.`,
-      minKills: MONSTER_KILL_TIERS.stats,
+      minKills: tiers.stats,
     });
   }
   if (def.bolster !== undefined) {
@@ -74,7 +68,7 @@ function powerFields(def: MonsterDef): CodexField[] {
       label: 'Bolsters',
       value: `${def.bolster.turns} turns`,
       hint: `Gives an ally fighting within ${def.bolster.range} tiles a status (${status}) for this long.`,
-      minKills: MONSTER_KILL_TIERS.stats,
+      minKills: tiers.stats,
     });
   }
   return rows;
@@ -85,51 +79,57 @@ export default defineCodexRenderer({
   label: 'Monsters',
   order: 30,
   hint: 'See or slay one in the dungeon.',
-  killTiers: [
-    { kills: MONSTER_KILL_TIERS.basics, label: 'basics' },
-    { kills: MONSTER_KILL_TIERS.stats, label: 'full stats' },
-    { kills: MONSTER_KILL_TIERS.lore, label: 'lore and drops' },
-  ],
-  loreKills: MONSTER_KILL_TIERS.lore,
+  killTiers: (def) => {
+    const tiers = killTiersFor(def);
+    return [
+      { kills: tiers.basics, label: 'basics' },
+      { kills: tiers.stats, label: 'full stats' },
+      { kills: tiers.lore, label: 'lore and drops' },
+    ];
+  },
+  loreKills: (def) => killTiersFor(def).lore,
   group: (def) => ROLE_INFO[def.role].plural,
-  fields: (def) => [
-    { label: 'Role', value: ROLE_INFO[def.role].name, hint: ROLE_INFO[def.role].description, key: true, minKills: MONSTER_KILL_TIERS.basics },
-    { label: 'HP', value: def.stats.hp, hint: 'Hit points when unhurt.', key: true, minKills: MONSTER_KILL_TIERS.basics },
+  fields: (def) => {
+    const tiers = killTiersFor(def);
+    return [
+    { label: 'Role', value: ROLE_INFO[def.role].name, hint: ROLE_INFO[def.role].description, key: true, minKills: tiers.basics },
+    { label: 'HP', value: def.stats.hp, hint: 'Hit points when unhurt.', key: true, minKills: tiers.basics },
     {
       label: 'Damage',
       value: `1–3 + ${def.stats.damage}`,
       hint: 'What a blow that lands does, before the target’s armor (never below 1).',
       key: true,
-      minKills: MONSTER_KILL_TIERS.basics,
+      minKills: tiers.basics,
     },
-    { label: 'Accuracy', value: def.stats.accuracy, hint: 'Each point adds 5% to its chance to hit, against your evasion.', minKills: MONSTER_KILL_TIERS.stats },
-    { label: 'Evasion', value: def.stats.evasion, hint: 'Each point takes 5% off your chance to hit it.', minKills: MONSTER_KILL_TIERS.stats },
-    { label: 'Armor', value: def.stats.armor, hint: 'Taken off the damage of each blow that lands on it.', minKills: MONSTER_KILL_TIERS.stats },
-    { label: 'Speed', value: def.stats.speed, hint: 'Energy gained each tick; 100 acts once a turn.', key: true, minKills: MONSTER_KILL_TIERS.basics },
+    { label: 'Accuracy', value: def.stats.accuracy, hint: 'Each point adds 5% to its chance to hit, against your evasion.', minKills: tiers.stats },
+    { label: 'Evasion', value: def.stats.evasion, hint: 'Each point takes 5% off your chance to hit it.', minKills: tiers.stats },
+    { label: 'Armor', value: def.stats.armor, hint: 'Taken off the damage of each blow that lands on it.', minKills: tiers.stats },
+    { label: 'Speed', value: def.stats.speed, hint: 'Energy gained each tick; 100 acts once a turn.', key: true, minKills: tiers.basics },
     ...powerFields(def),
     ...(def.bundle === undefined
       ? []
-      : [{ label: 'Traits', value: bundleText(def.bundle), hint: 'Innate abilities and passives of this kind.', minKills: MONSTER_KILL_TIERS.stats }]),
-    { label: 'Found on', value: dangerText(def), hint: 'The Danger range it appears in.', minKills: MONSTER_KILL_TIERS.basics },
-    { label: 'Threat', value: def.threat, hint: 'How dangerous it is. Kills of it are weighed by this.', minKills: MONSTER_KILL_TIERS.stats },
+      : [{ label: 'Traits', value: bundleText(def.bundle), hint: 'Innate abilities and passives of this kind.', minKills: tiers.stats }]),
+    { label: 'Found on', value: dangerText(def), hint: 'The Danger range it appears in.', minKills: tiers.basics },
+    { label: 'Threat', value: def.threat, hint: 'How dangerous it is. Kills of it are weighed by this.', minKills: tiers.stats },
     {
       label: 'Crowds',
       value: def.sharesTile === true ? 'Yes' : 'No',
       hint: 'Small folk and swarms can share a tile with others of their sort; everyone else needs a tile of their own.',
-      minKills: MONSTER_KILL_TIERS.stats,
+      minKills: tiers.stats,
     },
-    { label: 'Behavior', value: behaviorText(def), hint: 'The rules it follows each turn.', minKills: MONSTER_KILL_TIERS.stats },
+    { label: 'Behavior', value: behaviorText(def), hint: 'The rules it follows each turn.', minKills: tiers.stats },
     {
       label: 'Variants met',
       value: <VariantsMet monster={def.id} />,
       hint: 'Monster variants (Venomous, Swift, …) seen on this kind so far.',
-      minKills: MONSTER_KILL_TIERS.stats,
+      minKills: tiers.stats,
     },
     {
       label: 'Drops',
       value: dropsText(def),
       hint: 'Trophies and carried loot left behind when slain.',
-      minKills: MONSTER_KILL_TIERS.lore,
+      minKills: tiers.lore,
     },
-  ],
+    ];
+  },
 });
