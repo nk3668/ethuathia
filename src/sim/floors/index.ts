@@ -26,11 +26,14 @@ import type { EntityId, FloorId, RunConfig } from '../state';
 import { arrivalStairs, arrivalTile, dungeonDepth, floorIdAt, floorNode, floorTypeOf, stairsOn, stairsTarget } from './dungeon';
 import type { StairsDir } from './dungeon';
 import { fountainAt, FOUNTAIN_CONDITIONS, FOUNTAIN_GEN_STEPS, FOUNTAIN_RULE_ACTIONS } from './fountains';
-import { FLOORS_CONDITIONS, FLOORS_RULE_ACTIONS, names, stairsGathering } from './rules';
+import { maybeRespawnFloor } from './respawn';
+import type { RespawnConfig } from './respawn';
+import { FLOORS_CONDITIONS, FLOORS_RULE_ACTIONS, names, partyOnFloor, stairsGathering } from './rules';
 
 export * from './dungeon';
 export * from './rules';
 export * from './fountains';
+export * from './respawn';
 
 /** The events this domain emits (bodies, without `turn`). Each has wording in `ui/shell/logText/floors.ts`. */
 export type FloorsEvent =
@@ -58,7 +61,17 @@ export type FloorsEvent =
    */
   | { type: 'drankFountain'; actor: EntityId; fountain: EntityId; draught: string; left: number; floor: FloorId; pos: Pos }
   /** The fountain entity `fountain` at `pos` on `floor` has run dry. */
-  | { type: 'fountainRanDry'; fountain: EntityId; floor: FloorId; pos: Pos };
+  | { type: 'fountainRanDry'; fountain: EntityId; floor: FloorId; pos: Pos }
+  /**
+   * Emitted once per run the first time the dungeon repopulates a visited floor on the return trip
+   * (ETH-025), logging `"The dungeon stirs."` without repeating on every floor.
+   */
+  | { type: 'dungeonStirred'; floor: FloorId; depth: number }
+  /**
+   * `count` monsters repopulated `floor` (at `depth`, wave `wave`) upon re-entry (ETH-025). Quiet
+   * in the log (`dungeonStirred` announces it once); observable by tests and trackers.
+   */
+  | { type: 'floorRespawned'; floor: FloorId; depth: number; count: number; wave: number };
 
 /** Take the stairs you are standing on, going `dir`. */
 export interface StairsRequest {
@@ -86,6 +99,12 @@ export interface FloorsState {
    * turn 0). The per-floor turn cap counts from here.
    */
   arrived: Record<FloorId, number>;
+  /** How many respawn waves have repopulated each floor (ETH-025). */
+  respawns: Record<FloorId, number>;
+  /** True once `dungeonStirred` ("The dungeon stirs.") has been emitted this run (ETH-025). */
+  stirAnnounced: boolean;
+  /** Game turn the last living party member left each floor, for constant-respawn cooldowns (ETH-025). */
+  lastVacated: Record<FloorId, number>;
 }
 
 /** This domain's slice of the snapshot, at `snapshot.domains.floors`. Plain data. */
@@ -116,6 +135,8 @@ export interface FloorsConfig {
    * it out for as many as the floor type places (0–2 on Hewn Halls).
    */
   maxFountains?: number;
+  /** Tunable return-trip floor repopulation settings (ETH-025). */
+  respawn?: RespawnConfig;
 }
 
 /** This domain's row in `DomainTypes` (`src/sim/domain.ts`). */
@@ -162,16 +183,20 @@ export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {
         return;
       }
       const firstVisit = state.floors[to] === undefined;
+      const wasEmpty = firstVisit || partyOnFloor(state, to).length === 0;
       const pos = arrivalTile(state, to, arrivalStairs(state, to, dir));
       if (pos === null) throw new Error(`Floor "${to}" has no free tile to arrive on`);
       moveEntity(state, actor.id, to, pos);
       const depth = floorNode(state, to).depth;
       const slice = state.domains.floors;
+      if (partyOnFloor(state, from).length === 0) slice.lastVacated[from] = state.turn;
       if (slice.arrived[to] === undefined) slice.arrived[to] = state.turn;
       const deeper = depth > slice.deepest;
       slice.deepest = Math.max(slice.deepest, depth);
       emit({ type: 'tookStairs', actor: actor.id, dir, from, to, depth, pos: { x: pos.x, y: pos.y } });
       emit({ type: 'floorEntered', actor: actor.id, floor: to, depth, firstVisit, floorType: floorTypeOf(state, to) });
+      // Repopulate visited floors on the return trip (or continuously with the Guild Hall flag, ETH-025).
+      maybeRespawnFloor(state, to, pos, wasEmpty, firstVisit, emit);
       // A new deepest floor is worth XP to every living member (ETH-034).
       if (deeper) grantDepthXp(state, to, depth, emit);
     },
@@ -210,7 +235,7 @@ export const FLOORS_COMMANDS: CommandRecord<FloorsCommand> = {};
 
 /** The state slice for a new run: the party starts on the first floor at turn 0. */
 export function initFloors(_config: RunConfig): FloorsState {
-  return { deepest: 1, arrived: { [floorIdAt(1)]: 0 } };
+  return { deepest: 1, arrived: { [floorIdAt(1)]: 0 }, respawns: {}, stirAnnounced: false, lastVacated: {} };
 }
 
 /** The snapshot slice. Shares nothing with the state. */
@@ -249,7 +274,7 @@ registerInvariant('floors.graph', (state) => {
  */
 registerInvariant('floors.state', (state) => {
   const problems: string[] = [];
-  const { deepest, arrived } = state.domains.floors;
+  const { deepest, arrived, respawns, stirAnnounced, lastVacated } = state.domains.floors;
   let max = 0;
   for (const [id, turn] of Object.entries(arrived)) {
     const floor = state.floors[id];
@@ -258,6 +283,16 @@ registerInvariant('floors.state', (state) => {
     if (!Number.isSafeInteger(turn) || turn < 0 || turn > state.turn) problems.push(`floor "${id}" was reached on turn ${turn}`);
   }
   if (deepest !== max) problems.push(`deepest is ${deepest}, but the deepest floor reached is ${max}`);
+  for (const [id, waves] of Object.entries(respawns)) {
+    if (state.floors[id] === undefined) problems.push(`floor "${id}" respawned but is not built`);
+    if (!Number.isSafeInteger(waves) || waves < 1) problems.push(`floor "${id}" has respawn wave count ${waves}`);
+  }
+  if (typeof stirAnnounced !== 'boolean') problems.push(`stirAnnounced is ${String(stirAnnounced)}`);
+  if (Object.keys(respawns).length > 0 && !stirAnnounced) problems.push('a floor respawned before stirAnnounced was set');
+  for (const [id, turn] of Object.entries(lastVacated)) {
+    if (state.floors[id] === undefined) problems.push(`floor "${id}" was vacated but is not built`);
+    if (!Number.isSafeInteger(turn) || turn < 0 || turn > state.turn) problems.push(`floor "${id}" was vacated on turn ${turn}`);
+  }
   for (const id of state.party) {
     const floor = state.entities[id]?.floor;
     if (floor !== undefined && arrived[floor] === undefined) problems.push(`party member ${id} is on "${floor}", which was never reached`);

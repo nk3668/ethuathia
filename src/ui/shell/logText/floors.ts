@@ -35,4 +35,13 @@ export const FLOORS_LOG_TEXT: LogTextRecord<FloorsEvent> = {
     category: 'discovery',
     text: () => ['The ', mention(FEATURE_FOUNTAIN.id, 'fountain'), ' runs dry.'],
   },
+  dungeonStirred: {
+    category: 'discovery',
+    text: () => 'The dungeon stirs.',
+  },
+  floorRespawned: {
+    category: 'discovery',
+    quiet: true,
+    text: (e) => `${e.count} new ${e.count === 1 ? 'creature stirs' : 'creatures stir'} on floor ${e.depth}.`,
+  },
 };
