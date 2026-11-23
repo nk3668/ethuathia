@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ITEMS } from '../../src/content';
 import { CHRONICLE_TRACKER, discoveriesOf } from '../../src/sim';
 import type { SimEvent, SimEventType } from '../../src/sim';
-import { COMBAT_LOG_TEXT } from '../../src/ui/shell/logText/combat';
+import { COMBAT_LOG_TEXT, COMBAT_MOMENT_TEXT, HIGHLIGHT_OOD_SIGHTED } from '../../src/ui/shell/logText/combat';
 import { CORE_LOG_TEXT } from '../../src/ui/shell/logText/core';
 import { FLOORS_LOG_TEXT } from '../../src/ui/shell/logText/floors';
 import { ITEMS_LOG_TEXT } from '../../src/ui/shell/logText/items';
@@ -128,6 +128,25 @@ describe('log text', () => {
       ' ×2',
       '.',
     ]);
+  });
+
+  it('highlights and warns on out-of-depth monster sightings and formats oodSighted moments (ETH-134)', () => {
+    const base = { type: 'monsterSighted' as const, turn: 4, actor: 1, monster: 9, def: 'monster.basalt_giant', floor: 'd4', pos: { x: 2, y: 3 } };
+    const normal = describeEvent(base, () => 'Mira');
+    expect(normal.text).toBe('Mira spots the basalt giant.');
+    expect(highlightOf(base)).toBeUndefined();
+
+    const oodEvent = { ...base, ood: true as const };
+    const oodLine = describeEvent(oodEvent, () => 'Mira');
+    expect(oodLine.text).toBe('Mira spots the basalt giant — far above its usual depth!');
+    expect(highlightOf(oodEvent)).toEqual({ kind: HIGHLIGHT_OOD_SIGHTED, place: { floor: 'd4', pos: { x: 2, y: 3 } } });
+
+    const moment = CHRONICLE_TRACKER.reduce(CHRONICLE_TRACKER.init(), oodEvent).entries[0];
+    expect(moment).toBeDefined();
+    if (moment !== undefined) {
+      const worded = COMBAT_MOMENT_TEXT.oodSighted?.text(moment, () => 'Mira');
+      expect(worded).toEqual(['Mira spotted ', 'the ', { ref: 'monster.basalt_giant', label: 'basalt giant' }, ' far above its usual depth on floor 4.']);
+    }
   });
 
   it('mentions the first floor type in runStarted when present and omits it for hand-built floors (ETH-079)', () => {

@@ -210,3 +210,67 @@ export const TEMPLATE_HEXSPITTING = defineMonsterTemplate({
   weight: 2,
   glyphTint: '#c58cf2',
 });
+
+export const TEMPLATE_IRONCLAD = defineMonsterTemplate({
+  id: 'template.ironclad',
+  name: 'Ironclad',
+  description:
+    'Sheathed in calcified plates or salvaged mine-iron that turn aside light blows, though the heavy casing slows its stride and makes it clumsy.',
+  hint: 'A dull metallic ring each time an edge strikes thick, mineral-hard hide.',
+  tags: ['trait'],
+  prefix: 'Ironclad',
+  stats: { add: { armor: 2, speed: -10, evasion: -1 }, mul: { hp: 1.2 } },
+  threatMul: 1.6,
+  lootTier: 1,
+  weight: 3,
+  glyphTint: '#b0bec5',
+});
+
+export const TEMPLATE_KNITFLESH = defineMonsterTemplate({
+  id: 'template.knitflesh',
+  name: 'Knitflesh',
+  description:
+    'Torn sinew and split hide draw back together breath by breath, healing 1 HP at the start of every turn until it is put down for good.',
+  hint: 'Gashes that pull themselves shut between heartbeats in the lantern light.',
+  tags: ['trait'],
+  prefix: 'Knitflesh',
+  stats: { mul: { hp: 1.25 } },
+  bundle: { triggers: [{ on: 'trigger.turn_start', effects: [{ kind: 'heal', amount: 1 }] }] },
+  threatMul: 1.8,
+  lootTier: 2,
+  weight: 2,
+  glyphTint: '#7bd88f',
+  families: ['beast', 'small_folk', 'fungus', 'giant'],
+});
+
+export const TEMPLATE_DAZZLING = defineMonsterTemplate({
+  id: 'template.dazzling',
+  name: 'Dazzling',
+  description:
+    'Slick with phosphorescent damp that flares whenever it strikes, leaving spots before its prey’s eyes and making it harder to pin down.',
+  hint: 'Pale cavern-fire clinging to claws that leave bright afterimages in the dark.',
+  tags: ['trait'],
+  prefix: 'Dazzling',
+  stats: { add: { evasion: 1 } },
+  bundle: { triggers: [{ on: 'trigger.hit', effects: [{ kind: 'applyStatus', status: 'status.dazzled', turns: 3, to: 'other' }] }] },
+  threatMul: 1.5,
+  lootTier: 1,
+  weight: 3,
+  glyphTint: '#f4d35e',
+});
+
+export const TEMPLATE_RELENTLESS = defineMonsterTemplate({
+  id: 'template.relentless',
+  name: 'Relentless',
+  description:
+    'Driven by single-minded hunger, it presses forward recklessly—striking harder and shrugging off ailments while leaving itself open to counterblows.',
+  hint: 'A cold, unblinking focus that shakes off poison and never pulls a blow.',
+  tags: ['trait'],
+  prefix: 'Relentless',
+  stats: { add: { accuracy: 2, damage: 1, evasion: -1 } },
+  bundle: { modifiers: [{ stat: 'statusResist', op: 'add', value: 30 }] },
+  threatMul: 1.8,
+  lootTier: 2,
+  weight: 2,
+  glyphTint: '#e36b5b',
+});

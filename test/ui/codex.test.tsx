@@ -13,7 +13,10 @@ import {
   ITEM_FLANGED_MACE,
   ITEM_OWL_EYE_RING,
   ITEMS,
+  MONSTER_BASALT_GIANT,
   MONSTER_GLOAM_RAT,
+  MONSTER_TEMPLATES,
+  MONSTERS,
   STATUS_POISONED,
   TERRAIN_WALL,
   UPGRADES,
@@ -175,7 +178,7 @@ describe('CodexPanel', () => {
     expect(within(detail).getByText('Drops').nextSibling?.textContent).toContain('1 Trophy on kill');
     expect(within(detail).getByLabelText('Encounter record').textContent).toContain('All tiers unlocked');
 
-    // Innate monster bundle traits render in the full-stats kill tier (ETH-133).
+    // Innate monster bundle traits render in the full-stats kill tier (ETH-133, ETH-134).
     const sampleWithBundle: MonsterDef = {
       ...MONSTER_GLOAM_RAT,
       bundle: { modifiers: [{ stat: 'armor', op: 'add', value: 1 }] },
@@ -183,6 +186,11 @@ describe('CodexPanel', () => {
     const monsterFields = codexEntry(MONSTER_GLOAM_RAT.id)?.renderer.fields?.(sampleWithBundle);
     expect(monsterFields?.find((f) => f.label === 'Traits')).toMatchObject({
       value: 'Armor +1',
+      minKills: 10,
+    });
+    const giantFields = codexEntry(MONSTER_BASALT_GIANT.id)?.renderer.fields?.(MONSTER_BASALT_GIANT);
+    expect(giantFields?.find((f) => f.label === 'Traits')).toMatchObject({
+      value: 'each turn: heals 1 HP',
       minKills: 10,
     });
 
@@ -566,5 +574,7 @@ describe('Codex discoverability / reachability (ETH-131)', () => {
         expect(marks.length, `Codex entry "${def.id}" (${renderer.registry.kind}) is unreachable`).toBeGreaterThan(0);
       }
     }
+    expect(MONSTERS.all().length).toBeGreaterThanOrEqual(18);
+    expect(MONSTER_TEMPLATES.all().length).toBeGreaterThanOrEqual(8);
   });
 });

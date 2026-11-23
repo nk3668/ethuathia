@@ -1,6 +1,6 @@
 /** Log wording for the combat domain's events (`src/sim/combat/`). One entry per event type. */
 import { findDef, MONSTERS } from '../../../content';
-import { isNearDeathBlow } from '../../../sim';
+import { HIGHLIGHT_OOD_ID, isNearDeathBlow } from '../../../sim';
 import type { CombatEvent, DroppedLoot, EntityId, EventNames } from '../../../sim';
 import { defineHighlight, mention } from './types';
 import { onFloor } from './types';
@@ -11,6 +11,13 @@ export const HIGHLIGHT_NEAR_DEATH = defineHighlight({
   id: 'nearDeath',
   label: 'An adventurer is near death',
   description: 'A blow left a party member with less than a quarter of their HP.',
+});
+
+/** An out-of-depth monster was spotted far above its usual depth. */
+export const HIGHLIGHT_OOD_SIGHTED = defineHighlight({
+  id: HIGHLIGHT_OOD_ID,
+  label: 'An out-of-depth monster is spotted',
+  description: 'A party member caught sight of a creature prowling far above its usual depth.',
 });
 
 /**
@@ -104,7 +111,13 @@ export const COMBAT_LOG_TEXT: LogTextRecord<CombatEvent> = {
   },
   monsterSighted: {
     category: 'discovery',
-    text: (e, nameOf) => [`${nameOf(e.actor)} spots `, ...who(e.monster, e.def, nameOf, false, e.names), '.'],
+    highlight: HIGHLIGHT_OOD_SIGHTED,
+    highlightWhen: (e) => e.ood === true,
+    text: (e, nameOf) => [
+      `${nameOf(e.actor)} spots `,
+      ...who(e.monster, e.def, nameOf, false, e.names),
+      e.ood === true ? ' — far above its usual depth!' : '.',
+    ],
   },
   recovered: { category: 'combat', quiet: true, text: (e, nameOf) => `${nameOf(e.actor)} catches their breath (+${e.amount} HP).` },
   fleeFailed: {
@@ -123,6 +136,16 @@ export const COMBAT_MOMENT_TEXT: MomentTextRecord = {
       `${nameOf(m.actors[0] ?? 0)} was left with ${m.amount ?? 0} HP by `,
       ...who(m.actors[1] ?? 0, m.ids[0] ?? '', nameOf),
       `${onFloor(m.depth)}.`,
+    ],
+  },
+  oodSighted: {
+    kind: HIGHLIGHT_OOD_SIGHTED,
+    category: 'discovery',
+    // "Mira spotted the basalt giant far above its usual depth on floor 5."
+    text: (m, nameOf) => [
+      `${m.actors[0] === undefined ? 'The party' : nameOf(m.actors[0])} spotted `,
+      ...who(m.actors[1] ?? 0, m.ids[0] ?? '', nameOf),
+      ` far above its usual depth${onFloor(m.depth)}.`,
     ],
   },
 };
