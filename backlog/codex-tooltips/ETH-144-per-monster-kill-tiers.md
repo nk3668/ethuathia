@@ -2,7 +2,7 @@
 id: ETH-144
 title: Per-monster Codex kill-tier thresholds for rare monsters
 type: feature
-status: in-progress
+status: done
 priority: P3
 milestone: M1.6
 epic: codex-tooltips
@@ -35,3 +35,4 @@ Found in the ETH-091 review.
 ## Log
 - 2026-11-23: Created from the ETH-091 review (milestone M1.6, review follow-ups).
 - 2026-11-23: Implemented. `MonsterDef.codexTiers` + `killTiersFor(def)` in `src/content/monsters.ts` (zod refine for strictly increasing); the monster renderer, CodexPanel and Explain read per-def tiers via per-def `killTiers(def)`/`loreKills(def)`. Proved on a test fixture in `test/ui/codexTiers.test.tsx`; ARCHITECTURE content guidance added. No real monster given tiers; ETH-041 sets it on each unique.
+- 2026-11-23: Reviewed (one re-indent fix) and merged into m1.5-living-dungeon by the orchestrator (npm run check green, 1175 tests).

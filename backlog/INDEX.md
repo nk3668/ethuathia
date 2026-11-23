@@ -90,7 +90,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-080](tools-balance/ETH-080-monster-balance-pass.md) | Systemic monster, loot and progression balance pass (M1.5 capstone) | tools-balance | M1.5 | P1 | ready | M |
 | [ETH-142](combat-items/ETH-142-identify-secrecy-and-curse-safety.md) | Identification secrecy and curse safety for the idle player | combat-items | M1.6 | P1 | ready | M |
 | [ETH-143](tools-balance/ETH-143-content-spawn-reachability-check.md) | Content check that every discoverable def can actually appear in a run | tools-balance | M1.6 | P2 | done | S |
-| [ETH-144](codex-tooltips/ETH-144-per-monster-kill-tiers.md) | Per-monster Codex kill-tier thresholds for rare monsters | codex-tooltips | M1.6 | P3 | ready | S |
+| [ETH-144](codex-tooltips/ETH-144-per-monster-kill-tiers.md) | Per-monster Codex kill-tier thresholds for rare monsters | codex-tooltips | M1.6 | P3 | done | S |
 | [ETH-059](saves-platform/ETH-059-profile-saves.md) | Profile, banked currencies and versioned local saves | saves-platform | M2 | P0 | done | M |
 | [ETH-023](town-meta/ETH-023-at-risk-run-currency.md) | Track run earnings as at-risk currency and lose 25% on a wipe | town-meta | M2 | P1 | done | M |
 | [ETH-063](town-meta/ETH-063-upgrade-engine-town.md) | Upgrade engine and the Town screen with a Guild Hall | town-meta | M2 | P1 | done | M |

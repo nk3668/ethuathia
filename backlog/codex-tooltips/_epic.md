@@ -28,4 +28,4 @@ Every number, glyph and name in the game explains itself on hover, and the Codex
 - [x] [ETH-065 Codex tab, discovery tracking and Explain tooltips from content](ETH-065-codex-framework.md)
 - [x] [ETH-091 Codex hints for undiscovered entries and kill-count tiers](ETH-091-codex-hints-kill-tiers.md)
 - [x] [ETH-092 Codex as a wide two-pane modal](ETH-092-codex-two-pane-modal.md)
-- [ ] [ETH-144 Per-monster Codex kill-tier thresholds for rare monsters](ETH-144-per-monster-kill-tiers.md)
+- [x] [ETH-144 Per-monster Codex kill-tier thresholds for rare monsters](ETH-144-per-monster-kill-tiers.md)
