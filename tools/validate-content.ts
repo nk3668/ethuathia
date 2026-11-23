@@ -1,12 +1,13 @@
 /**
  * `npm run validate:content`: the same checks the game runs at start-up (`checkGame`: content
- * shapes and references plus the sim-side checks), with a report of what was checked
+ * shapes and references plus the sim-side checks) and the reachability check (ETH-143), with a report of what was checked
  * (docs/ARCHITECTURE.md §5). Run with `tsx`; it prints the report and exits with code 1 when
  * there are problems. `npm test` runs the same checks through `test/tools/validate-content.test.ts`.
  */
 import { pathToFileURL } from 'node:url';
 import { CONTENT_KINDS } from '../src/content';
 import { checkGame } from '../src/sim';
+import { reachabilityProblems } from './content-reachability';
 
 export interface ContentReport {
   /** Every problem found, each naming the def or table at fault. Empty when all is well. */
@@ -17,7 +18,7 @@ export interface ContentReport {
 
 export function validateContent(): ContentReport {
   return {
-    problems: checkGame(),
+    problems: [...checkGame(), ...reachabilityProblems()],
     counts: CONTENT_KINDS.map((k) => `${k.registry.kind}: ${k.registry.size}`),
   };
 }

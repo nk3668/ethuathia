@@ -1906,6 +1906,15 @@ As built (ETH-015):
   rendering. `tools/validate-content.ts` reports the same problems plus a count per kind. It runs
   with `tsx` as `npm run validate:content` (exit code 1 on problems), and its test runs the
   same `checkGame` in `npm test`.
+- **Reachability (ETH-143):** `tools/content-reachability.ts` (`reachabilityProblems`, run by
+  `validateContent`, so by `npm run validate:content` and `npm test`) checks that every def can
+  come up in a run: each monster spawns on some dungeon floor (`monsterWeightAt`, ecology included;
+  `MonsterDef.handPlaced` opts out defs only placed by hand), each template fits a spawnable monster
+  and some dungeon rolls templates, each item has a `loot` entry on a reachable floor or is a
+  contract's recover item, each base enchantment is used by a gear def and each special fits gear
+  that loots within its depth range. It counts only a dungeon's own floors (`1..depth.max`), not
+  return-trip shifts or OOD boosts. It lives in `tools/` because `src/content` can't import
+  `src/sim`. Every problem names the def and why.
 - **Lookups:** `findDef(id)` finds a def of any kind (the UI's `contentName` uses it, falling back
   to the id for things without defs yet); `findGlyph(glyphId)` gives the map look for a terrain or
   feature id, or a feature id plus a state (`feature.door.open`) from the feature's `states`,

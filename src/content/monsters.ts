@@ -201,6 +201,11 @@ export interface MonsterDef extends Def {
    * tile only if both have this; anything else needs a tile of its own.
    */
   readonly sharesTile?: boolean;
+  /**
+   * True for a def that only ever appears by hand (a unique, a summon, a test fixture), so the
+   * content reachability check (ETH-143) does not expect it to spawn in a dungeon.
+   */
+  readonly handPlaced?: boolean;
 }
 
 /** A monster's role powers: what it can do beyond a blow. */
@@ -285,6 +290,7 @@ export const MONSTER_KIND: ContentKind<MonsterDef> = {
       weight: positiveInt,
       threat: positiveInt,
       sharesTile: z.boolean().optional(),
+      handPlaced: z.boolean().optional(),
     })
     .refine((def) => def.danger.min <= def.danger.max, { message: 'danger.min must not be above danger.max', path: ['danger'] })
     .refine((def) => def.danger.peak === undefined || (def.danger.peak >= def.danger.min && def.danger.peak <= def.danger.max), {
