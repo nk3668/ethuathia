@@ -2,12 +2,12 @@
  * Monsters as entities: building one from its def, placing one by hand (tests), and the
  * `gen.monsters` generation step that stocks each floor.
  */
-import { clonePlain, Grid } from '../../core';
-import type { Pos, Rng } from '../../core';
+import { clonePlain, Grid, Rng, seedState } from '../../core';
+import type { Pos } from '../../core';
 import { MONSTERS, monsterRules, templateDefs } from '../../content';
 import type { MonsterDef } from '../../content';
 import { newAiPart } from '../ai/types';
-import { addEntity, blockerAt, getFloor } from '../entities';
+import { actorsAt, addEntity, blockerAt, featureAt, getFloor } from '../entities';
 import type { NewEntity } from '../entities';
 import { readParams } from '../gen/params';
 import { defineGenStep, rectTiles } from '../gen/types';
@@ -78,7 +78,7 @@ export function monstersForDepth(depth: number): MonsterDef[] {
 }
 
 /** One def picked from `defs` with chance proportional to `weight`. One draw. */
-function pickWeighted(defs: readonly MonsterDef[], rng: Rng): MonsterDef {
+export function pickWeighted(defs: readonly MonsterDef[], rng: Rng): MonsterDef {
   const total = defs.reduce((n, d) => n + d.weight, 0);
   let roll = rng.int(1, total);
   for (const d of defs) {
@@ -86,6 +86,95 @@ function pickWeighted(defs: readonly MonsterDef[], rng: Rng): MonsterDef {
     if (roll <= 0) return d;
   }
   return defs[defs.length - 1] as MonsterDef;
+}
+
+/** Tunable options for repopulating an already-visited floor (ETH-025). */
+export interface RespawnOptions {
+  /** Minimum monsters to spawn (defaults scale lightly with depth). */
+  min?: number;
+  /** Maximum monsters to spawn (defaults scale lightly with depth). */
+  max?: number;
+  /**
+   * Added to the floor's depth when picking return-trip monsters, so climbing back out pits the
+   * party against stronger creatures than it met going down (default 1; tuned in ETH-080).
+   */
+  depthShift?: number;
+  /** Minimum Chebyshev distance from the arrival stairs and living party members (default 7). */
+  stairsDistance?: number;
+  /** Chance per respawned monster to roll a template (default 0). */
+  templateChance?: number;
+}
+
+/** Default depth boost for return-trip monsters (ETH-025; tuned in ETH-080). */
+export const DEFAULT_RESPAWN_DEPTH_SHIFT = 1;
+
+/** Default minimum Chebyshev distance from the arrival stairs when repopulating a floor. */
+export const DEFAULT_RESPAWN_STAIRS_DISTANCE = 7;
+
+/**
+ * Spawns a deterministic wave of monsters on an already-built floor away from `arrivalPos` and
+ * any living party members on that floor (ETH-025). Draws only from a per-floor, per-wave seed
+ * (`respawn/<floor>/<wave>`), so shared RNG streams are never shifted. Returns how many monsters
+ * were placed.
+ */
+export function respawnFloor(
+  state: RunState,
+  floorId: FloorId,
+  arrivalPos: Pos,
+  wave: number,
+  options: RespawnOptions = {},
+): number {
+  const floor = getFloor(state, floorId);
+  const depth = floor.depth;
+  const depthShift = options.depthShift ?? DEFAULT_RESPAWN_DEPTH_SHIFT;
+  const allDefs = MONSTERS.all();
+  if (allDefs.length === 0) return 0;
+  const maxDefDepth = allDefs.reduce((m, d) => Math.max(m, d.depth.max), depth);
+  const effectiveDepth = Math.max(1, Math.min(maxDefDepth, depth + depthShift));
+  const defs = monstersForDepth(effectiveDepth);
+  const pool = defs.length > 0 ? defs : monstersForDepth(depth);
+  if (pool.length === 0) return 0;
+
+  const defaultMin = Math.max(1, Math.round((1 + 0.4 * depth) * 0.4));
+  const defaultMax = Math.max(defaultMin, Math.round((1 + 0.4 * depth) * 0.7));
+  const max = Math.max(0, options.max ?? defaultMax);
+  const min = Math.min(max, Math.max(0, options.min ?? defaultMin));
+  const stairsDistance = Math.max(0, options.stairsDistance ?? DEFAULT_RESPAWN_STAIRS_DISTANCE);
+  const templateChance = options.templateChance ?? 0;
+
+  const rng = new Rng(seedState(state.seed, `respawn/${floorId}/${wave}`));
+  const count = rng.int(min, max);
+  if (count <= 0) return 0;
+
+  const avoid: Pos[] = [arrivalPos];
+  for (const id of state.party) {
+    const member = state.entities[id];
+    if (member?.actor !== undefined && member.actor.hp > 0 && member.floor === floorId) avoid.push(member.pos);
+  }
+
+  const terrain = Grid.wrap(floor.terrain);
+  const tiles: Pos[] = [];
+  for (let y = 0; y < terrain.height; y++) {
+    for (let x = 0; x < terrain.width; x++) {
+      if (terrain.get(x, y) !== Terrain.Floor) continue;
+      const pos = { x, y };
+      if (featureAt(state, floorId, pos) !== undefined) continue;
+      if (actorsAt(state, floorId, pos).length > 0) continue;
+      if (avoid.some((a) => Math.max(Math.abs(a.x - x), Math.abs(a.y - y)) < stairsDistance)) continue;
+      tiles.push(pos);
+    }
+  }
+
+  let placed = 0;
+  for (let i = 0; i < count && tiles.length > 0; i++) {
+    const def = pickWeighted(pool, rng);
+    const at = rng.int(0, tiles.length - 1);
+    const [pos] = tiles.splice(at, 1) as [Pos];
+    const templates = rollTemplates(def, rng, templateChance);
+    spawnMonster(state, def.id, floorId, pos, templates.length === 0 ? undefined : { templates });
+    placed++;
+  }
+  return placed;
 }
 
 /**

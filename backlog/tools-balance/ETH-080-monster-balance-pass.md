@@ -25,6 +25,8 @@ After ETH-061, 50 seeds had 0 deaths because potions kept the party alive. Nate 
 
 ## Notes
 Run this last in M1.
+- Review and tune return-trip floor repopulation from `ETH-025`: default respawn count curve and `depthShift` (currently `+1`, so climbing back out spawns higher-level monsters than the party met going down).
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-22: Noted return-trip respawn density and `depthShift` tuning from ETH-025.

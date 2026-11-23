@@ -619,7 +619,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`) and ETH-019 26 (`intent.goal`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`) and ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`).
 
 ### Contracts in the run (ETH-024)
 
@@ -695,8 +695,19 @@ What later items build on, all exported from `src/sim/floors/`:
   `runStarted`, ETH-079). `floorType` (ETH-064) is the floor type id the floor
   is built from (`floorTypeOf(state, floor)`), or `null` for a hand-built floor; the Codex marks
   it `seen` from this event.
-- **State:** `state.domains.floors` holds `deepest` and `arrived` (the turn the party first
-  reached each floor).
+- **State:** `state.domains.floors` holds `deepest`, `arrived` (the turn the party first
+  reached each floor), `respawns` (wave count per floor), `stirAnnounced` and `lastVacated` (ETH-025).
+- **Return-trip repopulation (ETH-025, `floors/respawn.ts`, `combat/monsters.ts`):** when a party
+  member re-enters an already-built floor that currently has no living party members on it
+  (`!firstVisit && wasEmpty`, unless `monsters: false` or `respawn.enabled: false`), `maybeRespawnFloor`
+  spawns a deterministic wave (`respawnFloor`, seeded from `respawn/<floor>/<wave>`) of higher-level
+  monsters (`depth + depthShift`, default `+1`, tunable via `RunConfig.respawn` and balanced in ETH-080)
+  at least `stairsDistance` (7) tiles from the arrival stairs and living party members. Under default
+  rules, each visited floor repopulates once once `contractsComplete(state)` holds. `dungeonStirred`
+  (`"The dungeon stirs."`) is emitted once per run on the first repopulated floor, while quiet
+  `floorRespawned` is emitted for every repopulated floor. The run-modifier flag
+  `FLAG_CONSTANT_RESPAWN` (`'floors.constant_respawn'`, for the planned Guild Hall upgrade ETH-129)
+  or `respawn.continuous` enables repeated repopulation on revisit after `CONSTANT_RESPAWN_COOLDOWN` (50) turns.
 - **Party:** `gatheringAt(state, floor, pos)` says who is gathered at a place (chained within
   `GATHER_RADIUS`) and who is missing; `partyOnFloor` lists the living members on a floor.
 - **Fountains (ETH-072, `floors/fountains.ts`):** a core feature part

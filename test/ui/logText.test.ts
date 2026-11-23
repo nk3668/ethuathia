@@ -27,11 +27,11 @@ describe('log text', () => {
     expect(Object.keys(LOG_TEXT).sort()).toEqual([...types].sort());
   });
 
-  it('leaves out only moves, waits, floor arrivals (the stairs line says it), kills (the death line says it), recovery ticks and XP grants (the level-up line says it)', () => {
+  it('leaves out only moves, waits, floor arrivals (the stairs line says it), floor respawns (dungeonStirred says it once), kills (the death line says it), recovery ticks and XP grants (the level-up line says it)', () => {
     const quiet = Object.entries(LOG_TEXT)
       .filter(([, entry]) => entry.quiet === true)
       .map(([type]) => type as SimEventType);
-    expect(quiet.sort()).toEqual(['floorEntered', 'killed', 'moved', 'recovered', 'waited', 'xpGained']);
+    expect(quiet.sort()).toEqual(['floorEntered', 'floorRespawned', 'killed', 'moved', 'recovered', 'waited', 'xpGained']);
   });
 
   it('makes a missing formatter a compile error', () => {
