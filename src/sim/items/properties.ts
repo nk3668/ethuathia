@@ -36,6 +36,7 @@
 import { z } from 'zod';
 import type { Bundle } from '../../content';
 import type { Entity, RunState } from '../state';
+import { enchantmentProblems, PROP_BLESSING, PROP_ENCHANT, PROP_ENCHANTMENTS, PROP_IDENTIFIED } from './enchant';
 import type { ItemInstance, ItemOrigin } from './instance';
 import { PROP_WEAPON_SCALING } from './scaling';
 
@@ -48,6 +49,11 @@ export interface ItemPropertyCtx {
   readonly item: ItemInstance;
   /** Who wears (or would wear) the item, when there is one: gear comparison, worn stats, naming. */
   readonly wearer?: Entity;
+  /**
+   * When true (AI gear evaluation, ETH-044), properties hidden from `wearer` are skipped so the
+   * AI never peeks at unidentified enchantments or curses. Worn stats always use `false`.
+   */
+  readonly knownOnly?: boolean;
 }
 
 /** A name part from one property: before the base name or after it. */
@@ -66,6 +72,11 @@ export interface ItemPropertyKind<T = unknown> {
   readonly schema: z.ZodType<T>;
   /** Extra bundles while the item is worn, after the def's bundle. Default: none. */
   bundles?(ctx: ItemPropertyCtx, value: T): readonly Bundle[];
+  /**
+   * Like `bundles`, but lets the property credit a specific content source, tooltip label, or
+   * trigger potency (`ItemBundle`, ETH-044). Checked before `bundles`.
+   */
+  bundleParts?(ctx: ItemPropertyCtx, value: T): readonly ItemBundle[];
   /** The worth of one item after this property, given the worth so far (`base`). Default: unchanged. */
   value?(ctx: Omit<ItemPropertyCtx, 'wearer'>, value: T, base: number): number;
   /** Name parts. Default: none. */
@@ -83,12 +94,13 @@ export interface ItemPropertyKind<T = unknown> {
 
 /**
  * One bundle an item applies while worn, as `getStat` credits it: to `source` (a content id;
- * default the item's def) under `label` (default the source's name).
+ * default the item's def) under `label` (default the source's name), at `potency` (default 1).
  */
 export interface ItemBundle {
   readonly bundle: Bundle;
   readonly source?: string;
   readonly label?: string;
+  readonly potency?: number;
 }
 
 /**
@@ -120,7 +132,13 @@ export const PROP_ORIGIN: ItemPropertyKind<ItemOrigin> = {
 };
 
 /** The items domain's property kinds, in registry order (bundles, value, name parts follow it). */
-const ITEM_PROPERTY_LIST: readonly ItemPropertyKind[] = [PROP_ORIGIN as ItemPropertyKind];
+const ITEM_PROPERTY_LIST: readonly ItemPropertyKind[] = [
+  PROP_ENCHANT as ItemPropertyKind,
+  PROP_BLESSING as ItemPropertyKind,
+  PROP_ENCHANTMENTS as ItemPropertyKind,
+  PROP_IDENTIFIED as ItemPropertyKind,
+  PROP_ORIGIN as ItemPropertyKind,
+];
 
 const kinds: ItemPropertyKind[] = [];
 
@@ -165,12 +183,19 @@ export function itemProperties(item: ItemInstance): { kind: ItemPropertyKind; va
 
 /**
  * The bundles `item`'s properties add, with how each is credited: each present field kind's in
- * registry order, then each derived property's (`gearBundleParts` puts the def's first).
+ * registry order, then each derived property's (`gearBundleParts` puts the def's first). When
+ * `ctx.knownOnly` is true, properties hidden from `ctx.wearer` are omitted.
  */
 export function propertyBundleParts(ctx: ItemPropertyCtx): ItemBundle[] {
   const out: ItemBundle[] = [];
+  const known = ctx.knownOnly !== true || ctx.wearer === undefined || itemKnown(ctx);
   for (const { kind, value } of itemProperties(ctx.item)) {
-    if (kind.bundles !== undefined) for (const bundle of kind.bundles(ctx, value)) out.push({ bundle });
+    if (ctx.knownOnly === true && kind.hidden?.(value, known) === true) continue;
+    if (kind.bundleParts !== undefined) {
+      out.push(...kind.bundleParts(ctx, value));
+    } else if (kind.bundles !== undefined) {
+      for (const bundle of kind.bundles(ctx, value)) out.push({ bundle });
+    }
   }
   for (const prop of derived) out.push(...prop.bundles(ctx));
   return out;
@@ -203,5 +228,6 @@ export function propertyProblems(item: ItemInstance): string[] {
     const result = kind.schema.safeParse(value);
     if (!result.success) problems.push(`"${item.def}" has a bad ${field}: ${result.error.issues[0]?.message ?? 'invalid'}`);
   }
+  problems.push(...enchantmentProblems(item));
   return problems;
 }

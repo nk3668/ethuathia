@@ -12,8 +12,16 @@
  */
 import { ITEMS } from '../../content';
 import { clonePlain } from '../../core';
-import type { EquipSlot, ItemDef } from '../../content';
+import type { EquipSlot, ItemBlessing, ItemDef } from '../../content';
 import { propertyKindFor } from './properties';
+
+/** One special named/effect enchantment carried by an item (`prop.enchantments`, ETH-044). */
+export interface ItemEnchantment {
+  /** Content id from `ENCHANTMENTS` (`enchant.*`, `kind: 'special'`). */
+  id: string;
+  /** Positive integer rank (`1..maxLevel`). */
+  level: number;
+}
 
 /** One item or a stack of identical ones. Plain data; leave optional fields out rather than `undefined`. */
 export interface ItemInstance {
@@ -21,6 +29,17 @@ export interface ItemInstance {
   def: string;
   /** How many, from 1 to the def's `stack` (default 1). */
   qty: number;
+  /** Numeric enhancement (+N / -N), backed by `baseEnchantmentFor(def)` (ETH-044). */
+  enchant?: number;
+  /** Blessed or cursed beatitude; absent means uncursed (ETH-044). */
+  blessing?: ItemBlessing;
+  /** Special named/effect enchantments from `ENCHANTMENTS` (ETH-044). */
+  enchantments?: ItemEnchantment[];
+  /**
+   * Whether this instance's hidden properties (and base type, for potions/scrolls/jewelry) are
+   * known (ETH-044). Absent means known; loot generation sets `false` on items that start unidentified.
+   */
+  identified?: false;
   /** Heirloom history and flavor (ETH-118 `prop.origin`; ETH-069, ETH-109). Never stacks. */
   origin?: ItemOrigin;
 }

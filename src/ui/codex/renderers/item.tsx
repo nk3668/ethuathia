@@ -2,7 +2,7 @@
  * Codex view of items (ETH-061): grouped by category, with weight, value and what using one does;
  * for weapons and armor (ETH-043) the slot, base type and stats while worn.
  */
-import { attributeDef, EQUIP_SLOT_INFO, GEAR_TYPE_INFO, isJunk, ITEM_CATEGORIES, ITEM_CATEGORY_INFO, ITEMS, STATUSES, UNARMED_ATTRIBUTE } from '../../../content';
+import { attributeDef, EQUIP_SLOT_INFO, GEAR_TYPE_INFO, isAppearanceCategory, isJunk, ITEM_CATEGORIES, ITEM_CATEGORY_INFO, ITEM_STATE_INFO, ITEMS, STATUSES, UNARMED_ATTRIBUTE } from '../../../content';
 import type { Effect, ItemDef } from '../../../content';
 import { bundleStatsText, DAMAGE_FORMULA } from '../../../sim';
 import type { CodexField } from '../types';
@@ -16,6 +16,10 @@ function effectText(effect: Effect): string {
       return `deals ${effect.amount} damage`;
     case 'applyStatus':
       return `${STATUSES.has(effect.status) ? STATUSES.get(effect.status).name : effect.status} for ${effect.turns} turns`;
+    case 'identify':
+      return effect.scope === 'all' ? 'identifies all carried items' : 'identifies an unidentified item';
+    case 'uncurse':
+      return effect.scope === 'all' ? 'uncurses all items' : 'uncurses worn gear';
   }
 }
 
@@ -89,6 +93,15 @@ export default defineCodexRenderer({
       { label: 'Weight', value: def.weight, hint: 'Counts against the carrier’s Carry stat. Over it, the least valuable things get dropped.' },
       { label: 'Value', value: def.value, hint: 'Worth of one, which decides what an adventurer keeps when its pack is full.', key: use === null && def.gear === undefined },
       ...((def.stack ?? 1) > 1 ? [{ label: 'Stacks', value: `up to ${def.stack}`, hint: 'How many share one pack slot.' }] : []),
+      ...(def.gear !== undefined || isAppearanceCategory(def.category)
+        ? [
+            {
+              label: 'States',
+              value: def.gear !== undefined ? 'Enchantable · Blessed / Cursed' : 'Unidentified · Blessed / Cursed',
+              hint: `${ITEM_STATE_INFO.enchanted} ${ITEM_STATE_INFO.blessed} ${ITEM_STATE_INFO.cursed} ${ITEM_STATE_INFO.unidentified}`,
+            },
+          ]
+        : []),
     ];
   },
 });

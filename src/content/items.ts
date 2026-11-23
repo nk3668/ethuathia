@@ -19,7 +19,7 @@ import { z } from 'zod';
 import { Registry } from '../core';
 import type { Def } from '../core';
 import type { AttributeId } from './attributes';
-import type { Bundle } from './bundles';
+import type { Bundle, EffectKind } from './bundles';
 import { bundleRefs, bundleSchema } from './bundles';
 import type { ContentKind } from './kind';
 import { defShape, glyphSchema, positiveInt } from './schema';
@@ -250,6 +250,11 @@ export function healAmount(def: ItemDef): number {
   return total;
 }
 
+/** True if using the item runs at least one effect of `kind` (e.g. `'identify'`, `'uncurse'`). */
+export function hasEffectKind(def: ItemDef, kind: EffectKind): boolean {
+  return (def.bundle?.effects ?? []).some((e) => e.kind === kind);
+}
+
 // ---------------------------------------------------------------------------------------------
 // Starter items (original names and text)
 
@@ -293,6 +298,34 @@ export const ITEM_SCROLL_OF_RENEWAL = defineItem({
   stack: 5,
   bundle: { effects: [{ kind: 'applyStatus', status: 'status.regenerating', turns: 15 }] },
   loot: { weight: 4 },
+});
+
+export const ITEM_SCROLL_OF_IDENTIFY = defineItem({
+  id: 'item.scroll_of_identify',
+  name: 'Scroll of identify',
+  description: 'Fine grey ink arranged in neat diagnostic sigils. Reading it reveals the true nature, enchantments and curses of an unidentified item (or all of them when blessed).',
+  tags: ['identify'],
+  glyph: { ch: '?', color: '#9ec5e6' },
+  category: 'scroll',
+  weight: 1,
+  value: 30,
+  stack: 5,
+  bundle: { effects: [{ kind: 'identify', scope: 'one' }] },
+  loot: { weight: 3 },
+});
+
+export const ITEM_SCROLL_OF_UNCURSING = defineItem({
+  id: 'item.scroll_of_uncursing',
+  name: 'Scroll of uncursing',
+  description: 'A crisp white sheet smelling faintly of salt and cedar. Reading it breaks curses binding worn gear (and carried items too when blessed).',
+  tags: ['uncurse'],
+  glyph: { ch: '?', color: '#e8e0c5' },
+  category: 'scroll',
+  weight: 1,
+  value: 40,
+  stack: 5,
+  bundle: { effects: [{ kind: 'uncurse', scope: 'worn' }] },
+  loot: { weight: 2.5 },
 });
 
 export const ITEM_TRAIL_BISCUIT = defineItem({

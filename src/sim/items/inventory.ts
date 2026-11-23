@@ -16,6 +16,8 @@ import type { Emit } from '../events';
 import { fieldOfView } from '../perception';
 import type { ActorEntity, Entity, FloorId, RunState } from '../state';
 import { statValue } from '../stats/getStat';
+import { isKnownCursed } from './enchant';
+import { appearanceName, isItemIdentified, isTypeIdentified } from './identify';
 import { addToStacks, canStack, itemDef, itemWeight, stackSize } from './instance';
 import type { InventoryPart, ItemInstance } from './instance';
 import { upgradeSlot } from './equipment';
@@ -25,6 +27,12 @@ import { unitValue } from './value';
 export interface KnownItem {
   def: string;
   qty: number;
+  /** True when the item was unidentified when seen (ETH-044). Omitted for plain/known items. */
+  unidentified?: true;
+  /** True when the item was known to be cursed when seen/dropped, so the AI won't walk back for it (ETH-044). */
+  cursed?: true;
+  /** Known numeric enhancement when seen/dropped, so remembered value matches pack value (ETH-044). */
+  enchant?: number;
 }
 
 /** The party's memory of items, per floor, keyed by tile index (`y * width + x`). */
@@ -187,6 +195,7 @@ export function lowestValueIndex(state: RunState, entity: Entity): number | null
 export function wantsItem(state: RunState, actor: Entity, item: ItemInstance): boolean {
   const def = itemDef(item);
   if (isJunk(def)) return false;
+  if (isKnownCursed(state, item)) return false;
   if (def.category === 'gold' || def.category === 'relic') return true;
   if (upgradeSlot(state, actor, item) !== null) return true;
   const limit = carryLimit(state, actor);
@@ -213,8 +222,16 @@ export function knownItems(state: RunState, floorId: FloorId): Readonly<Record<n
   return state.domains.items.known[floorId] ?? {};
 }
 
-function knownList(e: ItemEntity): KnownItem {
-  return { def: e.item.def, qty: e.item.qty };
+function knownList(state: RunState, e: ItemEntity): KnownItem {
+  const item = e.item;
+  const known = isItemIdentified(state, item);
+  return {
+    def: item.def,
+    qty: item.qty,
+    ...(item.identified === false ? { unidentified: true as const } : {}),
+    ...(known && item.blessing === 'cursed' ? { cursed: true as const } : {}),
+    ...(known && item.enchant !== undefined ? { enchant: item.enchant } : {}),
+  };
 }
 
 /**
@@ -223,7 +240,7 @@ function knownList(e: ItemEntity): KnownItem {
  */
 export function rememberTile(state: RunState, floorId: FloorId, pos: Pos): void {
   const i = pos.y * getFloor(state, floorId).terrain.width + pos.x;
-  const here = itemsAt(state, floorId, pos).map(knownList);
+  const here = itemsAt(state, floorId, pos).map((e) => knownList(state, e));
   const known = state.domains.items.known;
   if (here.length > 0) {
     known[floorId] ??= {};
@@ -254,8 +271,8 @@ export function noticeItems(state: RunState, actor: ActorEntity, emit: Emit): vo
     const i = e.pos.y * width + e.pos.x;
     if (inView.cells[i] !== 1) continue;
     const list = now.get(i);
-    if (list === undefined) now.set(i, [knownList(e)]);
-    else list.push(knownList(e));
+    if (list === undefined) now.set(i, [knownList(state, e)]);
+    else list.push(knownList(state, e));
   }
   if (remembered !== undefined) {
     for (const key of Object.keys(remembered)) {
@@ -270,7 +287,16 @@ export function noticeItems(state: RunState, actor: ActorEntity, emit: Emit): vo
     for (const k of list) {
       if (before.has(k.def)) continue;
       before.add(k.def);
-      emit({ type: 'itemSighted', actor: actor.id, item: k.def, qty: k.qty, floor: floorId, pos: { x: i % width, y: Math.floor(i / width) } });
+      const typeUnknown = k.unidentified === true && !isTypeIdentified(state, k.def);
+      emit({
+        type: 'itemSighted',
+        actor: actor.id,
+        item: k.def,
+        ...(typeUnknown ? { name: appearanceName(state.seed, k.def), identified: false as const } : {}),
+        qty: k.qty,
+        floor: floorId,
+        pos: { x: i % width, y: Math.floor(i / width) },
+      });
     }
     memory[i] = list;
   }

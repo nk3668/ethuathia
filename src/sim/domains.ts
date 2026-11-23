@@ -39,6 +39,7 @@ import {
   CHRONICLE_RULES,
   CONDITIONS,
   DISCOVERY_RULES,
+  EFFECT_HANDLERS,
   FLOOR_PLAN_HOOKS,
   GEN_STEPS,
   RULE_ACTIONS,
@@ -108,6 +109,10 @@ for (const def of [...CORE_RULE_ACTIONS, ...ALL.flatMap((d) => d.ruleActions ?? 
 for (const def of [...ROOM_STEPS, ...ALL.flatMap((d) => d.genSteps ?? [])]) GEN_STEPS.register(def);
 
 for (const def of ALL.flatMap((d) => d.triggers ?? [])) TRIGGERS.register(def);
+for (const handler of ALL.flatMap((d) => d.effectHandlers ?? [])) {
+  if (EFFECT_HANDLERS.has(handler.kind)) throw new Error(`Two domains define the effect handler "${handler.kind}"`);
+  EFFECT_HANDLERS.set(handler.kind, handler);
+}
 STAT_PROVIDERS.push(...unique('stat provider', ALL.flatMap((d) => d.statProviders ?? [])));
 BUNDLE_SOURCES.push(...unique('bundle source', ALL.flatMap((d) => d.bundleSources ?? [])));
 
@@ -190,4 +195,4 @@ export function domainSnapshots(ctx: SnapshotCtx): DomainSnapshots {
   return out as DomainSnapshots;
 }
 
-export { BUNDLE_SOURCES, CHRONICLE_KINDS, CHRONICLE_RULES, CONDITIONS, DISCOVERY_RULES, GEN_STEPS, RULE_ACTIONS, STAT_PROVIDERS, TRIGGERS, VICTORY_CHECKS };
+export { BUNDLE_SOURCES, CHRONICLE_KINDS, CHRONICLE_RULES, CONDITIONS, DISCOVERY_RULES, EFFECT_HANDLERS, GEN_STEPS, RULE_ACTIONS, STAT_PROVIDERS, TRIGGERS, VICTORY_CHECKS };

@@ -29,6 +29,7 @@ export type { TerrainDef } from './terrain';
 export * from './monsters';
 export * from './monsterTemplates';
 export * from './items';
+export * from './enchantments';
 export * from './objectives';
 export * from './contracts';
 export * from './bounties';

@@ -1,17 +1,30 @@
 /**
- * Loot generation (ETH-061): the `gen.loot` step scatters items over a floor's rooms by depth.
+ * Loot generation (ETH-061, ETH-044): the `gen.loot` step scatters items over a floor's rooms by
+ * depth and rolls enchantment, beatitude (blessed / cursed), special enchantments and initial
+ * identification state from the loot RNG stream alone.
  *
  * It draws only from the draft's loot RNG (`FloorDraft.loot`, from `lootRngState(seed, floor)`),
  * never from the layout RNG, so changing loot never moves a wall and the order floors are reached
  * in never changes what lies on them.
  */
 import type { Pos, Rng } from '../../core';
-import { ITEMS } from '../../content';
-import type { ItemDef } from '../../content';
+import { baseEnchantmentFor, ITEMS, specialEnchantmentsFor } from '../../content';
+import type { EnchantmentDef, ItemBlessing, ItemDef } from '../../content';
 import { readParams } from '../gen/params';
 import { defineGenStep, rectTiles } from '../gen/types';
 import type { FloorDraft } from '../gen/types';
 import { Terrain } from '../state';
+import { needsTypeId } from './identify';
+import type { ItemEnchantment, ItemInstance } from './instance';
+
+/** Tunable loot property roll chances (ETH-044; reviewed in ETH-080). */
+export const LOOT_BLESS_CHANCE = 0.1;
+export const LOOT_CURSE_CHANCE = 0.1;
+export const LOOT_CONSUMABLE_CURSE_CHANCE = 0.08;
+export const LOOT_ENCHANT_CHANCE = 0.25;
+export const LOOT_SPECIAL_BASE_CHANCE = 0.12;
+export const LOOT_SPECIAL_PER_DEPTH = 0.02;
+export const LOOT_SPECIAL_MAX_CHANCE = 0.25;
 
 /** The item defs loot may place at `depth`, in registration order. */
 export function lootTable(depth: number): ItemDef[] {
@@ -27,6 +40,70 @@ function pickWeighted(table: readonly ItemDef[], rng: Rng): ItemDef {
     if (roll < 0) return def;
   }
   return table[table.length - 1] as ItemDef;
+}
+
+function pickWeightedEnchant(pool: readonly EnchantmentDef[], rng: Rng): EnchantmentDef {
+  const total = pool.reduce((n, e) => n + e.weight, 0);
+  let roll = rng.float() * total;
+  for (const e of pool) {
+    roll -= e.weight;
+    if (roll < 0) return e;
+  }
+  return pool[pool.length - 1] as EnchantmentDef;
+}
+
+/**
+ * Rolls enchantment (`+N`/`-N`), beatitude (`blessed`/`cursed`), special enchantments and initial
+ * `identified: false` for one loot item at `depth`, drawing exclusively from `rng` (the loot stream).
+ */
+export function rollItemProperties(def: ItemDef, depth: number, rng: Rng): Partial<ItemInstance> {
+  if (def.category === 'gold' || def.category === 'junk' || def.category === 'relic') return {};
+
+  const out: Partial<ItemInstance> = {};
+
+  if (def.gear !== undefined) {
+    const bRoll = rng.float();
+    let blessing: ItemBlessing | undefined;
+    if (bRoll < LOOT_BLESS_CHANCE) blessing = 'blessed';
+    else if (bRoll < LOOT_BLESS_CHANCE + LOOT_CURSE_CHANCE) blessing = 'cursed';
+    if (blessing !== undefined) out.blessing = blessing;
+
+    const base = baseEnchantmentFor(def);
+    if (base !== undefined) {
+      let enchant = 0;
+      if (blessing === 'cursed') {
+        enchant = rng.chance(0.75) ? -1 : -2;
+      } else if ((blessing === 'blessed' && rng.chance(0.5)) || rng.chance(LOOT_ENCHANT_CHANCE)) {
+        const cap = Math.min(base.maxLevel, depth >= 6 ? 3 : depth >= 3 ? 2 : 1);
+        enchant = cap <= 1 ? 1 : rng.chance(0.65) ? 1 : rng.int(2, cap);
+      }
+      if (enchant !== 0) out.enchant = Math.max(base.minLevel, Math.min(base.maxLevel, enchant));
+    }
+
+    const specials = specialEnchantmentsFor(def, depth);
+    if (specials.length > 0) {
+      const chance = Math.min(LOOT_SPECIAL_MAX_CHANCE, LOOT_SPECIAL_BASE_CHANCE + Math.max(0, depth - 2) * LOOT_SPECIAL_PER_DEPTH);
+      if (rng.chance(chance)) {
+        const picked = pickWeightedEnchant(specials, rng);
+        const level = picked.maxLevel >= 2 && depth >= 5 && rng.chance(0.25) ? 2 : picked.minLevel;
+        const entry: ItemEnchantment = { id: picked.id, level };
+        out.enchantments = [entry];
+      }
+    }
+
+    if (out.enchant !== undefined || out.blessing !== undefined || out.enchantments !== undefined || needsTypeId(def)) {
+      out.identified = false;
+    }
+    return out;
+  }
+
+  if (def.category === 'potion' || def.category === 'scroll') {
+    const bRoll = rng.float();
+    if (bRoll < LOOT_BLESS_CHANCE) out.blessing = 'blessed';
+    else if (bRoll < LOOT_BLESS_CHANCE + LOOT_CONSUMABLE_CURSE_CHANCE) out.blessing = 'cursed';
+    out.identified = false;
+  }
+  return out;
 }
 
 /** Room tiles (every floor tile if there are no rooms) with no feature, start or item on them, in order. */
@@ -49,7 +126,7 @@ export const GEN_LOOT = defineGenStep({
   id: 'gen.loot',
   name: 'Scatter loot',
   description:
-    'Places a few items on free room tiles, chosen by depth from the items that can be found there. Gold piles grow with depth.',
+    'Places a few items on free room tiles, chosen by depth from the items that can be found there, rolling enchantments, blessings, curses and identification. Gold piles grow with depth.',
   parse(raw) {
     const p = readParams(raw, {
       minItems: { default: 3, min: 0, max: 200, integer: true },
@@ -69,7 +146,8 @@ export const GEN_LOOT = defineGenStep({
       const range = def.loot?.qty;
       let qty = range === undefined ? 1 : rng.int(range.min, range.max);
       if (def.category === 'gold') qty = Math.min(qty * draft.depth, def.stack ?? 1);
-      draft.items.push({ pos, item: { def: def.id, qty } });
+      const props = rollItemProperties(def, draft.depth, rng);
+      draft.items.push({ pos, item: { def: def.id, qty, ...props } });
     }
   },
 });

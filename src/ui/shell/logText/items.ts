@@ -14,11 +14,12 @@ export const HIGHLIGHT_VALUABLE_FIND = defineHighlight({
 });
 
 /**
- * The item as a mention, with ` ×3` after it for more than one. `name` is the event's item name
- * (`itemName`, ETH-118: "+2 Iron hatchet"), present only when it differs from the def's name.
+ * The item as a mention (or plain text if `identified === false`, so hovering doesn't spoil an
+ * unidentified potion/scroll/jewelry, ETH-044), with ` ×3` after it for more than one.
  */
-function itemParts(item: string, qty: number, name?: string): LogPart[] {
-  return qty === 1 ? [mention(item, name)] : [mention(item, name), ` ×${qty}`];
+function itemParts(item: string, qty: number, name?: string, identified?: false): LogPart[] {
+  const head: LogPart = identified === false ? (name ?? 'an unidentified item') : mention(item, name);
+  return qty === 1 ? [head] : [head, ` ×${qty}`];
 }
 
 function verb(item: string): string {
@@ -28,13 +29,13 @@ function verb(item: string): string {
 export const ITEMS_LOG_TEXT: LogTextRecord<ItemsEvent> = {
   itemSighted: {
     category: 'discovery',
-    text: (e, nameOf) => [`${nameOf(e.actor)} spots `, ...itemParts(e.item, e.qty), '.'],
+    text: (e, nameOf) => [`${nameOf(e.actor)} spots `, ...itemParts(e.item, e.qty, e.name, e.identified), '.'],
   },
   pickedUp: {
     category: 'loot',
     highlight: HIGHLIGHT_VALUABLE_FIND,
-    highlightWhen: (e) => e.value >= NOTABLE_ITEM_VALUE,
-    text: (e, nameOf) => [`${nameOf(e.actor)} picks up `, ...itemParts(e.item, e.qty, e.name), '.'],
+    highlightWhen: (e) => e.identified !== false && e.value >= NOTABLE_ITEM_VALUE,
+    text: (e, nameOf) => [`${nameOf(e.actor)} picks up `, ...itemParts(e.item, e.qty, e.name, e.identified), '.'],
   },
   goldPickedUp: {
     category: 'loot',
@@ -42,7 +43,7 @@ export const ITEMS_LOG_TEXT: LogTextRecord<ItemsEvent> = {
   },
   dropped: {
     category: 'loot',
-    text: (e, nameOf) => [`${nameOf(e.actor)} drops `, ...itemParts(e.item, e.qty, e.name), '.'],
+    text: (e, nameOf) => [`${nameOf(e.actor)} drops `, ...itemParts(e.item, e.qty, e.name, e.identified), '.'],
   },
   used: {
     category: 'loot',
@@ -59,6 +60,22 @@ export const ITEMS_LOG_TEXT: LogTextRecord<ItemsEvent> = {
   unequipped: {
     category: 'loot',
     text: (e, nameOf) => [`${nameOf(e.actor)} takes off `, mention(e.item, e.name), ` (${EQUIP_SLOT_INFO[e.slot].label.toLowerCase()}).`],
+  },
+  itemIdentified: {
+    category: 'discovery',
+    text: (e, nameOf) => [
+      `${nameOf(e.actor)} identifies ${e.was} as `,
+      mention(e.item, e.name),
+      e.cursed === true ? ' — it is cursed!' : '.',
+    ],
+  },
+  itemUncursed: {
+    category: 'loot',
+    text: (e, nameOf) => [
+      `The curse lifts from ${nameOf(e.actor)}’s `,
+      mention(e.item, e.name),
+      e.slot === null ? '.' : ` (${EQUIP_SLOT_INFO[e.slot].label.toLowerCase()}).`,
+    ],
   },
 };
 

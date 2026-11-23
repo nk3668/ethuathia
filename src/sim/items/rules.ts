@@ -6,14 +6,16 @@
  * hand each one to the player's own rules.
  */
 import type { Pos } from '../../core';
-import { EQUIP_SLOT_INFO, gearSlots, healAmount, ITEMS } from '../../content';
+import { EQUIP_SLOT_INFO, gearSlots, hasEffectKind, healAmount, ITEMS } from '../../content';
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } from '../ai/types';
 import { getFloor } from '../entities';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { statValue } from '../stats/getStat';
-import { bestUpgrade, gearStatsText } from './equipment';
+import { isCursed } from './enchant';
+import { bestUpgrade, gearStatsText, wornItems } from './equipment';
+import { appearanceName, isInstanceTypeKnown, isItemIdentified, isTypeIdentified } from './identify';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
 import { itemName } from './name';
@@ -73,26 +75,48 @@ export const COND_OVERLOADED = defineCondition({
   describe: () => 'overloaded',
 });
 
+/** True while the actor is wearing at least one cursed item (ETH-044). */
+export const COND_WEARING_CURSED = defineCondition({
+  id: 'cond.wearing_cursed',
+  name: 'Wearing cursed gear',
+  description: 'True while the adventurer is wearing a cursed piece of gear that cannot be removed until uncursed.',
+  parse: noParams,
+  evaluate({ actor }) {
+    const cursed = wornItems(actor).find(({ item }) => isCursed(item));
+    return cursed === undefined ? { ok: false, detail: '' } : { ok: true, detail: `cursed gear in ${EQUIP_SLOT_INFO[cursed.slot].label.toLowerCase()}` };
+  },
+  describe: () => 'wearing cursed gear',
+});
+
 // ---------------------------------------------------------------------------------------------
 // Rule actions
 
 /**
- * The healing potion to quaff: the weakest one that still covers the missing HP, else the
- * strongest. `null` if the pack has none.
+ * The healing potion to quaff: the weakest known healing potion that still covers the missing HP,
+ * else the strongest known healing potion; if none is known, an unidentified potion so the
+ * adventurer tries one in an emergency (ETH-044). `null` if the pack has none.
  */
 export function bestHealing(ctx: AiCtx): { index: number; heal: number } | null {
   const { state, actor } = ctx;
   const missing = statValue(state, actor, 'hp') - actor.actor.hp;
   let cover: { index: number; heal: number } | null = null;
   let strongest: { index: number; heal: number } | null = null;
+  let unknownPotion: number | null = null;
   for (const [index, item] of inventoryOf(actor).entries()) {
     const def = itemDef(item);
+    if (def.category !== 'potion') continue;
+    if (!isInstanceTypeKnown(state, item)) {
+      if (unknownPotion === null) unknownPotion = index;
+      continue;
+    }
     const heal = healAmount(def);
-    if (def.category !== 'potion' || heal <= 0) continue;
+    if (heal <= 0) continue;
     if (heal >= missing && (cover === null || heal < cover.heal)) cover = { index, heal };
     if (strongest === null || heal > strongest.heal) strongest = { index, heal };
   }
-  return cover ?? strongest;
+  if (cover !== null) return cover;
+  if (strongest !== null) return strongest;
+  return unknownPotion === null ? null : { index: unknownPotion, heal: 0 };
 }
 
 /** Quaff the healing potion that best fits the missing HP. */
@@ -168,8 +192,21 @@ export const ACT_PICK_UP = defineRuleAction({
     for (const [key, list] of Object.entries(knownItems(state, actor.floor))) {
       const i = Number(key);
       if (i === here) continue;
-      const wanted = list.find((k) => ITEMS.has(k.def) && wantsItem(state, actor, { def: k.def, qty: k.qty }));
-      if (wanted !== undefined) goals.push({ pos: { x: i % width, y: Math.floor(i / width) }, name: ITEMS.get(wanted.def).name });
+      const wanted = list.find(
+        (k) =>
+          ITEMS.has(k.def) &&
+          wantsItem(state, actor, {
+            def: k.def,
+            qty: k.qty,
+            ...(k.unidentified ? { identified: false } : {}),
+            ...(k.cursed ? { blessing: 'cursed' as const } : {}),
+            ...(k.enchant !== undefined ? { enchant: k.enchant } : {}),
+          }),
+      );
+      if (wanted !== undefined) {
+        const label = wanted.unidentified === true && !isTypeIdentified(state, wanted.def) ? appearanceName(state.seed, wanted.def) : ITEMS.get(wanted.def).name;
+        goals.push({ pos: { x: i % width, y: Math.floor(i / width) }, name: label });
+      }
     }
     if (goals.length === 0) return null;
     const paths = aiPathGrid(ctx);
@@ -204,7 +241,7 @@ export const ACT_EQUIP_UPGRADE = defineRuleAction({
     const up = bestUpgrade(state, actor);
     if (up === null) return null;
     const name = itemName(state, up.item, actor);
-    const stats = gearStatsText(state, actor, up.item);
+    const stats = gearStatsText(state, actor, up.item, true);
     const what = stats === null ? `the ${name}` : `the ${name} (${stats})`;
     const instead = up.replaces === null ? `, nothing worn there yet` : ` in place of the ${itemName(state, up.replaces, actor)}`;
     const where = gearSlotsCount(up.item) > 1 ? ` (${EQUIP_SLOT_INFO[up.slot].label.toLowerCase()})` : '';
@@ -213,33 +250,79 @@ export const ACT_EQUIP_UPGRADE = defineRuleAction({
   describe: () => 'equip clear upgrades',
 });
 
+/** Read a known Scroll of Uncursing to break curses on worn gear (ETH-044). */
+export const ACT_USE_UNCURSE = defineRuleAction({
+  id: 'act.use_uncurse',
+  name: 'Uncurse gear',
+  description: 'Read a known Scroll of Uncursing to free cursed worn gear.',
+  parse: noParams,
+  resolve({ state, actor }): Resolved | null {
+    if (!wornItems(actor).some(({ item }) => isCursed(item))) return null;
+    const index = inventoryOf(actor).findIndex((item) => isInstanceTypeKnown(state, item) && hasEffectKind(itemDef(item), 'uncurse'));
+    if (index < 0) return null;
+    const entry = inventoryOf(actor)[index] as ItemInstance;
+    return { request: { id: 'use', index }, detail: `reading a ${itemName(state, entry, actor)}` };
+  },
+  describe: () => 'read a scroll of uncursing',
+});
+
+/** Read a known Scroll of Identify when carrying any unidentified item (ETH-044). */
+export const ACT_USE_IDENTIFY = defineRuleAction({
+  id: 'act.use_identify',
+  name: 'Identify items',
+  description: 'Read a known Scroll of Identify when carrying an unidentified item.',
+  parse: noParams,
+  resolve({ state, actor }): Resolved | null {
+    const pack = inventoryOf(actor);
+    const scrollIdx = pack.findIndex((item) => isInstanceTypeKnown(state, item) && hasEffectKind(itemDef(item), 'identify'));
+    if (scrollIdx < 0) return null;
+    const hasTarget =
+      wornItems(actor).some(({ item }) => !isItemIdentified(state, item)) ||
+      pack.some((item, i) => i !== scrollIdx && !isItemIdentified(state, item));
+    if (!hasTarget) return null;
+    const entry = pack[scrollIdx] as ItemInstance;
+    return { request: { id: 'use', index: scrollIdx }, detail: `reading a ${itemName(state, entry, actor)}` };
+  },
+  describe: () => 'read a scroll of identify',
+});
+
 function gearSlotsCount(item: ItemInstance): number {
   return gearSlots(itemDef(item)).length;
 }
 
 /** The items domain's conditions, in registration order. */
-export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED];
+export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED, COND_WEARING_CURSED];
 
 /** The items domain's rule actions, in registration order. */
-export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_QUAFF_HEALING, ACT_DROP_LOWEST, ACT_PICK_UP, ACT_EQUIP_UPGRADE];
+export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [
+  ACT_QUAFF_HEALING,
+  ACT_DROP_LOWEST,
+  ACT_PICK_UP,
+  ACT_EQUIP_UPGRADE,
+  ACT_USE_UNCURSE,
+  ACT_USE_IDENTIFY,
+];
 
 /**
  * The baseline's urgent item rules, checked first: quaff healing below `HEAL_BELOW_PERCENT` HP;
- * while overloaded, first put on a clear upgrade from the pack (worn gear doesn't count against
- * Carry, so that may be enough), then drop the least valuable thing. Putting the upgrade on first
- * keeps the AI from dropping things it would pick up again once the upgrade is worn.
+ * uncurse cursed worn gear if carrying a Scroll of Uncursing; while overloaded, first put on a
+ * clear upgrade from the pack (worn gear doesn't count against Carry, so that may be enough), then
+ * drop the least valuable thing.
  */
 export const ITEMS_BASELINE_URGENT: readonly Rule[] = [
   { condition: { id: 'cond.wounded', params: { percent: HEAL_BELOW_PERCENT } }, action: { id: 'act.quaff_healing' }, enabled: true },
+  { condition: { id: 'cond.wearing_cursed' }, action: { id: 'act.use_uncurse' }, enabled: true },
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.equip_upgrade' }, enabled: true },
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.drop_lowest' }, enabled: true },
 ];
 
 /**
  * The baseline's gear and looting rules, checked just before exploring (so never next to an
- * enemy): put on clear upgrades (ETH-043), then pick up wanted items within `PICKUP_DETOUR` steps.
+ * enemy): identify carried items with a known Scroll of Identify, put on clear upgrades (ETH-043),
+ * then pick up wanted items within `PICKUP_DETOUR` steps.
  */
 export const ITEMS_BASELINE_LOOT: readonly Rule[] = [
+  { condition: { id: 'cond.always' }, action: { id: 'act.use_identify' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.equip_upgrade' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.pick_up', params: { maxDetour: PICKUP_DETOUR } }, enabled: true },
 ];

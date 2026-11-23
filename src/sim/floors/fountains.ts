@@ -25,6 +25,7 @@ import type { FloorDraft, GenStepDef, Rect } from '../gen/types';
 import type { FloorPlan } from '../floorText';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { registerInvariant } from '../invariants';
+import { isInstanceTypeKnown } from '../items/identify';
 import { inventoryOf } from '../items/inventory';
 import { getMemory } from '../perception';
 import { statValue } from '../stats/getStat';
@@ -143,11 +144,11 @@ export function knownFlowingFountains(state: RunState, floorId: FloorId): Pos[] 
 }
 
 /**
- * Whether `actor` carries a healing potion: any pack entry whose use heals its user (`healAmount`),
- * the same items the baseline's `act.quaff_healing` drinks (ETH-061).
+ * Whether `actor` carries a known healing potion: any pack entry whose type is known to the party
+ * (ETH-044) and whose use heals its user (`healAmount`), matching `act.quaff_healing` (ETH-061).
  */
-export function carriesHealingPotion(_state: RunState, actor: ActorEntity): boolean {
-  return inventoryOf(actor).some((item) => ITEMS.has(item.def) && healAmount(ITEMS.get(item.def)) > 0);
+export function carriesHealingPotion(state: RunState, actor: ActorEntity): boolean {
+  return inventoryOf(actor).some((item) => ITEMS.has(item.def) && isInstanceTypeKnown(state, item) && healAmount(ITEMS.get(item.def)) > 0);
 }
 
 // ---------------------------------------------------------------------------------------------

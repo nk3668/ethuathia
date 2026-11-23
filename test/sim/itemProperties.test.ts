@@ -81,8 +81,16 @@ const ofType = <T extends SimEvent['type']>(events: SimEvent[], type: T) =>
   events.filter((e): e is Extract<SimEvent, { type: T }> => e.type === type);
 
 describe('the property registry', () => {
-  it('lists origin first, then registered kinds in order, and refuses a taken field', () => {
-    expect(ITEM_PROPERTIES.map((k) => k.id)).toEqual(['prop.origin', 'prop.test_edge', 'prop.test_veiled']);
+  it('lists built-in properties in order, then registered kinds, and refuses a taken field', () => {
+    expect(ITEM_PROPERTIES.map((k) => k.id)).toEqual([
+      'prop.enchant',
+      'prop.blessing',
+      'prop.enchantments',
+      'prop.identified',
+      'prop.origin',
+      'prop.test_edge',
+      'prop.test_veiled',
+    ]);
     expect(() => registerItemProperty({ ...PROP_EDGE, id: 'prop.other' })).toThrow(/taken/);
     expect(() => registerItemProperty(PROP_EDGE)).toThrow(/Duplicate/);
   });

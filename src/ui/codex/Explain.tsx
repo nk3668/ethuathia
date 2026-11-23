@@ -4,6 +4,7 @@
  * by the Codex tab and the map's tile inspector.
  */
 import type { ReactNode } from 'react';
+import { ITEM_STATE_INFO } from '../../content';
 import type { Glyph } from '../../content';
 import { cx } from '../kit/cx';
 import { Tooltip } from '../kit';
@@ -100,9 +101,14 @@ export interface ExplainProps {
   name?: string;
   /**
    * A line about this particular thing for this viewer, after the fields: how a weapon's
-   * attribute changes its wielder's damage (ETH-082).
+   * attribute changes its wielder's damage (ETH-082) or its enchantment/curse state (ETH-044).
    */
   note?: string;
+  /**
+   * When set (ETH-044), hides the real def behind a generic unidentified card so hovering an
+   * unidentified potion, scroll or jewelry never spoils what it is.
+   */
+  unidentified?: { readonly name: string; readonly category: string };
   /** The text shown; defaults to `name`, else the def's name. */
   children?: ReactNode;
 }
@@ -111,8 +117,29 @@ export interface ExplainProps {
  * A content mention with a hover and focus tooltip explaining it. An id no kind knows renders
  * its text (or the id) plainly.
  */
-export function Explain({ id, name, note, children }: ExplainProps) {
+export function Explain({ id, name, note, unidentified, children }: ExplainProps) {
   const entry = codexEntry(id);
+  if (unidentified !== undefined) {
+    const label = children ?? unidentified.name;
+    return (
+      <Tooltip
+        content={
+          <div className={styles.card}>
+            <div className={styles.heading}>
+              <GlyphMark glyph={entry === undefined ? null : entryGlyph(entry)} />
+              <span className={styles.name}>{unidentified.name}</span>
+              <span className={styles.kind}>{unidentified.category}</span>
+            </div>
+            <p className={styles.description}>{ITEM_STATE_INFO.unidentified}</p>
+          </div>
+        }
+      >
+        <span tabIndex={0} className={styles.link}>
+          {label}
+        </span>
+      </Tooltip>
+    );
+  }
   const text = children ?? name ?? entry?.def.name ?? id;
   if (entry === undefined) return <>{text}</>;
   return (

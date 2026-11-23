@@ -19,7 +19,7 @@
  */
 import { Grid } from '../../core';
 import type { Pos } from '../../core';
-import { gearSlots, isEquipSlot, isUsable, ITEMS } from '../../content';
+import { ENCHANTMENTS, gearSlots, isEquipSlot, isUsable, ITEMS } from '../../content';
 import type { EquipSlot } from '../../content';
 import type { CommandRecord } from '../commands';
 import type { SimDomain, SnapshotCtx, TurnCtx } from '../domain';
@@ -31,7 +31,10 @@ import { partyVisible } from '../perception';
 import type { Entity, EntityId, FloorId, RunConfig } from '../state';
 import { ITEMS_ACTIONS } from './actions';
 import type { ItemsRequest } from './actions';
+import { ITEMS_EFFECT_HANDLERS } from './effects';
+import { isCursed, itemStateNote } from './enchant';
 import { SOURCE_EQUIPPED, wornItems } from './equipment';
+import { appearanceName, isInstanceTypeKnown, isItemIdentified, isTypeIdentified } from './identify';
 import { instanceProblem, itemDef, itemWeight } from './instance';
 import { itemName } from './name';
 import { propertyProblems } from './properties';
@@ -44,12 +47,15 @@ import { ITEMS_CONDITIONS, ITEMS_RULE_ACTIONS } from './rules';
 import { itemValue } from './value';
 
 export * from './instance';
+export * from './identify';
+export * from './enchant';
 export * from './properties';
 export * from './scaling';
 export * from './name';
 export * from './equipment';
 export * from './value';
 export * from './inventory';
+export * from './effects';
 export * from './actions';
 export * from './loot';
 export * from './rules';
@@ -60,17 +66,18 @@ export const NOTABLE_ITEM_VALUE = 50;
 /** The events this domain emits (bodies, without `turn`). Each has wording in `ui/shell/logText/items.ts`. */
 export type ItemsEvent =
   /** A party member saw `qty` of item `item` lying at `pos` for the first time there. */
-  | { type: 'itemSighted'; actor: EntityId; item: string; qty: number; floor: FloorId; pos: Pos }
+  | { type: 'itemSighted'; actor: EntityId; item: string; name?: string; identified?: false; qty: number; floor: FloorId; pos: Pos }
   /**
    * `actor` picked up `qty` of `item`, worth `value` in all (`itemValue`). `name` (on this and
    * the events below) is the item's `itemName` as the actor sees it, present only when it differs
-   * from the def's name (an item with properties, ETH-118).
+   * from the def's name (an item with properties, ETH-118). `identified: false` when the item's
+   * base type was unknown at pickup (ETH-044).
    */
-  | { type: 'pickedUp'; actor: EntityId; item: string; name?: string; qty: number; value: number; floor: FloorId; pos: Pos }
+  | { type: 'pickedUp'; actor: EntityId; item: string; name?: string; identified?: false; qty: number; value: number; floor: FloorId; pos: Pos }
   /** `actor` picked up a pile of gold (item `item`), adding `amount` to the party's purse. */
   | { type: 'goldPickedUp'; actor: EntityId; item: string; amount: number; floor: FloorId; pos: Pos }
-  /** `actor` dropped `qty` of `item` at `pos`. */
-  | { type: 'dropped'; actor: EntityId; item: string; name?: string; qty: number; floor: FloorId; pos: Pos }
+  /** `actor` dropped `qty` of `item` at `pos`. `identified: false` when its base type is still unknown (ETH-044). */
+  | { type: 'dropped'; actor: EntityId; item: string; name?: string; identified?: false; qty: number; floor: FloorId; pos: Pos }
   /** `actor` used one `item` (quaffed, read, ate). Its effects' events follow. */
   | { type: 'used'; actor: EntityId; item: string; name?: string; floor: FloorId; pos: Pos }
   /** `actor` put on `item` in `slot`; `replaced` is the item it took off there (now in its pack), if any, and `replacedName` its name when it differs from the def's. */
@@ -82,11 +89,27 @@ export type ItemsEvent =
       slot: EquipSlot;
       replaced: string | null;
       replacedName?: string;
+      enchantments?: string[];
       floor: FloorId;
       pos: Pos;
     }
   /** `actor` took off `item` from `slot` and put it in its pack. */
-  | { type: 'unequipped'; actor: EntityId; item: string; name?: string; slot: EquipSlot; floor: FloorId; pos: Pos };
+  | { type: 'unequipped'; actor: EntityId; item: string; name?: string; slot: EquipSlot; floor: FloorId; pos: Pos }
+  /** `actor` identified an item (ETH-044) via Wits on pickup, using, wearing, or an `identify` effect. */
+  | {
+      type: 'itemIdentified';
+      actor: EntityId;
+      item: string;
+      name: string;
+      was: string;
+      method: 'wits' | 'use' | 'equip' | 'effect';
+      enchantments?: string[];
+      cursed?: true;
+      floor: FloorId;
+      pos: Pos;
+    }
+  /** A curse was lifted from `item` (ETH-044); `slot` is set when it was worn. */
+  | { type: 'itemUncursed'; actor: EntityId; item: string; name: string; slot: EquipSlot | null; floor: FloorId; pos: Pos };
 
 /** The commands this domain accepts. */
 export type ItemsCommand = never;
@@ -97,12 +120,14 @@ export interface ItemsState {
   gold: number;
   /** The items the party remembers seeing, per floor and tile. */
   known: KnownItems;
+  /** Item def ids whose true identity has been learned this run (potions, scrolls, jewelry; ETH-044). Sorted, unique. */
+  identifiedTypes: string[];
 }
 
 /** One carried item, for the UI. */
 export interface ItemView {
   def: string;
-  /** `itemName` as the member sees it: the def's name with its properties' parts (ETH-118). */
+  /** `itemName` as the member sees it: the def's name (or generic appearance) with visible properties' parts (ETH-118, ETH-044). */
   name: string;
   qty: number;
   /** Weight of the whole stack. */
@@ -112,6 +137,12 @@ export interface ItemView {
   usable: boolean;
   /** For a weapon, how its attribute changes this member's damage (`weaponScalingText`, ETH-082); absent when it changes nothing. */
   scaling?: string;
+  /** Present when this item's hidden properties are not yet known (ETH-044). */
+  unidentified?: true;
+  /** Present when this item's base type is still unknown (potions/scrolls/jewelry; ETH-044). */
+  typeUnknown?: true;
+  /** Tooltip note explaining this item's enchantment, blessing/curse or unidentified state (ETH-044). */
+  stateNote?: string;
 }
 
 /** One worn item, for the UI (ETH-043). */
@@ -124,6 +155,10 @@ export interface WornView {
   value: number;
   /** For a weapon, how its attribute changes the wearer's damage (`weaponScalingText`, ETH-082); absent when it changes nothing. */
   scaling?: string;
+  /** Present when the worn item is cursed and cannot be unequipped until uncursed (ETH-044). */
+  cursed?: true;
+  /** Tooltip note explaining this item's enchantment or blessing/curse state (ETH-044). */
+  stateNote?: string;
 }
 
 /** A party member's pack and worn gear, for the UI. */
@@ -143,6 +178,10 @@ export interface FloorItemView {
   qty: number;
   /** In view now; otherwise remembered and maybe gone. */
   visible: boolean;
+  /** Display name when it differs from the def's (an unidentified appearance or identified enchanted item, ETH-044). */
+  name?: string;
+  /** Present when the item's base type is unknown, so map hover won't spoil the Codex card (ETH-044). */
+  typeUnknown?: true;
 }
 
 /** This domain's slice of the snapshot, at `snapshot.domains.items`. Plain data. */
@@ -176,9 +215,9 @@ export interface ItemsTypes {
 
 export const ITEMS_COMMANDS: CommandRecord<ItemsCommand> = {};
 
-/** The state slice for a new run: an empty purse and no items seen. */
+/** The state slice for a new run: an empty purse, no items seen, and no types identified yet. */
 export function initItems(_config: RunConfig): ItemsState {
-  return { gold: 0, known: {} };
+  return { gold: 0, known: {}, identifiedTypes: [] };
 }
 
 /** `{ scaling }` for a view, when the weapon's attribute changes `member`'s damage (ETH-082). */
@@ -194,23 +233,36 @@ export function itemsSnapshot({ state, floor }: SnapshotCtx): ItemsSnapshot {
     const e = state.entities[id];
     if (e?.actor === undefined) continue;
     members[id] = {
-      items: inventoryOf(e).map((item) => ({
-        def: item.def,
-        name: itemName(state, item, e),
-        qty: item.qty,
-        weight: itemWeight(item),
-        value: itemValue(state, item),
-        usable: isUsable(itemDef(item)),
-        ...scalingField(e, item),
-      })),
-      equipped: wornItems(e).map(({ slot, item }) => ({
-        slot,
-        def: item.def,
-        name: itemName(state, item, e),
-        weight: itemWeight(item),
-        value: itemValue(state, item),
-        ...scalingField(e, item),
-      })),
+      items: inventoryOf(e).map((item) => {
+        const typeKnown = isInstanceTypeKnown(state, item);
+        const identified = isItemIdentified(state, item);
+        const note = itemStateNote(state, item, e);
+        return {
+          def: item.def,
+          name: itemName(state, item, e),
+          qty: item.qty,
+          weight: itemWeight(item),
+          value: itemValue(state, item),
+          usable: isUsable(itemDef(item)),
+          ...scalingField(e, item),
+          ...(identified ? {} : { unidentified: true as const }),
+          ...(typeKnown ? {} : { typeUnknown: true as const }),
+          ...(note === null ? {} : { stateNote: note }),
+        };
+      }),
+      equipped: wornItems(e).map(({ slot, item }) => {
+        const note = itemStateNote(state, item, e);
+        return {
+          slot,
+          def: item.def,
+          name: itemName(state, item, e),
+          weight: itemWeight(item),
+          value: itemValue(state, item),
+          ...scalingField(e, item),
+          ...(isCursed(item) ? { cursed: true as const } : {}),
+          ...(note === null ? {} : { stateNote: note }),
+        };
+      }),
       weight: carryWeight(state, e),
       carry: carryLimit(state, e),
     };
@@ -218,16 +270,44 @@ export function itemsSnapshot({ state, floor }: SnapshotCtx): ItemsSnapshot {
 
   const { width } = getFloor(state, floor).terrain;
   const visible = partyVisible(state, floor);
+  const viewer = state.party.map((id) => state.entities[id]).find((e) => e !== undefined);
   const views: { i: number; view: FloorItemView }[] = [];
   for (const [key, list] of Object.entries(state.domains.items.known[floor] ?? {})) {
     const i = Number(key);
     if (visible.cells[i] === 1) continue;
-    for (const k of list) views.push({ i, view: { pos: { x: i % width, y: Math.floor(i / width) }, def: k.def, qty: k.qty, visible: false } });
+    for (const k of list) {
+      const typeUnknown = k.unidentified === true && !isTypeIdentified(state, k.def);
+      const name = typeUnknown ? appearanceName(state.seed, k.def) : undefined;
+      views.push({
+        i,
+        view: {
+          pos: { x: i % width, y: Math.floor(i / width) },
+          def: k.def,
+          qty: k.qty,
+          visible: false,
+          ...(name === undefined ? {} : { name }),
+          ...(typeUnknown ? { typeUnknown: true as const } : {}),
+        },
+      });
+    }
   }
   for (const e of floorItems(state, floor)) {
     const i = e.pos.y * width + e.pos.x;
     if (visible.cells[i] !== 1) continue;
-    views.push({ i, view: { pos: { x: e.pos.x, y: e.pos.y }, def: e.item.def, qty: e.item.qty, visible: true } });
+    const typeUnknown = !isInstanceTypeKnown(state, e.item);
+    const shown = viewer === undefined ? itemDef(e.item).name : itemName(state, e.item, viewer);
+    const name = shown === itemDef(e.item).name ? undefined : shown;
+    views.push({
+      i,
+      view: {
+        pos: { x: e.pos.x, y: e.pos.y },
+        def: e.item.def,
+        qty: e.item.qty,
+        visible: true,
+        ...(name === undefined ? {} : { name }),
+        ...(typeUnknown ? { typeUnknown: true as const } : {}),
+      },
+    });
   }
   // A stable sort keeps each tile's items bottom first.
   views.sort((a, b) => a.i - b.i);
@@ -290,11 +370,21 @@ registerInvariant('items.properties', (state) => {
   return problems;
 });
 
-/** The purse is a whole number of 0 or more; remembered items are on built floors' tiles and valid. */
+/** The purse is a whole number of 0 or more; remembered items and identified types are valid. */
 registerInvariant('items.state', (state) => {
   const problems: string[] = [];
-  const { gold, known } = state.domains.items;
+  const { gold, known, identifiedTypes } = state.domains.items;
   if (!Number.isSafeInteger(gold) || gold < 0) problems.push(`gold is ${gold}`);
+  if (!Array.isArray(identifiedTypes)) {
+    problems.push('identifiedTypes is not an array');
+  } else {
+    const seen = new Set<string>();
+    for (const id of identifiedTypes) {
+      if (typeof id !== 'string' || !ITEMS.has(id)) problems.push(`identifiedTypes has unknown item "${String(id)}"`);
+      else if (seen.has(id)) problems.push(`identifiedTypes lists "${id}" twice`);
+      seen.add(id);
+    }
+  }
   for (const [floorId, tiles] of Object.entries(known)) {
     const floor = state.floors[floorId];
     if (floor === undefined) {
@@ -318,9 +408,10 @@ registerInvariant('items.state', (state) => {
 /** A run chronicle moment (ETH-120): a valuable find. `ids` is the item, `amount` its value. */
 export const CHRONICLE_VALUABLE_FIND = defineChronicleKind({ id: 'valuableFind', priority: 40 });
 
-/** Which of this domain's events are run chronicle moments: a pickup worth `NOTABLE_ITEM_VALUE` or more. */
+/** Which of this domain's events are run chronicle moments: a known pickup worth `NOTABLE_ITEM_VALUE` or more. */
 export const ITEMS_CHRONICLE: ChronicleRules = {
-  pickedUp: (e) => (e.value >= NOTABLE_ITEM_VALUE ? momentAt(CHRONICLE_VALUABLE_FIND, e, [e.actor], [e.item], { amount: e.value }) : null),
+  pickedUp: (e) =>
+    e.identified !== false && e.value >= NOTABLE_ITEM_VALUE ? momentAt(CHRONICLE_VALUABLE_FIND, e, [e.actor], [e.item], { amount: e.value }) : null,
 };
 
 /** What this domain registers with the shared code, in this order. */
@@ -333,13 +424,21 @@ export const ITEMS_DOMAIN: SimDomain<ItemsTypes> = {
   ruleActions: ITEMS_RULE_ACTIONS,
   genSteps: [GEN_LOOT],
   bundleSources: [SOURCE_EQUIPPED],
+  effectHandlers: ITEMS_EFFECT_HANDLERS,
   turnStart: itemsTurnStart,
   discoveries: {
-    itemSighted: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),
-    pickedUp: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),
+    itemSighted: (e) => (e.identified !== false && ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),
+    pickedUp: (e) => (e.identified !== false && ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),
     goldPickedUp: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),
     used: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'used' }] : []),
-    equipped: (e) => (ITEMS.has(e.item) ? [{ id: e.item, mark: 'used' }] : []),
+    equipped: (e) => [
+      ...(ITEMS.has(e.item) ? [{ id: e.item, mark: 'used' as const }] : []),
+      ...(e.enchantments ?? []).filter((id) => ENCHANTMENTS.has(id)).map((id) => ({ id, mark: 'used' as const })),
+    ],
+    itemIdentified: (e) => [
+      ...(ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' as const }] : []),
+      ...(e.enchantments ?? []).filter((id) => ENCHANTMENTS.has(id)).map((id) => ({ id, mark: 'seen' as const })),
+    ],
   },
   chronicle: ITEMS_CHRONICLE,
   chronicleKinds: [CHRONICLE_VALUABLE_FIND],

@@ -3,7 +3,7 @@
  * the root `registries.ts` and `domain.ts` can import them without a cycle.
  */
 import type { Def } from '../../core';
-import type { AttributeId, Bundle } from '../../content';
+import type { AttributeId, Bundle, Effect, EffectKind } from '../../content';
 import type { Emit } from '../events';
 import type { Entity, EntityId, RunState } from '../state';
 import type { StatId } from './statIds';
@@ -137,4 +137,14 @@ export interface EffectCtx {
   readonly source: string;
   /** Scales `heal` and `damage` amounts. 1 is the def as written. */
   readonly potency: number;
+}
+
+/**
+ * A domain-owned handler for one `Effect` kind (ETH-044): lets domains register custom effect
+ * interpreters (`identify`, `uncurse`, later `teleport`, `reveal`, `summon`) through
+ * `SimDomain.effectHandlers` without creating import cycles with `src/sim/stats/effects.ts`.
+ */
+export interface EffectHandler<K extends EffectKind = EffectKind> {
+  readonly kind: K;
+  run(ctx: EffectCtx, target: Entity, effect: Extract<Effect, { kind: K }>): void;
 }

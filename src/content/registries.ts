@@ -12,6 +12,7 @@ import { DEITY_KIND } from './deities';
 import { DOCTRINE_KIND } from './doctrines';
 import { DRAUGHT_KIND } from './draughts';
 import { DUNGEON_KIND } from './dungeons';
+import { ENCHANTMENT_KIND } from './enchantments';
 import { FEATURE_KIND, FEATURES } from './features';
 import { FLOOR_TYPE_KIND } from './floors';
 import { GRAMMAR_KIND } from './grammars';
@@ -43,6 +44,7 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
   MONSTER_KIND,
   MONSTER_TEMPLATE_KIND,
   ITEM_KIND,
+  ENCHANTMENT_KIND,
   CONTRACT_KIND,
   BOUNTY_KIND,
   OMEN_KIND,

@@ -9,9 +9,12 @@ import { removeEntity } from '../entities';
 import type { EntityId } from '../state';
 import { runEffects } from '../stats/effects';
 import { clampVitals } from '../stats/getStat';
+import { identifyItemFor, tryIdentifyOnPickup } from './effects';
+import { consumablePotency, isCursed, itemEnchantmentIds } from './enchant';
 import { equippedIn, slotFor } from './equipment';
+import { isInstanceTypeKnown } from './identify';
 import { itemDef } from './instance';
-import { nameField } from './name';
+import { itemName, nameField } from './name';
 import { addToInventory, ensureInventory, inventoryOf, itemsAt, placeItem, rememberTile, takeFromInventory } from './inventory';
 import { itemValue } from './value';
 
@@ -90,8 +93,22 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
         emit({ type: 'goldPickedUp', actor: actor.id, item: def.id, amount: instance.qty, floor, pos });
       } else {
         const value = itemValue(state, instance);
+        const typeUnknown = !isInstanceTypeKnown(state, instance);
+        const named = nameField(state, instance, actor);
+        emit({
+          type: 'pickedUp',
+          actor: actor.id,
+          item: def.id,
+          ...named,
+          ...(typeUnknown ? { identified: false as const } : {}),
+          qty: instance.qty,
+          value,
+          floor,
+          pos,
+        });
+        // Roll the Wits-based identify skill on pickup (ETH-044, ETH-081) before stacking.
+        tryIdentifyOnPickup(state, actor, instance, emit);
         addToInventory(actor, instance);
-        emit({ type: 'pickedUp', actor: actor.id, item: def.id, ...nameField(state, instance, actor), qty: instance.qty, value, floor, pos });
       }
       rememberTile(state, floor, pos);
     },
@@ -118,9 +135,19 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       if (entry === undefined) return;
       const taken = takeFromInventory(actor, index, qty ?? entry.qty);
       const pos = { x: actor.pos.x, y: actor.pos.y };
+      const typeKnown = isInstanceTypeKnown(state, taken);
       placeItem(state, actor.floor, pos, taken);
       rememberTile(state, actor.floor, pos);
-      emit({ type: 'dropped', actor: actor.id, item: taken.def, ...nameField(state, taken, actor), qty: taken.qty, floor: actor.floor, pos });
+      emit({
+        type: 'dropped',
+        actor: actor.id,
+        item: taken.def,
+        ...nameField(state, taken, actor),
+        ...(typeKnown ? {} : { identified: false as const }),
+        qty: taken.qty,
+        floor: actor.floor,
+        pos,
+      });
     },
   },
   use: {
@@ -139,10 +166,13 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       const entry = inventoryOf(actor)[index];
       if (entry === undefined) return;
       const def = itemDef(entry);
-      const named = nameField(state, entry, actor);
-      takeFromInventory(actor, index, 1);
+      const used = takeFromInventory(actor, index, 1);
+      const potency = consumablePotency(used);
+      // Using a consumable identifies its type for the rest of the run (ETH-044).
+      identifyItemFor(state, actor, used, 'use', emit);
+      const named = nameField(state, used, actor);
       emit({ type: 'used', actor: actor.id, item: def.id, ...named, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
-      runEffects({ state, emit, self: actor.id, source: def.id, potency: 1 }, def.bundle?.effects ?? []);
+      runEffects({ state, emit, self: actor.id, source: def.id, potency }, def.bundle?.effects ?? []);
     },
   },
   equip: {
@@ -157,13 +187,19 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       if (raw.slot === undefined) return { id: 'equip', index: raw.index };
       return isEquipSlot(raw.slot) ? { id: 'equip', index: raw.index, slot: raw.slot } : `The slot must be one of ${EQUIP_SLOTS.join(', ')}`;
     },
-    validate: ({ actor }, { index, slot }) => {
+    validate: ({ state, actor }, { index, slot }) => {
       const entry = inventoryOf(actor)[index];
       if (entry === undefined) return 'There is no such item in the pack';
       const def = itemDef(entry);
       const slots = gearSlots(def);
       if (slots.length === 0) return `${def.name} can't be worn`;
-      return slot === undefined || slots.includes(slot) ? null : `${def.name} can't be worn there`;
+      if (slot !== undefined && !slots.includes(slot)) return `${def.name} can't be worn there`;
+      const target = slot ?? slotFor(actor, entry);
+      if (target !== null) {
+        const worn = equippedIn(actor, target);
+        if (worn !== null && isCursed(worn)) return `${itemName(state, worn, actor)} is cursed and cannot be replaced`;
+      }
+      return null;
     },
     execute: ({ state, actor, emit }, { index, slot: asked }) => {
       const entry = inventoryOf(actor)[index];
@@ -174,9 +210,12 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       const old = equipped[slot];
       equipped[slot] = item;
       if (old !== undefined) addToInventory(actor, old);
+      // Putting on gear identifies its properties and reveals any curse immediately (ETH-044).
+      identifyItemFor(state, actor, item, 'equip', emit);
       clampVitals(state, actor);
       const pos = { x: actor.pos.x, y: actor.pos.y };
       const replacedName = old === undefined ? {} : nameField(state, old, actor);
+      const enchantments = itemEnchantmentIds(item);
       emit({
         type: 'equipped',
         actor: actor.id,
@@ -185,6 +224,7 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
         slot,
         replaced: old?.def ?? null,
         ...(replacedName.name === undefined ? {} : { replacedName: replacedName.name }),
+        ...(enchantments.length > 0 ? { enchantments } : {}),
         floor: actor.floor,
         pos,
       });
@@ -197,7 +237,12 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
     tags: [],
     cost: 100,
     parse: (raw) => (isEquipSlot(raw.slot) ? { id: 'unequip', slot: raw.slot } : `The slot must be one of ${EQUIP_SLOTS.join(', ')}`),
-    validate: ({ actor }, { slot }) => (equippedIn(actor, slot) === null ? 'Nothing is worn there' : null),
+    validate: ({ state, actor }, { slot }) => {
+      const worn = equippedIn(actor, slot);
+      if (worn === null) return 'Nothing is worn there';
+      if (isCursed(worn)) return `${itemName(state, worn, actor)} is cursed and cannot be removed`;
+      return null;
+    },
     execute: ({ state, actor, emit }, { slot }) => {
       const equipped = actor.inventory?.equipped;
       const item = equipped?.[slot];
