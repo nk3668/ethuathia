@@ -7,7 +7,7 @@ priority: P1
 milestone: M1.5
 epic: tools-balance
 size: M
-depends_on: [ETH-024, ETH-025, ETH-034, ETH-040, ETH-043, ETH-044, ETH-085, ETH-133, ETH-134, ETH-135, ETH-136]
+depends_on: [ETH-024, ETH-025, ETH-034, ETH-040, ETH-043, ETH-044, ETH-085, ETH-133, ETH-134, ETH-135, ETH-136, ETH-142]
 created: 2026-11-18
 updated: 2026-11-23
 ---
@@ -33,3 +33,4 @@ After ETH-061, 50 seeds had 0 deaths because potions and passive recovery kept t
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-22: Noted return-trip respawn density and `depthShift` tuning from ETH-025.
 - 2026-11-23: Moved to M1.5 capstone after ETH-133–ETH-136 and aligned targets with `docs/DIFFICULTY_PHILOSOPHY.md` (coordinating Renown pacing with ETH-132).
+- 2026-11-23: Added ETH-142 (identification secrecy and curse safety) to depends_on so loot is balanced on fair curse odds.
