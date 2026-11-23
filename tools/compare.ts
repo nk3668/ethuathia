@@ -14,8 +14,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bankedRenown, floorTurns, renownPerHour } from './headless';
-import type { Outcome, SeedResult } from './headless';
+import { bankedRenown, floorTurns, median, renownPerHour, summarizeReport } from './headless';
+import type { HeadlessPreset, HeadlessRulesPreset, Outcome, ReportSummary, SeedResult } from './headless';
 import type { RunOutcome } from '../src/sim';
 
 /** Bumped when the shape of `SimReport` changes. */
@@ -27,17 +27,30 @@ export interface ReportArgs {
   seeds: number;
   cap: number;
   party: number;
+  preset?: HeadlessPreset;
+  upgrades?: string[];
+  rules?: HeadlessRulesPreset;
 }
 
 /** What `--json` writes. */
 export interface SimReport {
   version: number;
   args: ReportArgs;
+  summary?: ReportSummary;
   results: SeedResult[];
 }
 
 export function makeReport(args: ReportArgs, results: SeedResult[]): SimReport {
-  return { version: REPORT_VERSION, args: { from: args.from, seeds: args.seeds, cap: args.cap, party: args.party }, results };
+  const reportArgs: ReportArgs = {
+    from: args.from,
+    seeds: args.seeds,
+    cap: args.cap,
+    party: args.party,
+    ...(args.preset !== undefined && args.preset !== 'fresh' ? { preset: args.preset } : {}),
+    ...(args.upgrades !== undefined && args.upgrades.length > 0 ? { upgrades: [...args.upgrades] } : {}),
+    ...(args.rules !== undefined && args.rules !== 'baseline' ? { rules: args.rules } : {}),
+  };
+  return { version: REPORT_VERSION, args: reportArgs, summary: summarizeReport(results), results };
 }
 
 /** Reads a report written by `--json`. Throws a readable `Error` if it isn't one. */
@@ -100,8 +113,10 @@ const mean = (xs: number[]) => (xs.length === 0 ? null : xs.reduce((a, b) => a +
 /** The values that are there, for fields older reports lack. */
 const present = (xs: (number | undefined)[]) => xs.filter((x): x is number => x !== undefined);
 const doneTurns = (rs: readonly SeedResult[]) => rs.filter((r) => r.outcome === 'done').map((r) => r.turns);
+const allTurns = (rs: readonly SeedResult[]) => rs.map((r) => r.runTurns ?? r.turns);
 const countOf = (o: Outcome) => (rs: readonly SeedResult[]) => rs.filter((r) => r.outcome === o).length;
 const endOf = (o: RunOutcome) => (rs: readonly SeedResult[]) => rs.filter((r) => r.end === o).length;
+const ratePct = (n: number, total: number) => (total === 0 ? null : (n / total) * 100);
 
 /** The rows of the comparison table. Later items add deaths, currency per hour and so on. */
 export const METRICS: Metric[] = [
@@ -113,18 +128,26 @@ export const METRICS: Metric[] = [
   { name: 'runs with stuck', value: (rs) => rs.filter((r) => r.stuck.count > 0).length, digits: 0 },
   { name: 'stuck events', value: (rs) => rs.reduce((n, r) => n + r.stuck.count, 0), digits: 0 },
   { name: 'turns, mean (done)', value: (rs) => mean(doneTurns(rs)), digits: 1 },
+  { name: 'turns, median (done)', value: (rs) => median(doneTurns(rs)), digits: 1 },
   { name: 'turns, min (done)', value: (rs) => (doneTurns(rs).length === 0 ? null : Math.min(...doneTurns(rs))), digits: 0 },
   { name: 'turns, max (done)', value: (rs) => (doneTurns(rs).length === 0 ? null : Math.max(...doneTurns(rs))), digits: 0 },
+  { name: 'turns, mean (all)', value: (rs) => mean(allTurns(rs)), digits: 1 },
+  { name: 'turns, median (all)', value: (rs) => median(allTurns(rs)), digits: 1 },
   { name: 'explored %, mean', value: (rs) => mean(rs.map((r) => r.explored.fraction * 100)), digits: 1 },
   // Reports from before ETH-058 ran one floor, so their depth is 1.
   { name: 'depth, mean', value: (rs) => mean(rs.map((r) => r.depth ?? 1)), digits: 2 },
+  { name: 'depth, median', value: (rs) => median(rs.map((r) => r.depth ?? 1)), digits: 1 },
   { name: 'depth, max', value: (rs) => (rs.length === 0 ? null : Math.max(...rs.map((r) => r.depth ?? 1))), digits: 0 },
+  { name: 'floor 3+ reach %', value: (rs) => ratePct(rs.filter((r) => (r.depth ?? 1) >= 3).length, rs.length), digits: 1 },
   { name: 'turns per floor, mean', value: (rs) => mean(floorTurns(rs)), digits: 1 },
   // Run outcomes (ETH-062). Reports from before it have no run end, so these read 0.
   { name: 'ended above bottom', value: countOf('early'), digits: 0 },
   { name: 'outcome: victory', value: endOf('victory'), digits: 0 },
   { name: 'outcome: retreat', value: endOf('retreat'), digits: 0 },
   { name: 'outcome: wipe', value: endOf('wipe'), digits: 0 },
+  { name: 'win rate %', value: (rs) => ratePct(endOf('victory')(rs), rs.length), digits: 1 },
+  { name: 'retreat rate %', value: (rs) => ratePct(endOf('retreat')(rs), rs.length), digits: 1 },
+  { name: 'wipe rate %', value: (rs) => ratePct(endOf('wipe')(rs), rs.length), digits: 1 },
   { name: 'run turns, mean (ended)', value: (rs) => mean(rs.flatMap((r) => (r.runTurns === undefined ? [] : [r.runTurns]))), digits: 1 },
   { name: 'renown at risk, mean', value: (rs) => mean(rs.map((r) => r.atRisk?.renown ?? 0)), digits: 1 },
   { name: 'trophies at risk, mean', value: (rs) => mean(rs.map((r) => r.atRisk?.trophies ?? 0)), digits: 1 },
@@ -148,12 +171,14 @@ export const METRICS: Metric[] = [
   // Combat (ETH-060). Reports from before it had no monsters, so these read 0.
   { name: 'kills, mean', value: (rs) => mean(rs.map((r) => r.kills ?? 0)), digits: 1 },
   { name: 'deaths, total', value: (rs) => rs.reduce((n, r) => n + (r.deaths ?? 0), 0), digits: 0 },
+  { name: 'deaths per run', value: (rs) => ratePct(rs.reduce((n, r) => n + (r.deaths ?? 0), 0), rs.length * 100), digits: 2 },
   { name: 'fountain drinks, mean', value: (rs) => mean(rs.map((r) => r.drinks ?? 0)), digits: 1 },
   // Skills (ETH-081).
   { name: 'failed flee checks, mean', value: (rs) => mean(rs.map((r) => r.fleeFails ?? 0)), digits: 1 },
   { name: 'status turns resisted, mean', value: (rs) => mean(rs.map((r) => r.resisted ?? 0)), digits: 1 },
   // Leveling (ETH-034). Reports from before it read '-'.
   { name: 'party level, mean', value: (rs) => mean(present(rs.map((r) => r.level))), digits: 2 },
+  { name: 'party level, median', value: (rs) => median(present(rs.map((r) => r.level))), digits: 1 },
   // Contracts (ETH-024). Reports from before it took none, so this reads 0.
   { name: 'contracts complete, total', value: (rs) => rs.reduce((n, r) => n + (r.contracts ?? 0), 0), digits: 0 },
   { name: 'gear equipped, mean', value: (rs) => mean(rs.map((r) => r.equips ?? 0)), digits: 1 },

@@ -83,6 +83,14 @@ describe('tools/compare', () => {
     const legacy = makeReport(ARGS, parseReportText(formatReport(before.results)));
     const fromLegacy = formatComparison(legacy, before);
     expect(fromLegacy).toMatch(/renown\/hr \(1x\), banked\s+-\s+[\d.]+\s+-/);
+    expect(fromLegacy).toMatch(/party level, median\s+-\s+[\d.]+\s+-/);
+    expect(fromLegacy).toMatch(/win rate %\s+[\d.]+\s+[\d.]+\s+/);
+
+    // Pre-summary JSON reports (e.g. origin/main) parse cleanly and leave default args unmodified.
+    const originJson = JSON.stringify({ version: 1, args: ARGS, results: before.results });
+    const parsedOrigin = parseReport(originJson, 'origin.json');
+    expect(parsedOrigin.args).toEqual(ARGS);
+    expect(formatComparison(parsedOrigin, before)).toContain('all 3 shared seeds end the same');
   });
 
   it('formats stale-base warnings only when ahead of the merge base', () => {

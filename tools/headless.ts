@@ -6,9 +6,64 @@
  * (`npm run sim -- --seeds N`); `test/tools/headless.test.ts` runs it in the test suite.
  */
 import { parseArgs } from 'node:util';
-import { CLASS_VANGUARD, CONTRACT_RECOVER_RELIC, RACE_HUMAN } from '../src/content';
-import { ACT_WAIT, CHRONICLE_TRACKER, DROP_TURNS, floorIdAt, RUN_OUTCOMES, SimSession, TURNS_PER_SECOND } from '../src/sim';
-import type { AdventurerConfig, Explored, RewardAmounts, RunConfig, RunOutcome, Snapshot } from '../src/sim';
+import {
+  CLASS_VANGUARD,
+  CONTRACT_RECOVER_RELIC,
+  RACE_HUMAN,
+  UPGRADE_DRILL_YARD,
+  UPGRADE_FOURTH_BERTH,
+  UPGRADE_HARDY_RECRUITS,
+  UPGRADE_ROSTER_LEDGER,
+  UPGRADE_SECOND_BERTH,
+  UPGRADE_THIRD_BERTH,
+  UPGRADES,
+} from '../src/content';
+import {
+  canPurchase,
+  checkProfile,
+  checkRunConfig,
+  chosenContracts,
+  chosenInGroup,
+  defaultRunChoices,
+  milestoneRequirements,
+  newProfile,
+  owns,
+  partySize,
+  purchase,
+  upgradePartyBundles,
+  upgradeRunModifiers,
+} from '../src/meta';
+import type { Profile } from '../src/meta';
+import {
+  ACT_WAIT,
+  CHRONICLE_TRACKER,
+  CONDITIONS,
+  createRun,
+  DROP_TURNS,
+  dungeonDepth,
+  floorIdAt,
+  RULE_ACTIONS,
+  RUN_OUTCOMES,
+  runOver,
+  runReport,
+  SimSession,
+  snapshot,
+  stateHash,
+  step,
+  TURNS_PER_SECOND,
+} from '../src/sim';
+import type {
+  AdventurerConfig,
+  Explored,
+  RewardAmounts,
+  Rule,
+  RunConfig,
+  RunOutcome,
+  RunReport,
+  SimEvent,
+  Snapshot,
+  ViewOptions,
+} from '../src/sim';
 
 /**
  * Party turns a run may take before it is stopped. A lone adventurer takes about 200–300 party
@@ -26,19 +81,163 @@ export function headlessParty(size: number): AdventurerConfig[] {
   return NAMES.slice(0, size).map((name) => ({ name, classId: CLASS_VANGUARD.id, raceId: RACE_HUMAN.id }));
 }
 
+export type HeadlessPreset = 'fresh' | 'progressed';
+
+export const HEADLESS_PRESETS: readonly HeadlessPreset[] = ['fresh', 'progressed'];
+
+/**
+ * Valid Guild Hall progression path for `--preset progressed`: unlocks all four berths and
+ * picks Hardy Recruits (+2 max HP) and Drill Yard (+1 accuracy), verified through `purchase`.
+ */
+export const PROGRESSED_UPGRADES: readonly string[] = [
+  UPGRADE_SECOND_BERTH.id,
+  UPGRADE_ROSTER_LEDGER.id,
+  UPGRADE_HARDY_RECRUITS.id,
+  UPGRADE_THIRD_BERTH.id,
+  UPGRADE_FOURTH_BERTH.id,
+  UPGRADE_DRILL_YARD.id,
+];
+
+export type HeadlessRulesPreset = 'baseline' | 'cautious';
+
+export const HEADLESS_RULES_PRESETS: readonly HeadlessRulesPreset[] = ['baseline', 'cautious'];
+
+/**
+ * Cautious behavior rules overlaid ahead of `BASELINE_RULES` (`--rules cautious`):
+ * quaff healing potions earlier (<60% HP), flee earlier (<50% HP), retreat out of the dungeon
+ * when critically hurt with no healing potion (<35% HP), drink fountains earlier (<65% HP), and
+ * wait at stairs up rather than detouring when heading out or once contracts are complete.
+ */
+export const CAUTIOUS_RULES: readonly Rule[] = [
+  { condition: { id: 'cond.wounded', params: { percent: 60 } }, action: { id: 'act.quaff_healing' }, enabled: true },
+  { condition: { id: 'cond.stuck' }, action: { id: 'act.back_off' }, enabled: true },
+  { condition: { id: 'cond.hp_below', params: { percent: 50 } }, action: { id: 'act.flee' }, enabled: true },
+  { condition: { id: 'cond.enemy_adjacent' }, action: { id: 'act.attack_adjacent' }, enabled: true },
+  { condition: { id: 'cond.hurt_no_healing', params: { below: 35 } }, action: { id: 'act.retreat_run' }, enabled: true },
+  { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
+  { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
+  { condition: { id: 'cond.contracts_complete' }, action: { id: 'act.retreat_run' }, enabled: true },
+  { condition: { id: 'cond.hurt_no_healing', params: { below: 65 } }, action: { id: 'act.drink_fountain' }, enabled: true },
+];
+
 export interface HeadlessOptions {
   /** Party turns before giving up on the run. Default `DEFAULT_TURN_CAP`. */
   cap?: number;
-  /** Default: one adventurer. */
+  /** Default: `headlessParty(partySize(profile))` (one adventurer when `fresh` with no upgrades). */
   party?: AdventurerConfig[];
   /** Floors in the dungeon. Default: the run config's default (`DEFAULT_DEPTH`). */
   depth?: number;
-  /** The contracts the run takes on. Default `HEADLESS_CONTRACTS`, what a new player's Prepare screen picks. */
+  /** The contracts the run takes on. Default `HEADLESS_CONTRACTS` (or profile's `chosenContracts` when upgraded). */
   contracts?: string[];
+  /** Meta-progression preset (`fresh` or `progressed`). Default `'fresh'`. */
+  preset?: HeadlessPreset;
+  /** Explicit upgrade node ids to apply via `meta` helpers. */
+  upgrades?: readonly string[];
+  /** Behavior rule preset (`baseline` or `cautious`) or explicit rules ahead of `BASELINE_RULES`. */
+  rules?: HeadlessRulesPreset | readonly Rule[];
 }
 
 /** The contracts a headless run takes on by default (ETH-024): Recover the relic, the Prepare default. */
 export const HEADLESS_CONTRACTS: readonly string[] = [CONTRACT_RECOVER_RELIC.id];
+
+/**
+ * Builds a checked `Profile` for a headless sweep from `preset` and `upgrades`.
+ * Preset nodes are purchased through `purchase()` so tree prerequisites hold; explicit
+ * `--upgrades` nodes use `purchase()` when unlocked or attach directly (after checking existence
+ * and `exclusiveGroup` conflicts) so isolated upgrade sweeps like `--upgrades upgrade.hardy_recruits`
+ * work without forcing extra berth prerequisites.
+ */
+export function buildHeadlessProfile(preset: HeadlessPreset = 'fresh', upgrades: readonly string[] = []): Profile {
+  const base = newProfile();
+  let profile: Profile = { ...base, currencies: { renown: 1_000_000, trophies: 1_000_000, favor: {} } };
+
+  if (preset === 'progressed') {
+    for (const id of PROGRESSED_UPGRADES) profile = purchase(profile, id);
+  }
+
+  for (const rawId of upgrades) {
+    const id = rawId.trim();
+    if (id === '') throw new Error('Upgrade id must not be empty');
+    if (!UPGRADES.has(id)) {
+      const available = UPGRADES.all().map((u) => u.id).join(', ');
+      throw new Error(`Unknown upgrade "${id}". Available upgrades: ${available}`);
+    }
+    if (owns(profile, id)) continue;
+    const node = UPGRADES.get(id);
+    if (node.exclusiveGroup !== undefined) {
+      const conflict = chosenInGroup(profile, node.exclusiveGroup);
+      if (conflict !== undefined && conflict.id !== id) {
+        throw new Error(`Upgrade "${id}" conflicts with "${conflict.id}" in exclusive group "${node.exclusiveGroup}"`);
+      }
+    }
+    const check = canPurchase(profile, id);
+    if (check.ok) {
+      profile = purchase(profile, id);
+    } else if (check.status === 'locked' && (check.missing?.length ?? 0) > 0) {
+      profile = { ...profile, upgrades: { ...profile.upgrades, owned: [...profile.upgrades.owned, id] } };
+    } else {
+      throw new Error(`Cannot apply upgrade "${id}": ${check.reason}`);
+    }
+  }
+
+  const finalProfile: Profile = { ...profile, currencies: base.currencies };
+  const problems = checkProfile(finalProfile);
+  if (problems.length > 0) throw new RangeError(`Invalid headless profile: ${problems.join('; ')}`);
+  return finalProfile;
+}
+
+/**
+ * Resolves `HeadlessOptions` into a checked `RunConfig` using real `meta` helpers
+ * (`partySize`, `upgradePartyBundles`, `upgradeRunModifiers`, `chosenContracts`, `checkRunConfig`).
+ * Keeps the default (`fresh`, no upgrades) byte-identical to `{ party, contracts, depth? }`.
+ */
+export function buildHeadlessConfig(options: HeadlessOptions = {}): RunConfig {
+  const preset = options.preset ?? 'fresh';
+  const upgrades = options.upgrades ?? [];
+  const profile = buildHeadlessProfile(preset, upgrades);
+  const hasUpgrades = profile.upgrades.owned.length > 0;
+  const partyBundles = upgradePartyBundles(profile);
+  const runModifiers = upgradeRunModifiers(profile);
+  const watchRequirements = milestoneRequirements(profile);
+  const contracts =
+    options.contracts ??
+    (hasUpgrades ? chosenContracts(profile, defaultRunChoices().contracts).map((d) => d.id) : HEADLESS_CONTRACTS);
+
+  const config: RunConfig = {
+    party: options.party ?? headlessParty(partySize(profile)),
+    contracts: [...contracts],
+    ...(options.depth === undefined ? {} : { depth: options.depth }),
+    ...(partyBundles.length === 0 ? {} : { partyBundles }),
+    ...(runModifiers.length === 0 ? {} : { runModifiers }),
+    ...(watchRequirements.length === 0 ? {} : { watchRequirements }),
+  };
+  const problems = checkRunConfig(config);
+  if (problems.length > 0) throw new RangeError(`Invalid run config: ${problems.join('; ')}`);
+  return config;
+}
+
+/** Validates and resolves a rule preset or custom rule list against the sim's registered conditions and actions. */
+export function resolveHeadlessRules(rules: HeadlessRulesPreset | readonly Rule[] = 'baseline'): Rule[] {
+  if (rules === 'baseline') return [];
+  const list = rules === 'cautious' ? CAUTIOUS_RULES : rules;
+  return list.map((rule, i) => {
+    if (!CONDITIONS.has(rule.condition.id)) {
+      throw new Error(`Rule #${i + 1}: unknown condition "${rule.condition.id}"`);
+    }
+    const condProblem = CONDITIONS.get(rule.condition.id).check(rule.condition.params);
+    if (condProblem !== null) {
+      throw new Error(`Rule #${i + 1} (${rule.condition.id}): ${condProblem}`);
+    }
+    if (!RULE_ACTIONS.has(rule.action.id)) {
+      throw new Error(`Rule #${i + 1}: unknown rule action "${rule.action.id}"`);
+    }
+    const actionProblem = RULE_ACTIONS.get(rule.action.id).check(rule.action.params);
+    if (actionProblem !== null) {
+      throw new Error(`Rule #${i + 1} (${rule.action.id}): ${actionProblem}`);
+    }
+    return structuredClone(rule);
+  });
+}
 
 /**
  * How one seed's run went.
@@ -76,6 +275,10 @@ export interface SeedResult {
   end?: RunOutcome;
   /** Game turns until the run ended, return trip included. Only for runs that ended. */
   runTurns?: number;
+  /** Whether the party ever turned back for the surface (`turnedBack` event). */
+  turnedBack?: boolean;
+  /** Whether the party ever picked up a contract item (`contractCompleted` event). */
+  relicTaken?: boolean;
   /** The run's at-risk currency when it stopped (currency id → amount). */
   atRisk?: RewardAmounts;
   /** What a wipe took from `atRisk` (ETH-023); empty otherwise. Missing from reports before ETH-023. */
@@ -131,25 +334,66 @@ function idle(snap: Snapshot): boolean {
   return living.length > 0 && living.every((m) => m.intent?.action === ACT_WAIT.id);
 }
 
+interface HeadlessRunner {
+  step(): { events: SimEvent[]; progressed: boolean; ended: RunReport | null };
+  snapshot(view?: ViewOptions): Snapshot;
+  depth(): number;
+  report(): RunReport | null;
+  stateHash(): string;
+}
+
+/**
+ * Runs via `SimSession` for default baseline rules, or via `createRun` + `step` when own
+ * behavior rules are overlaid on the party (since `SimSession` keeps `RunState` private).
+ */
+function createRunner(config: RunConfig, seed: number, ownRules: readonly Rule[]): HeadlessRunner {
+  if (ownRules.length === 0) {
+    const session = new SimSession(config, seed);
+    return {
+      step: () => session.step(),
+      snapshot: (view) => session.snapshot(view),
+      depth: () => session.debugDungeonDepth(),
+      report: () => session.report(),
+      stateHash: () => session.stateHash(),
+    };
+  }
+  const state = createRun(config, seed);
+  for (const id of state.party) {
+    const entity = state.entities[id];
+    if (entity?.ai !== undefined) entity.ai.rules = ownRules.map((r) => structuredClone(r));
+  }
+  return {
+    step: () => {
+      const turn = state.turn;
+      const wasOver = runOver(state);
+      const events = step(state, []);
+      const ended = !wasOver && runOver(state) ? runReport(state) : null;
+      return { events, progressed: events.length > 0 || state.turn !== turn, ended };
+    },
+    snapshot: (view) => snapshot(state, view),
+    depth: () => dungeonDepth(state),
+    report: () => (runOver(state) ? runReport(state) : null),
+    stateHash: () => stateHash(state),
+  };
+}
+
 /** Runs one seed until the party settles, the cap is hit or the run stalls. */
 export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult {
   const cap = options.cap ?? DEFAULT_TURN_CAP;
-  const config: RunConfig = {
-    party: options.party ?? headlessParty(1),
-    contracts: [...(options.contracts ?? HEADLESS_CONTRACTS)],
-    ...(options.depth === undefined ? {} : { depth: options.depth }),
-  };
-  const session = new SimSession(config, seed);
+  const config = buildHeadlessConfig(options);
+  const ownRules = resolveHeadlessRules(options.rules);
+  const runner = createRunner(config, seed, ownRules);
   const stuck: SeedResult['stuck'] = { count: 0, firstTurn: null };
   /** The game turn each depth was first reached on. */
   const reached = new Map<number, number>([[1, 0]]);
   let outcome: Outcome = 'cap';
   let idleSince: number | null = null;
   let turnedBack: number | null = null;
+  let relicTaken = false;
   let end: { outcome: RunOutcome; turn: number } | null = null;
   let steps = 0;
   let items = 0;
-  let snap = session.snapshot();
+  let snap = runner.snapshot();
 
   let kills = 0;
   let deaths = 0;
@@ -164,10 +408,11 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
   const slain = new Map<number, string>();
 
   while (steps < cap) {
-    const { events, progressed } = session.step();
+    const { events, progressed } = runner.step();
     for (const e of events) {
       if (e.type === 'floorEntered' && !reached.has(e.depth)) reached.set(e.depth, e.turn);
       if (e.type === 'turnedBack') turnedBack ??= e.turn;
+      if (e.type === 'contractCompleted') relicTaken = true;
       if (e.type === 'runEnded') end = { outcome: e.outcome, turn: e.turn };
       if (e.type === 'pickedUp') items++;
       if (e.type === 'killed') {
@@ -193,8 +438,8 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
       break;
     }
     steps++;
-    snap = session.snapshot();
-    const bottom = session.debugDungeonDepth();
+    snap = runner.snapshot();
+    const bottom = runner.depth();
     if (end !== null) {
       outcome = snap.domains.floors.deepest === bottom ? 'done' : 'early';
       break;
@@ -220,7 +465,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     return {
       depth,
       turns: (next ?? turns) - start,
-      explored: session.snapshot({ floor: floorIdAt(depth) }).floor.explored.fraction,
+      explored: runner.snapshot({ floor: floorIdAt(depth) }).floor.explored.fraction,
     };
   });
   return {
@@ -230,7 +475,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     steps,
     explored: snap.floor.explored,
     depth: snap.domains.floors.deepest,
-    bottom: session.debugDungeonDepth(),
+    bottom: runner.depth(),
     floors,
     items,
     gold: snap.domains.items.gold,
@@ -245,10 +490,12 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     contracts: snap.domains.quests.contracts.filter((c) => c.complete).length,
     equips,
     moments: chronicle.entries.length,
-    hash: session.stateHash(),
+    turnedBack: turnedBack !== null,
+    relicTaken,
+    hash: runner.stateHash(),
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
     atRisk: { ...snap.domains.run.atRisk },
-    lost: { ...(session.report()?.result.lost ?? {}) },
+    lost: { ...(runner.report()?.result.lost ?? {}) },
   };
 }
 
@@ -308,6 +555,154 @@ export function renownPerHour(results: readonly SeedResult[]): number | null {
   return (totalRenown / totalSteps) * STEPS_PER_HOUR_AT_1X;
 }
 
+/** Median of `values`, or `null` when empty. */
+export function median(values: readonly number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) return sorted[mid] as number;
+  return ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2;
+}
+
+/** Aggregate difficulty and economy summary over a sweep of `SeedResult`s (`DIFFICULTY_PHILOSOPHY.md` §2 & §9). */
+export interface ReportSummary {
+  runs: number;
+  reachedBottom: number;
+  endedAbove: number;
+  settledAbove: number;
+  hitCap: number;
+  stalled: number;
+  stuckRuns: number;
+  outcomes: Record<RunOutcome, number>;
+  winRatePct: number;
+  retreatRatePct: number;
+  wipeRatePct: number;
+  floor3PlusCount: number;
+  floor3PlusRatePct: number;
+  relicRuns: number;
+  relicReturnTripWipes: number;
+  returnTripLethalityPct: number | null;
+  turnsDoneMean: number | null;
+  turnsDoneMedian: number | null;
+  turnsDoneMin: number | null;
+  turnsDoneMax: number | null;
+  turnsAllMean: number | null;
+  turnsAllMedian: number | null;
+  turnsAllMin: number | null;
+  turnsAllMax: number | null;
+  turnsPerFloorMean: number | null;
+  turnsPerFloorMax: number | null;
+  depthMean: number | null;
+  depthMedian: number | null;
+  depthMin: number | null;
+  depthMax: number | null;
+  levelMean: number | null;
+  levelMedian: number | null;
+  levelMin: number | null;
+  levelMax: number | null;
+  killsMean: number | null;
+  deathsTotal: number;
+  deathsPerRun: number | null;
+  deathCauses: Record<string, number>;
+  itemsMean: number | null;
+  itemsMax: number | null;
+  goldMean: number | null;
+  goldMax: number | null;
+  renownBankedMean: number | null;
+  renownPerHour1x: number | null;
+}
+
+const avg = (xs: readonly number[]): number | null => (xs.length === 0 ? null : xs.reduce((a, b) => a + b, 0) / xs.length);
+
+/** Computes `ReportSummary` over `results`, leaving missing fields as `null`. */
+export function summarizeReport(results: readonly SeedResult[]): ReportSummary {
+  const runs = results.length;
+  const count = (o: Outcome) => results.filter((r) => r.outcome === o).length;
+  const endCount = (o: RunOutcome) => results.filter((r) => r.end === o).length;
+  const outcomes: Record<RunOutcome, number> = {
+    victory: endCount('victory'),
+    retreat: endCount('retreat'),
+    wipe: endCount('wipe'),
+  };
+  const pct = (n: number) => (runs === 0 ? 0 : (n / runs) * 100);
+  const floor3PlusCount = results.filter((r) => (r.depth ?? 1) >= 3).length;
+
+  const tracksRelic = results.some((r) => r.relicTaken !== undefined);
+  const relicRuns = tracksRelic ? results.filter((r) => r.relicTaken === true).length : 0;
+  const relicReturnTripWipes = tracksRelic
+    ? results.filter((r) => r.relicTaken === true && r.turnedBack === true && r.end === 'wipe').length
+    : 0;
+  const returnTripLethalityPct = relicRuns === 0 ? null : (relicReturnTripWipes / relicRuns) * 100;
+
+  const doneTurns = results.filter((r) => r.outcome === 'done').map((r) => r.turns);
+  const allTurns = results.map((r) => r.runTurns ?? r.turns);
+  const perFloor = floorTurns(results);
+  const depths = results.map((r) => r.depth ?? 1);
+  const levels = results.flatMap((r) => (r.level === undefined ? [] : [r.level]));
+  const picked = results.map((r) => r.items ?? 0);
+  const gold = results.map((r) => r.gold ?? 0);
+  const kills = results.map((r) => r.kills ?? 0);
+  const deathsTotal = results.reduce((n, r) => n + (r.deaths ?? 0), 0);
+  const deathCauses: Record<string, number> = {};
+  for (const r of results) {
+    for (const [cause, n] of Object.entries(r.deathCauses ?? {})) {
+      deathCauses[cause] = (deathCauses[cause] ?? 0) + n;
+    }
+  }
+  const banked = results.map(bankedRenown).filter((n): n is number => n !== null);
+
+  return {
+    runs,
+    reachedBottom: count('done'),
+    endedAbove: count('early'),
+    settledAbove: count('idle'),
+    hitCap: count('cap'),
+    stalled: count('stalled'),
+    stuckRuns: results.filter((r) => r.stuck.count > 0).length,
+    outcomes,
+    winRatePct: pct(outcomes.victory),
+    retreatRatePct: pct(outcomes.retreat),
+    wipeRatePct: pct(outcomes.wipe),
+    floor3PlusCount,
+    floor3PlusRatePct: pct(floor3PlusCount),
+    relicRuns,
+    relicReturnTripWipes,
+    returnTripLethalityPct,
+    turnsDoneMean: avg(doneTurns),
+    turnsDoneMedian: median(doneTurns),
+    turnsDoneMin: doneTurns.length === 0 ? null : Math.min(...doneTurns),
+    turnsDoneMax: doneTurns.length === 0 ? null : Math.max(...doneTurns),
+    turnsAllMean: avg(allTurns),
+    turnsAllMedian: median(allTurns),
+    turnsAllMin: allTurns.length === 0 ? null : Math.min(...allTurns),
+    turnsAllMax: allTurns.length === 0 ? null : Math.max(...allTurns),
+    turnsPerFloorMean: avg(perFloor),
+    turnsPerFloorMax: perFloor.length === 0 ? null : Math.max(...perFloor),
+    depthMean: avg(depths),
+    depthMedian: median(depths),
+    depthMin: depths.length === 0 ? null : Math.min(...depths),
+    depthMax: depths.length === 0 ? null : Math.max(...depths),
+    levelMean: avg(levels),
+    levelMedian: median(levels),
+    levelMin: levels.length === 0 ? null : Math.min(...levels),
+    levelMax: levels.length === 0 ? null : Math.max(...levels),
+    killsMean: avg(kills),
+    deathsTotal,
+    deathsPerRun: runs === 0 ? null : deathsTotal / runs,
+    deathCauses,
+    itemsMean: avg(picked),
+    itemsMax: picked.length === 0 ? null : Math.max(0, ...picked),
+    goldMean: avg(gold),
+    goldMax: gold.length === 0 ? null : Math.max(0, ...gold),
+    renownBankedMean: avg(banked),
+    renownPerHour1x: renownPerHour(results),
+  };
+}
+
+function fmtWholeOrOne(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 /** The report as text, for the console: one row per seed, a summary, then the flagged seeds. */
 export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_CAP): string {
   const header = ['seed', 'turns', 'depth', 'explored', 'stuck', 'result', 'state hash'];
@@ -325,56 +720,68 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
   const line = (cells: string[]) =>
     cells.map((c, i) => (i < 5 ? c.padStart(widths[i] as number) : c.padEnd(widths[i] as number))).join('  ').trimEnd();
 
-  const done = results.filter((r) => r.outcome === 'done');
-  const turns = done.map((r) => r.turns);
-  const count = (o: Outcome) => results.filter((r) => r.outcome === o).length;
+  const s = summarizeReport(results);
   const summary = [
-    `${results.length} run${results.length === 1 ? '' : 's'}: ${done.length} reached the bottom`,
-    ...(count('early') > 0 ? [`${count('early')} ended above it`] : []),
-    ...(count('idle') > 0 ? [`${count('idle')} settled above it`] : []),
-    `${count('cap')} hit the turn cap`,
-    ...(count('stalled') > 0 ? [`${count('stalled')} stalled`] : []),
-    `${results.filter((r) => r.stuck.count > 0).length} triggered stuck detection`,
+    `${s.runs} run${s.runs === 1 ? '' : 's'}: ${s.reachedBottom} reached the bottom`,
+    ...(s.endedAbove > 0 ? [`${s.endedAbove} ended above it`] : []),
+    ...(s.settledAbove > 0 ? [`${s.settledAbove} settled above it`] : []),
+    `${s.hitCap} hit the turn cap`,
+    ...(s.stalled > 0 ? [`${s.stalled} stalled`] : []),
+    `${s.stuckRuns} triggered stuck detection`,
   ].join(', ');
-  const mean = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
-  const turnLine =
-    turns.length === 0
-      ? ''
-      : `Turns to the bottom (done runs): mean ${mean(turns)}, min ${Math.min(...turns)}, max ${Math.max(...turns)}.`;
-  const perFloor = floorTurns(results);
-  const depths = results.map((r) => r.depth ?? 1);
-  const depthLine =
-    `Depth reached: mean ${(depths.reduce((a, b) => a + b, 0) / Math.max(1, depths.length)).toFixed(1)}, ` +
-    `min ${Math.min(...depths)}, max ${Math.max(...depths)}. ` +
-    `Turns per floor: mean ${mean(perFloor)}, max ${Math.max(...perFloor)}.`;
 
-  const ends = RUN_OUTCOMES.map((o) => [o, results.filter((r) => r.end === o).length] as const).filter(([, n]) => n > 0);
+  const ends = RUN_OUTCOMES.map((o) => [o, s.outcomes[o]] as const).filter(([, n]) => n > 0);
   const endLine = ends.length === 0 ? '' : `Run outcomes: ${ends.map(([o, n]) => `${n} ${o}`).join(', ')}.`;
-  const picked = results.map((r) => r.items ?? 0);
-  const gold = results.map((r) => r.gold ?? 0);
-  const lootLine =
-    `Items picked up per run: mean ${(picked.reduce((a, b) => a + b, 0) / Math.max(1, picked.length)).toFixed(1)}, ` +
-    `max ${Math.max(0, ...picked)}. Gold per run: mean ${(gold.reduce((a, b) => a + b, 0) / Math.max(1, gold.length)).toFixed(1)}, max ${Math.max(0, ...gold)}.`;
+  const returnTripPart =
+    s.returnTripLethalityPct === null
+      ? ''
+      : ` Return-trip lethality (relic runs): ${s.returnTripLethalityPct.toFixed(1)}% (${s.relicReturnTripWipes}/${s.relicRuns}).`;
+  const rateLine =
+    s.runs === 0
+      ? ''
+      : `Outcome rates: win ${s.winRatePct.toFixed(1)}%, retreat ${s.retreatRatePct.toFixed(1)}%, wipe ${s.wipeRatePct.toFixed(1)}%.${returnTripPart}`;
 
-  const kills = results.map((r) => r.kills ?? 0);
-  const deaths = results.reduce((n, r) => n + (r.deaths ?? 0), 0);
-  const causes = new Map<string, number>();
-  for (const r of results) for (const [cause, n] of Object.entries(r.deathCauses ?? {})) causes.set(cause, (causes.get(cause) ?? 0) + n);
-  const causeText = [...causes.entries()]
+  const turnLine =
+    s.turnsDoneMean === null || s.turnsDoneMedian === null
+      ? ''
+      : `Turns to the bottom (done runs): mean ${Math.round(s.turnsDoneMean)}, min ${s.turnsDoneMin}, max ${s.turnsDoneMax}. Median: ${fmtWholeOrOne(s.turnsDoneMedian)}.`;
+  const allTurnLine =
+    s.turnsAllMean === null || s.turnsAllMedian === null
+      ? ''
+      : `Turns (all runs): mean ${Math.round(s.turnsAllMean)}, median ${fmtWholeOrOne(s.turnsAllMedian)}, min ${s.turnsAllMin}, max ${s.turnsAllMax}.`;
+
+  const depthLine =
+    s.depthMean === null || s.depthMedian === null || s.turnsPerFloorMean === null
+      ? ''
+      : `Depth reached: mean ${s.depthMean.toFixed(1)}, min ${s.depthMin}, max ${s.depthMax}. ` +
+        `Turns per floor: mean ${Math.round(s.turnsPerFloorMean)}, max ${s.turnsPerFloorMax}. ` +
+        `Median depth: ${s.depthMedian.toFixed(1)}, floor 3+: ${s.floor3PlusRatePct.toFixed(1)}% (${s.floor3PlusCount}/${s.runs}).`;
+
+  const levelLine =
+    s.levelMean === null || s.levelMedian === null
+      ? ''
+      : `Party level: mean ${s.levelMean.toFixed(2)}, median ${fmtWholeOrOne(s.levelMedian)} (min ${s.levelMin}, max ${s.levelMax}).`;
+
+  const lootLine =
+    s.itemsMean === null || s.goldMean === null
+      ? ''
+      : `Items picked up per run: mean ${s.itemsMean.toFixed(1)}, max ${s.itemsMax}. ` +
+        `Gold per run: mean ${s.goldMean.toFixed(1)}, max ${s.goldMax}.`;
+
+  const causeText = Object.entries(s.deathCauses)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([cause, n]) => `${cause} ${n}`)
     .join(', ');
   const combatLine =
-    `Kills per run: mean ${(kills.reduce((a, b) => a + b, 0) / Math.max(1, kills.length)).toFixed(1)}. ` +
-    `Deaths: ${deaths}${deaths === 0 ? '' : ` (${causeText})`}.`;
-
-  const banked = results.map(bankedRenown).filter((n): n is number => n !== null);
-  const perHour = renownPerHour(results);
-  const renownLine =
-    banked.length === 0 || perHour === null
+    s.killsMean === null || s.deathsPerRun === null
       ? ''
-      : `Renown banked per run: mean ${(banked.reduce((a, b) => a + b, 0) / banked.length).toFixed(1)}, ` +
-        `${perHour.toFixed(1)}/hr at 1x (${TURNS_PER_SECOND} steps/s).`;
+      : `Kills per run: mean ${s.killsMean.toFixed(1)}. ` +
+        `Deaths: ${s.deathsTotal}${s.deathsTotal === 0 ? '' : ` (${causeText})`}. Deaths per run: ${s.deathsPerRun.toFixed(2)}.`;
+
+  const renownLine =
+    s.renownBankedMean === null || s.renownPerHour1x === null
+      ? ''
+      : `Renown banked per run: mean ${s.renownBankedMean.toFixed(1)}, ${s.renownPerHour1x.toFixed(1)}/hr at 1x (${TURNS_PER_SECOND} steps/s).`;
 
   const flagged = results.flatMap((r) => {
     const reason = flagReason(r, cap);
@@ -387,8 +794,13 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     '',
     `${summary}.`,
     ...(endLine === '' ? [] : [endLine]),
+    ...(rateLine === '' ? [] : [rateLine]),
     ...(turnLine === '' ? [] : [turnLine]),
-    ...(results.length === 0 ? [] : [depthLine, lootLine, combatLine]),
+    ...(allTurnLine === '' ? [] : [allTurnLine]),
+    ...(depthLine === '' ? [] : [depthLine]),
+    ...(levelLine === '' ? [] : [levelLine]),
+    ...(lootLine === '' ? [] : [lootLine]),
+    ...(combatLine === '' ? [] : [combatLine]),
     ...(renownLine === '' ? [] : [renownLine]),
     flagged.length === 0 ? 'Flagged seeds: none.' : `Flagged seeds:\n${flagged.join('\n')}`,
   ].join('\n');
@@ -401,6 +813,9 @@ export interface SimArgs {
   seeds: number;
   cap: number;
   party: number;
+  preset: HeadlessPreset;
+  upgrades: string[];
+  rules: HeadlessRulesPreset;
   /** Write the report as JSON to this file (`--json`). */
   json: string | null;
   /** Compare with the report in this file (`--baseline`). */
@@ -411,6 +826,7 @@ export interface SimArgs {
 }
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
+                      [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious]
                       [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
@@ -418,16 +834,39 @@ hit, and reports per seed the turns taken, the depth reached, how much of the la
 explored and the final state hash, then the turns per floor. Seeds that hit the turn cap, settle
 above the bottom or trigger stuck detection are listed at the end.
 
-  --seeds N        how many seeds to run (default 10)
-  --from S         the first seed (default 1)
-  --cap T          party turns allowed per run (default ${DEFAULT_TURN_CAP})
-  --party P        adventurers in the party, 1 to ${MAX_PARTY} (default 1)
-  --json FILE      also write the report as JSON, to keep as a baseline
-  --compare REF    run the same seeds on git ref REF (e.g. origin/main, or merge-base for the
-                   merge base with origin/main) and print a before/after table of the report
-                   metrics
-  --baseline FILE  print the before/after table against a report saved with --json
-  --help           show this text`;
+  --seeds N               how many seeds to run (default 10)
+  --from S                the first seed (default 1)
+  --cap T                 party turns allowed per run (default ${DEFAULT_TURN_CAP})
+  --party P               adventurers in the party, 1 to ${MAX_PARTY} (default from preset/upgrades, 1 when fresh)
+  --preset NAME           profile preset: fresh (default) or progressed
+  --upgrades ID1,ID2,...  comma-separated upgrade node ids to apply (e.g. upgrade.hardy_recruits,upgrade.drill_yard)
+  --rules NAME            behavior rule preset: baseline (default) or cautious
+  --json FILE             also write the report as JSON, to keep as a baseline
+  --compare REF           run the same seeds on git ref REF (e.g. origin/main, or merge-base for the
+                          merge base with origin/main) and print a before/after table of the report
+                          metrics
+  --baseline FILE         print the before/after table against a report saved with --json
+  --help                  show this text`;
+
+function parsePreset(raw: string | undefined): HeadlessPreset {
+  if (raw === undefined) return 'fresh';
+  if ((HEADLESS_PRESETS as readonly string[]).includes(raw)) return raw as HeadlessPreset;
+  throw new Error(`--preset must be one of ${HEADLESS_PRESETS.join(', ')}, got "${raw}"`);
+}
+
+function parseRulesPreset(raw: string | undefined): HeadlessRulesPreset {
+  if (raw === undefined) return 'baseline';
+  if ((HEADLESS_RULES_PRESETS as readonly string[]).includes(raw)) return raw as HeadlessRulesPreset;
+  throw new Error(`--rules must be one of ${HEADLESS_RULES_PRESETS.join(', ')}, got "${raw}"`);
+}
+
+function parseUpgradeList(raw: string | undefined): string[] {
+  if (raw === undefined) return [];
+  if (raw.trim() === '') throw new Error('--upgrades must be a comma-separated list of upgrade ids');
+  const ids = raw.split(',').map((part) => part.trim());
+  if (ids.some((id) => id === '')) throw new Error('--upgrades must not contain empty upgrade ids');
+  return ids;
+}
 
 /** Reads the command line. Throws an `Error` with a readable message on a bad argument. */
 export function parseSimArgs(argv: readonly string[]): SimArgs {
@@ -438,6 +877,9 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       from: { type: 'string' },
       cap: { type: 'string' },
       party: { type: 'string' },
+      preset: { type: 'string' },
+      upgrades: { type: 'string' },
+      rules: { type: 'string' },
       json: { type: 'string' },
       compare: { type: 'string' },
       baseline: { type: 'string' },
@@ -449,11 +891,18 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
   if (values.compare !== undefined && values.baseline !== undefined) {
     throw new Error('Use --compare or --baseline, not both');
   }
+  const preset = parsePreset(values.preset);
+  const upgrades = parseUpgradeList(values.upgrades);
+  const rules = parseRulesPreset(values.rules);
+  const profile = buildHeadlessProfile(preset, upgrades);
   return {
     seeds: int('--seeds', values.seeds, 10, 1),
     from: int('--from', values.from, 1, 0),
     cap: int('--cap', values.cap, DEFAULT_TURN_CAP, 1),
-    party: int('--party', values.party, 1, 1, MAX_PARTY),
+    party: int('--party', values.party, partySize(profile), 1, MAX_PARTY),
+    preset,
+    upgrades,
+    rules,
     json: values.json ?? null,
     compare: values.compare ?? null,
     baseline: values.baseline ?? null,
