@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-142**
+**Next ID: ETH-143**
 
 **Assigned to Antigravity** (low risk; pick any whose dependencies are done): ETH-090, ETH-077, ETH-019, then ETH-094, ETH-085, ETH-084.
 
@@ -58,7 +58,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-061](combat-items/ETH-061-items-inventory-core.md) | Items on the floor, inventory, pickup and drop, and in-run gold | combat-items | M1 | P0 | done | M |
 | [ETH-062](sim-core/ETH-062-run-end-summary.md) | Run end (victory, retreat, wipe), run trackers, run summary and auto-restart | sim-core | M1 | P0 | done | M |
 | [ETH-024](quests/ETH-024-contracts-recover-relic.md) | Contract model and the Recover-relic contract; victory needs every contract plus the exit | quests | M1 | P1 | done | M |
-| [ETH-025](quests/ETH-025-return-trip.md) | Return trip: walk back up through explored floors, with light respawns | quests | M1 | P1 | pending-review | M |
+| [ETH-025](quests/ETH-025-return-trip.md) | Return trip: walk back up through explored floors, with light respawns | quests | M1 | P1 | done | M |
 | [ETH-033](characters/ETH-033-attributes-derived-stats.md) | Four attributes and the stats derived from them | characters | M1 | P1 | done | M |
 | [ETH-034](characters/ETH-034-xp-leveling-class-growth.md) | XP, leveling and per-class attribute growth | characters | M1 | P1 | done | M |
 | [ETH-040](bestiary/ETH-040-monster-roles.md) | Monster roles and role behaviors | bestiary | M1 | P1 | done | M |
@@ -71,7 +71,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-017](adventurer-ai/ETH-017-party-yield-in-corridors.md) | Party members yield or swap places in narrow passages | adventurer-ai | M1 | P2 | done | S |
 | [ETH-020](ui-shell/ETH-020-cycle-adventurers-key.md) | Key to cycle the selected adventurer | ui-shell | M1 | P2 | done | S |
 | [ETH-021](ui-shell/ETH-021-show-sim-errors.md) | Tell the player when the sim stops on an error | ui-shell | M1 | P2 | done | S |
-| [ETH-044](combat-items/ETH-044-enchant-curse-identify.md) | Enchantment, blessed and cursed items, and identification | combat-items | M1 | P2 | pending-review | M |
+| [ETH-044](combat-items/ETH-044-enchant-curse-identify.md) | Enchantment, blessed and cursed items, and identification | combat-items | M1 | P2 | done | M |
 | [ETH-066](ui-shell/ETH-066-possession.md) | Possess an adventurer and play them directly | ui-shell | M1 | P2 | done | M |
 | [ETH-073](ui-shell/ETH-073-collapse-repeated-trace-lines.md) | Collapse repeated identical AI trace lines in the log | ui-shell | M1 | P2 | done | S |
 | [ETH-075](combat-items/ETH-075-killer-named-death-line.md) | Name the killer in the death log line and the wipe summary | combat-items | M1 | P2 | done | S |
@@ -86,6 +86,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-134](bestiary/ETH-134-expand-old-delve-bestiary-and-templates.md) | Expand The Old Delve bestiary and templates across Danger bands | bestiary | M1.5 | P1 | done | M |
 | [ETH-135](dungeon-gen/ETH-135-density-encounters-groups-and-patrols.md) | Threat-budget room encounters, cohesive group engagement, and corridor patrols | dungeon-gen | M1.5 | P1 | done | M |
 | [ETH-136](quests/ETH-136-return-trip-deep-surge.md) | Return-trip deep surge: lower-floor threats and hunter patrols on ascent | quests | M1.5 | P1 | ready | S |
+| [ETH-142](combat-items/ETH-142-identify-secrecy-and-curse-safety.md) | Identification secrecy and curse safety for the idle player | combat-items | M1.5 | P1 | ready | M |
 | [ETH-080](tools-balance/ETH-080-monster-balance-pass.md) | Systemic monster, loot and progression balance pass (M1.5 capstone) | tools-balance | M1.5 | P1 | ready | M |
 | [ETH-059](saves-platform/ETH-059-profile-saves.md) | Profile, banked currencies and versioned local saves | saves-platform | M2 | P0 | done | M |
 | [ETH-023](town-meta/ETH-023-at-risk-run-currency.md) | Track run earnings as at-risk currency and lose 25% on a wipe | town-meta | M2 | P1 | done | M |
