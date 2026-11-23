@@ -2,7 +2,7 @@
 epic: combat-items
 title: Combat, items and statuses
 status: active
-milestones: [M1, M2, M5, later]
+milestones: [M1, M1.6, M2, M5, later]
 ---
 
 ## Goal

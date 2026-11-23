@@ -4,7 +4,7 @@ title: Identification secrecy and curse safety for the idle player
 type: feature
 status: ready
 priority: P1
-milestone: M1.5
+milestone: M1.6
 epic: combat-items
 size: M
 depends_on: [ETH-044]
@@ -42,3 +42,4 @@ Fix two problems found in the ETH-044 review:
 
 ## Log
 - 2026-11-23: Created from the review of ETH-044.
+- 2026-11-23: Moved to M1.6 (review follow-ups); ETH-080 no longer waits on it.
