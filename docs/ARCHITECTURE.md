@@ -219,8 +219,9 @@ watch state rather than events (`track.requirements`). It is pure like `reduce`,
 `projectedRewards` skips it, so currency should be earned from events.
 
 A tracker's state is plain data, part of the run state (saved with it) and must not keep
-references to event objects. The base trackers are `track.depth` (Renown per floor reached below
-the first, `RENOWN_PER_FLOOR` 10), `track.turns` (one Renown per `TURNS_PER_RENOWN` 50 game
+references to event objects. The base trackers are `track.depth` (depth-weighted Renown per floor
+reached below the first: `RENOWN_PER_FLOOR × floor^RENOWN_DEPTH_EXPONENT`, `10 × floor^1.3`
+rounded, summed by `depthRenown`, ETH-085), `track.turns` (one Renown per `TURNS_PER_RENOWN` 50 game
 turns), `track.kills` (Trophies; a placeholder until ETH-060 adds a kill event, then
 `trophiesForKill(difficulty)` per kill) and `track.deaths` (who fell, from `fell` events).
 

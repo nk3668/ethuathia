@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-131**
+**Next ID: ETH-133**
 
 **Assigned to Antigravity** (low risk; pick any whose dependencies are done): ETH-090, ETH-077, ETH-019, then ETH-094, ETH-085, ETH-084.
 
@@ -110,13 +110,14 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Guild Hall doctrine: prioritize clearing floors or prioritize the stairs | town-meta | M2 | P2 | ready | S |
 | [ETH-083](town-meta/ETH-083-gold-to-trophies.md) | Leftover gold converts to Trophies when the party exits | town-meta | M2 | P2 | ready | S |
 | [ETH-084](ui-shell/ETH-084-rematch-same-seed.md) | Rematch button on the run summary replays the same seed | ui-shell | M2 | P2 | done | S |
-| [ETH-085](town-meta/ETH-085-depth-weighted-renown.md) | Depth-weighted Renown rewards | town-meta | M2 | P2 | ready | S |
+| [ETH-085](town-meta/ETH-085-depth-weighted-renown.md) | Depth-weighted Renown rewards | town-meta | M2 | P2 | pending-review | S |
 | [ETH-086](town-meta/ETH-086-foundations-and-tactics-trees.md) | Split upgrade trees into permanent Foundations and free Tactics | town-meta | M2 | P2 | ready | M |
 | [ETH-087](characters/ETH-087-class-mastery-levels.md) | Class Mastery: a shared level per class that earns tree points | characters | M2 | P2 | idea | M |
 | [ETH-091](codex-tooltips/ETH-091-codex-hints-kill-tiers.md) | Codex hints for undiscovered entries and kill-count tiers | codex-tooltips | M2 | P2 | pending-review | M |
 | [ETH-092](codex-tooltips/ETH-092-codex-two-pane-modal.md) | Codex as a wide two-pane modal | codex-tooltips | M2 | P2 | done | M |
 | [ETH-093](town-meta/ETH-093-building-unlock-quests.md) | Unlock town buildings by finishing a quest for each | town-meta | M2 | P2 | idea | M |
 | [ETH-129](town-meta/ETH-129-guild-hall-constant-respawn.md) | Guild Hall upgrade: constant floor respawns on revisit | town-meta | M2 | P2 | idea | S |
+| [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rescale Guild Hall Renown costs for depth-weighted rewards | town-meta | M2 | P2 | idea | S |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |
 | [ETH-077](ui-shell/ETH-077-prepare-attribute-previews.md) | Show attribute previews in the Prepare screen's class and race selects | ui-shell | M2 | P3 | done | S |

@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  bankedRenown,
   DEFAULT_TURN_CAP,
   flagReason,
   formatReport,
   headlessParty,
   parseSimArgs,
+  renownPerHour,
   runSeed,
   runSeeds,
+  STEPS_PER_HOUR_AT_1X,
 } from '../../tools/headless';
 import type { SeedResult } from '../../tools/headless';
 
@@ -115,6 +118,23 @@ describe('tools/headless', () => {
       result(2, { kills: 4, deaths: 2, deathCauses: { 'monster.gloam_rat': 1, 'monster.mossling': 1 } }),
     ];
     expect(formatReport(results)).toContain('Kills per run: mean 7.0. Deaths: 2 (monster.gloam_rat 1, monster.mossling 1).');
+  });
+
+  it('computes banked Renown per hour at 1x speed and prints it in the report (ETH-085)', () => {
+    // Missing `lost` (pre-ETH-023 report) or zero steps yields null.
+    expect(bankedRenown(result(1))).toBeNull();
+    expect(renownPerHour([result(1)])).toBeNull();
+    expect(renownPerHour([result(1, { steps: 0, atRisk: { renown: 100 }, lost: {} })])).toBeNull();
+
+    // Time-weighted across runs: (90 + 360) banked / (1800 + 7200 steps = 0.5 hr) = 900/hr.
+    const runs = [
+      result(1, { steps: 1800, atRisk: { renown: 120 }, lost: { renown: 30 } }),
+      result(2, { steps: 7200, atRisk: { renown: 360 }, lost: {} }),
+    ];
+    expect(STEPS_PER_HOUR_AT_1X).toBe(18_000);
+    expect(bankedRenown(runs[0] as SeedResult)).toBe(90);
+    expect(renownPerHour(runs)).toBeCloseTo(900, 6);
+    expect(formatReport(runs)).toContain('Renown banked per run: mean 225.0, 900.0/hr at 1x (5 steps/s).');
   });
 
   it('says so when no seed needs a look', () => {

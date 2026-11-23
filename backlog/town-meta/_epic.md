@@ -43,3 +43,4 @@ More items are added when M2 becomes the current milestone.
 - [ ] [ETH-124 Retire veterans to Tavern jobs for permanent passive bonuses](ETH-124-tavern-veterans-retirement.md)
 - [ ] [ETH-127 Achievements tracked with the objective engine](ETH-127-achievements.md)
 - [ ] [ETH-129 Guild Hall upgrade: constant floor respawns on revisit](ETH-129-guild-hall-constant-respawn.md)
+- [ ] [ETH-132 Rescale Guild Hall Renown costs for depth-weighted rewards](ETH-132-rescale-guild-hall-renown-costs.md)

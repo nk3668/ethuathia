@@ -546,7 +546,9 @@ the party with each member's fate, the contracts, **Moments** (ETH-120: the run'
 notable chronicle moments in turn order, each "Turn N" in faint tabular figures then its
 sentence; a past run shows the five its record kept), a currency table (Earned, Lost in the wipe, Banked; the Omen
 multiplier column arrives with ETH-067, between Earned and Lost, so it reads base → ×Omen → −25%)
-with a muted line under it saying how the outcome treated the earnings (ETH-023), "Met this run" (the Codex discoveries), a placeholder epitaph in
+with a formula tooltip on Renown and a compact per-floor Renown breakdown beneath the table
+(ETH-085, omitted for older saved runs whose totals predate the formula), a muted line under it
+saying how the outcome treated the earnings (ETH-023), "Met this run" (the Codex discoveries), a placeholder epitaph in
 italics, the Auto-restart checkbox with "Next run in N s" and Cancel while counting down, and
 the buttons **Review log** (ghost; closes it, Escape too), **Rematch** (secondary, ETH-084;
 replays the previous run's seed with your current upgrades and rules, with a tooltip

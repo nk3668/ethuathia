@@ -70,6 +70,21 @@ describe('tools/compare', () => {
     expect(other).toContain('Warning: stale base');
   });
 
+  it('compares banked Renown per hour before and after, and prints - for older reports without it (ETH-085)', () => {
+    const before = makeReport(ARGS, runSeeds(1, 3, { depth: 2 }));
+    const doubled: SeedResult[] = before.results.map((r) => ({
+      ...r,
+      atRisk: { ...r.atRisk, renown: (r.atRisk?.renown ?? 0) * 2 },
+      lost: { ...r.lost, renown: (r.lost?.renown ?? 0) * 2 },
+    }));
+    const diff = formatComparison(before, makeReport(ARGS, doubled));
+    expect(diff).toMatch(/renown\/hr \(1x\), banked\s+[\d.]+\s+[\d.]+\s+\+[\d.]+ \(\+100\.0%\)/);
+
+    const legacy = makeReport(ARGS, parseReportText(formatReport(before.results)));
+    const fromLegacy = formatComparison(legacy, before);
+    expect(fromLegacy).toMatch(/renown\/hr \(1x\), banked\s+-\s+[\d.]+\s+-/);
+  });
+
   it('formats stale-base warnings only when ahead of the merge base', () => {
     expect(staleBaseWarning('origin/main', 0, 'abcdef1234567')).toBeNull();
     expect(staleBaseWarning('origin/main', 1, 'abcdef1234567')).toBe(

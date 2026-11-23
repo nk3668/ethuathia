@@ -1,12 +1,29 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { formatNumber } from '../../core';
+import { RENOWN } from '../../sim';
 import type { RunReport } from '../../sim';
 import { Button, Tooltip } from '../kit';
 import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
 import { useSimStore } from '../stores/simStore';
 import styles from './RunSummary.module.css';
-import { contractsOf, currencyName, currencyRows, discoveriesOf, epitaph, fallenOf, lossNote, momentsOf, OUTCOME_LOOK, partyOf, reportFromRecord, unlockLines } from './runSummaryText';
+import {
+  contractsOf,
+  currencyName,
+  currencyRows,
+  discoveriesOf,
+  epitaph,
+  fallenOf,
+  lossNote,
+  momentsOf,
+  OUTCOME_LOOK,
+  partyOf,
+  RENOWN_FORMULA_EXAMPLES,
+  RENOWN_FORMULA_TEXT,
+  renownBreakdown,
+  reportFromRecord,
+  unlockLines,
+} from './runSummaryText';
 import { rewardText } from './logText/quests';
 import { contentName, momentLine } from './text';
 
@@ -53,6 +70,17 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const found = discoveriesOf(report);
   const contracts = contractsOf(report);
   const moments = momentsOf(report);
+  const renown = renownBreakdown(report);
+  const renownSources =
+    renown === null
+      ? []
+      : [
+          renown.floors.length === 0 && (renown.turns > 0 || renown.contracts > 0 || renown.other > 0) ? 'Floor 1: 0' : null,
+          renown.turns > 0 ? `Turns (${TURN_FORMAT.format(renown.turnCount)}): +${formatNumber(renown.turns)}` : null,
+          renown.contracts > 0 ? `Contracts: +${formatNumber(renown.contracts)}` : null,
+          renown.other > 0 ? `Modifiers & other: +${formatNumber(renown.other)}` : null,
+        ].filter((line): line is string => line !== null);
+  const showRenownBreakdown = renown !== null && (renown.floors.length > 0 || renownSources.length > 0);
   const nameOf = (id: number) => party?.find((m) => m.id === id)?.name ?? 'Someone';
 
   useEffect(() => next.current?.focus(), []);
@@ -145,7 +173,13 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
             <tbody>
               {currencyRows(report).map((row) => (
                 <tr key={row.key}>
-                  <th scope="row">{currencyName(row.key)}</th>
+                  <th scope="row">
+                    {row.key === RENOWN ? (
+                      <Tooltip content={<RenownFormulaContent />}>{currencyName(row.key)}</Tooltip>
+                    ) : (
+                      currencyName(row.key)
+                    )}
+                  </th>
                   <td>{formatNumber(row.atRisk)}</td>
                   <td>{row.lost === 0 ? '–' : `−${formatNumber(row.lost)}`}</td>
                   <td>{formatNumber(row.banked)}</td>
@@ -153,6 +187,25 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
               ))}
             </tbody>
           </table>
+          {showRenownBreakdown && renown !== null && (
+            <div className={styles.renownBreakdown}>
+              <div className={styles.breakdownHead}>
+                <span>Renown breakdown</span>
+                {renown.floors.length > 0 && <span className={styles.breakdownTotal}>Depth: +{formatNumber(renown.depth)}</span>}
+              </div>
+              {renown.floors.length > 0 && (
+                <ul className={styles.floorList} aria-label="Renown per floor">
+                  {renown.floors.map((f) => (
+                    <li key={f.depth} className={styles.floorItem}>
+                      <span className={styles.floorLabel}>Floor {f.depth}</span>
+                      <span className={styles.floorAmount}>+{formatNumber(f.renown)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {renownSources.length > 0 && <p className={styles.breakdownSources}>{renownSources.join(' · ')}</p>}
+            </div>
+          )}
           <p className={styles.note}>{lossNote(report.end.outcome)}</p>
         </section>
 
@@ -195,6 +248,19 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Tooltip body explaining the depth-weighted Renown formula (ETH-085). */
+function RenownFormulaContent() {
+  return (
+    <>
+      <strong>Renown formula</strong>
+      <br />
+      {RENOWN_FORMULA_TEXT}
+      <br />
+      {RENOWN_FORMULA_EXAMPLES}
+    </>
   );
 }
 
