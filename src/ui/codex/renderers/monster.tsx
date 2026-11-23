@@ -92,44 +92,44 @@ export default defineCodexRenderer({
   fields: (def) => {
     const tiers = killTiersFor(def);
     return [
-    { label: 'Role', value: ROLE_INFO[def.role].name, hint: ROLE_INFO[def.role].description, key: true, minKills: tiers.basics },
-    { label: 'HP', value: def.stats.hp, hint: 'Hit points when unhurt.', key: true, minKills: tiers.basics },
-    {
-      label: 'Damage',
-      value: `1–3 + ${def.stats.damage}`,
-      hint: 'What a blow that lands does, before the target’s armor (never below 1).',
-      key: true,
-      minKills: tiers.basics,
-    },
-    { label: 'Accuracy', value: def.stats.accuracy, hint: 'Each point adds 5% to its chance to hit, against your evasion.', minKills: tiers.stats },
-    { label: 'Evasion', value: def.stats.evasion, hint: 'Each point takes 5% off your chance to hit it.', minKills: tiers.stats },
-    { label: 'Armor', value: def.stats.armor, hint: 'Taken off the damage of each blow that lands on it.', minKills: tiers.stats },
-    { label: 'Speed', value: def.stats.speed, hint: 'Energy gained each tick; 100 acts once a turn.', key: true, minKills: tiers.basics },
-    ...powerFields(def),
-    ...(def.bundle === undefined
-      ? []
-      : [{ label: 'Traits', value: bundleText(def.bundle), hint: 'Innate abilities and passives of this kind.', minKills: tiers.stats }]),
-    { label: 'Found on', value: dangerText(def), hint: 'The Danger range it appears in.', minKills: tiers.basics },
-    { label: 'Threat', value: def.threat, hint: 'How dangerous it is. Kills of it are weighed by this.', minKills: tiers.stats },
-    {
-      label: 'Crowds',
-      value: def.sharesTile === true ? 'Yes' : 'No',
-      hint: 'Small folk and swarms can share a tile with others of their sort; everyone else needs a tile of their own.',
-      minKills: tiers.stats,
-    },
-    { label: 'Behavior', value: behaviorText(def), hint: 'The rules it follows each turn.', minKills: tiers.stats },
-    {
-      label: 'Variants met',
-      value: <VariantsMet monster={def.id} />,
-      hint: 'Monster variants (Venomous, Swift, …) seen on this kind so far.',
-      minKills: tiers.stats,
-    },
-    {
-      label: 'Drops',
-      value: dropsText(def),
-      hint: 'Trophies and carried loot left behind when slain.',
-      minKills: tiers.lore,
-    },
+      { label: 'Role', value: ROLE_INFO[def.role].name, hint: ROLE_INFO[def.role].description, key: true, minKills: tiers.basics },
+      { label: 'HP', value: def.stats.hp, hint: 'Hit points when unhurt.', key: true, minKills: tiers.basics },
+      {
+        label: 'Damage',
+        value: `1–3 + ${def.stats.damage}`,
+        hint: 'What a blow that lands does, before the target’s armor (never below 1).',
+        key: true,
+        minKills: tiers.basics,
+      },
+      { label: 'Accuracy', value: def.stats.accuracy, hint: 'Each point adds 5% to its chance to hit, against your evasion.', minKills: tiers.stats },
+      { label: 'Evasion', value: def.stats.evasion, hint: 'Each point takes 5% off your chance to hit it.', minKills: tiers.stats },
+      { label: 'Armor', value: def.stats.armor, hint: 'Taken off the damage of each blow that lands on it.', minKills: tiers.stats },
+      { label: 'Speed', value: def.stats.speed, hint: 'Energy gained each tick; 100 acts once a turn.', key: true, minKills: tiers.basics },
+      ...powerFields(def),
+      ...(def.bundle === undefined
+        ? []
+        : [{ label: 'Traits', value: bundleText(def.bundle), hint: 'Innate abilities and passives of this kind.', minKills: tiers.stats }]),
+      { label: 'Found on', value: dangerText(def), hint: 'The Danger range it appears in.', minKills: tiers.basics },
+      { label: 'Threat', value: def.threat, hint: 'How dangerous it is. Kills of it are weighed by this.', minKills: tiers.stats },
+      {
+        label: 'Crowds',
+        value: def.sharesTile === true ? 'Yes' : 'No',
+        hint: 'Small folk and swarms can share a tile with others of their sort; everyone else needs a tile of their own.',
+        minKills: tiers.stats,
+      },
+      { label: 'Behavior', value: behaviorText(def), hint: 'The rules it follows each turn.', minKills: tiers.stats },
+      {
+        label: 'Variants met',
+        value: <VariantsMet monster={def.id} />,
+        hint: 'Monster variants (Venomous, Swift, …) seen on this kind so far.',
+        minKills: tiers.stats,
+      },
+      {
+        label: 'Drops',
+        value: dropsText(def),
+        hint: 'Trophies and carried loot left behind when slain.',
+        minKills: tiers.lore,
+      },
     ];
   },
 });

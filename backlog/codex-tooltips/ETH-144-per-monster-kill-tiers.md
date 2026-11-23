@@ -2,7 +2,7 @@
 id: ETH-144
 title: Per-monster Codex kill-tier thresholds for rare monsters
 type: feature
-status: done
+status: in-progress
 priority: P3
 milestone: M1.6
 epic: codex-tooltips
