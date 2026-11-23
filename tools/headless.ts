@@ -104,20 +104,18 @@ export const HEADLESS_RULES_PRESETS: readonly HeadlessRulesPreset[] = ['baseline
 
 /**
  * Cautious behavior rules overlaid ahead of `BASELINE_RULES` (`--rules cautious`):
- * quaff healing potions earlier (<60% HP), flee earlier (<50% HP), retreat out of the dungeon
- * when critically hurt with no healing potion (<35% HP), drink fountains earlier (<65% HP), and
- * wait at stairs up rather than detouring when heading out or once contracts are complete.
+ * quaff healing potions earlier (<65% HP), drink fountains earlier (<75% HP), retreat out of the
+ * dungeon when critically hurt with no healing potion (<15% HP), and wait at stairs up rather
+ * than detouring when heading out or once contracts are complete.
  */
 export const CAUTIOUS_RULES: readonly Rule[] = [
-  { condition: { id: 'cond.wounded', params: { percent: 60 } }, action: { id: 'act.quaff_healing' }, enabled: true },
+  { condition: { id: 'cond.wounded', params: { percent: 65 } }, action: { id: 'act.quaff_healing' }, enabled: true },
   { condition: { id: 'cond.stuck' }, action: { id: 'act.back_off' }, enabled: true },
-  { condition: { id: 'cond.hp_below', params: { percent: 50 } }, action: { id: 'act.flee' }, enabled: true },
-  { condition: { id: 'cond.enemy_adjacent' }, action: { id: 'act.attack_adjacent' }, enabled: true },
-  { condition: { id: 'cond.hurt_no_healing', params: { below: 35 } }, action: { id: 'act.retreat_run' }, enabled: true },
+  { condition: { id: 'cond.hurt_no_healing', params: { below: 15 } }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   { condition: { id: 'cond.contracts_complete' }, action: { id: 'act.retreat_run' }, enabled: true },
-  { condition: { id: 'cond.hurt_no_healing', params: { below: 65 } }, action: { id: 'act.drink_fountain' }, enabled: true },
+  { condition: { id: 'cond.hurt_no_healing', params: { below: 75 } }, action: { id: 'act.drink_fountain' }, enabled: true },
 ];
 
 export interface HeadlessOptions {

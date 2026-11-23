@@ -55,12 +55,12 @@ const BUDGET_ANCHORS: readonly [number, number][] = [
   [2, 9],
   [3, 18],
   [4, 26],
-  [5, 34],
-  [6, 54],
-  [7, 74],
-  [8, 102],
-  [9, 155],
-  [10, 190],
+  [5, 31],
+  [6, 44],
+  [7, 65],
+  [8, 86],
+  [9, 128],
+  [10, 155],
 ];
 
 /** Smooth, monotonic Danger-to-threat-budget curve scaled by optional `budgetMul` (default `1`). */
@@ -70,9 +70,9 @@ export function floorThreatBudget(danger: number, budgetMul = 1): number {
   if (danger < 1) {
     base = 7 * danger;
   } else if (danger >= 10) {
-    base = 190 + (danger - 10) * 35;
+    base = 155 + (danger - 10) * 32;
   } else {
-    base = 190;
+    base = 155;
     for (let i = 0; i < BUDGET_ANCHORS.length - 1; i++) {
       const [d0, b0] = BUDGET_ANCHORS[i] as [number, number];
       const [d1, b1] = BUDGET_ANCHORS[i + 1] as [number, number];

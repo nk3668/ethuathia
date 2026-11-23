@@ -411,7 +411,7 @@ export const TRIGGER_STRUCK: TriggerKindDef = {
 };
 
 /** An adventurer with no enemy next to them gets back 1 HP every this many game turns. */
-export const RECOVERY_INTERVAL = 2;
+export const RECOVERY_INTERVAL = 8;
 
 /** Turn start: reap any 0 HP actors, then refresh group alerts and patrol progress for living monsters. */
 function combatTurnStart({ state, actor, emit }: TurnCtx): void {

@@ -154,9 +154,9 @@ export const DUNGEON_OLD_DELVE = defineDungeon({
   floorType: 'floor.halls',
   encounters: {
     budgetMul: 1,
-    templateRamp: { minDanger: 3, base: 0.035, perDanger: 0.035, max: 0.35 },
+    templateRamp: { minDanger: 3, base: 0.03, perDanger: 0.03, max: 0.3 },
     ood: { minDanger: 3, chance: 0.05, boost: 2 },
     patrolMul: 1,
-    surge: { dangerWindow: 2, templateBonus: 0.15, countMul: 1 },
+    surge: { dangerWindow: 2, templateBonus: 0.15, countMul: 1.1 },
   },
 });
