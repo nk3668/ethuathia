@@ -23,6 +23,10 @@ export function effectText(effect: Effect): string {
       return `deals ${effect.amount} damage`;
     case 'applyStatus':
       return `applies ${STATUSES.has(effect.status) ? STATUSES.get(effect.status).name : effect.status} for ${effect.turns} turns`;
+    case 'identify':
+      return effect.scope === 'all' ? 'identifies all carried items' : 'identifies an item';
+    case 'uncurse':
+      return effect.scope === 'all' ? 'uncurses all items' : 'uncurses worn gear';
   }
 }
 

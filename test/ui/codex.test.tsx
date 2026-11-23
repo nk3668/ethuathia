@@ -328,6 +328,23 @@ describe('Explain', () => {
     expect(container.querySelector('[tabindex]')).toBeNull();
   });
 
+  it('hides the real def behind a generic unidentified tooltip card (ETH-044)', async () => {
+    const user = userEvent.setup();
+    render(<Explain id="item.mending_draught" unidentified={{ name: 'Cloudy red vial', category: 'Potions' }} />);
+    expect(screen.getByText('Cloudy red vial')).toBeTruthy();
+    await user.tab();
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toContain('Unidentified');
+    expect(tip.textContent).not.toContain('Mending draught');
+    expect(tip.textContent).not.toContain('heals 12 HP');
+  });
+
+  it('includes an Enchantments section in the Codex (ETH-044)', () => {
+    bank({ 'enchant.keen': ['seen'] });
+    render(<CodexPanel />);
+    expect(within(section('Enchantments')).getByText('Keen')).toBeTruthy();
+  });
+
   it('marks content mentions in the log', () => {
     act(() => {
       useSimStore.getState().receiveEvents([{ type: 'doorOpened', actor: 1, door: 2, pos: { x: 1, y: 1 }, turn: 3 }]);

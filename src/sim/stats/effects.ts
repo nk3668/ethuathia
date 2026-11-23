@@ -12,6 +12,7 @@
  */
 import type { Effect, Trigger } from '../../content';
 import type { Emit } from '../events';
+import { EFFECT_HANDLERS } from '../registries';
 import type { Entity, EntityId, RunState } from '../state';
 import { forEachBundle, statValue } from './getStat';
 import { applyStatus } from './statuses';
@@ -58,8 +59,24 @@ export function runEffect(ctx: EffectCtx, effect: Effect): void {
     }
     case 'applyStatus':
       // The bundle's holder inflicts it on someone else (a venomous bite's `to: 'other'`).
-      applyStatus(ctx.state, target, effect.status, effect.turns, ctx.emit, effect.potency ?? 1, true, ctx.state.entities[ctx.self]);
+      // `ctx.potency` scales the status duration (e.g. blessed/cursed status consumables at 1.5×/0.5×,
+      // or ranked on-hit enchantments like Venomous II).
+      applyStatus(
+        ctx.state,
+        target,
+        effect.status,
+        scaled(effect.turns, ctx.potency),
+        ctx.emit,
+        effect.potency ?? 1,
+        true,
+        ctx.state.entities[ctx.self],
+      );
       return;
+    default: {
+      const handler = EFFECT_HANDLERS.get(effect.kind);
+      handler?.run(ctx, target, effect as never);
+      return;
+    }
   }
 }
 

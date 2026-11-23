@@ -487,10 +487,12 @@ The API every later item uses (ETH-057, §2.2):
   `detachBundles(state, entity, source)`; saves keep ids only. `StatsConfig.partyBundles` attaches
   bundles to every party member at the start of a run.
 - **Effects:** `runEffect(ctx, effect)` / `runEffects` with `EffectCtx = { state, emit, self,
-  other?, source, potency }`. Kinds: `heal`, `damage`, `applyStatus`; each may say
+  other?, source, potency }`. Built-in kinds: `heal`, `damage`, `applyStatus`; domain-owned
+  kinds (`identify`, `uncurse`, ETH-044) register an `EffectHandler` via `SimDomain.effectHandlers`
+  (`EFFECT_HANDLERS`), avoiding circular imports with `src/sim/stats/effects.ts`. Each may say
   `to: 'other'` (default `self`). Effects on a missing or dead target do nothing. **A new kind** is
-  one member of `Effect` and one option in `effectSchema` (`content/bundles.ts`) and one case in
-  `runEffect` (`sim/stats/effects.ts`). The `damage` effect only lowers HP (never below 0, clears
+  one member of `Effect` and one option in `effectSchema` (`content/bundles.ts`), plus either a
+  case in `runEffect` or an `EffectHandler` in the owning domain. The `damage` effect only lowers HP (never below 0, clears
   a queued action at 0) and emits `damaged`. Combat's turn hooks settle a monster left at 0 HP
   (`died`, blaming the status); a party member at 0 HP is the run domain's `fell`.
 - **Triggers:** content writes `{ on: 'trigger.some_kind', effects }`. A trigger kind is a
@@ -619,7 +621,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`) and ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`) and ETH-044 28 (`ItemsState.identifiedTypes`).
 
 ### Contracts in the run (ETH-024)
 
@@ -889,9 +891,25 @@ per-instance item data adds an `ItemPropertyKind`, not its own edits to `gearBun
   `weaponScalingText` ("Damage scales with Finesse 14 instead of Brawn 12: +1 damage"), shown as
   the item tooltip's `note`; the Codex item card has a "Scales with" field. Spells (ETH-037)
   should scale with Wits through the same `DAMAGE_FORMULA` when they exist.
-- **Planned kinds:** ETH-044 `enchant` (bundle scaled by the number, value up), `blessing`
-  (`blessed` / `cursed`; a cursed item refuses `unequip` in `validate`), `identified` (drives
-  `known`); ETH-045 `affixes` (a bundle and a prefix or suffix each; artifacts are fixed affixes);
+- **Enchantment, beatitude and identification (ETH-044, `src/content/enchantments.ts`,
+  `src/sim/items/enchant.ts`, `identify.ts`, `effects.ts`):**
+  - `ENCHANTMENTS` (`enchant.*`, `ENCHANTMENT_KIND`) is a data-driven content kind with `kind: 'base'`
+    (drives numeric `+N`/`-N` per gear category or `GearType`: `enchant.honed`, `enchant.reinforced`,
+    `enchant.attuned`) and `kind: 'special'` (named/effect enchantments with full `Bundle`s:
+    `enchant.keen`, `enchant.venomous`, `enchant.vampiric`, `enchant.nimble`, `enchant.warding`).
+  - Built-in `ITEM_PROPERTY_LIST` order: `prop.enchant` (`enchant?: number`), `prop.blessing`
+    (`blessing?: 'blessed' | 'cursed'`), `prop.enchantments` (`enchantments?: { id, level }[]`),
+    `prop.identified` (`identified?: boolean`, absent = known), `prop.origin`.
+  - Cursed gear refuses `unequip` and `equip` replacement in `validate`; `upgradeSlot` skips cursed
+    slots and known-cursed items; blessed/cursed consumables scale `runEffects` potency (`1.5×`/`0.5×`)
+    and gear shifts enhancement (`+1`/`-1`). `Scroll of uncursing` (`{ kind: 'uncurse' }`) and
+    `Scroll of identify` (`{ kind: 'identify' }`) run via `ITEMS_DOMAIN.effectHandlers`.
+  - Potions, scrolls and jewelry start with deterministic per-seed generic appearances
+    (`appearanceName(seed, defId)`) until learned in `state.domains.items.identifiedTypes`; weapons
+    and armor hide `+N`, beatitude and special enchantments until instance-identified via Wits
+    `identify` on pickup (`tryIdentifyOnPickup`), wearing, using, or Scroll of Identify. AI gear
+    comparisons pass `knownOnly: true` so the AI never peeks at hidden properties.
+- **Planned kinds:** ETH-045 `affixes` (a bundle and a prefix or suffix each; artifacts are fixed affixes);
   ETH-096 `charges { n, max }`.
 
 ### Content kinds

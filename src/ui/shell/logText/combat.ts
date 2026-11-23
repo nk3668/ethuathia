@@ -32,7 +32,7 @@ function dropsText(drops: readonly DroppedLoot[] | undefined): LogPart[] {
   const parts: LogPart[] = [', dropping '];
   drops.forEach((d, i) => {
     if (i > 0) parts.push(i === drops.length - 1 ? ' and ' : ', ');
-    parts.push(mention(d.item, d.name), d.qty > 1 ? ` ×${d.qty}` : '');
+    parts.push(d.identified === false ? (d.name ?? 'an unidentified item') : mention(d.item, d.name), d.qty > 1 ? ` ×${d.qty}` : '');
   });
   return parts.filter((p) => p !== '');
 }

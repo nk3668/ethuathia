@@ -43,3 +43,4 @@ More items are added when M1 becomes the current milestone.
 - [ ] [ETH-112 Weighted gear score so auto-equip can take trade-offs](ETH-112-weighted-gear-score.md)
 - [x] [ETH-118 Item properties: per-instance layers that feed gearBundles, value, names and stacking](ETH-118-item-properties.md)
 - [ ] [ETH-123 Allied non-party creatures: actors that fight with the party without being members](ETH-123-allied-creatures.md)
+- [ ] [ETH-130 Expand the enchantment pool with additional effects and triggers](ETH-130-more-enchantments.md)

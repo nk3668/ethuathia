@@ -55,6 +55,35 @@ describe('log text', () => {
     ]);
     const plain = ITEMS_LOG_TEXT.unequipped.text({ type: 'unequipped', ...base }, () => 'Mira');
     expect(plain).toEqual(['Mira takes off ', { ref: 'item.iron_hatchet' }, ' (main hand).']);
+
+    // Unidentified pickups/drops render plain text (no Codex mention spoiler) and do not highlight as valuable finds; itemIdentified and itemUncursed format cleanly (ETH-044).
+    const unknownPickEvent = {
+      type: 'pickedUp' as const,
+      turn: 2,
+      actor: 1,
+      item: 'item.quickstep_tonic',
+      name: 'Cloudy red vial',
+      identified: false as const,
+      qty: 1,
+      value: 60,
+      floor: 'd1',
+      pos: { x: 0, y: 0 },
+    };
+    expect(ITEMS_LOG_TEXT.pickedUp.text(unknownPickEvent, () => 'Mira')).toEqual(['Mira picks up ', 'Cloudy red vial', '.']);
+    expect(ITEMS_LOG_TEXT.pickedUp.highlightWhen?.(unknownPickEvent)).toBe(false);
+    expect(ITEMS_LOG_TEXT.pickedUp.highlightWhen?.({ ...unknownPickEvent, identified: undefined })).toBe(true);
+
+    const unknownDrop = ITEMS_LOG_TEXT.dropped.text(
+      { type: 'dropped', turn: 2, actor: 1, item: 'item.mending_draught', name: 'Cloudy red vial', identified: false, qty: 1, floor: 'd1', pos: { x: 0, y: 0 } },
+      () => 'Mira',
+    );
+    expect(unknownDrop).toEqual(['Mira drops ', 'Cloudy red vial', '.']);
+
+    const identified = ITEMS_LOG_TEXT.itemIdentified.text(
+      { type: 'itemIdentified', turn: 3, actor: 1, item: 'item.iron_hatchet', name: '-1 cursed Iron hatchet', was: 'Iron hatchet', method: 'equip', cursed: true, floor: 'd1', pos: { x: 0, y: 0 } },
+      () => 'Mira',
+    );
+    expect(identified).toEqual(['Mira identifies Iron hatchet as ', { ref: 'item.iron_hatchet', label: '-1 cursed Iron hatchet' }, ' — it is cursed!']);
   });
 
   it('names templated and named monsters by their event names, with and without an article (ETH-117)', () => {

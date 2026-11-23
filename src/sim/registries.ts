@@ -14,7 +14,8 @@ import type { FloorPlanHook, RunTracker, VictoryCheck } from './domain';
 import type { GenStepDef } from './gen/types';
 import type { ChronicleKind, ChronicleRule } from './run/chronicle';
 import type { DiscoveryRule } from './run/codex';
-import type { BundleSource, StatProvider, TriggerKindDef } from './stats/types';
+import type { BundleSource, EffectHandler, StatProvider, TriggerKindDef } from './stats/types';
+import type { EffectKind } from '../content';
 
 /** Every rule condition, by id (`cond.*`). The rules editor is generated from it (M3). */
 export const CONDITIONS = new Registry<ConditionDef>('rule condition');
@@ -39,6 +40,12 @@ export const STAT_PROVIDERS: StatProvider[] = [];
 
 /** Every bundle source, in run order: what `getStat` and `fireTrigger` read bundles from. */
 export const BUNDLE_SOURCES: BundleSource[] = [];
+
+/**
+ * Domain-owned effect handlers, keyed by `EffectKind` (ETH-044): filled by `domains.ts` from
+ * `SimDomain.effectHandlers` so `runEffect` can delegate domain effects without import cycles.
+ */
+export const EFFECT_HANDLERS = new Map<EffectKind, EffectHandler>();
 
 /**
  * Every run tracker, in domain order (`RUN_TRACKERS` in `domains.ts` is this list). The run

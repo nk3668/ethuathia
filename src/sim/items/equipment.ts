@@ -24,8 +24,11 @@
 import { EQUIP_SLOTS, gearSlots } from '../../content';
 import type { Bundle, EquipSlot, Modifier } from '../../content';
 import type { Entity, RunState } from '../state';
+import { scaleModifier } from '../stats/getStat';
 import type { BundleSource } from '../stats/types';
 import { isStatId, STAT_INFO } from '../stats/statIds';
+import { isCursed, isKnownCursed } from './enchant';
+import { isInstanceTypeKnown } from './identify';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
 import { inventoryOf } from './inventory';
@@ -61,18 +64,21 @@ export function wornItems(entity: Entity): WornItem[] {
  * comparing gear); leave it out where there is no one (a Codex entry), and a property that
  * depends on the wearer (ETH-082 scaling) adds nothing.
  */
-export function gearBundles(state: RunState, wearer: Entity | undefined, item: ItemInstance): Bundle[] {
-  return gearBundleParts(state, wearer, item).map((p) => p.bundle);
+export function gearBundles(state: RunState, wearer: Entity | undefined, item: ItemInstance, knownOnly = false): Bundle[] {
+  return gearBundleParts(state, wearer, item, knownOnly).map((p) => p.bundle);
 }
 
 /**
  * `gearBundles` with how `getStat` credits each one: a property's bundle may name another source
- * and a label (ETH-082's weapon scaling credits the wielder's attributes).
+ * and a label (ETH-082's weapon scaling credits the wielder's attributes) and a `potency` (ETH-044).
+ * When `knownOnly` is true, hidden properties (and unidentified jewelry base stats) are omitted.
  */
-export function gearBundleParts(state: RunState, wearer: Entity | undefined, item: ItemInstance): ItemBundle[] {
+export function gearBundleParts(state: RunState, wearer: Entity | undefined, item: ItemInstance, knownOnly = false): ItemBundle[] {
+  if (knownOnly && wearer !== undefined && !isInstanceTypeKnown(state, item)) return [];
   const bundle = itemDef(item).bundle;
   const own: ItemBundle[] = bundle === undefined ? [] : [{ bundle }];
-  return [...own, ...propertyBundleParts(wearer === undefined ? { state, item } : { state, item, wearer })];
+  const ctx = wearer === undefined ? { state, item, ...(knownOnly ? { knownOnly: true } : {}) } : { state, item, wearer, ...(knownOnly ? { knownOnly: true } : {}) };
+  return [...own, ...propertyBundleParts(ctx)];
 }
 
 /** Every worn item's bundles, credited to the item's def id (or the source a property names), in slot order. */
@@ -80,7 +86,9 @@ export const SOURCE_EQUIPPED: BundleSource = {
   id: 'items.equipped',
   visit(state, entity, visit) {
     for (const { item } of wornItems(entity)) {
-      for (const part of gearBundleParts(state, entity, item)) visit(part.bundle, part.source ?? item.def, 1, part.label);
+      for (const part of gearBundleParts(state, entity, item)) {
+        visit(part.bundle, part.source ?? item.def, part.potency ?? 1, part.label);
+      }
     }
   },
 };
@@ -96,15 +104,18 @@ export function modifierText(m: Pick<Modifier, 'stat' | 'op' | 'value'>): string
 }
 
 /** An item's stat changes, keyed `add:<stat>` / `mul:<stat>`; `null` if it has triggers or effects. */
-function statTotals(state: RunState, wearer: Entity | undefined, item: ItemInstance | null): Map<string, number> | null {
+function statTotals(state: RunState, wearer: Entity | undefined, item: ItemInstance | null, knownOnly = false): Map<string, number> | null {
   const totals = new Map<string, number>();
   if (item === null) return totals;
-  for (const bundle of gearBundles(state, wearer, item)) {
+  for (const part of gearBundleParts(state, wearer, item, knownOnly)) {
+    const bundle = part.bundle;
     if ((bundle.triggers?.length ?? 0) > 0 || (bundle.effects?.length ?? 0) > 0) return null;
+    const potency = part.potency ?? 1;
     for (const m of bundle.modifiers ?? []) {
+      const scaled = scaleModifier(m.op, m.value, potency);
       const key = `${m.op}:${m.stat}`;
       const before = totals.get(key) ?? (m.op === 'mul' ? 1 : 0);
-      totals.set(key, m.op === 'mul' ? before * m.value : before + m.value);
+      totals.set(key, m.op === 'mul' ? before * scaled : before + scaled);
     }
   }
   return totals;
@@ -118,11 +129,18 @@ export type GearComparison = 'better' | 'worse' | 'same' | 'mixed';
  * and better in one, `worse` the other way round, `same` if equal, `mixed` for a tradeoff. Gear
  * with triggers is always `mixed` (against anything but nothing at all on both sides): the AI
  * can't tell whether a trigger helps. Every stat counts higher as better. Both are weighed as
- * `wearer` would wear them (`gearBundles`), item properties included.
+ * `wearer` would wear them (`gearBundles`), item properties included. When `knownOnly` is true,
+ * unidentified hidden properties are ignored so the AI doesn't peek.
  */
-export function compareGear(state: RunState, wearer: Entity | undefined, a: ItemInstance | null, b: ItemInstance | null): GearComparison {
-  const ta = statTotals(state, wearer, a);
-  const tb = statTotals(state, wearer, b);
+export function compareGear(
+  state: RunState,
+  wearer: Entity | undefined,
+  a: ItemInstance | null,
+  b: ItemInstance | null,
+  knownOnly = false,
+): GearComparison {
+  const ta = statTotals(state, wearer, a, knownOnly);
+  const tb = statTotals(state, wearer, b, knownOnly);
   if (ta === null || tb === null) return 'mixed';
   let up = false;
   let down = false;
@@ -139,23 +157,28 @@ export function compareGear(state: RunState, wearer: Entity | undefined, a: Item
 
 /**
  * Where `item` goes when put on without naming a slot: the first of its slots that is empty,
- * otherwise its first slot. `null` if it can't be worn.
+ * otherwise the first uncursed slot it fits, otherwise its first slot. `null` if it can't be worn.
  */
 export function slotFor(entity: Entity, item: ItemInstance): EquipSlot | null {
   const slots = gearSlots(itemDef(item));
-  return slots.find((s) => equippedIn(entity, s) === null) ?? slots[0] ?? null;
+  return (
+    slots.find((s) => equippedIn(entity, s) === null) ??
+    slots.find((s) => !isCursed(equippedIn(entity, s))) ??
+    slots[0] ??
+    null
+  );
 }
 
 /**
- * The slot where putting on `item` would be a clear upgrade, or `null`. An empty slot it fits
- * comes first (taken only if `item` beats wearing nothing there). With every slot it fits full
- * (two rings worn), it replaces a worn item it beats: the weaker of them when one beats the
- * other, else the first. The replaced item never beats the one left in the other slot, so the AI
- * never swaps back and forth.
+ * The slot where putting on `item` would be a clear upgrade, or `null`. Known-cursed items are
+ * never chosen, and slots holding cursed gear cannot be replaced (ETH-044). Uses `knownOnly` so
+ * the AI compares only known stats.
  */
 export function upgradeSlot(state: RunState, entity: Entity, item: ItemInstance): EquipSlot | null {
-  const slots = gearSlots(itemDef(item));
-  const cmp = (a: ItemInstance | null, b: ItemInstance | null) => compareGear(state, entity, a, b);
+  if (isKnownCursed(state, item)) return null;
+  const slots = gearSlots(itemDef(item)).filter((s) => !isCursed(equippedIn(entity, s)));
+  if (slots.length === 0) return null;
+  const cmp = (a: ItemInstance | null, b: ItemInstance | null) => compareGear(state, entity, a, b, true);
   const empty = slots.find((s) => equippedIn(entity, s) === null);
   if (empty !== undefined) return cmp(item, null) === 'better' ? empty : null;
   const beaten = slots.filter((s) => cmp(item, equippedIn(entity, s)) === 'better');
@@ -187,7 +210,7 @@ export function bestUpgrade(state: RunState, entity: Entity): GearUpgrade | null
     targets.forEach((target, index) => {
       if (target === slot) candidates.push(index);
     });
-    const best = candidates.find((i) => !candidates.some((j) => compareGear(state, entity, pack[j] as ItemInstance, pack[i] as ItemInstance) === 'better'));
+    const best = candidates.find((i) => !candidates.some((j) => compareGear(state, entity, pack[j] as ItemInstance, pack[i] as ItemInstance, true) === 'better'));
     if (best !== undefined) return { index: best, slot, item: pack[best] as ItemInstance, replaces: worn };
   }
   return null;
@@ -198,13 +221,15 @@ export function bestUpgrade(state: RunState, entity: Entity): GearUpgrade | null
  * `null` if it has none. Modifiers of one stat and op are summed into one (weapon scaling's
  * parts net into the damage, ETH-082), and one that sums to nothing is left out.
  */
-export function gearStatsText(state: RunState, wearer: Entity | undefined, item: ItemInstance): string | null {
+export function gearStatsText(state: RunState, wearer: Entity | undefined, item: ItemInstance, knownOnly = false): string | null {
   const totals = new Map<string, Pick<Modifier, 'stat' | 'op' | 'value'>>();
-  for (const bundle of gearBundles(state, wearer, item)) {
-    for (const m of bundle.modifiers ?? []) {
+  for (const part of gearBundleParts(state, wearer, item, knownOnly)) {
+    const potency = part.potency ?? 1;
+    for (const m of part.bundle.modifiers ?? []) {
+      const scaled = scaleModifier(m.op, m.value, potency);
       const key = `${m.op}:${m.stat}`;
       const before = totals.get(key);
-      const value = before === undefined ? m.value : m.op === 'mul' ? before.value * m.value : before.value + m.value;
+      const value = before === undefined ? scaled : m.op === 'mul' ? before.value * scaled : before.value + scaled;
       totals.set(key, { stat: m.stat, op: m.op, value });
     }
   }

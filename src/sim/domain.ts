@@ -25,7 +25,7 @@ import type { FloorPlan } from './floorText';
 import type { RewardAmounts } from './run/result';
 import type { ActorEntity, FloorId, RunConfig, RunState } from './state';
 import type { StatsTypes } from './stats';
-import type { BundleSource, StatProvider, TriggerKindDef } from './stats/types';
+import type { BundleSource, EffectHandler, StatProvider, TriggerKindDef } from './stats/types';
 
 /** The types one domain contributes. Each domain exports one of these as `<Domain>Types`. */
 export interface DomainShape {
@@ -184,6 +184,8 @@ export interface SimDomain<T extends DomainShape> {
   readonly bundleSources?: readonly BundleSource[];
   /** The trigger kinds this domain fires (`TRIGGERS`, ids `trigger.*`). */
   readonly triggers?: readonly TriggerKindDef[];
+  /** Custom effect interpreters owned by this domain (`EFFECT_HANDLERS`, ETH-044). */
+  readonly effectHandlers?: readonly EffectHandler[];
   /**
    * Runs at the start of every actor's turn, before it decides, in domain order. It may change
    * the state and emit events; an actor left dead skips its action.

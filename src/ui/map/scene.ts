@@ -173,7 +173,10 @@ export function tileSubject(snap: Snapshot, pos: Pos): string | null {
   const actor = snap.floor.actors.find((a) => a.pos.x === pos.x && a.pos.y === pos.y && !party.has(a.id));
   if (actor) return actor.def;
   const items = snap.domains.items.floor.filter((i) => i.pos.x === pos.x && i.pos.y === pos.y);
-  if (items.length > 0) return (items[items.length - 1] as (typeof items)[number]).def;
+  if (items.length > 0) {
+    const top = items[items.length - 1] as (typeof items)[number];
+    return top.typeUnknown === true ? null : top.def;
+  }
   return snap.floor.features.find((f) => f.pos.x === pos.x && f.pos.y === pos.y)?.def ?? null;
 }
 
@@ -197,7 +200,10 @@ export function describeTile(snap: Snapshot, pos: Pos): TileInfo | null {
     }
   }
   const items = snap.domains.items.floor.filter((it) => it.pos.x === pos.x && it.pos.y === pos.y);
-  for (const it of [...items].reverse()) things.push(it.qty === 1 ? contentName(it.def) : `${contentName(it.def)} ×${it.qty}`);
+  for (const it of [...items].reverse()) {
+    const label = it.name ?? contentName(it.def);
+    things.push(it.qty === 1 ? label : `${label} ×${it.qty}`);
+  }
   const feature = snap.floor.features.find((f) => f.pos.x === pos.x && f.pos.y === pos.y);
   if (feature) {
     const f = feature.feature;

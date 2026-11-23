@@ -1,5 +1,5 @@
 import { useShallow } from 'zustand/react/shallow';
-import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, EQUIP_SLOT_INFO, gearSlots, ITEMS, STATUSES } from '../../content';
+import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, EQUIP_SLOT_INFO, gearSlots, ITEM_CATEGORY_INFO, ITEMS, STATUSES } from '../../content';
 import type { AttributeId } from '../../content';
 import { STAT_IDS, STAT_INFO } from '../../sim';
 import type { ActionRequest, EntityId, InventoryView, LevelView, MemberStatsView } from '../../sim';
@@ -322,11 +322,17 @@ function act(action: ActionRequest): void {
   runKeyAction({ type: 'act', action });
 }
 
+/** Joins an item's state note (ETH-044) and weapon scaling note (ETH-082) for `Explain`. */
+function itemNote(stateNote?: string, scaling?: string): string | undefined {
+  const parts = [stateNote, scaling].filter((s): s is string => s !== undefined && s !== '');
+  return parts.length === 0 ? undefined : parts.join(' ');
+}
+
 /** A small pack button for a possessed adventurer's item actions, with a tooltip saying what it does. */
-function PackAction({ label, hint, onClick }: { label: string; hint: string; onClick(): void }) {
+function PackAction({ label, hint, disabled, onClick }: { label: string; hint: string; disabled?: boolean; onClick(): void }) {
   return (
     <Tooltip content={hint}>
-      <Button variant="ghost" className={styles.packAction} onClick={onClick}>
+      <Button variant="ghost" className={styles.packAction} disabled={disabled} onClick={onClick}>
         {label}
       </Button>
     </Tooltip>
@@ -370,12 +376,17 @@ function Pack({ id, possessed }: { id: EntityId; possessed: boolean }) {
             <li key={worn.slot} className={styles.packRow}>
               <span>
                 <span className={styles.packSlot}>{EQUIP_SLOT_INFO[worn.slot].label}: </span>
-                <Explain id={worn.def} name={worn.name} note={worn.scaling} />
+                <Explain id={worn.def} name={worn.name} note={itemNote(worn.stateNote, worn.scaling)} />
               </span>
               {possessed && (
                 <PackAction
-                  label="Take off"
-                  hint={`Take off ${worn.name} and put it in the pack. Spends the turn.`}
+                  label={worn.cursed === true ? 'Cursed' : 'Take off'}
+                  disabled={worn.cursed === true}
+                  hint={
+                    worn.cursed === true
+                      ? `${worn.name} is cursed and cannot be removed until uncursed.`
+                      : `Take off ${worn.name} and put it in the pack. Spends the turn.`
+                  }
                   onClick={() => act({ id: 'unequip', slot: worn.slot })}
                 />
               )}
@@ -387,28 +398,36 @@ function Pack({ id, possessed }: { id: EntityId; possessed: boolean }) {
         <p className={styles.packEmpty}>Nothing carried.</p>
       ) : (
         <ul className={styles.packList}>
-          {pack.items.map((item, i) => (
-            <li key={`${item.def}-${i}`} className={styles.packRow}>
-              <span>
-                <Explain id={item.def} name={item.name} note={item.scaling} />
-                {item.qty > 1 && <span className={styles.packQty}> ×{item.qty}</span>}
-              </span>
-              {possessed && wearable(item.def) && (
-                <PackAction
-                  label="Equip"
-                  hint={`Put on ${item.name}; whatever was worn there goes into the pack. Spends the turn.`}
-                  onClick={() => act({ id: 'equip', index: i })}
-                />
-              )}
-              {possessed && item.usable && (
-                <PackAction
-                  label="Use"
-                  hint={`Use one ${item.name}. Spends the turn.`}
-                  onClick={() => act({ id: 'use', index: i })}
-                />
-              )}
-            </li>
-          ))}
+          {pack.items.map((item, i) => {
+            const categoryLabel = ITEMS.has(item.def) ? ITEM_CATEGORY_INFO[ITEMS.get(item.def).category].label : 'Item';
+            return (
+              <li key={`${item.def}-${i}`} className={styles.packRow}>
+                <span>
+                  <Explain
+                    id={item.def}
+                    name={item.name}
+                    note={itemNote(item.stateNote, item.scaling)}
+                    unidentified={item.typeUnknown === true ? { name: item.name, category: categoryLabel } : undefined}
+                  />
+                  {item.qty > 1 && <span className={styles.packQty}> ×{item.qty}</span>}
+                </span>
+                {possessed && wearable(item.def) && (
+                  <PackAction
+                    label="Equip"
+                    hint={`Put on ${item.name}; whatever was worn there goes into the pack. Spends the turn.`}
+                    onClick={() => act({ id: 'equip', index: i })}
+                  />
+                )}
+                {possessed && item.usable && (
+                  <PackAction
+                    label="Use"
+                    hint={`Use one ${item.name}. Spends the turn.`}
+                    onClick={() => act({ id: 'use', index: i })}
+                  />
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

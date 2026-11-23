@@ -43,7 +43,17 @@ export type Effect =
       readonly turns: number;
       readonly potency?: number;
       readonly to?: EffectTarget;
-    };
+    }
+  /**
+   * Identifies unidentified carried or worn items (ETH-044): `one` (default) identifies one item,
+   * `all` (or `potency >= 1.5`, e.g. a blessed scroll) identifies everything carried and worn.
+   */
+  | { readonly kind: 'identify'; readonly scope?: 'one' | 'all'; readonly to?: EffectTarget }
+  /**
+   * Lifts curses from items (ETH-044): `worn` (default) uncurses worn gear, `all` (or
+   * `potency >= 1.5`, e.g. a blessed scroll) uncurses worn gear and carried items alike.
+   */
+  | { readonly kind: 'uncurse'; readonly scope?: 'worn' | 'all'; readonly to?: EffectTarget };
 
 export type EffectKind = Effect['kind'];
 
@@ -78,6 +88,16 @@ export const effectSchema: z.ZodType<Effect> = z.discriminatedUnion('kind', [
     status: z.string().min(1),
     turns: positiveInt,
     potency: z.number().positive('must be above 0').optional(),
+    to: targetSchema,
+  }),
+  z.strictObject({
+    kind: z.literal('identify'),
+    scope: z.enum(['one', 'all']).optional(),
+    to: targetSchema,
+  }),
+  z.strictObject({
+    kind: z.literal('uncurse'),
+    scope: z.enum(['worn', 'all']).optional(),
     to: targetSchema,
   }),
 ]);

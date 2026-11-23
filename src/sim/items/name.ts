@@ -1,21 +1,25 @@
 /**
- * An item's display name (ETH-118): the def's name with each item property's name parts around
- * it, in `ITEM_PROPERTIES` order ("+2 cursed Iron hatchet of Embers"). Log text, the party card
- * and `Explain` show it; the AI's trace lines use it too.
+ * An item's display name (ETH-118, ETH-044): the def's name (or seeded generic appearance while
+ * an appearance-category type is unidentified) with each visible item property's name parts around
+ * it, in `ITEM_PROPERTIES` order ("+2 blessed Keen Iron hatchet of Draining"). Log text, the party
+ * card and `Explain` show it; the AI's trace lines use it too.
  */
 import type { Entity, RunState } from '../state';
+import { appearanceName, isInstanceTypeKnown } from './identify';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
 import { itemKnown, itemProperties } from './properties';
 
 /**
- * The name of one `item` as `viewer` sees it: prefixes, the def's name, suffixes. A part whose
- * kind says it is `hidden` while the viewer doesn't know the item (`itemKnown`) is left out.
- * Without a viewer the item counts as known.
+ * The name of one `item` as `viewer` sees it: prefixes, the base name (or generic appearance when
+ * its type is unidentified), suffixes. A part whose kind says it is `hidden` while the viewer
+ * doesn't know the item (`itemKnown`) is left out. Without a viewer the item counts as known.
  */
 export function itemName(state: RunState, item: ItemInstance, viewer?: Entity): string {
+  const typeKnown = viewer === undefined || isInstanceTypeKnown(state, item);
+  const baseName = typeKnown ? itemDef(item).name : appearanceName(state.seed, item.def);
   const props = itemProperties(item);
-  if (props.length === 0) return itemDef(item).name;
+  if (props.length === 0) return baseName;
   const known = viewer === undefined || itemKnown({ state, item, wearer: viewer });
   const before: string[] = [];
   const after: string[] = [];
@@ -25,7 +29,7 @@ export function itemName(state: RunState, item: ItemInstance, viewer?: Entity): 
     if (prefix !== undefined && prefix !== '') before.push(prefix);
     if (suffix !== undefined && suffix !== '') after.push(suffix);
   }
-  return [...before, itemDef(item).name, ...after].join(' ');
+  return [...before, baseName, ...after].join(' ');
 }
 
 /**
