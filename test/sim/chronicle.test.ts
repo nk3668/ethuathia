@@ -56,10 +56,10 @@ const chronicleOf = (state: RunState) => state.domains.run.trackers[CHRONICLE_TR
 describe('chronicle rules', () => {
   it('register every kind once, with a priority, and a rule for each highlighted event type', () => {
     expect([...CHRONICLE_KINDS.keys()].sort()).toEqual(
-      ['adventurerFell', 'contractComplete', 'earningsLost', 'leveledUp', 'nearDeath', 'stuck', 'valuableFind'].sort(),
+      ['adventurerFell', 'contractComplete', 'earningsLost', 'leveledUp', 'nearDeath', 'oodSighted', 'stuck', 'valuableFind'].sort(),
     );
     for (const kind of CHRONICLE_KINDS.values()) expect(Number.isFinite(kind.priority)).toBe(true);
-    for (const type of ['stuck', 'leveledUp', 'attacked', 'pickedUp', 'contractCompleted', 'fell', 'earningsLost']) {
+    for (const type of ['stuck', 'leveledUp', 'attacked', 'monsterSighted', 'pickedUp', 'contractCompleted', 'fell', 'earningsLost']) {
       expect(CHRONICLE_RULES.has(type), type).toBe(true);
     }
   });

@@ -325,7 +325,7 @@ export const MONSTER_GLOAM_RAT = defineMonster({
   glyph: { ch: 'r', color: '#b8a48c' },
   stats: { hp: 3, damage: 0, accuracy: 0, evasion: 1, armor: 0, speed: 110 },
   role: 'skirmisher',
-  danger: { min: 1, max: 4 },
+  danger: { min: 1, peak: 2, max: 4 },
   weight: 10,
   threat: 1,
 });
@@ -341,7 +341,7 @@ export const MONSTER_MOSSLING = defineMonster({
   glyph: { ch: 'g', color: '#7fae5a' },
   stats: { hp: 4, damage: 0, accuracy: 0, evasion: 0, armor: 0, speed: 100 },
   role: 'swarm',
-  danger: { min: 1, max: 6 },
+  danger: { min: 1, peak: 2, max: 5 },
   weight: 8,
   threat: 1,
   sharesTile: true,
@@ -356,11 +356,11 @@ export const MONSTER_MOSS_TENDER = defineMonster({
   hint: 'A hoarse croak from behind the mob, binding its kin’s wounds with wet green moss.',
   tags: ['small_folk'],
   glyph: { ch: 'h', color: '#a8c76a' },
-  stats: { hp: 4, damage: 0, accuracy: 0, evasion: 1, armor: 0, speed: 100 },
+  stats: { hp: 6, damage: 0, accuracy: 0, evasion: 1, armor: 0, speed: 100 },
   role: 'support',
-  mend: { amount: 2, range: 4 },
+  mend: { amount: 3, range: 4 },
   bolster: { status: 'status.emboldened', turns: 5, range: 4 },
-  danger: { min: 2, max: 7 },
+  danger: { min: 2, peak: 3, max: 7 },
   weight: 4,
   threat: 2,
   sharesTile: true,
@@ -378,9 +378,42 @@ export const MONSTER_MIRE_TOAD = defineMonster({
   stats: { hp: 6, damage: 0, accuracy: 0, evasion: 0, armor: 1, speed: 80 },
   role: 'caster',
   bolt: { range: 4, name: 'gob of bog-slime' },
-  danger: { min: 1, max: 5 },
+  danger: { min: 1, peak: 2, max: 5 },
   weight: 6,
   threat: 2,
+});
+
+export const MONSTER_PIT_BADGER = defineMonster({
+  id: 'monster.pit_badger',
+  name: 'Pit badger',
+  description:
+    'A broad-clawed burrower with dusty slate fur and a stubborn, territorial snarl. Once cornered in the upper ' +
+    'workings, it stands its ground and trades blows until one side drops.',
+  hint: 'Broad claws scraping loose shale in the shallow workings, refusing to yield a step.',
+  tags: ['beast'],
+  glyph: { ch: 'b', color: '#c48f65' },
+  stats: { hp: 6, damage: 1, accuracy: 0, evasion: 0, armor: 0, speed: 95 },
+  role: 'brute',
+  danger: { min: 1, peak: 2, max: 4 },
+  weight: 7,
+  threat: 2,
+});
+
+export const MONSTER_SPORE_PUFF = defineMonster({
+  id: 'monster.spore_puff',
+  name: 'Spore puff',
+  description:
+    'A drifting cluster of pale, fist-sized toadstools that scoot along damp flagstones on fibrous threads. They ' +
+    'crowd together in drifts and bump clumsily against warm ankles.',
+  hint: 'Soft pale caps bobbing in damp corners, drifting together like spilled flour.',
+  tags: ['fungus', 'swarm'],
+  glyph: { ch: 'f', color: '#b4c474' },
+  stats: { hp: 3, damage: 0, accuracy: 0, evasion: 1, armor: 0, speed: 95 },
+  role: 'swarm',
+  danger: { min: 1, peak: 2, max: 4 },
+  weight: 6,
+  threat: 1,
+  sharesTile: true,
 });
 
 export const MONSTER_ASHMITE_SWARM = defineMonster({
@@ -392,9 +425,9 @@ export const MONSTER_ASHMITE_SWARM = defineMonster({
   hint: 'A grey, humming haze of tiny mandibles drifting like disturbed hearth-ash.',
   tags: ['swarm'],
   glyph: { ch: 'w', color: '#c9b9a6' },
-  stats: { hp: 3, damage: 0, accuracy: 0, evasion: 2, armor: 0, speed: 120 },
+  stats: { hp: 5, damage: 0, accuracy: 1, evasion: 2, armor: 0, speed: 120 },
   role: 'swarm',
-  danger: { min: 2, max: 8 },
+  danger: { min: 2, peak: 4, max: 7 },
   weight: 6,
   threat: 2,
   sharesTile: true,
@@ -407,11 +440,29 @@ export const MONSTER_BONE_GNAWER = defineMonster({
   hint: 'The dry crack of split marrow echoing from a darkened corner.',
   tags: ['beast'],
   glyph: { ch: 'G', color: '#d8cfb0' },
-  stats: { hp: 8, damage: 0, accuracy: 0, evasion: 0, armor: 0, speed: 100 },
+  stats: { hp: 10, damage: 2, accuracy: 1, evasion: 0, armor: 1, speed: 100 },
   role: 'brute',
-  danger: { min: 3, max: 9 },
+  danger: { min: 3, peak: 4, max: 8 },
   weight: 6,
   threat: 3,
+});
+
+export const MONSTER_LANTERN_CAP = defineMonster({
+  id: 'monster.lantern_cap',
+  name: 'Lantern cap',
+  description:
+    'A tall, waxy shelf-fungus whose crown stores a harsh yellow flare. It keeps across the gallery, lobbing ' +
+    'blinding spore-flashes that leave spots dancing in an explorer’s eyes.',
+  hint: 'A pale yellow glow from a damp pillar before a stinging flare bursts in your eyes.',
+  tags: ['fungus'],
+  glyph: { ch: 'F', color: '#e6c85c' },
+  stats: { hp: 8, damage: 1, accuracy: 1, evasion: 0, armor: 0, speed: 90 },
+  role: 'caster',
+  bolt: { range: 4, name: 'glimmering spore-flash' },
+  bundle: { triggers: [{ on: 'trigger.hit', effects: [{ kind: 'applyStatus', status: 'status.dazzled', turns: 3, to: 'other' }] }] },
+  danger: { min: 3, peak: 4, max: 8 },
+  weight: 5,
+  threat: 4,
 });
 
 export const MONSTER_SLATE_HOUND = defineMonster({
@@ -423,11 +474,99 @@ export const MONSTER_SLATE_HOUND = defineMonster({
   hint: 'Stone-grey flanks loping through the mid-levels, snapping once and wheeling out of reach.',
   tags: ['beast'],
   glyph: { ch: 'd', color: '#8a9bb0' },
-  stats: { hp: 7, damage: 0, accuracy: 0, evasion: 1, armor: 0, speed: 110 },
+  stats: { hp: 9, damage: 2, accuracy: 1, evasion: 2, armor: 0, speed: 110 },
   role: 'skirmisher',
-  danger: { min: 4, max: 10 },
+  danger: { min: 4, peak: 5, max: 9 },
   weight: 5,
   threat: 4,
+});
+
+export const MONSTER_CRYPT_SENTINEL = defineMonster({
+  id: 'monster.crypt_sentinel',
+  name: 'Crypt sentinel',
+  description:
+    'A dry-jointed watchman from forgotten mine shrines, its ribs bound in rusted iron strapping. Unfeeling and ' +
+    'patient, it shrugs off venoms and foul vapors that would drop living flesh.',
+  hint: 'Rusted iron strapping creaking over dry bone, marching steadily through the galleries.',
+  tags: ['undead'],
+  glyph: { ch: 'U', color: '#a8b6c2' },
+  stats: { hp: 13, damage: 2, accuracy: 1, evasion: 0, armor: 2, speed: 85 },
+  role: 'brute',
+  bundle: { modifiers: [{ stat: 'statusResist', op: 'add', value: 30 }] },
+  danger: { min: 3, peak: 5, max: 9 },
+  weight: 5,
+  threat: 4,
+});
+
+export const MONSTER_CLINKER_AUTOMATON = defineMonster({
+  id: 'monster.clinker_automaton',
+  name: 'Clinker automaton',
+  description:
+    'A squat mining rig hammered together from boiler plate and slag-bound gears, still following some old ' +
+    'watch-order. Heavy armor turns hasty edges while its iron-shod piston arm strikes like a hammer.',
+  hint: 'The rhythmic hiss and clank of riveted boiler plate rounding a deep gallery bend.',
+  tags: ['construct'],
+  glyph: { ch: 'C', color: '#b59461' },
+  stats: { hp: 20, damage: 4, accuracy: 2, evasion: 0, armor: 3, speed: 80 },
+  role: 'brute',
+  bundle: { modifiers: [{ stat: 'statusResist', op: 'add', value: 50 }] },
+  danger: { min: 6, peak: 7, max: 11 },
+  weight: 5,
+  threat: 7,
+});
+
+export const MONSTER_FETID_STALKER = defineMonster({
+  id: 'monster.fetid_stalker',
+  name: 'Fetid stalker',
+  description:
+    'A sinewy, six-limbed cave hunter with pale weeping glands behind its fangs. It bounds through the deep ' +
+    'workings, raking with poison-slick claws and springing back into shadow.',
+  hint: 'Six silent pads slipping over wet stone, leaving dark drops of venom on the trail.',
+  tags: ['beast'],
+  glyph: { ch: 'S', color: '#7ea859' },
+  stats: { hp: 15, damage: 3, accuracy: 2, evasion: 3, armor: 1, speed: 120 },
+  role: 'skirmisher',
+  bundle: { triggers: [{ on: 'trigger.hit', effects: [{ kind: 'applyStatus', status: 'status.poisoned', turns: 3, to: 'other' }] }] },
+  danger: { min: 6, peak: 7, max: 12 },
+  weight: 5,
+  threat: 6,
+});
+
+export const MONSTER_TARN_SPITTER = defineMonster({
+  id: 'monster.tarn_spitter',
+  name: 'Tarn spitter',
+  description:
+    'A bloated, blind amphibian bred in stagnant sump-pools deep below the shafts. From across a chamber it hurls ' +
+    'clots of rancid tarn-bile that turn an adventurer’s stomach and slow their stride.',
+  hint: 'A hollow splash from a black sump-pool before sour bile arcs through the dark.',
+  tags: ['beast'],
+  glyph: { ch: 'T', color: '#9ab84b' },
+  stats: { hp: 14, damage: 3, accuracy: 2, evasion: 1, armor: 1, speed: 95 },
+  role: 'caster',
+  bolt: { range: 5, name: 'clot of tarn-bile' },
+  bundle: { triggers: [{ on: 'trigger.hit', effects: [{ kind: 'applyStatus', status: 'status.queasy', turns: 4, to: 'other' }] }] },
+  danger: { min: 6, peak: 8, max: 12 },
+  weight: 5,
+  threat: 6,
+});
+
+export const MONSTER_GLOOMCHANTER = defineMonster({
+  id: 'monster.gloomchanter',
+  name: 'Gloomchanter',
+  description:
+    'A cowl-headed subterranean singer wrapped in damp mineral-stained rags. Keeping behind bigger brutes, it knits ' +
+    'their torn flesh with deep-mine moss-salves and drums them into a fury.',
+  hint: 'A low, resonant hum echoing behind a warband, steadying wounded brutes.',
+  tags: ['small_folk'],
+  glyph: { ch: 'H', color: '#c298d9' },
+  stats: { hp: 14, damage: 2, accuracy: 1, evasion: 2, armor: 1, speed: 100 },
+  role: 'support',
+  mend: { amount: 5, range: 4 },
+  bolster: { status: 'status.emboldened', turns: 6, range: 4 },
+  danger: { min: 6, peak: 8, max: 12 },
+  weight: 4,
+  threat: 6,
+  sharesTile: true,
 });
 
 export const MONSTER_CAVERN_BRUTE = defineMonster({
@@ -438,9 +577,84 @@ export const MONSTER_CAVERN_BRUTE = defineMonster({
   hint: 'Slow, deliberate footsteps in the deep halls that shake dust from the vaulting.',
   tags: ['giant'],
   glyph: { ch: 'B', color: '#c7714f' },
-  stats: { hp: 10, damage: 1, accuracy: 0, evasion: 0, armor: 0, speed: 80 },
+  stats: { hp: 24, damage: 4, accuracy: 2, evasion: 0, armor: 2, speed: 85 },
   role: 'brute',
   danger: { min: 7, peak: 9, max: 99 },
   weight: 4,
   threat: 6,
+});
+
+export const MONSTER_SABLEWING_SWARM = defineMonster({
+  id: 'monster.sablewing_swarm',
+  name: 'Sablewing swarm',
+  description:
+    'A churning cloud of razor-beaked cave midges whose bites carry a slow-burning sting. They pour around ' +
+    'frontline shields to surround any exposed flank.',
+  hint: 'A dark, whistling ribbon of needle-beaks threading the deepest vaults.',
+  tags: ['swarm'],
+  glyph: { ch: 'w', color: '#d67c6b' },
+  stats: { hp: 14, damage: 3, accuracy: 3, evasion: 4, armor: 0, speed: 120 },
+  role: 'swarm',
+  bundle: { triggers: [{ on: 'trigger.hit', effects: [{ kind: 'applyStatus', status: 'status.poisoned', turns: 4, to: 'other' }] }] },
+  danger: { min: 7, peak: 10, max: 15 },
+  weight: 4,
+  threat: 7,
+  sharesTile: true,
+});
+
+export const MONSTER_BASALT_GIANT = defineMonster({
+  id: 'monster.basalt_giant',
+  name: 'Basalt giant',
+  description:
+    'A towering slab-muscled colossus of living grey rock veined with warm mineral sap. Slow to turn but terrible ' +
+    'to trade blows with, its cracked hide knits itself closed breath by breath.',
+  hint: 'Grinding stone joints and the smell of wet slate, mending cracks as fast as steel opens them.',
+  tags: ['giant'],
+  glyph: { ch: 'J', color: '#9c7863' },
+  stats: { hp: 30, damage: 5, accuracy: 3, evasion: 0, armor: 3, speed: 85 },
+  role: 'brute',
+  bundle: { triggers: [{ on: 'trigger.turn_start', effects: [{ kind: 'heal', amount: 1 }] }] },
+  danger: { min: 8, peak: 10, max: 16 },
+  weight: 4,
+  threat: 10,
+});
+
+export const MONSTER_GRAVE_CANTOR = defineMonster({
+  id: 'monster.grave_cantor',
+  name: 'Grave cantor',
+  description:
+    'A tall, shrouded cantor from the deepest ossuary cuts whose silent bell-notes knit shattered bone and whip ' +
+    'nearby horrors into unnatural speed.',
+  hint: 'A cold, voiceless bell-toll behind the abyssal ranks that quickens every dead hand.',
+  tags: ['undead'],
+  glyph: { ch: 'V', color: '#d4a3d9' },
+  stats: { hp: 21, damage: 3, accuracy: 2, evasion: 2, armor: 2, speed: 100 },
+  role: 'support',
+  mend: { amount: 8, range: 4 },
+  bolster: { status: 'status.hasted', turns: 4, range: 4 },
+  bundle: { modifiers: [{ stat: 'statusResist', op: 'add', value: 40 }] },
+  danger: { min: 8, peak: 10, max: 16 },
+  weight: 3,
+  threat: 9,
+});
+
+export const MONSTER_SHROUDWEAVER = defineMonster({
+  id: 'monster.shroudweaver',
+  name: 'Shroudweaver',
+  description:
+    'A tattered, floating remnant wrapped in luminous burial-mist. It drifts back from steel while hurling jagged ' +
+    'bolts of grave-chill that sear the eyes and leave torches guttering.',
+  hint: 'Pale silver threads hanging in the deepest dark, lancing chill across the chamber.',
+  tags: ['undead'],
+  glyph: { ch: 'W', color: '#8f9de0' },
+  stats: { hp: 22, damage: 4, accuracy: 3, evasion: 2, armor: 1, speed: 100 },
+  role: 'caster',
+  bolt: { range: 5, name: 'lance of grave-chill' },
+  bundle: {
+    modifiers: [{ stat: 'statusResist', op: 'add', value: 40 }],
+    triggers: [{ on: 'trigger.hit', effects: [{ kind: 'applyStatus', status: 'status.dazzled', turns: 4, to: 'other' }] }],
+  },
+  danger: { min: 10, peak: 11, max: 18 },
+  weight: 4,
+  threat: 10,
 });

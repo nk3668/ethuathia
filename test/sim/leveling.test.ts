@@ -138,8 +138,9 @@ describe('growth rolls', () => {
 describe('earning XP', () => {
   it('a fixed-seed fight levels the Vanguard with the expected stats', () => {
     const { state, hero } = setup({}, 7);
-    // A cavern brute (threat 6) two steps away: 24 XP, exactly level 3.
-    const brute = spawnMonster(state, 'monster.cavern_brute', 'd1', { x: 3, y: 1 });
+    // A weakened cavern brute (threat 6) two steps away: 24 XP, exactly level 3.
+    const brute = spawnMonster(state, 'monster.cavern_brute', 'd1', { x: 3, y: 1 }) as ActorEntity;
+    brute.actor.hp = 2;
     expect(MONSTERS.get('monster.cavern_brute').threat).toBe(6);
     expect(statValue(state, hero, 'hp')).toBe(20);
     const events = runUntil(state, (es) => es.some((e) => e.type === 'killed'));
@@ -188,7 +189,8 @@ describe('earning XP', () => {
   it('is the same for the same seed', () => {
     const play = () => {
       const { state } = setup({}, 11);
-      spawnMonster(state, 'monster.cavern_brute', 'd1', { x: 3, y: 1 });
+      const brute = spawnMonster(state, 'monster.cavern_brute', 'd1', { x: 3, y: 1 }) as ActorEntity;
+      brute.actor.hp = 2;
       spawnMonster(state, 'monster.mire_toad', 'd1', { x: 5, y: 1 });
       const events = runUntil(state, () => false, 60);
       return { events: events.filter((e) => e.type === 'xpGained' || e.type === 'leveledUp'), growth: state.entities[state.party[0] as EntityId]?.growth };
@@ -284,7 +286,8 @@ describe('shared kill XP', () => {
 describe('the record of it', () => {
   it('tracks XP per actor and per class for class Mastery, and shows it in the snapshot and the log', () => {
     const { state, hero } = setup({}, 7);
-    spawnMonster(state, 'monster.cavern_brute', 'd1', { x: 3, y: 1 });
+    const brute = spawnMonster(state, 'monster.cavern_brute', 'd1', { x: 3, y: 1 }) as ActorEntity;
+    brute.actor.hp = 2;
     const events = runUntil(state, (es) => es.some((e) => e.type === 'leveledUp'));
 
     // What `RunResult.extras['track.xp']` holds once the run ends.
