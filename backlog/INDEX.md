@@ -58,7 +58,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-061](combat-items/ETH-061-items-inventory-core.md) | Items on the floor, inventory, pickup and drop, and in-run gold | combat-items | M1 | P0 | done | M |
 | [ETH-062](sim-core/ETH-062-run-end-summary.md) | Run end (victory, retreat, wipe), run trackers, run summary and auto-restart | sim-core | M1 | P0 | done | M |
 | [ETH-024](quests/ETH-024-contracts-recover-relic.md) | Contract model and the Recover-relic contract; victory needs every contract plus the exit | quests | M1 | P1 | done | M |
-| [ETH-025](quests/ETH-025-return-trip.md) | Return trip: walk back up through explored floors, with light respawns | quests | M1 | P1 | done | M |
+| [ETH-025](quests/ETH-025-return-trip.md) | Return trip: walk back up through explored floors, with light respawns | quests | M1 | P1 | pending-review | M |
 | [ETH-033](characters/ETH-033-attributes-derived-stats.md) | Four attributes and the stats derived from them | characters | M1 | P1 | done | M |
 | [ETH-034](characters/ETH-034-xp-leveling-class-growth.md) | XP, leveling and per-class attribute growth | characters | M1 | P1 | done | M |
 | [ETH-040](bestiary/ETH-040-monster-roles.md) | Monster roles and role behaviors | bestiary | M1 | P1 | done | M |
