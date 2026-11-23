@@ -8,16 +8,18 @@
  * - `RunConfig.maxFountains` caps fountains per floor (the Dry Wells Omen, ETH-067, sets it to 0);
  *   `planFloor` applies it after generation, so the rest of the floor doesn't change.
  * - The `drink` action (in `index.ts`) drinks the fountain the actor stands on.
- * - `act.drink_fountain` walks to the nearest known fountain that isn't dry and drinks;
- *   `cond.hurt_no_healing` is the baseline's reason to: HP below a share of the maximum and no
- *   healing potion carried.
+ * - `act.drink_fountain` walks to the nearest known fountain that isn't dry or known to be harmful
+ *   (ETH-094: skips any fountain whose last observed draught in `floors.observedFountains` has
+ *   `outcome === 'bane'`, without peeking at untouched fountains' hidden draughts, explaining the
+ *   skip in the trace) and drinks; `cond.hurt_no_healing`
+ *   is the baseline's reason to: HP below a share of the maximum and no healing potion carried.
  */
 import { DRAUGHTS, healAmount, ITEMS } from '../../content';
 import type { DraughtDef } from '../../content';
 import type { Pos, Rng } from '../../core';
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
-import type { AiCtx, ConditionDef, ParamParser, Resolved, RuleActionDef } from '../ai/types';
+import type { AiCtx, ConditionDef, ParamParser, ResolveResult, RuleActionDef } from '../ai/types';
 import { featureAt } from '../entities';
 import { readParams } from '../gen/params';
 import { defineGenStep, rectTiles } from '../gen/types';
@@ -30,7 +32,7 @@ import { inventoryOf } from '../items/inventory';
 import { getMemory } from '../perception';
 import { statValue } from '../stats/getStat';
 import { DEFS, Terrain } from '../state';
-import type { ActorEntity, Entity, FloorId, RunState } from '../state';
+import type { ActorEntity, Entity, EntityId, FloorId, RunState } from '../state';
 
 /** A fountain feature part. */
 export type FountainPart = Extract<NonNullable<Entity['feature']>, { kind: 'fountain' }>;
@@ -130,17 +132,61 @@ export function fountainAt(state: RunState, floorId: FloorId, pos: Pos): (Entity
   return e?.feature?.kind === 'fountain' ? (e as Entity & { feature: FountainPart }) : undefined;
 }
 
-/** Where the party remembers fountains that weren't dry when last seen on `floorId`, in tile order. */
-export function knownFlowingFountains(state: RunState, floorId: FloorId): Pos[] {
+/** A remembered flowing fountain on a floor, with the last draught the party observed from it (if any). */
+interface KnownFountain {
+  pos: Pos;
+  observedDraught: string | undefined;
+}
+
+/** Remembered fountains on `floorId` that weren't dry when last seen, in tile order. */
+function rememberedFlowingFountains(state: RunState, floorId: FloorId): KnownFountain[] {
   const memory = getMemory(state, floorId);
   const { width } = memory.terrain;
-  const out: Pos[] = [];
+  const out: KnownFountain[] = [];
   for (const key of Object.keys(memory.features)) {
     const i = Number(key);
     const f = memory.features[i]?.feature;
-    if (f?.kind === 'fountain' && f.draughts.length > 0) out.push({ x: i % width, y: Math.floor(i / width) });
+    if (f?.kind === 'fountain' && f.draughts.length > 0) {
+      const pos = { x: i % width, y: Math.floor(i / width) };
+      const entity = fountainAt(state, floorId, pos);
+      const observedDraught = entity === undefined ? undefined : observedFountainDraught(state, entity.id);
+      out.push({ pos, observedDraught });
+    }
   }
   return out;
+}
+
+/** Where the party remembers fountains that weren't dry when last seen on `floorId`, in tile order. */
+export function knownFlowingFountains(state: RunState, floorId: FloorId): Pos[] {
+  return rememberedFlowingFountains(state, floorId).map((f) => f.pos);
+}
+
+/** True if `draughtId` is a known draught def whose outcome is harmful (`bane`, ETH-094). */
+export function isHarmfulDraught(draughtId: string): boolean {
+  return DRAUGHTS.has(draughtId) && DRAUGHTS.get(draughtId).outcome === 'bane';
+}
+
+/** The last draught id the party observed by drinking from `fountainId`, or `undefined` if untouched (ETH-094). */
+export function observedFountainDraught(state: RunState, fountainId: EntityId): string | undefined {
+  return state.domains.floors.observedFountains[fountainId];
+}
+
+/** True if the party has drunk from `fountainId` and its last observed draught was harmful (`bane`, ETH-094). */
+export function isFountainKnownHarmful(state: RunState, fountainId: EntityId): boolean {
+  const observed = observedFountainDraught(state, fountainId);
+  return observed !== undefined && isHarmfulDraught(observed);
+}
+
+/** Lowercase draught names joined for a trace: "brackish water", "brackish water and bitter water". */
+function draughtNames(ids: readonly string[]): string {
+  const list = ids.map((id) => (DRAUGHTS.has(id) ? DRAUGHTS.get(id).name.toLowerCase() : id));
+  return list.length <= 1 ? (list[0] ?? '') : `${list.slice(0, -1).join(', ')} and ${list.at(-1) as string}`;
+}
+
+/** Trace phrase explaining why one or more fountains were skipped (ETH-094). */
+function describeSkippedFountains(draughtIds: readonly string[]): string {
+  const verb = draughtIds.length === 1 ? 'is' : 'are';
+  return `skipped fountain (${draughtNames(draughtIds)} ${verb} harmful)`;
 }
 
 /**
@@ -185,27 +231,63 @@ export const COND_HURT_NO_HEALING = defineCondition({
   describe: ({ below }) => `HP below ${below}% and no healing potion`,
 });
 
-/** Walk to the nearest known fountain that isn't dry and drink from it. */
+/** Walk to the nearest known fountain that isn't dry or known to be harmful, and drink from it. */
 export const ACT_DRINK_FOUNTAIN = defineRuleAction({
   id: 'act.drink_fountain',
   name: 'Drink from a fountain',
   description:
     'Walk to the nearest fountain on this floor that the party has seen and that isn’t dry, and drink from it. ' +
-    'Most draughts mend wounds, but some do nothing and a few sit badly. Can’t be done before a fountain is found.',
+    'Most draughts mend wounds, but some do nothing and a few sit badly. Skips any fountain whose last observed ' +
+    'draught was harmful. Can’t be done before a usable fountain is found.',
   parse: noParams,
-  resolve(ctx: AiCtx): Resolved | null {
+  resolve(ctx: AiCtx): ResolveResult {
     const { state, actor } = ctx;
     const here = fountainAt(state, actor.floor, actor.pos);
+    let skippedHere: string | null = null;
     if (here !== undefined && here.feature.draughts.length > 0) {
-      return { request: { id: 'drink' }, detail: 'drinking from the fountain' };
+      const observed = observedFountainDraught(state, here.id);
+      if (observed === undefined || !isHarmfulDraught(observed)) {
+        return { request: { id: 'drink' }, detail: 'drinking from the fountain' };
+      }
+      skippedHere = observed;
     }
-    const goals = knownFlowingFountains(state, actor.floor);
-    if (goals.length === 0) return null;
+
+    const remembered = rememberedFlowingFountains(state, actor.floor);
+    const safe: Pos[] = [];
+    const harmful: { pos: Pos; draught: string }[] = [];
+    for (const f of remembered) {
+      if (f.pos.x === actor.pos.x && f.pos.y === actor.pos.y) continue;
+      if (f.observedDraught !== undefined && isHarmfulDraught(f.observedDraught)) {
+        harmful.push({ pos: f.pos, draught: f.observedDraught });
+      } else {
+        safe.push(f.pos);
+      }
+    }
+    if (safe.length === 0 && harmful.length === 0 && skippedHere === null) return null;
+
     const paths = aiPathGrid(ctx);
-    const map = buildGoalMap(paths, goals);
-    const cost = map.get(actor.pos.x, actor.pos.y);
-    if (cost === UNREACHABLE) return null;
-    return followMap(ctx, paths, map, `heading for a fountain, ${cost} ${cost === 1 ? 'turn' : 'turns'} away`);
+    const safeMap = safe.length > 0 ? buildGoalMap(paths, safe) : null;
+    const safeCost = safeMap === null ? UNREACHABLE : safeMap.get(actor.pos.x, actor.pos.y);
+
+    const skippedDraughts: string[] = [];
+    const note = (id: string) => {
+      if (!skippedDraughts.includes(id)) skippedDraughts.push(id);
+    };
+    if (skippedHere !== null) note(skippedHere);
+    for (const f of harmful) {
+      const cost = buildGoalMap(paths, [f.pos]).get(actor.pos.x, actor.pos.y);
+      if (cost !== UNREACHABLE && (safeCost === UNREACHABLE || cost <= safeCost)) note(f.draught);
+    }
+
+    const skippedNote = skippedDraughts.length > 0 ? describeSkippedFountains(skippedDraughts) : undefined;
+    if (safeMap !== null && safeCost !== UNREACHABLE) {
+      const base = `heading for a fountain, ${safeCost} ${safeCost === 1 ? 'turn' : 'turns'} away`;
+      const step = followMap(ctx, paths, safeMap, base);
+      if (step === null) return skippedNote === undefined ? null : { skipped: skippedNote };
+      return skippedNote === undefined ? step : { ...step, skipped: skippedNote };
+    }
+
+    return skippedNote === undefined ? null : { skipped: skippedNote };
   },
   describe: () => 'drink from the nearest fountain',
 });
@@ -217,8 +299,9 @@ export const FOUNTAIN_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_DRINK_FOUNTA
 // Invariants
 
 /**
- * Every fountain holds only known draught ids, sits on a floor tile, and no floor has more
- * fountains than `RunConfig.maxFountains`.
+ * Every fountain holds only known draught ids, sits on a floor tile, no floor has more
+ * fountains than `RunConfig.maxFountains`, and `observedFountains` maps fountain entities to known
+ * draught ids.
  */
 registerInvariant('floors.fountains', (state) => {
   const problems: string[] = [];
@@ -237,6 +320,20 @@ registerInvariant('floors.fountains', (state) => {
   if (max !== undefined) {
     for (const [floor, n] of Object.entries(counts)) {
       if (n > max) problems.push(`floor "${floor}" has ${n} fountains, the config allows ${max}`);
+    }
+  }
+  const observed = state.domains.floors.observedFountains;
+  if (typeof observed !== 'object' || observed === null || Array.isArray(observed)) {
+    problems.push('floors state has no observedFountains map');
+  } else {
+    for (const [key, draughtId] of Object.entries(observed)) {
+      const entity = state.entities[Number(key)];
+      if (entity === undefined || String(entity.id) !== key || entity.feature?.kind !== 'fountain') {
+        problems.push(`observedFountains references "${key}", which is not a fountain`);
+      }
+      if (typeof draughtId !== 'string' || !DRAUGHTS.has(draughtId)) {
+        problems.push(`observedFountains for fountain ${key} holds unknown draught "${String(draughtId)}"`);
+      }
     }
   }
   return problems;

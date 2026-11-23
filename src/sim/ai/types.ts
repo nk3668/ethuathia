@@ -166,7 +166,21 @@ export interface Resolved {
   waitingFor?: EntityId;
   /** The tile the action is heading for or targeting, if any (`Intent.goal`, ETH-019). */
   goal?: Pos;
+  /** Optional note explaining a closer/alternative option skipped while taking this action (ETH-094). */
+  skipped?: string;
 }
+
+/**
+ * Why a rule action chose not to act when its condition held (ETH-094): the engine moves on to the
+ * next rule and appends `skipped` to the trace of whichever rule fires, so the player sees why the
+ * earlier rule was passed over.
+ */
+export interface RuleSkipped {
+  skipped: string;
+}
+
+/** What `RuleActionDef.resolve` returns: an action to take, a skip reason for the trace, or `null`. */
+export type ResolveResult = Resolved | RuleSkipped | null;
 
 /**
  * A rule condition, as registered in `CONDITIONS`. `name` and `description` are its Codex and
@@ -198,8 +212,8 @@ export interface RuleActionDef extends Def {
   readonly idle: boolean;
   /** Why `params` are malformed, or `null` if they are fine. */
   check(params: unknown): string | null;
-  /** The action to take now, or `null` if this can't be done right now. Changes nothing. */
-  resolve(ctx: AiCtx, params: unknown): Resolved | null;
+  /** The action to take now, a skip reason for the trace, or `null` if this can't be done right now. Changes nothing. */
+  resolve(ctx: AiCtx, params: unknown): ResolveResult;
   /** The rule row's text for these params, e.g. "explore the nearest unknown ground". */
   describe(params: unknown): string;
 }
@@ -269,7 +283,7 @@ export function defineRuleAction<P>(
   def: DefText & {
     idle?: boolean;
     parse: ParamParser<P>;
-    resolve(ctx: AiCtx, params: P): Resolved | null;
+    resolve(ctx: AiCtx, params: P): ResolveResult;
     describe(params: P): string;
   },
 ): RuleActionDef {

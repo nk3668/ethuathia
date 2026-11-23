@@ -143,7 +143,8 @@ export function logLines(events: readonly { seq: number; event: SimEvent }[], na
   for (const { seq, event } of events) {
     if (textOf(event).quiet === true) continue;
     if (event.type === 'ruleFired') {
-      const goal = `${event.rule.set}:${event.rule.index}:${event.action}`;
+      const skipped = event.skipped === undefined || event.skipped.length === 0 ? '' : `|${event.skipped.join('|')}`;
+      const goal = `${event.rule.set}:${event.rule.index}:${event.action}${skipped}`;
       const key = `${goal}:${event.detail}`;
       if (goals.get(event.actor) === goal) {
         if (run !== null && run.actor === event.actor) {
