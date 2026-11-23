@@ -29,4 +29,4 @@ Confidence that the sim is deterministic and that balance changes are measured, 
 - [x] [ETH-056 Safety net: state invariants, soak test, app-boot smoke test and sim compare](ETH-056-invariants-soak-compare.md)
 - [x] [ETH-076 Sim compare warns when its base has moved since the branch was cut](ETH-076-sim-compare-stale-base-warning.md)
 - [ ] [ETH-080 Systemic monster, loot and progression balance pass (M1.5 capstone)](ETH-080-monster-balance-pass.md)
-- [ ] [ETH-131 Cross-domain contract and property-based test guards](ETH-131-contract-and-property-guards.md)
+- [x] [ETH-131 Cross-domain contract and property-based test guards](ETH-131-contract-and-property-guards.md)

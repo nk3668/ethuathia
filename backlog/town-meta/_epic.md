@@ -36,7 +36,7 @@ More items are added when M2 becomes the current milestone.
 - [ ] [ETH-071 Guild Hall doctrine: prioritize clearing floors or prioritize the stairs](ETH-071-doctrine-clear-or-stairs.md)
 - [x] [ETH-074 Town buildings unlocked by milestones](ETH-074-locked-buildings.md)
 - [ ] [ETH-083 Leftover gold converts to Trophies when the party exits](ETH-083-gold-to-trophies.md)
-- [ ] [ETH-085 Depth-weighted Renown rewards](ETH-085-depth-weighted-renown.md)
+- [x] [ETH-085 Depth-weighted Renown rewards](ETH-085-depth-weighted-renown.md)
 - [ ] [ETH-086 Split upgrade trees into permanent Foundations and free Tactics](ETH-086-foundations-and-tactics-trees.md)
 - [ ] [ETH-093 Unlock town buildings by finishing a quest for each](ETH-093-building-unlock-quests.md)
 - [ ] [ETH-108 Guild trophy room](ETH-108-guild-trophy-room.md)

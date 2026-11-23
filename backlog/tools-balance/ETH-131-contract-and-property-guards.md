@@ -2,7 +2,7 @@
 id: ETH-131
 title: Cross-domain contract and property-based test guards (honesty, secrecy, potency, discoverability)
 type: chore
-status: pending-review
+status: done
 priority: P2
 milestone: M2
 epic: tools-balance
@@ -49,3 +49,4 @@ Individual unit tests verify the paths an author remembered to think about, but 
 - 2026-11-23: Implemented all 6 contract and property-based guards (`test/sim/enchantIdentify.test.ts`, `test/ui/logText.test.ts`, `test/sim/stats.test.ts`, `test/ui/codex.test.tsx`, `test/sim/itemProperties.test.ts`, `src/core/range.ts` + `test/core/range.test.ts`), fixed two real hardening findings surfaced by the guards (`PROP_IDENTIFIED.value` unknown-type value leak via `UNKNOWN_TYPE_VALUE`, and `PROP_ORIGIN` rejecting `{}`), and documented critical-service testing criteria in `docs/ARCHITECTURE.md` §11.6, `backlog/README.md`, and `CLAUDE.md`.
 - 2026-11-23: Added branch/PR sequencing note (`eth-131-contract-property-guards` awaits rebase onto `main` after PRs #83 and #84 merge).
 - 2026-11-23: Rebased onto main (bundled with docs/DIFFICULTY_PHILOSOPHY.md) and merged to main; PENDING REVIEW.
+- 2026-11-23: Reviewed; done. No major issues. Minor: the Codex reachability test feeds in hand-built events, so it doesn't prove the sim ever spawns each entry. The gear identification leak it missed is filed as ETH-142.

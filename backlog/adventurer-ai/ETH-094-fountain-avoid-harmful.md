@@ -2,7 +2,7 @@
 id: ETH-094
 title: The AI avoids fountain draughts known to be harmful
 type: feature
-status: pending-review
+status: done
 priority: P3
 milestone: M4
 epic: adventurer-ai
@@ -31,3 +31,4 @@ Decided in Nate's interview answers (2026-11-18).
 - 2026-11-20: Updated after review to base avoidance on per-fountain observed draughts (`state.domains.floors.observedFountains: Record<EntityId, string>`, `STATE_VERSION` 27) rather than peeking at a fountain's hidden `draughts[0]` queue. Untouched fountains are never peeked at; drinking records the last draught observed from that fountain, and `act.drink_fountain` skips any fountain whose last observed draught has `outcome === 'bane'`.
   - (default) Skip explanations travel as `RuleSkipped` notes appended to the fired `ruleFired.detail` and `ai.memory.intent.detail` (so the party card shows them and consecutive identical decisions still fold in `logLines`) — alternative: emit a separate `ruleSkipped` event each turn.
 - 2026-11-23: Rebased onto main (STATE_VERSION 29) and merged to main (PR #81); PENDING REVIEW.
+- 2026-11-23: Reviewed; done. No major issues; avoidance reads only draughts the party has seen and doesn't peek at hidden ones.
