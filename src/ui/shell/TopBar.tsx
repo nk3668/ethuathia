@@ -223,8 +223,8 @@ function Possession() {
 }
 
 /**
- * "Floor 3/10 · Turn 4,812" from the latest snapshot: the floor the map shows out of the
- * dungeon's depth. "No run" before the first snapshot.
+ * "Floor 3 · Turn 4,812" (or "Floor 3/10 · Turn 4,812" once revealed) from the latest snapshot.
+ * "No run" before the first snapshot.
  */
 function RunPosition() {
   const depth = useSimStore((s) => s.snapshot?.floor.depth);
@@ -234,23 +234,27 @@ function RunPosition() {
   if (depth === undefined || total === undefined || deepest === undefined || turn === undefined) {
     return <p className={styles.position}>No run</p>;
   }
+  const floorLabel = total === null ? `Floor ${depth}` : `Floor ${depth}/${total}`;
+  const floorHeading = total === null ? `Floor ${depth}` : `Floor ${depth} of ${total}`;
+  const floorAbout =
+    total === null
+      ? `The floor the map shows. Deepest reached: floor ${deepest}.`
+      : `The floor the map shows, out of the dungeon\u2019s ${total} floors. Deepest reached: floor ${deepest}.`;
   return (
     <Tooltip
       placement="bottom"
       content={
         <>
-          <strong>
-            Floor {depth} of {total}
-          </strong>
+          <strong>{floorHeading}</strong>
           <br />
-          The floor the map shows, out of the dungeon&rsquo;s {total} floors. Deepest reached: floor {deepest}.
+          {floorAbout}
           <br />
           Turn {TURN_FORMAT.format(turn)}: game time since the run began.
         </>
       }
     >
       <p tabIndex={0} className={styles.position}>
-        Floor {depth}/{total} · Turn {TURN_FORMAT.format(turn)}
+        {floorLabel} · Turn {TURN_FORMAT.format(turn)}
       </p>
     </Tooltip>
   );

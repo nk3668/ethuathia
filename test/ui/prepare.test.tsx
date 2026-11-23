@@ -44,7 +44,7 @@ describe('PrepareScreen', () => {
 
     await user.click(screen.getByRole('button', { name: 'Descend' }));
     expect(configs).toHaveLength(1);
-    expect(configs[0]).toMatchObject({ party: [{ classId: 'class.vanguard' }], depth: 10 });
+    expect(configs[0]).toMatchObject({ party: [{ classId: 'class.vanguard' }], dungeonId: 'dungeon.old_delve' });
     off();
   });
 

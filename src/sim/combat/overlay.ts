@@ -194,6 +194,16 @@ export const PROVIDER_OVERLAY: StatProvider = {
   },
 };
 
+/** Innate passives from a monster's `MonsterDef.bundle` (ETH-133), credited to its species def. */
+export const SOURCE_MONSTER_INNATE: BundleSource = {
+  id: 'combat.innate',
+  visit(_state, entity, visit) {
+    if (!MONSTERS.has(entity.def)) return;
+    const def = MONSTERS.get(entity.def);
+    if (def.bundle !== undefined) visit(def.bundle, def.id, 1, def.name);
+  },
+};
+
 /** The overlay's bundles: each template's, credited to the template, then its own. Their triggers fire too. */
 export const SOURCE_TEMPLATES: BundleSource = {
   id: 'combat.templates',
@@ -205,21 +215,25 @@ export const SOURCE_TEMPLATES: BundleSource = {
 
 /**
  * The max HP of a new monster of `def` with `overlay`, worked out from the def and the overlay
- * alone (no run state), the way `statValue` would: base, then the overlay's changes, then the
- * template and overlay bundles' HP modifiers. Generation uses it to spawn monsters at full HP.
+ * alone (no run state), the way `statValue` would: base, then innate bundle HP modifiers, then
+ * the overlay's changes, then the template and overlay bundles' HP modifiers. Generation uses it
+ * to spawn monsters at full HP.
  */
 export function spawnHp(def: MonsterDef, overlay: MonsterOverlay | undefined): number {
-  if (overlay === undefined) return def.stats.hp;
+  if (overlay === undefined && def.bundle === undefined) return def.stats.hp;
   let add = def.stats.hp;
   let mul = 1;
   const sink: StatSink = (op, value) => {
     if (op === 'add') add += value;
     else mul *= value;
   };
-  overlayStatParts(def, overlay, 'hp', sink);
-  overlayBundles(def, overlay, (bundle, _source, potency) => {
-    for (const m of bundle.modifiers ?? []) if (m.stat === 'hp') sink(m.op, scaleModifier(m.op, m.value, potency), def.id);
-  });
+  if (overlay !== undefined) overlayStatParts(def, overlay, 'hp', sink);
+  for (const m of def.bundle?.modifiers ?? []) if (m.stat === 'hp') sink(m.op, m.value, def.id);
+  if (overlay !== undefined) {
+    overlayBundles(def, overlay, (bundle, _source, potency) => {
+      for (const m of bundle.modifiers ?? []) if (m.stat === 'hp') sink(m.op, scaleModifier(m.op, m.value, potency), def.id);
+    });
+  }
   return Math.max(STAT_INFO.hp.min, Math.round(add * mul));
 }
 

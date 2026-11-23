@@ -8,7 +8,18 @@ export default defineCodexRenderer({
   order: 65,
   alwaysKnown: true,
   fields: (def) => [
-    { label: 'Depth', value: `${def.depth} floors`, hint: 'How many floors down the bottom is.', key: true },
+    {
+      label: 'Depth',
+      value: def.depth.min === def.depth.max ? `${def.depth.min} ${def.depth.min === 1 ? 'floor' : 'floors'}` : `${def.depth.min}–${def.depth.max} floors`,
+      hint: 'How many floors down the bottom lies.',
+      key: true,
+    },
+    {
+      label: 'Danger',
+      value: def.danger.perFloor === 0 ? String(def.danger.start) : `${def.danger.start} (+${def.danger.perFloor}/floor)`,
+      hint: 'Starting Danger rating and how fast threats escalate per floor.',
+      key: true,
+    },
     { label: 'Floors', value: findDef(def.floorType)?.name ?? def.floorType, hint: 'The kind of floor it is built from.', key: true },
   ],
 });

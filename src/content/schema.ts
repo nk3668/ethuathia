@@ -12,6 +12,9 @@ z.config({ jitless: true });
 /** One part of a namespaced id: lowercase letters, digits and underscores, starting with a letter. */
 const ID_PART = /^[a-z][a-z0-9_]*$/;
 
+/** A content tag: lowercase letters, digits and underscores, starting with a letter. */
+export const tagSchema = z.string().regex(ID_PART, 'must be lowercase letters, digits and _');
+
 /** An id in `prefix`'s namespace, e.g. `idSchema('class')` accepts `class.vanguard`. */
 export function idSchema(prefix: string): z.ZodString {
   const pattern = new RegExp(`^${prefix}\\.[a-z][a-z0-9_]*$`);
@@ -25,7 +28,7 @@ export function defShape(prefix: string) {
     name: z.string().trim().min(1, 'must not be empty'),
     description: z.string().trim().min(1, 'must not be empty'),
     hint: z.string().trim().min(1, 'must not be empty').optional(),
-    tags: z.array(z.string().regex(ID_PART, 'must be lowercase letters, digits and _')),
+    tags: z.array(tagSchema),
   };
 }
 

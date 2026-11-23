@@ -194,8 +194,9 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     }
     steps++;
     snap = session.snapshot();
+    const bottom = session.debugDungeonDepth();
     if (end !== null) {
-      outcome = snap.domains.floors.deepest === snap.domains.floors.depth ? 'done' : 'early';
+      outcome = snap.domains.floors.deepest === bottom ? 'done' : 'early';
       break;
     }
     if (!idle(snap)) {
@@ -205,7 +206,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     idleSince ??= snap.turn;
     // A dropped goal comes back after DROP_TURNS, so waiting longer than that means it is over.
     if (snap.turn - idleSince > DROP_TURNS) {
-      outcome = snap.domains.floors.deepest === snap.domains.floors.depth ? 'done' : 'idle';
+      outcome = snap.domains.floors.deepest === bottom ? 'done' : 'idle';
       break;
     }
   }
@@ -229,7 +230,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     steps,
     explored: snap.floor.explored,
     depth: snap.domains.floors.deepest,
-    bottom: snap.domains.floors.depth,
+    bottom: session.debugDungeonDepth(),
     floors,
     items,
     gold: snap.domains.items.gold,

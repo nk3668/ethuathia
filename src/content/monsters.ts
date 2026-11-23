@@ -11,6 +11,8 @@
 import { z } from 'zod';
 import { Registry } from '../core';
 import type { Def } from '../core';
+import { bundleRefs, bundleSchema } from './bundles';
+import type { Bundle } from './bundles';
 import type { ContentKind, ContentRef } from './kind';
 import { defShape, glyphSchema, idSchema, nonNegativeInt, positiveInt } from './schema';
 import type { Glyph } from './schema';
@@ -162,6 +164,13 @@ export interface BolsterPower {
   readonly range: number;
 }
 
+/** Open-ended Danger band over which a monster appears, peaking at `peak` (default `(min + max) / 2`). */
+export interface DangerRange {
+  readonly min: number;
+  readonly peak?: number;
+  readonly max: number;
+}
+
 export interface MonsterDef extends Def {
   /** How it is drawn on the map and in the Codex. The map colors it from this. */
   readonly glyph: Glyph;
@@ -179,9 +188,11 @@ export interface MonsterDef extends Def {
   readonly mend?: MendPower;
   /** The status `act.bolster_ally` hands out. */
   readonly bolster?: BolsterPower;
-  /** The floors it appears on, by depth, both ends included. */
-  readonly depth: { readonly min: number; readonly max: number };
-  /** How often it is picked among the monsters of a depth, relative to the others. */
+  /** The Danger band it appears in, both ends included, with optional peak weight center. */
+  readonly danger: DangerRange;
+  /** Optional innate passives (stat modifiers and hit/turn triggers) credited to this species. */
+  readonly bundle?: Bundle;
+  /** How often it is picked among the monsters of a Danger rating, relative to the others. */
   readonly weight: number;
   /** How dangerous it is, for rewards (Trophies weigh kills by it) and reports. */
   readonly threat: number;
@@ -247,6 +258,8 @@ export const boltSchema = z.strictObject({ range: z.number().int().min(2).max(12
 export const mendSchema = z.strictObject({ amount: positiveInt, range: positiveInt });
 export const bolsterSchema = z.strictObject({ status: idSchema('status'), turns: positiveInt, range: positiveInt });
 
+const dangerNumber = z.number().refine(Number.isFinite, 'must be a finite number').positive('must be above 0');
+
 export const MONSTER_KIND: ContentKind<MonsterDef> = {
   registry: MONSTERS,
   schema: z
@@ -267,12 +280,17 @@ export const MONSTER_KIND: ContentKind<MonsterDef> = {
       bolt: boltSchema.optional(),
       mend: mendSchema.optional(),
       bolster: bolsterSchema.optional(),
-      depth: z.strictObject({ min: positiveInt, max: positiveInt }),
+      danger: z.strictObject({ min: dangerNumber, peak: dangerNumber.optional(), max: dangerNumber }),
+      bundle: bundleSchema.optional(),
       weight: positiveInt,
       threat: positiveInt,
       sharesTile: z.boolean().optional(),
     })
-    .refine((def) => def.depth.min <= def.depth.max, { message: 'depth.min must not be above depth.max', path: ['depth'] })
+    .refine((def) => def.danger.min <= def.danger.max, { message: 'danger.min must not be above danger.max', path: ['danger'] })
+    .refine((def) => def.danger.peak === undefined || (def.danger.peak >= def.danger.min && def.danger.peak <= def.danger.max), {
+      message: 'danger.peak must lie between danger.min and danger.max',
+      path: ['danger', 'peak'],
+    })
     .refine((def) => def.role !== 'caster' || def.bolt !== undefined, { message: 'a caster needs a bolt', path: ['bolt'] })
     .refine((def) => def.role !== 'support' || def.mend !== undefined || def.bolster !== undefined, {
       message: 'a support needs mend or bolster',
@@ -284,6 +302,7 @@ export const MONSTER_KIND: ContentKind<MonsterDef> = {
       { path: `rules[${i}].action.id`, kind: 'rule action', id: rule.action.id },
     ]),
     ...(def.bolster === undefined ? [] : [{ path: 'bolster.status', kind: 'status', id: def.bolster.status }]),
+    ...(def.bundle === undefined ? [] : bundleRefs('bundle', def.bundle)),
   ],
 };
 
@@ -306,7 +325,7 @@ export const MONSTER_GLOAM_RAT = defineMonster({
   glyph: { ch: 'r', color: '#b8a48c' },
   stats: { hp: 3, damage: 0, accuracy: 0, evasion: 1, armor: 0, speed: 110 },
   role: 'skirmisher',
-  depth: { min: 1, max: 4 },
+  danger: { min: 1, max: 4 },
   weight: 10,
   threat: 1,
 });
@@ -322,7 +341,7 @@ export const MONSTER_MOSSLING = defineMonster({
   glyph: { ch: 'g', color: '#7fae5a' },
   stats: { hp: 4, damage: 0, accuracy: 0, evasion: 0, armor: 0, speed: 100 },
   role: 'swarm',
-  depth: { min: 1, max: 6 },
+  danger: { min: 1, max: 6 },
   weight: 8,
   threat: 1,
   sharesTile: true,
@@ -341,7 +360,7 @@ export const MONSTER_MOSS_TENDER = defineMonster({
   role: 'support',
   mend: { amount: 2, range: 4 },
   bolster: { status: 'status.emboldened', turns: 5, range: 4 },
-  depth: { min: 2, max: 7 },
+  danger: { min: 2, max: 7 },
   weight: 4,
   threat: 2,
   sharesTile: true,
@@ -359,7 +378,7 @@ export const MONSTER_MIRE_TOAD = defineMonster({
   stats: { hp: 6, damage: 0, accuracy: 0, evasion: 0, armor: 1, speed: 80 },
   role: 'caster',
   bolt: { range: 4, name: 'gob of bog-slime' },
-  depth: { min: 1, max: 5 },
+  danger: { min: 1, max: 5 },
   weight: 6,
   threat: 2,
 });
@@ -375,7 +394,7 @@ export const MONSTER_ASHMITE_SWARM = defineMonster({
   glyph: { ch: 'w', color: '#c9b9a6' },
   stats: { hp: 3, damage: 0, accuracy: 0, evasion: 2, armor: 0, speed: 120 },
   role: 'swarm',
-  depth: { min: 2, max: 8 },
+  danger: { min: 2, max: 8 },
   weight: 6,
   threat: 2,
   sharesTile: true,
@@ -390,7 +409,7 @@ export const MONSTER_BONE_GNAWER = defineMonster({
   glyph: { ch: 'G', color: '#d8cfb0' },
   stats: { hp: 8, damage: 0, accuracy: 0, evasion: 0, armor: 0, speed: 100 },
   role: 'brute',
-  depth: { min: 3, max: 9 },
+  danger: { min: 3, max: 9 },
   weight: 6,
   threat: 3,
 });
@@ -406,7 +425,7 @@ export const MONSTER_SLATE_HOUND = defineMonster({
   glyph: { ch: 'd', color: '#8a9bb0' },
   stats: { hp: 7, damage: 0, accuracy: 0, evasion: 1, armor: 0, speed: 110 },
   role: 'skirmisher',
-  depth: { min: 4, max: 10 },
+  danger: { min: 4, max: 10 },
   weight: 5,
   threat: 4,
 });
@@ -421,7 +440,7 @@ export const MONSTER_CAVERN_BRUTE = defineMonster({
   glyph: { ch: 'B', color: '#c7714f' },
   stats: { hp: 10, damage: 1, accuracy: 0, evasion: 0, armor: 0, speed: 80 },
   role: 'brute',
-  depth: { min: 7, max: 99 },
+  danger: { min: 7, peak: 9, max: 99 },
   weight: 4,
   threat: 6,
 });

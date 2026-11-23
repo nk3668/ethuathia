@@ -5,9 +5,10 @@
 import { clampRange, clonePlain, Grid, Rng, seedState } from '../../core';
 import type { Pos } from '../../core';
 import { MONSTERS, monsterRules, templateDefs } from '../../content';
-import type { MonsterDef } from '../../content';
+import type { DungeonDef, DungeonEcology, MonsterDef } from '../../content';
 import { newAiPart } from '../ai/types';
 import { actorsAt, addEntity, blockerAt, featureAt, getFloor } from '../entities';
+import { floorDanger, runDungeon } from '../floors/dungeon';
 import type { NewEntity } from '../entities';
 import { readParams } from '../gen/params';
 import { defineGenStep, rectTiles } from '../gen/types';
@@ -72,9 +73,32 @@ export function spawnMonster(state: RunState, defId: string, floorId: FloorId, p
   return monster;
 }
 
-/** The monster defs that can appear at `depth`, in registration order. */
-export function monstersForDepth(depth: number): MonsterDef[] {
-  return MONSTERS.all().filter((m) => m.depth.min <= depth && depth <= m.depth.max);
+function ecologyMatches(def: MonsterDef, ecology?: DungeonEcology): boolean {
+  if (ecology === undefined) return true;
+  if (ecology.allowTags !== undefined && !ecology.allowTags.some((t) => def.tags.includes(t))) return false;
+  if (ecology.denyTags !== undefined && ecology.denyTags.some((t) => def.tags.includes(t))) return false;
+  return true;
+}
+
+/**
+ * Effective spawn weight of `def` at `danger` under optional `ecology`: linearly tapers from `1.0`
+ * at `peak ?? (min + max) / 2` down to `0.25` at the furthest edge inside `[min, max]` (`0`
+ * outside or when excluded by `ecology`), multiplied by `def.weight` and ecology tag weights.
+ */
+export function monsterWeightAt(def: MonsterDef, danger: number, ecology?: DungeonEcology): number {
+  const { min, max } = def.danger;
+  if (danger < min || danger > max || !ecologyMatches(def, ecology)) return 0;
+  const peak = def.danger.peak ?? (min + max) / 2;
+  const span = Math.max(peak - min, max - peak);
+  const taper = span <= 0 ? 1 : 1 - 0.75 * (Math.abs(danger - peak) / span);
+  const tagMul =
+    ecology?.tagWeights === undefined ? 1 : def.tags.reduce((mul, tag) => mul * (ecology.tagWeights?.[tag] ?? 1), 1);
+  return Math.max(0, def.weight * taper * tagMul);
+}
+
+/** The monster defs that can appear at `danger` under optional `ecology`, in registration order. */
+export function monstersForDanger(danger: number, ecology?: DungeonEcology): MonsterDef[] {
+  return MONSTERS.all().filter((m) => monsterWeightAt(m, danger, ecology) > 0);
 }
 
 /** One def picked from `defs` with chance proportional to `weight`. One draw. */
@@ -88,6 +112,48 @@ export function pickWeighted(defs: readonly MonsterDef[], rng: Rng): MonsterDef 
   return defs[defs.length - 1] as MonsterDef;
 }
 
+/** One def picked from `defs` proportional to `monsterWeightAt(d, danger, ecology)`. One draw. */
+export function pickWeightedForDanger(
+  defs: readonly MonsterDef[],
+  danger: number,
+  rng: Rng,
+  ecology?: DungeonEcology,
+): MonsterDef {
+  const weights = defs.map((d) => monsterWeightAt(d, danger, ecology));
+  const total = weights.reduce((n, w) => n + w, 0);
+  if (total <= 0) return pickWeighted(defs, rng);
+  let roll = rng.float() * total;
+  for (let i = 0; i < defs.length; i++) {
+    roll -= weights[i] as number;
+    if (roll < 0) return defs[i] as MonsterDef;
+  }
+  return defs[defs.length - 1] as MonsterDef;
+}
+
+/**
+ * Pure Wave-2 extension hook: resolves template spawn probability from `dungeon.encounters.templateRamp`
+ * at `danger`, or returns `fallback` (default `0`) when no ramp is configured.
+ */
+export function templateChanceFor(dungeon: DungeonDef | undefined, danger: number, fallback = 0): number {
+  const ramp = dungeon?.encounters?.templateRamp;
+  if (ramp === undefined) return Math.max(0, Math.min(1, fallback));
+  if (danger < ramp.minDanger) return 0;
+  const raw = ramp.base + (danger - ramp.minDanger) * ramp.perDanger;
+  return Math.max(0, Math.min(1, Math.min(ramp.max, raw)));
+}
+
+/**
+ * Pure Wave-2 extension hook: rolls out-of-depth (OOD) Danger elevation when `ETH-134` enables it.
+ * Returns `{ danger, ood: false }` until `ETH-134`.
+ */
+export function rollOodDanger(
+  _dungeon: DungeonDef | undefined,
+  danger: number,
+  _rng: Rng,
+): { danger: number; ood: boolean } {
+  return { danger, ood: false };
+}
+
 /** Tunable options for repopulating an already-visited floor (ETH-025). */
 export interface RespawnOptions {
   /** Minimum monsters to spawn (defaults scale lightly with depth). */
@@ -95,7 +161,7 @@ export interface RespawnOptions {
   /** Maximum monsters to spawn (defaults scale lightly with depth). */
   max?: number;
   /**
-   * Added to the floor's depth when picking return-trip monsters, so climbing back out pits the
+   * Added to the floor's Danger when picking return-trip monsters, so climbing back out pits the
    * party against stronger creatures than it met going down (default 1; tuned in ETH-080).
    */
   depthShift?: number;
@@ -127,13 +193,16 @@ export function respawnFloor(
   const floor = getFloor(state, floorId);
   const depth = floor.depth;
   const depthShift = options.depthShift ?? DEFAULT_RESPAWN_DEPTH_SHIFT;
+  const ecology = runDungeon(state).ecology;
+  const baseDanger = floorDanger(state, depth);
   const allDefs = MONSTERS.all();
   if (allDefs.length === 0) return 0;
-  const maxDefDepth = allDefs.reduce((m, d) => Math.max(m, d.depth.max), depth);
-  const effectiveDepth = Math.max(1, Math.min(maxDefDepth, depth + depthShift));
-  const defs = monstersForDepth(effectiveDepth);
-  const pool = defs.length > 0 ? defs : monstersForDepth(depth);
+  const maxDefDanger = allDefs.reduce((m, d) => Math.max(m, d.danger.max), baseDanger);
+  const effectiveDanger = Math.max(1, Math.min(maxDefDanger, baseDanger + depthShift));
+  const defs = monstersForDanger(effectiveDanger, ecology);
+  const pool = defs.length > 0 ? defs : monstersForDanger(baseDanger, ecology);
   if (pool.length === 0) return 0;
+  const poolDanger = defs.length > 0 ? effectiveDanger : baseDanger;
 
   const defaultMin = Math.max(1, Math.round((1 + 0.4 * depth) * 0.4));
   const defaultMax = Math.max(defaultMin, Math.round((1 + 0.4 * depth) * 0.7));
@@ -166,7 +235,7 @@ export function respawnFloor(
 
   let placed = 0;
   for (let i = 0; i < count && tiles.length > 0; i++) {
-    const def = pickWeighted(pool, rng);
+    const def = pickWeightedForDanger(pool, poolDanger, rng, ecology);
     const at = rng.int(0, tiles.length - 1);
     const [pos] = tiles.splice(at, 1) as [Pos];
     const templates = rollTemplates(def, rng, templateChance);
@@ -178,16 +247,17 @@ export function respawnFloor(
 
 /**
  * Stocks a floor with monsters: `base + perDepth × depth` of them (rounded), each a def that can
- * appear at the floor's depth picked by weight, on a free room tile at least `stairsDistance`
- * tiles from every stairs, so nobody arrives into a fight. Draws only from the floor's own RNG.
- * With `templateChance` above 0 (ETH-117), each monster may get up to `MAX_TEMPLATES` templates
- * (`rollTemplates`); at 0, the default, nothing more is drawn, so floors come out as before.
+ * appear at the floor's Danger picked by peak-weighted selection, on a free room tile at least
+ * `stairsDistance` tiles from every stairs, so nobody arrives into a fight. Draws only from the
+ * floor's own RNG. With `templateChance` above 0 (ETH-117), each monster may get up to
+ * `MAX_TEMPLATES` templates (`rollTemplates`); at 0, the default, nothing more is drawn, so floors
+ * come out as before.
  */
 export const GEN_MONSTERS = defineGenStep({
   id: 'gen.monsters',
   name: 'Place monsters',
   description:
-    'Puts monsters in the rooms, more on deeper floors, picked by how common each kind is at that depth and kept ' +
+    'Puts monsters in the rooms, more on deeper floors, picked by how common each kind is at that Danger and kept ' +
     'away from the stairs. A floor type can ask for some of them to be variants (Venomous, Swift and so on).',
   parse(raw) {
     return readParams(raw, {
@@ -198,7 +268,8 @@ export const GEN_MONSTERS = defineGenStep({
     });
   },
   run(draft, p, rng) {
-    const defs = monstersForDepth(draft.depth);
+    const ecology = draft.dungeon?.ecology;
+    const defs = monstersForDanger(draft.danger, ecology);
     const count = Math.round(p.base + p.perDepth * draft.depth);
     if (defs.length === 0 || count <= 0) return;
     const stairs = draft.features.filter((f) => f.feature.kind === 'stairs').map((f) => f.pos);
@@ -212,7 +283,7 @@ export const GEN_MONSTERS = defineGenStep({
           stairs.every((s) => Math.max(Math.abs(s.x - t.x), Math.abs(s.y - t.y)) >= p.stairsDistance),
       );
     for (let i = 0; i < count && tiles.length > 0; i++) {
-      const def = pickWeighted(defs, rng);
+      const def = pickWeightedForDanger(defs, draft.danger, rng, ecology);
       const at = rng.int(0, tiles.length - 1);
       const [pos] = tiles.splice(at, 1) as [Pos];
       const templates = rollTemplates(def, rng, p.templateChance);

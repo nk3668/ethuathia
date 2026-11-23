@@ -17,7 +17,7 @@ import {
   getEntity,
   hitChance,
   isPartyWiped,
-  monstersForDepth,
+  monstersForDanger,
   planFloor,
   snapshot,
   spawnMonster,
@@ -59,8 +59,8 @@ describe('monster content', () => {
       expect(monsterRules(def).length).toBeGreaterThan(0);
     }
     expect(MONSTERS.all().filter((m) => m.sharesTile === true).length).toBeGreaterThan(0);
-    expect(monstersForDepth(1).length).toBeGreaterThan(0);
-    expect(monstersForDepth(10).length).toBeGreaterThan(0);
+    expect(monstersForDanger(1).length).toBeGreaterThan(0);
+    expect(monstersForDanger(10).length).toBeGreaterThan(0);
   });
 });
 
@@ -202,15 +202,15 @@ describe('tile sharing', () => {
 });
 
 describe('spawning', () => {
-  it('stocks generated floors by depth, away from the stairs, the same way every time', () => {
-    const state = createRun({ party: [HERO] }, 7);
+  it('stocks generated floors by danger, away from the stairs, the same way every time', () => {
+    const state = createRun({ party: [HERO], depth: 10 }, 7);
     const plan = planFloor(state, 'd1');
     const again = planFloor(state, 'd1');
     expect(plan.spawns).toEqual(again.spawns);
     expect(plan.spawns?.length).toBeGreaterThan(0);
     const stairs = plan.features.filter((f) => f.feature.kind === 'stairs').map((f) => f.pos);
     for (const s of plan.spawns ?? []) {
-      expect(monstersForDepth(1).map((m) => m.id)).toContain(s.def);
+      expect(monstersForDanger(1).map((m) => m.id)).toContain(s.def);
       expect(plan.terrain.get(s.pos.x, s.pos.y)).toBe(1);
       for (const p of stairs) expect(Math.max(Math.abs(p.x - s.pos.x), Math.abs(p.y - s.pos.y))).toBeGreaterThanOrEqual(7);
     }

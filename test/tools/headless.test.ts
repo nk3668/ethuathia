@@ -69,7 +69,9 @@ describe('tools/headless', () => {
     expect(r.explored.fraction).toBeGreaterThan(0);
     expect(r.explored.fraction).toBeLessThan(1);
     expect(r.depth).toBe(1);
-    expect(flagReason(r, 30)).toMatch(/^hit the turn cap \(30 party turns\) on floor 1 of 10 at \d+\.\d% explored$/);
+    expect(r.bottom).toBeGreaterThanOrEqual(6);
+    expect(r.bottom).toBeLessThanOrEqual(10);
+    expect(flagReason(r, 30)).toMatch(new RegExp(`^hit the turn cap \\(30 party turns\\) on floor 1 of ${r.bottom} at \\d+\\.\\d% explored$`));
   });
 
   it('runs a bigger party', () => {

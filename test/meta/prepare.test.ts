@@ -22,7 +22,8 @@ defineDungeon({
   name: 'Test Pit',
   description: 'A shallow test pit.',
   tags: [],
-  depth: 3,
+  depth: { min: 3, max: 3 },
+  danger: { start: 1, perFloor: 1 },
   floorType: 'floor.halls',
 });
 defineUpgrade({
@@ -46,7 +47,8 @@ describe('buildRunConfig', () => {
     const config = buildRunConfig(profile, defaultRunChoices(), 42);
     expect(config.party).toHaveLength(1);
     expect(config.party[0]).toMatchObject({ classId: 'class.vanguard', raceId: 'race.human' });
-    expect(config.depth).toBe(10);
+    expect(config.dungeonId).toBe('dungeon.old_delve');
+    expect(config.depth).toBeUndefined();
     expect(checkRunConfig(config)).toEqual([]);
     // The same seed gives the same party; another seed may name them differently.
     expect(buildRunConfig(profile, defaultRunChoices(), 42)).toEqual(config);
@@ -72,10 +74,10 @@ describe('buildRunConfig', () => {
       dungeon: { dungeonId: 'dungeon.test_pit' },
     });
     // The test pit is locked until its upgrade is owned: the first open dungeon goes instead.
-    expect(buildRunConfig(newProfile(), choices, 1).depth).toBe(10);
+    expect(buildRunConfig(newProfile(), choices, 1).dungeonId).toBe('dungeon.old_delve');
     expect(availableDungeons(newProfile()).map((d) => d.id)).not.toContain('dungeon.test_pit');
     const surveyed = own(newProfile(), 'upgrade.test_survey');
-    expect(buildRunConfig(surveyed, choices, 1).depth).toBe(3);
+    expect(buildRunConfig(surveyed, choices, 1).dungeonId).toBe('dungeon.test_pit');
 
     const unknown = completeRunChoices({ party: { slots: [{ classId: 'class.nobody', raceId: null }] } });
     expect(buildRunConfig(newProfile(), unknown, 1).party[0]?.classId).toBe('class.vanguard');

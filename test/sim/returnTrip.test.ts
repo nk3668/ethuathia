@@ -112,8 +112,8 @@ describe('return trip (ETH-025)', () => {
     const dist = Math.max(Math.abs(m.pos.x - d2StairsDown.pos.x), Math.abs(m.pos.y - d2StairsDown.pos.y));
     expect(dist).toBeGreaterThanOrEqual(7);
     const def = MONSTERS.get(m.def);
-    expect(def.depth.min).toBeLessThanOrEqual(4);
-    expect(def.depth.max).toBeGreaterThanOrEqual(4);
+    expect(def.danger.min).toBeLessThanOrEqual(4);
+    expect(def.danger.max).toBeGreaterThanOrEqual(4);
 
     // Let the whole party climb all the way out to Victory.
     const rest = stepUntil(state, () => false, 1000);

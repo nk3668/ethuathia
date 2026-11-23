@@ -146,6 +146,12 @@ describe('log text', () => {
 
     const singleFloor: RunStartedEvent = { type: 'runStarted', turn: 0, party, depth: 1, floorType: null };
     expect(RUN_DOMAIN_LOG_TEXT.runStarted.text(singleFloor, () => 'Mira')).toBe('Mira enters the dungeon, 1 floor deep.');
+
+    const hiddenGenerated: RunStartedEvent = { type: 'runStarted', turn: 0, party, depth: null, floorType: 'floor.halls' };
+    expect(describeEvent(hiddenGenerated, () => 'Mira').text).toBe('Mira enters the dungeon (Hewn Halls).');
+
+    const hiddenHandBuilt: RunStartedEvent = { type: 'runStarted', turn: 0, party, depth: null, floorType: null };
+    expect(RUN_DOMAIN_LOG_TEXT.runStarted.text(hiddenHandBuilt, () => 'Mira')).toBe('Mira enters the dungeon.');
   });
 
   it('logs ruleFired skip explanations even when the fallback rule did not change, and folds repeats (ETH-094)', () => {

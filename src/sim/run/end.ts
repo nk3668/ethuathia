@@ -11,7 +11,7 @@ import { clonePlain } from '../../core';
 import { deathPredicate, killerOf } from '../combat/death';
 import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
-import { dungeonDepth, floorNode, floorTypeOf } from '../floors/dungeon';
+import { depthRevealed, dungeonDepth, floorNode, floorTypeOf } from '../floors/dungeon';
 import { VICTORY_CHECKS } from '../registries';
 import type { EntityId, RunState } from '../state';
 import type { RunOutcome, RunResult } from './result';
@@ -66,7 +66,12 @@ export function announceStart(state: RunState, emit: Emit): void {
   const slice = state.domains.run;
   if (slice.started) return;
   slice.started = true;
-  emit({ type: 'runStarted', party: partyRecords(state), depth: dungeonDepth(state), floorType: floorTypeOf(state, state.dungeon.entry) });
+  emit({
+    type: 'runStarted',
+    party: partyRecords(state),
+    depth: depthRevealed(state) ? dungeonDepth(state) : null,
+    floorType: floorTypeOf(state, state.dungeon.entry),
+  });
 }
 
 /** True once the run has ended. */
@@ -164,7 +169,13 @@ function end(state: RunState, stepEvents: readonly SimEvent[], emit: Emit, outco
 function leftCause(state: RunState, checks: string, won: boolean): string {
   const deepest = state.domains.floors.deepest;
   const bottom = dungeonDepth(state);
-  const reached = deepest === bottom ? `reached the bottom of the dungeon (floor ${bottom})` : `reached floor ${deepest} of ${bottom}`;
+  const revealed = depthRevealed(state);
+  const reached =
+    deepest === bottom
+      ? `reached the bottom of the dungeon (floor ${bottom})`
+      : revealed
+        ? `reached floor ${deepest} of ${bottom}`
+        : `reached floor ${deepest}`;
   const leaving = state.domains.run.leaving;
   const why =
     leaving === null

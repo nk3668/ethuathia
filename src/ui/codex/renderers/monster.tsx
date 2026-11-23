@@ -12,6 +12,7 @@ import { trophiesForKill } from '../../../sim';
 import { defineCodexRenderer } from '../types';
 import { VariantsMet } from '../VariantsMet';
 import type { CodexField } from '../types';
+import { bundleText } from './status';
 
 /** Monster kill-count tiers (ETH-091). */
 export const MONSTER_KILL_TIERS = {
@@ -38,14 +39,14 @@ function behaviorText(def: MonsterDef): string {
   return text === '' ? 'Keeps to itself' : text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function depthText(def: MonsterDef): string {
-  return def.depth.max >= 99 ? `Floor ${def.depth.min} and deeper` : `Floors ${def.depth.min}–${def.depth.max}`;
+function dangerText(def: MonsterDef): string {
+  return def.danger.max >= 99 ? `Danger ${def.danger.min}+` : `Danger ${def.danger.min}–${def.danger.max}`;
 }
 
 function dropsText(def: MonsterDef): string {
   const trophies = trophiesForKill(def.threat);
   const trophyWord = trophies === 1 ? '1 Trophy' : `${trophies} Trophies`;
-  return `${trophyWord} on kill; variant and elite kin drop carried floor loot (${depthText(def).toLowerCase()}).`;
+  return `${trophyWord} on kill; variant and elite kin drop carried floor loot (${dangerText(def).toLowerCase()}).`;
 }
 
 /** Rows for the role powers a def has (revealed at the full-stats tier). */
@@ -106,7 +107,10 @@ export default defineCodexRenderer({
     { label: 'Armor', value: def.stats.armor, hint: 'Taken off the damage of each blow that lands on it.', minKills: MONSTER_KILL_TIERS.stats },
     { label: 'Speed', value: def.stats.speed, hint: 'Energy gained each tick; 100 acts once a turn.', key: true, minKills: MONSTER_KILL_TIERS.basics },
     ...powerFields(def),
-    { label: 'Found on', value: depthText(def), hint: 'The dungeon floors it appears on.', minKills: MONSTER_KILL_TIERS.basics },
+    ...(def.bundle === undefined
+      ? []
+      : [{ label: 'Traits', value: bundleText(def.bundle), hint: 'Innate abilities and passives of this kind.', minKills: MONSTER_KILL_TIERS.stats }]),
+    { label: 'Found on', value: dangerText(def), hint: 'The Danger range it appears in.', minKills: MONSTER_KILL_TIERS.basics },
     { label: 'Threat', value: def.threat, hint: 'How dangerous it is. Kills of it are weighed by this.', minKills: MONSTER_KILL_TIERS.stats },
     {
       label: 'Crowds',
