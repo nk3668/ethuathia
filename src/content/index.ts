@@ -21,7 +21,7 @@ export { checkKinds, ContentError } from './kind';
 export type { ContentKind, ContentRef, RefTarget } from './kind';
 export { defineRace, RACE_HUMAN, RACE_KIND, RACES } from './races';
 export type { RaceDef } from './races';
-export { checkContent, CONTENT_KINDS, defName, findDef, findGlyph, validateContent } from './registries';
+export { checkContent, checkDefHints, CONTENT_KINDS, defName, findDef, findGlyph, HINT_REQUIRED_KINDS, validateContent } from './registries';
 export { defShape, glyphSchema, idSchema, nonNegativeInt, positiveInt } from './schema';
 export type { Glyph } from './schema';
 export { defineTerrain, TERRAIN, TERRAIN_FLOOR, TERRAIN_KIND, TERRAIN_WALL } from './terrain';

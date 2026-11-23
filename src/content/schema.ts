@@ -24,6 +24,7 @@ export function defShape(prefix: string) {
     id: idSchema(prefix),
     name: z.string().trim().min(1, 'must not be empty'),
     description: z.string().trim().min(1, 'must not be empty'),
+    hint: z.string().trim().min(1, 'must not be empty').optional(),
     tags: z.array(z.string().regex(ID_PART, 'must be lowercase letters, digits and _')),
   };
 }

@@ -1,13 +1,13 @@
 /**
- * The Codex (docs/VISUAL-DESIGN.md §5.3, ETH-065, ETH-092): a field-journal view of every class,
- * race, monster, item, Omen, deity… one section per content kind, filled in as the player
+ * The Codex (docs/VISUAL-DESIGN.md §5.3, ETH-065, ETH-091, ETH-092): a field-journal view of every
+ * class, race, monster, item, Omen, deity… one section per content kind, filled in as the player
  * discovers things.
  *
  * `CodexPanel` is the two-pane journal body: categories, search and entry list on the left, the
- * selected entry's page (large glyph, lore, stat table, and kill/death record) on the right. At
- * tablet width (`NARROW_QUERY`, under 1000px) it collapses to one pane at a time with a Back
- * button on the entry page. `CodexModal` hosts `CodexPanel` in a wide modal dialog with keyboard
- * navigation and focus return; `CodexTab` is the side-panel launcher.
+ * selected entry's page (large glyph, lore or hint, stat table, and kill/death record with kill
+ * tiers) on the right. At tablet width (`NARROW_QUERY`, under 1000px) it collapses to one pane at
+ * a time with a Back button on the entry page. `CodexModal` hosts `CodexPanel` in a wide modal
+ * dialog with keyboard navigation and focus return; `CodexTab` is the side-panel launcher.
  *
  * Sections and entry views come from the kind renderers in `renderers/`; this file never names a
  * kind.
@@ -25,8 +25,8 @@ import styles from './CodexPanel.module.css';
 import { GlyphMark } from './Explain';
 import { ALL_RENDERERS, entryGlyph, entryMarks } from './registry';
 import type { CodexEntry } from './registry';
-import type { CodexRenderer } from './types';
-import { useDiscovered } from './useDiscovered';
+import type { CodexKillTier, CodexRenderer } from './types';
+import { monsterKillCount, useDiscovered, useMonsterKills } from './useDiscovered';
 
 const MARK_LABEL: Readonly<Record<CodexMark, string>> = { seen: 'Seen', killed: 'Slain', used: 'Used' };
 
@@ -91,32 +91,30 @@ function flattenRows(sections: readonly Section[]): Row[] {
   return rows;
 }
 
+/** Describes the current kill-tier standing for a tiered entry (ETH-091). */
+function tierSummary(tiers: readonly CodexKillTier[], kills: number): string {
+  const next = tiers.find((t) => kills < t.kills);
+  if (next === undefined) return 'All tiers unlocked';
+  return `Next tier at ${next.kills} ${next.kills === 1 ? 'kill' : 'kills'} (${next.label})`;
+}
+
 /**
  * Combat record for an entry: how many times the party has slain it, and how many party members
  * have fallen to it across recorded history and the live run (while unbanked).
  */
 function useEncounterRecord(
   entry: CodexEntry,
-  marks: readonly CodexMark[] | null,
-): { kills: number; deaths: number; showKills: boolean } | null {
+  discovered: CodexDiscoveries,
+  killsMap: Readonly<Record<string, number>>,
+): { kills: number; deaths: number; showKills: boolean; tierNote?: string } | null {
   const id = entry.def.id;
   const nameLower = entry.def.name.toLowerCase();
   const profile = useProfileStore((s) => s.profile);
-  const events = useSimStore((s) => s.events);
   const chronicle = useSimStore((s) => s.chronicle);
   const runBanked = useSimStore((s) => s.banked);
 
   return useMemo(() => {
-    const profileKillsRecord = (profile.codex as { kills?: Readonly<Record<string, number>> }).kills;
-    const bankedKills = profileKillsRecord?.[id] ?? 0;
-    let liveKills = 0;
-    if (!runBanked) {
-      for (const { event } of events) {
-        if (event.type === 'killed' && event.byParty && event.victimDef === id) liveKills++;
-      }
-    }
-    const minFromMark = marks?.includes('killed') === true ? 1 : 0;
-    const kills = Math.max(bankedKills + liveKills, minFromMark);
+    const kills = monsterKillCount(id, discovered, killsMap);
 
     let deaths = 0;
     for (const run of profile.history.recent) {
@@ -135,11 +133,12 @@ function useEncounterRecord(
       }
     }
 
-    const isCombatKind = entry.renderer.registry.kind === 'monster';
-    const showKills = isCombatKind || kills > 0;
+    const tiers = entry.renderer.killTiers;
+    const showKills = tiers !== undefined || kills > 0;
     if (!showKills && deaths === 0) return null;
-    return { kills, deaths, showKills };
-  }, [id, nameLower, profile, events, chronicle, runBanked, marks, entry.renderer.registry.kind]);
+    const tierNote = tiers === undefined ? undefined : tierSummary(tiers, kills);
+    return { kills, deaths, showKills, ...(tierNote === undefined ? {} : { tierNote }) };
+  }, [id, nameLower, profile, chronicle, runBanked, discovered, killsMap, entry.renderer.killTiers]);
 }
 
 export function CodexPanel() {
@@ -340,8 +339,9 @@ function CodexSection({
 
 function CodexRow({ row, selected, onSelect }: { row: Row; selected: boolean; onSelect(): void }) {
   const { entry, marks } = row;
+  const glyph = entryGlyph(entry);
   if (marks === null) {
-    const hint = entry.renderer.hint ?? DEFAULT_HINT;
+    const hint = entry.def.hint ?? entry.renderer.hint ?? DEFAULT_HINT;
     return (
       <li className={styles.unknown} title={hint}>
         <button
@@ -351,7 +351,7 @@ function CodexRow({ row, selected, onSelect }: { row: Row; selected: boolean; on
           aria-current={selected ? 'true' : undefined}
           onClick={onSelect}
         >
-          <GlyphMark glyph={null} />
+          <GlyphMark glyph={glyph ?? null} />
           <span>???</span>
           <span className={styles.hint}>{hint}</span>
         </button>
@@ -367,7 +367,7 @@ function CodexRow({ row, selected, onSelect }: { row: Row; selected: boolean; on
         aria-current={selected ? 'true' : undefined}
         onClick={onSelect}
       >
-        <GlyphMark glyph={entryGlyph(entry)} />
+        <GlyphMark glyph={glyph} />
         <span className={styles.name}>{entry.def.name}</span>
         {marks.length > 0 && <span className={styles.marks}>{marks.map((m) => MARK_LABEL[m]).join(' · ')}</span>}
       </button>
@@ -378,33 +378,40 @@ function CodexRow({ row, selected, onSelect }: { row: Row; selected: boolean; on
 function CodexEntryPage({ row }: { row: Row }) {
   const { entry, marks } = row;
   const { def, renderer } = entry;
+  const discovered = useDiscovered();
+  const killsMap = useMonsterKills();
   const group = renderer.group?.(def);
-  const record = useEncounterRecord(entry, marks);
+  const glyph = entryGlyph(entry);
+  const hintText = def.hint ?? renderer.hint ?? DEFAULT_HINT;
+  const record = useEncounterRecord(entry, discovered, killsMap);
 
   if (marks === null) {
-    const hint = renderer.hint ?? DEFAULT_HINT;
     return (
       <article className={styles.page}>
         <header className={styles.pageHeader}>
           <div className={styles.heroGlyphBox}>
-            <GlyphMark glyph={null} className={styles.heroGlyph} />
+            <GlyphMark glyph={glyph ?? null} className={styles.heroGlyph} />
           </div>
           <div className={styles.pageHeading}>
             <h3 className={styles.pageTitle}>???</h3>
             <p className={styles.pageSubtitle}>{group !== undefined ? `${group} · ${renderer.label}` : renderer.label}</p>
           </div>
         </header>
-        <p className={styles.lore}>{hint}</p>
+        <p className={styles.lore}>{hintText}</p>
       </article>
     );
   }
 
-  const fields = renderer.fields?.(def) ?? [];
+  const killCount = record?.kills ?? 0;
+  const loreReady = renderer.loreKills === undefined || killCount >= renderer.loreKills;
+  const bodyText = loreReady ? def.description : hintText;
+  const fields = (renderer.fields?.(def) ?? []).filter((f) => (f.minKills ?? 0) <= killCount);
+
   return (
     <article className={styles.page}>
       <header className={styles.pageHeader}>
         <div className={styles.heroGlyphBox}>
-          <GlyphMark glyph={entryGlyph(entry)} className={styles.heroGlyph} />
+          <GlyphMark glyph={glyph} className={styles.heroGlyph} />
         </div>
         <div className={styles.pageHeading}>
           <div className={styles.pageTitleRow}>
@@ -415,7 +422,7 @@ function CodexEntryPage({ row }: { row: Row }) {
         </div>
       </header>
 
-      <p className={styles.lore}>{def.description}</p>
+      <p className={styles.lore}>{bodyText}</p>
 
       {record !== null && (
         <dl className={styles.record} aria-label="Encounter record">
@@ -432,6 +439,12 @@ function CodexEntryPage({ row }: { row: Row }) {
             <dt>Adventurers lost</dt>
             <dd>{record.deaths}</dd>
           </div>
+          {record.tierNote !== undefined && (
+            <div className={styles.recordItem}>
+              <dt>Knowledge</dt>
+              <dd>{record.tierNote}</dd>
+            </div>
+          )}
         </dl>
       )}
 

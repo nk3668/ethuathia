@@ -43,6 +43,7 @@ export const FEATURE_DOOR = defineFeature({
   description:
     'A heavy plank door on iron hinges. Shut, it blocks sight and has to be opened before anyone can pass. ' +
     'A doorway can only be entered or left straight on, never diagonally.',
+  hint: 'Iron hinges in a stone threshold, holding the next room’s secret shut.',
   tags: ['door'],
   glyph: DOOR_CLOSED,
   states: { closed: DOOR_CLOSED, open: { ch: "'", color: '#c08a4a' } },
@@ -52,6 +53,7 @@ export const FEATURE_STAIRS_UP = defineFeature({
   id: 'feature.stairs_up',
   name: 'Stairs up',
   description: 'Steps climbing back toward the surface. On the first floor they lead out of the dungeon.',
+  hint: 'Worn steps rising toward paler air and the way home.',
   tags: ['stairs'],
   glyph: { ch: '<', color: '#ffffff', bold: true },
 });
@@ -60,6 +62,7 @@ export const FEATURE_STAIRS_DOWN = defineFeature({
   id: 'feature.stairs_down',
   name: 'Stairs down',
   description: 'Steps descending to the next floor, where the dark is deeper and the danger greater.',
+  hint: 'Cut stone steps sinking into colder dark below.',
   tags: ['stairs'],
   glyph: { ch: '>', color: '#ffffff', bold: true },
 });
@@ -75,6 +78,7 @@ export const FEATURE_FOUNTAIN = defineFeature({
     'of chance: most often it mends wounds, sometimes it sharpens the eyes or turns the stomach, and sometimes it ' +
     'is only water. A fountain holds a few draughts before it runs dry. Adventurers drink when hurt and carrying ' +
     'no healing potion, and skip fountains whose last tasted draught was harmful.',
+  hint: 'A brimming stone basin whose water may mend or sicken.',
   tags: ['fountain'],
   glyph: FOUNTAIN_FLOWING,
   states: { flowing: FOUNTAIN_FLOWING, dry: { ch: '{', color: '#5b6573' } },

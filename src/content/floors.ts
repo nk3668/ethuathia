@@ -50,6 +50,7 @@ export const FLOOR_HALLS = defineFloorType({
   name: 'Hewn Halls',
   description:
     'Rectangular chambers cut from the rock and joined by narrow passages. Most chamber mouths are fitted with doors.',
+  hint: 'Square-cut chambers linked by narrow corridors and heavy doors.',
   tags: ['floor'],
   size: { w: 64, h: 32 },
   steps: [

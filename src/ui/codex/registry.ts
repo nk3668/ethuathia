@@ -62,9 +62,9 @@ export function entryGlyph({ def, renderer }: CodexEntry): Glyph | undefined {
   return typeof own === 'object' && own !== null && typeof (own as Glyph).ch === 'string' ? (own as Glyph) : undefined;
 }
 
-/** How the player has met an entry, or `null` if it is still unknown. Always-known kinds return `[]`. */
+/** How the player has met an entry, or `null` if it is still unknown. Always-known and Codex-hidden kinds return `[]`. */
 export function entryMarks(entry: CodexEntry, discovered: CodexDiscoveries): readonly CodexMark[] | null {
   const marks = discovered[entry.def.id];
   if (marks !== undefined && marks.length > 0) return marks;
-  return entry.renderer.alwaysKnown === true ? [] : null;
+  return entry.renderer.alwaysKnown === true || entry.renderer.hidden === true ? [] : null;
 }

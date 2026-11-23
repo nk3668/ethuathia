@@ -81,9 +81,9 @@ export function PartyPanel({ profile, choices, update }: PreparePanelProps) {
                 </select>
               </label>
               <span className={styles.summary}>
-                {selectedClass !== undefined ? <Explain id={selectedClass.id} /> : 'any class'}
+                {selectedClass !== undefined ? <Explain id={selectedClass.id} reveal /> : 'any class'}
                 {' · '}
-                {selectedRace !== undefined ? <Explain id={selectedRace.id} /> : 'any race'}
+                {selectedRace !== undefined ? <Explain id={selectedRace.id} reveal /> : 'any race'}
               </span>
               <span className={styles.preview} data-random={preview.resolved ? undefined : 'true'}>
                 {preview.text}
