@@ -275,6 +275,7 @@ Imports only point downward in this list: `core` imports nothing, `ui` may impor
 - Gameplay randomness must use the sim's seeded RNG, never `Math.random()`.
 - Every new mechanic needs Codex and tooltip text and a log message.
 - Write sim tests for new AI behavior with a fixed seed and a hand-built map.
+- Extend the cross-domain contract and property guards (`docs/ARCHITECTURE.md` §11.6) whenever adding new critical services (hidden-state AI rules, secret-bearing events, `Effect` kinds, Codex entries, `ItemPropertyKind`s, or `{ min?, max? }` range configs).
 
 ---
 

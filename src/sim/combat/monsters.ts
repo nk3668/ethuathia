@@ -2,7 +2,7 @@
  * Monsters as entities: building one from its def, placing one by hand (tests), and the
  * `gen.monsters` generation step that stocks each floor.
  */
-import { clonePlain, Grid, Rng, seedState } from '../../core';
+import { clampRange, clonePlain, Grid, Rng, seedState } from '../../core';
 import type { Pos } from '../../core';
 import { MONSTERS, monsterRules, templateDefs } from '../../content';
 import type { MonsterDef } from '../../content';
@@ -137,8 +137,7 @@ export function respawnFloor(
 
   const defaultMin = Math.max(1, Math.round((1 + 0.4 * depth) * 0.4));
   const defaultMax = Math.max(defaultMin, Math.round((1 + 0.4 * depth) * 0.7));
-  const max = Math.max(0, options.max ?? defaultMax);
-  const min = Math.min(max, Math.max(0, options.min ?? defaultMin));
+  const { min, max } = clampRange(options, { min: defaultMin, max: defaultMax });
   const stairsDistance = Math.max(0, options.stairsDistance ?? DEFAULT_RESPAWN_STAIRS_DISTANCE);
   const templateChance = options.templateChance ?? 0;
 

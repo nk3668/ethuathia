@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { bundleRefs, defineBundle, defineStatus } from '../../src/content';
+import type { EffectKind } from '../../src/content';
 import {
   addEntity,
   applyStatus,
@@ -355,4 +356,61 @@ describe('snapshot and invariants', () => {
     expect(problems).toContainEqual(expect.stringMatching(/^\[stats\.parts\] .*status "status\.hasted" with 0 turns left/));
     expect(problems).toContainEqual(expect.stringMatching(/^\[stats\.parts\] .*unknown bundle "bundle\.nope"/));
   });
+});
+
+describe('exhaustive Effect potency contract (ETH-131)', () => {
+  const EFFECT_POTENCY_CASES: Record<EffectKind, () => void> = {
+    heal: () => {
+      for (const [potency, expected] of [[0.5, 5], [1, 10], [1.5, 15]] as const) {
+        const { state, hero, emit } = setup();
+        if (hero.stats !== undefined) hero.stats.base.hp = 40;
+        hero.actor.hp = 1;
+        runEffect({ state, emit, self: hero.id, source: 'test', potency }, { kind: 'heal', amount: 10 });
+        expect(hero.actor.hp, `heal @ ${potency}`).toBe(1 + expected);
+      }
+    },
+    damage: () => {
+      for (const [potency, expected] of [[0.5, 5], [1, 10], [1.5, 15]] as const) {
+        const { state, hero, emit } = setup();
+        hero.actor.hp = 20;
+        runEffect({ state, emit, self: hero.id, source: 'test', potency }, { kind: 'damage', amount: 10 });
+        expect(hero.actor.hp, `damage @ ${potency}`).toBe(20 - expected);
+      }
+    },
+    applyStatus: () => {
+      for (const [potency, expected] of [[0.5, 4], [1, 8], [1.5, 12], [2, 16]] as const) {
+        const { state, hero, emit } = setup();
+        runEffect({ state, emit, self: hero.id, source: 'test', potency }, { kind: 'applyStatus', status: 'status.hasted', turns: 8 });
+        expect(statusesOf(hero), `applyStatus @ ${potency}`).toEqual([['status.hasted', expected, 1]]);
+      }
+    },
+    identify: () => {
+      for (const [potency, expectedIdentified] of [[0.5, 1], [1, 1], [1.5, 2]] as const) {
+        const { state, hero, emit, events } = setup();
+        hero.inventory = {
+          items: [
+            { def: 'item.iron_hatchet', qty: 1, enchant: 1, identified: false },
+            { def: 'item.arming_sword', qty: 1, enchant: 1, identified: false },
+          ],
+        };
+        runEffect({ state, emit, self: hero.id, source: 'test', potency }, { kind: 'identify' });
+        expect(events.filter((e) => e.type === 'itemIdentified'), `identify @ ${potency}`).toHaveLength(expectedIdentified);
+      }
+    },
+    uncurse: () => {
+      for (const [potency, expectedUncursed] of [[0.5, 1], [1, 1], [1.5, 2]] as const) {
+        const { state, hero, emit, events } = setup();
+        hero.inventory = {
+          items: [{ def: 'item.arming_sword', qty: 1, blessing: 'cursed' }],
+          equipped: { mainHand: { def: 'item.iron_hatchet', qty: 1, blessing: 'cursed' } },
+        };
+        runEffect({ state, emit, self: hero.id, source: 'test', potency }, { kind: 'uncurse' });
+        expect(events.filter((e) => e.type === 'itemUncursed'), `uncurse @ ${potency}`).toHaveLength(expectedUncursed);
+      }
+    },
+  };
+
+  for (const [kind, verify] of Object.entries(EFFECT_POTENCY_CASES)) {
+    it(`honors ctx.potency for "${kind}"`, verify);
+  }
 });

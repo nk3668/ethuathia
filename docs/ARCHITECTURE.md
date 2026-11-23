@@ -2491,5 +2491,22 @@ cards show every member, and the top bar and log show the run.
 
 Listed for contributors in [`../backlog/README.md`](../backlog/README.md#gates): `npm run
 check` (typecheck, lint and every test, which includes the invariants, soak, determinism and
-app-boot tests), the sim compare table against `origin/main` in the PR body, and a look at the
-running app for UI changes.
+app-boot tests), the sim compare table against `origin/main` in the PR body, a look at the
+running app for UI changes, and extending the contract/property guards in §11.6 whenever a new
+critical service or extension seam is added.
+
+### 11.6 Contract & property-guard criteria (ETH-131)
+
+Unit tests verify paths the author had in mind, whereas cross-domain contract and property-based
+guards verify invariants across *all* registered kinds, domains, or states so future features fail
+fast instead of regressing silently. Apply and extend these six guards whenever building or
+modifying a critical service in the categories below:
+
+| When adding or changing… | Required guard | Where to extend | Impact / Value |
+|---|---|---|---|
+| Any **AI rule, condition, or scoring helper** that reads state with hidden/unidentified information (potions, scrolls, jewelry, traps, monsters, shrines, merchants) | **AI indistinguishability property test:** mutate hidden fields (`enchant`, `blessing`, `enchantments`) or swap same-category `def`s on `identified: false` items and assert `chooseRule` returns the identical `{ action, request }`. | `test/sim/enchantIdentify.test.ts` (or the feature's AI suite) | **High / Very High** — prevents secret-peeking bugs in new AI domains |
+| Any **SimEvent, log formatter, highlight rule, chronicle rule, or drop payload** carrying a player-discoverable secret (`item`, unseen trap/encounter, etc.) | **Non-spoiling event / log / chronicle sweep:** run unidentified/secret event payloads through `describeEvent`, `highlightWhen`, `discoveriesOf`, and `CHRONICLE_TRACKER`, asserting zero `{ ref }` Codex links, zero real-name substrings, `highlight: undefined`, and `[]` discoveries/entries. | `test/ui/logText.test.ts` | **High / Very High** — blocks UI tooltip, highlight, and chronicle spoilers |
+| A new **`Effect['kind']`**, potency-scaled consumable, trait, shrine/fountain effect, or ranked enchantment trigger | **Exhaustive `Effect['kind']` potency contract:** `EFFECT_POTENCY_CASES: Record<EffectKind, () => void>` forces a TypeScript compile error until the new kind's `0.5×` / `1×` / `1.5×+` scaling is specified and tested. | `test/sim/stats.test.ts` | **High / High** — catches unscaled `ctx.potency` at compile time |
+| A new **content kind, Codex renderer, or non-`alwaysKnown` def** (items, statuses, monsters, enchantments, deities, omens, bounties) | **Codex discoverability / reachability check:** map the kind's real producer event(s) in `probesByKind` and verify every non-`alwaysKnown`, non-`hidden` entry yields `>= 1` discovery mark via `discoveriesOf`. | `test/ui/codex.test.tsx` | **Medium-High / High** — guarantees no entry stays permanently stuck at `???` |
+| A new **`ItemPropertyKind`** (or similar sparse optional field on `ItemInstance` / `RunState` used in equality or `canStack` checks) | **Canonical-value invariant test:** ensure `schema` rejects every default/no-op value (`0`, `true`, `[]`, `{}`, `'uncursed'`) and register it in `CANONICAL_REJECTED`. | `test/sim/itemProperties.test.ts` | **Medium / High** — prevents duplicate unstackable instances and save bloat |
+| A configurable **numeric range `{ min?, max? }`** with positive defaults (spawn counts, loot quantities, depth bounds, cooldowns) | **Use `clampRange` + `{ max: 0 }` boundary test:** compute and clamp `max` before clamping `min <= max` via `clampRange` (`src/core/range.ts`) and assert `{ max: 0 }` produces `{ min: 0, max: 0 }`. | `src/core/range.ts`, `test/core/range.test.ts`, caller suite | **Low-Medium / Medium** — stops positive `defaultMin` from overriding explicit disable (`max: 0`) |
