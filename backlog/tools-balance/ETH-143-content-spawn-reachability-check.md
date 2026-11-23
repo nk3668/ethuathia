@@ -2,7 +2,7 @@
 id: ETH-143
 title: Content check that every discoverable def can actually appear in a run
 type: chore
-status: in-progress
+status: done
 priority: P2
 milestone: M1.6
 epic: tools-balance
@@ -37,3 +37,4 @@ Found in the ETH-131 review.
 ## Log
 - 2026-11-23: Created from the ETH-131 review (milestone M1.6, review follow-ups).
 - 2026-11-23: Implemented `tools/content-reachability.ts` (run by `validateContent`), `MonsterDef.handPlaced` opt-out flag, tests in `test/content/reachability.test.ts`. All shipped defs are reachable today; no opt-outs used. Reachability counts a dungeon's own floors only (no return-trip shift or OOD). Special enchantments with weight 0 are treated as Smithy-only, not checked.
+- 2026-11-23: Reviewed and merged into m1.5-living-dungeon by the orchestrator (npm run check green, 1167 tests).

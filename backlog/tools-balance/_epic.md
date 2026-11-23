@@ -30,6 +30,6 @@ Confidence that the sim is deterministic and that balance changes are measured, 
 - [x] [ETH-076 Sim compare warns when its base has moved since the branch was cut](ETH-076-sim-compare-stale-base-warning.md)
 - [ ] [ETH-080 Systemic monster, loot and progression balance pass (M1.5 capstone)](ETH-080-monster-balance-pass.md)
 - [x] [ETH-131 Cross-domain contract and property-based test guards](ETH-131-contract-and-property-guards.md)
-- [ ] [ETH-143 Content check that every discoverable def can actually appear in a run](ETH-143-content-spawn-reachability-check.md)
+- [x] [ETH-143 Content check that every discoverable def can actually appear in a run](ETH-143-content-spawn-reachability-check.md)
 - [ ] [ETH-145 Fix the party-size inversion so solo is the hardest way to play](ETH-145-party-size-ordering.md)
 - [ ] [ETH-146 Composition and rules balance pass (M3 milestone balance check)](ETH-146-composition-balance-pass.md)
