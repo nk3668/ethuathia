@@ -141,7 +141,7 @@ describe('OOD sighting highlight, log text, chronicle, and save/load determinism
 
   it('emits ood on monsterSighted, highlights the log warning, records a chronicle moment, and round-trips saves', () => {
     const state = createRun({ party: [HERO], floorText: HALL, depth: 5, monsters: false }, 12);
-    const oodSpawn = addEntity(state, { ...newMonster(MONSTER_BASALT_GIANT, { x: 4, y: 1 }, undefined, true), floor: 'd1' });
+    const oodSpawn = addEntity(state, { ...newMonster(MONSTER_BASALT_GIANT, { x: 4, y: 1 }, undefined, { ood: true }), floor: 'd1' });
     fillVitals(state, oodSpawn);
     const normalSpawn = addEntity(state, { ...newMonster(MONSTER_GLOAM_RAT, { x: 6, y: 1 }), floor: 'd1' });
     fillVitals(state, normalSpawn);

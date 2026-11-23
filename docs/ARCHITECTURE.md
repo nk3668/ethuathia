@@ -313,6 +313,8 @@ All in `src/sim/run/`:
   (emits `aided`, then the `healed` or `statusApplied` it causes). The adventurer baseline rushes
   a caster that has it in bolt range (`cond.in_bolt_range` → `act.rush_caster`, after
   `act.attack_adjacent`). No new state: roles add no parts or slices.
+- **Encounters, Squads & Group AI (ETH-135, `src/content/squads.ts`, `combat/encounters.ts`, `combat/groupAi.ts`):**
+  `gen.monsters` delegates to `populateEncounters`, allocating a Danger-scaled floor threat budget (`floorThreatBudget`, scaled by `DungeonDef.encounters?.budgetMul`) across non-arrival rooms while keeping `stairsDistance` clear and preserving OOD + depth-ramped templates (`rollOodDanger`, `templateChanceFor`). `SQUAD_BLUEPRINTS` define role/tag archetypes (`minDanger`, `weight`, `slots`, `preferSameTag`, `patrolEligible`) with zero hardcoded monster ids. Placed squads and deterministic multi-room corridor patrols carry optional `MonsterPart` state (`groupId`, `homeRoom`, `alert { pos, untilTurn }`, `patrol { waypoints, next }`), with pure rule conditions/actions (`cond.has_alert`, `act.pursue_alert`, `act.tether_wander`, `act.patrol`) spliced by `withGroupAiRules` and hook-driven alert/patrol updates (`PURSUIT_MEMORY_TURNS = 8`) in `combatTurnStart` and `strike`. Invariants `combat.groups` and `combat.patrols` verify group/room/alert/waypoint validity.
 
 ### Codex discoveries
 
@@ -622,7 +624,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), and ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), and ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`).
 
 ### Contracts in the run (ETH-024)
 
