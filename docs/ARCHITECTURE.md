@@ -704,17 +704,23 @@ What later items build on, all exported from `src/sim/floors/`:
   reached each floor), `respawns` (wave count per floor), `stirAnnounced`, `lastVacated` (ETH-025)
   and `observedFountains` (ETH-094: the last draught id the party observed by drinking from each
   fountain, keyed by fountain entity id).
-- **Return-trip repopulation (ETH-025, `floors/respawn.ts`, `combat/monsters.ts`):** when a party
+- **Return-trip repopulation & deep surge (ETH-025, ETH-136, `floors/respawn.ts`, `combat/encounters.ts`, `combat/monsters.ts`):** when a party
   member re-enters an already-built floor that currently has no living party members on it
   (`!firstVisit && wasEmpty`, unless `monsters: false` or `respawn.enabled: false`), `maybeRespawnFloor`
-  spawns a deterministic wave (`respawnFloor`, seeded from `respawn/<floor>/<wave>`) of higher-level
-  monsters (`depth + depthShift`, default `+1`, tunable via `RunConfig.respawn` and balanced in ETH-080)
-  at least `stairsDistance` (7) tiles from the arrival stairs and living party members. Under default
-  rules, each visited floor repopulates once once `contractsComplete(state)` holds. `dungeonStirred`
-  (`"The dungeon stirs."`) is emitted once per run on the first repopulated floor, while quiet
-  `floorRespawned` is emitted for every repopulated floor. The run-modifier flag
-  `FLAG_CONSTANT_RESPAWN` (`'floors.constant_respawn'`, for the planned Guild Hall upgrade ETH-129)
-  or `respawn.continuous` enables repeated repopulation on revisit after `CONSTANT_RESPAWN_COOLDOWN` (50) turns.
+  spawns a deterministic wave (seeded from `respawn/<floor>/<wave>`). Under default rules, once
+  `contractsComplete(state)` holds and the party ascends (`dir === 'up'`, `!continuous`, `prior === 0`),
+  `surgeFloor` launches a post-contract **deep surge** driven by `runDungeon(state).encounters?.surge`
+  (defaulting to `{ dangerWindow: 2, templateBonus: 0.15, countMul: 1 }`): it selects monsters from
+  `[max(1, bottomDanger - surge.dangerWindow), bottomDanger]` (where `bottomDanger = floorDanger(state, dungeonDepth(state))`,
+  unless `respawn.depthShift` is explicitly set), raises template probability by `+surge.templateBonus`
+  over `templateChanceFor(dungeon, spawnDanger)` (clamped `[0, 1]`), scales wave size by `surge.countMul`
+  (honoring `respawn.min` / `respawn.max`), and deploys cohesive route-biased room squads and hunter
+  patrols (`groupId`, `homeRoom`, `patrol`) while strictly honoring `stairsDistance` (7) from arrival
+  and exit stairs and excluding stairs rooms. Voluntary Retreat before contract completion remains
+  un-surged, and `FLAG_CONSTANT_RESPAWN` (`'floors.constant_respawn'`, ETH-129) or `respawn.continuous`
+  stays anchored to local `floorDanger + depthShift` via `respawnFloor` after `CONSTANT_RESPAWN_COOLDOWN` (50)
+  turns. `dungeonStirred` (`"The dungeon stirs."`) is emitted once per run on the first repopulated
+  floor, while quiet `floorRespawned` (`surged?: true` on surges) is emitted for every repopulated floor.
 - **Party:** `gatheringAt(state, floor, pos)` says who is gathered at a place (chained within
   `GATHER_RADIUS`) and who is missing; `partyOnFloor` lists the living members on a floor.
 - **Fountains (ETH-072, `floors/fountains.ts`):** a core feature part
