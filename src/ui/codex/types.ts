@@ -41,9 +41,9 @@ export interface CodexRenderer<T extends Def = Def> {
   /** Left out of the Codex (but still shown by `Explain`). */
   readonly hidden?: boolean;
   /** Kill-count tiers for kinds that reveal more as the player slays more of them (ETH-091). */
-  readonly killTiers?: readonly CodexKillTier[];
+  killTiers?(def: T): readonly CodexKillTier[];
   /** Kills required before the entry's full `description` lore replaces its `hint` (ETH-091). */
-  readonly loreKills?: number;
+  loreKills?(def: T): number;
   /** The entry's look. Defaults to the def's own `glyph` field, if it has one. */
   glyph?(def: T): Glyph | undefined;
   /** The subheading the entry is listed under, e.g. a monster's family. */
