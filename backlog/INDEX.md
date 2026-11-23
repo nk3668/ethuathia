@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-143**
+**Next ID: ETH-145**
 
 **Assigned to Antigravity** (low risk; pick any whose dependencies are done): ETH-090, ETH-077, ETH-019, then ETH-094, ETH-085, ETH-084.
 
@@ -15,7 +15,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [dungeon-gen](dungeon-gen/_epic.md) | Dungeon generation | active | M0, M1, M1.5, M4, M5, M6, later |
 | [adventurer-ai](adventurer-ai/_epic.md) | Decision engine and baseline AI | active | M0, M1, M4 |
 | [behavior-rules](behavior-rules/_epic.md) | Behavior rules | active | M2, M3 |
-| [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M2, M5, later |
+| [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M1.6, M2, M5, later |
 | [content](content/_epic.md) | Content definitions | active | M0, M1, M2, M3, M4, M5, M6 |
 | [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M3, M5, later |
 | [saves-platform](saves-platform/_epic.md) | Saves, desktop packaging and time-away | active | M2, M6 |
@@ -24,8 +24,8 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [deities](deities/_epic.md) | Deities and altars | active | M6 |
 | [ui-shell](ui-shell/_epic.md) | UI shell and kit | active | M0, M1, M2 |
 | [map-renderer](map-renderer/_epic.md) | Map renderer | active | M0, M1 |
-| [codex-tooltips](codex-tooltips/_epic.md) | Codex and tooltips | active | M2 |
-| [tools-balance](tools-balance/_epic.md) | Test and balance tooling | active | M0, M1, M1.5, M2 |
+| [codex-tooltips](codex-tooltips/_epic.md) | Codex and tooltips | active | M1.6, M2 |
+| [tools-balance](tools-balance/_epic.md) | Test and balance tooling | active | M0, M1, M1.5, M1.6, M2 |
 | [quests](quests/_epic.md) | Quests: contracts and bounties | active | M1, M1.5, M2, M3, M4, M5 |
 | [characters](characters/_epic.md) | Characters: attributes, classes and races | active | M1, M2, M3, M5 |
 | [bestiary](bestiary/_epic.md) | Bestiary: monsters, uniques and elites | active | M1, M1.5, M2, M4, M5, later |
@@ -86,8 +86,10 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-134](bestiary/ETH-134-expand-old-delve-bestiary-and-templates.md) | Expand The Old Delve bestiary and templates across Danger bands | bestiary | M1.5 | P1 | done | M |
 | [ETH-135](dungeon-gen/ETH-135-density-encounters-groups-and-patrols.md) | Threat-budget room encounters, cohesive group engagement, and corridor patrols | dungeon-gen | M1.5 | P1 | done | M |
 | [ETH-136](quests/ETH-136-return-trip-deep-surge.md) | Return-trip deep surge: lower-floor threats and hunter patrols on ascent | quests | M1.5 | P1 | ready | S |
-| [ETH-142](combat-items/ETH-142-identify-secrecy-and-curse-safety.md) | Identification secrecy and curse safety for the idle player | combat-items | M1.5 | P1 | ready | M |
 | [ETH-080](tools-balance/ETH-080-monster-balance-pass.md) | Systemic monster, loot and progression balance pass (M1.5 capstone) | tools-balance | M1.5 | P1 | ready | M |
+| [ETH-142](combat-items/ETH-142-identify-secrecy-and-curse-safety.md) | Identification secrecy and curse safety for the idle player | combat-items | M1.6 | P1 | ready | M |
+| [ETH-143](tools-balance/ETH-143-content-spawn-reachability-check.md) | Content check that every discoverable def can actually appear in a run | tools-balance | M1.6 | P2 | ready | S |
+| [ETH-144](codex-tooltips/ETH-144-per-monster-kill-tiers.md) | Per-monster Codex kill-tier thresholds for rare monsters | codex-tooltips | M1.6 | P3 | ready | S |
 | [ETH-059](saves-platform/ETH-059-profile-saves.md) | Profile, banked currencies and versioned local saves | saves-platform | M2 | P0 | done | M |
 | [ETH-023](town-meta/ETH-023-at-risk-run-currency.md) | Track run earnings as at-risk currency and lose 25% on a wipe | town-meta | M2 | P1 | done | M |
 | [ETH-063](town-meta/ETH-063-upgrade-engine-town.md) | Upgrade engine and the Town screen with a Guild Hall | town-meta | M2 | P1 | done | M |

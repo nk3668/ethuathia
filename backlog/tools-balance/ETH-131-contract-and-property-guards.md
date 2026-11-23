@@ -50,3 +50,4 @@ Individual unit tests verify the paths an author remembered to think about, but 
 - 2026-11-23: Added branch/PR sequencing note (`eth-131-contract-property-guards` awaits rebase onto `main` after PRs #83 and #84 merge).
 - 2026-11-23: Rebased onto main (bundled with docs/DIFFICULTY_PHILOSOPHY.md) and merged to main; PENDING REVIEW.
 - 2026-11-23: Reviewed; done. No major issues. Minor: the Codex reachability test feeds in hand-built events, so it doesn't prove the sim ever spawns each entry. The gear identification leak it missed is filed as ETH-142.
+- 2026-11-23: Minor note filed as ETH-143 (M1.6).

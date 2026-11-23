@@ -38,7 +38,7 @@ backlog/
 | `type` | `feature` · `bug` · `chore` (tooling or refactoring) · `spike` (research or prototype) · `content` (data such as monsters and items) |
 | `status` | `idea` · `ready` · `in-progress` · `blocked` · `pending-review` · `done` · `dropped` |
 | `priority` | `P0` now · `P1` this milestone · `P2` soon · `P3` someday |
-| `milestone` | `M0`, `M1`, `M1.5`, `M2`–`M6` (see the roadmap in `CLAUDE.md` §10) · `later` |
+| `milestone` | `M0`, `M1`, `M1.5`, `M1.6`, `M2`–`M6` (see the roadmap in `CLAUDE.md` §10) · `later` |
 | `epic` | name of the epic's folder, or `none` |
 | `size` | `S` under half a day · `M` 1–2 days · `L` too big: split it |
 | `depends_on` | list of IDs, e.g. `[ETH-003, ETH-004]` |
