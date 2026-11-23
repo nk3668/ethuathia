@@ -33,4 +33,4 @@ Monsters are varied and readable: they fight by role, belong to families, and in
 - [ ] [ETH-101 Nemesis system](ETH-101-nemesis-system.md)
 - [ ] [ETH-109 Ethan, an extremely rare and very weak boss](ETH-109-ethan-rare-boss.md)
 - [x] [ETH-117 Monster templates: prefixes, traits and named overrides layered on a base MonsterDef](ETH-117-monster-templates.md)
-- [ ] [ETH-134 Expand The Old Delve bestiary and templates across Danger bands](ETH-134-expand-old-delve-bestiary-and-templates.md)
+- [x] [ETH-134 Expand The Old Delve bestiary and templates across Danger bands](ETH-134-expand-old-delve-bestiary-and-templates.md)

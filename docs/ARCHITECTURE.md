@@ -622,7 +622,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), and ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), and ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind).
 
 ### Contracts in the run (ETH-024)
 
@@ -1133,7 +1133,7 @@ in `src/sim/quests/objectives.ts`.
   `names?: EventNames` (entity id → `ShownName`, from `namesOf(...entities)`) only when an overlay
   changes a name, so plain events are unchanged; `died` adds `proper?`, `templates?` and `drops?`
   (`DroppedLoot`: the `carries`, placed on its tile with `placeItem` after it leaves);
-  `monsterSighted` adds `templates?`. `Killer.proper` / `source.proper` keep a proper name's
+  `monsterSighted` adds `templates?` and `ood?: true` (and triggers the `oodSighted` chronicle moment when out of depth). `Killer.proper` / `source.proper` keep a proper name's
   capitals and drop the article ("was slain by Vell the Unbowed").
 - **Codex:** `monsterSighted` discovers each template (`seen`) and `templateMetKey(def, template)`
   (`met.<def>.<template>`, not a content id); the monster entry's "Variants met" reads

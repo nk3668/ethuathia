@@ -15,6 +15,7 @@ import { defineGenStep, rectTiles } from '../gen/types';
 import { Terrain } from '../state';
 import type { Entity, FloorId, RunState } from '../state';
 import { fillVitals, newStatsPart } from '../stats/getStat';
+import { computeOodDanger, computeTemplateChance } from './ood';
 import { overlayProblems, rollTemplates, spawnHp } from './overlay';
 import type { MonsterOverlay } from './overlay';
 
@@ -22,6 +23,8 @@ import type { MonsterOverlay } from './overlay';
 export interface MonsterPart {
   /** True once a party member has seen it (`monsterSighted` was emitted). */
   sighted: boolean;
+  /** True when spawned out-of-depth above the floor's normal Danger band (ETH-134). */
+  ood?: true;
   /** What is layered on its def (ETH-117): templates, a name, stat changes, carried items. Absent on a plain monster. */
   overlay?: MonsterOverlay;
 }
@@ -31,7 +34,7 @@ export interface MonsterPart {
  * rules of its role (its templates' role, if one changes it), and `overlay` when given. The
  * overlay is copied and not checked here (`spawnMonster` checks it).
  */
-export function newMonster(def: MonsterDef, pos: Pos, overlay?: MonsterOverlay): Omit<NewEntity, 'floor'> {
+export function newMonster(def: MonsterDef, pos: Pos, overlay?: MonsterOverlay, ood?: true): Omit<NewEntity, 'floor'> {
   const { hp, damage, accuracy, evasion, armor, speed, sight } = def.stats;
   const kept = overlay === undefined || Object.keys(overlay).length === 0 ? undefined : clonePlain(overlay);
   return {
@@ -46,7 +49,11 @@ export function newMonster(def: MonsterDef, pos: Pos, overlay?: MonsterOverlay):
         enabled: true,
       })),
     ),
-    monster: kept === undefined ? { sighted: false } : { sighted: false, overlay: kept },
+    monster: {
+      sighted: false,
+      ...(ood === true ? { ood: true as const } : {}),
+      ...(kept === undefined ? {} : { overlay: kept }),
+    },
   };
 }
 
@@ -135,23 +142,18 @@ export function pickWeightedForDanger(
  * at `danger`, or returns `fallback` (default `0`) when no ramp is configured.
  */
 export function templateChanceFor(dungeon: DungeonDef | undefined, danger: number, fallback = 0): number {
-  const ramp = dungeon?.encounters?.templateRamp;
-  if (ramp === undefined) return Math.max(0, Math.min(1, fallback));
-  if (danger < ramp.minDanger) return 0;
-  const raw = ramp.base + (danger - ramp.minDanger) * ramp.perDanger;
-  return Math.max(0, Math.min(1, Math.min(ramp.max, raw)));
+  return computeTemplateChance(dungeon, danger, fallback);
 }
 
 /**
  * Pure Wave-2 extension hook: rolls out-of-depth (OOD) Danger elevation when `ETH-134` enables it.
- * Returns `{ danger, ood: false }` until `ETH-134`.
  */
 export function rollOodDanger(
-  _dungeon: DungeonDef | undefined,
+  dungeon: DungeonDef | undefined,
   danger: number,
-  _rng: Rng,
+  rng: Rng,
 ): { danger: number; ood: boolean } {
-  return { danger, ood: false };
+  return computeOodDanger(dungeon, danger, rng);
 }
 
 /** Tunable options for repopulating an already-visited floor (ETH-025). */
@@ -282,12 +284,20 @@ export const GEN_MONSTERS = defineGenStep({
           !taken.has(t.y * draft.terrain.width + t.x) &&
           stairs.every((s) => Math.max(Math.abs(s.x - t.x), Math.abs(s.y - t.y)) >= p.stairsDistance),
       );
+    const templateChance = templateChanceFor(draft.dungeon, draft.danger, p.templateChance);
     for (let i = 0; i < count && tiles.length > 0; i++) {
-      const def = pickWeightedForDanger(defs, draft.danger, rng, ecology);
+      const oodRoll = rollOodDanger(draft.dungeon, draft.danger, rng);
+      const oodDefs = oodRoll.ood ? monstersForDanger(oodRoll.danger, ecology) : defs;
+      const pool = oodDefs.length > 0 ? oodDefs : defs;
+      const spawnDanger = oodDefs.length > 0 ? oodRoll.danger : draft.danger;
+      const strictOod = oodRoll.ood ? pool.filter((m) => m.danger.min > draft.danger) : pool;
+      const pickPool = strictOod.length > 0 ? strictOod : pool;
+      const def = pickWeightedForDanger(pickPool, spawnDanger, rng, ecology);
       const at = rng.int(0, tiles.length - 1);
       const [pos] = tiles.splice(at, 1) as [Pos];
-      const templates = rollTemplates(def, rng, p.templateChance);
-      draft.spawns.push(newMonster(def, pos, templates.length === 0 ? undefined : { templates }));
+      const templates = rollTemplates(def, rng, templateChance);
+      const ood = oodRoll.ood && def.danger.min > draft.danger ? true : undefined;
+      draft.spawns.push(newMonster(def, pos, templates.length === 0 ? undefined : { templates }, ood));
     }
   },
 });

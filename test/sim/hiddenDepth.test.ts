@@ -249,8 +249,13 @@ describe('configDepthRange, resolveRunDepth, and Danger curves', () => {
 
     const rng = Rng.seeded(9, 'test-ood');
     const before = rng.saveState();
-    expect(rollOodDanger(DUNGEON_OLD_DELVE, 5, rng)).toEqual({ danger: 5, ood: false });
+    // Below minDanger (3), OOD never triggers and never draws from rng.
+    expect(rollOodDanger(DUNGEON_OLD_DELVE, 2, rng)).toEqual({ danger: 2, ood: false });
     expect(rng.state).toEqual(before);
+    // At minDanger+, rollOodDanger delegates cleanly to computeOodDanger.
+    const rolled = rollOodDanger(DUNGEON_OLD_DELVE, 5, rng);
+    expect([5, 7]).toContain(rolled.danger);
+    expect(rolled.ood).toBe(rolled.danger > 5);
   });
 });
 

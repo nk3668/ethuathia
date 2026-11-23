@@ -36,6 +36,7 @@ import { FLEE_ACTION } from './flee';
 import type { FleeRequest } from './flee';
 import { GEN_MONSTERS } from './monsters';
 import type { MonsterPart } from './monsters';
+import { CHRONICLE_OOD_SIGHTED } from './ood';
 import { namesOf, overlayProblems, PROVIDER_OVERLAY, SOURCE_MONSTER_INNATE, SOURCE_TEMPLATES, templateMetKey, templatesField } from './overlay';
 import type { ShownName } from './overlay';
 import { boltable, canSee, isAlly, rolePowers, ROLE_CONDITIONS, ROLE_RULE_ACTIONS } from './roles';
@@ -44,6 +45,7 @@ import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, hpPe
 export * from './death';
 export * from './flee';
 export * from './monsters';
+export * from './ood';
 export * from './overlay';
 export * from './roles';
 export * from './rules';
@@ -132,9 +134,10 @@ export type CombatEvent =
     }
   /**
    * A party member (`actor`) saw `monster` (def `def`) for the first time, at `pos`. `templates`
-   * (ETH-117) are the monster's template ids, which the Codex marks seen too.
+   * (ETH-117) are the monster's template ids, which the Codex marks seen too. `ood` is set when
+   * the monster spawned out-of-depth (ETH-134).
    */
-  | { type: 'monsterSighted'; actor: EntityId; monster: EntityId; def: string; floor: FloorId; pos: Pos; templates?: string[]; names?: EventNames }
+  | { type: 'monsterSighted'; actor: EntityId; monster: EntityId; def: string; floor: FloorId; pos: Pos; templates?: string[]; names?: EventNames; ood?: true }
   /** An adventurer caught their breath and got back `amount` HP (natural recovery). */
   | { type: 'recovered'; actor: EntityId; amount: number }
   /**
@@ -439,6 +442,7 @@ function noticeMonsters(state: RunState, viewer: ActorEntity, emit: TurnCtx['emi
       pos: { x: m.pos.x, y: m.pos.y },
       ...templatesField(m),
       ...namesOf(m),
+      ...(m.monster.ood === true ? { ood: true as const } : {}),
     });
   }
 }
@@ -505,6 +509,7 @@ export const CHRONICLE_NEAR_DEATH = defineChronicleKind({ id: 'nearDeath', prior
 /** Which of this domain's events are run chronicle moments. */
 export const COMBAT_CHRONICLE: ChronicleRules = {
   attacked: (e) => (isNearDeathBlow(e) ? momentAt(CHRONICLE_NEAR_DEATH, e, [e.target, e.actor], [e.actorDef], { amount: e.hp }) : null),
+  monsterSighted: (e) => (e.ood === true ? momentAt(CHRONICLE_OOD_SIGHTED, e, [e.actor, e.monster], [e.def]) : null),
 };
 
 /** What this domain registers with the shared code, in this order. */
@@ -536,6 +541,6 @@ export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
     killed: (e) => (MONSTERS.has(e.victimDef) ? [{ id: e.victimDef, mark: 'killed' }] : []),
   },
   chronicle: COMBAT_CHRONICLE,
-  chronicleKinds: [CHRONICLE_NEAR_DEATH],
+  chronicleKinds: [CHRONICLE_NEAR_DEATH, CHRONICLE_OOD_SIGHTED],
 };
 
