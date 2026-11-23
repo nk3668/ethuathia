@@ -75,14 +75,16 @@ export type FloorsEvent =
   | { type: 'fountainRanDry'; fountain: EntityId; floor: FloorId; pos: Pos }
   /**
    * Emitted once per run the first time the dungeon repopulates a visited floor on the return trip
-   * (ETH-025), logging `"The dungeon stirs."` without repeating on every floor.
+   * or under constant-respawn rules (ETH-025, ETH-136), logging `"The dungeon stirs."` without
+   * repeating on every floor. `surged` is set for post-contract return-trip deep surges.
    */
-  | { type: 'dungeonStirred'; floor: FloorId; depth: number }
+  | { type: 'dungeonStirred'; floor: FloorId; depth: number; surged?: true }
   /**
-   * `count` monsters repopulated `floor` (at `depth`, wave `wave`) upon re-entry (ETH-025). Quiet
-   * in the log (`dungeonStirred` announces it once); observable by tests and trackers.
+   * `count` monsters repopulated `floor` (at `depth`, wave `wave`) upon re-entry (ETH-025,
+   * ETH-136). `surged` is set for post-contract return-trip deep surges. Quiet in the log
+   * (`dungeonStirred` announces it once); observable by tests and trackers.
    */
-  | { type: 'floorRespawned'; floor: FloorId; depth: number; count: number; wave: number };
+  | { type: 'floorRespawned'; floor: FloorId; depth: number; count: number; wave: number; surged?: true };
 
 /** Take the stairs you are standing on, going `dir`. */
 export interface StairsRequest {
@@ -217,8 +219,8 @@ export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {
       slice.deepest = Math.max(slice.deepest, depth);
       emit({ type: 'tookStairs', actor: actor.id, dir, from, to, depth, pos: { x: pos.x, y: pos.y } });
       emit({ type: 'floorEntered', actor: actor.id, floor: to, depth, firstVisit, floorType: floorTypeOf(state, to) });
-      // Repopulate visited floors on the return trip (or continuously with the Guild Hall flag, ETH-025).
-      maybeRespawnFloor(state, to, pos, wasEmpty, firstVisit, emit);
+      // Repopulate visited floors on the return trip (or continuously with the Guild Hall flag, ETH-025 / ETH-136).
+      maybeRespawnFloor(state, to, pos, wasEmpty, firstVisit, emit, dir);
       // A new deepest floor is worth XP to every living member (ETH-034).
       if (deeper) grantDepthXp(state, to, depth, emit);
     },

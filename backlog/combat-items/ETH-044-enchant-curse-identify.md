@@ -2,7 +2,7 @@
 id: ETH-044
 title: Enchantment, blessed and cursed items, and identification
 type: feature
-status: pending-review
+status: done
 priority: P2
 milestone: M1
 epic: combat-items
@@ -34,3 +34,4 @@ Classic roguelike item risk and knowledge. The Cursed Hoard Omen and the Smithy'
 - 2026-11-19: Added ETH-118 (item properties) to `depends_on`: build on the shared system instead of a parallel version.
 - 2026-11-22: Started and done. Added `src/content/enchantments.ts` (`ENCHANTMENTS` registry with 3 base numeric profiles + 5 starter special enchantments, `BLESSING_INFO`, `ITEM_STATE_INFO`, seeded `APPEARANCE_POOLS`); `{ kind: 'identify' }` and `{ kind: 'uncurse' }` effects with `SimDomain.effectHandlers` (`EFFECT_HANDLERS`); `Scroll of identify` and `Scroll of uncursing`; `src/sim/items/identify.ts`, `enchant.ts`, `effects.ts` (`prop.enchant`, `prop.blessing`, `prop.enchantments`, `prop.identified`); loot-RNG property rolling; cursed gear lock + AI handling; Wits `identify` pickup roll + use-ID + wear-ID; non-spoiling UI/Codex tooltips and `src/ui/codex/renderers/enchantment.tsx`; `STATE_VERSION` 27. Filed `ETH-130` for adding more enchantments later.
 - 2026-11-23: Rebased onto main (STATE_VERSION 28) and merged to main (PR #84); PENDING REVIEW.
+- 2026-11-23: Reviewed; done. The identification leak and blind-curse feedback is filed as ETH-142.

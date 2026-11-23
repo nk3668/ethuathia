@@ -149,6 +149,24 @@ describe('log text', () => {
     }
   });
 
+  it('words surged return-trip floorRespawned events distinctly while preserving dungeonStirred and quiet status (ETH-136)', () => {
+    const stirredPlain = { type: 'dungeonStirred' as const, turn: 10, floor: 'd2', depth: 2 };
+    const stirredSurged = { ...stirredPlain, surged: true as const };
+    expect(describeEvent(stirredPlain, () => '').text).toBe('The dungeon stirs.');
+    expect(describeEvent(stirredSurged, () => '').text).toBe('The dungeon stirs.');
+
+    const plainOne = { type: 'floorRespawned' as const, turn: 10, floor: 'd2', depth: 2, count: 1, wave: 1 };
+    const plainMany = { ...plainOne, count: 3 };
+    const surgedOne = { ...plainOne, surged: true as const };
+    const surgedMany = { ...plainMany, surged: true as const };
+
+    expect(FLOORS_LOG_TEXT.floorRespawned.quiet).toBe(true);
+    expect(describeEvent(plainOne, () => '').text).toBe('1 new creature stirs on floor 2.');
+    expect(describeEvent(plainMany, () => '').text).toBe('3 new creatures stir on floor 2.');
+    expect(describeEvent(surgedOne, () => '').text).toBe('1 deep creature surges onto floor 2.');
+    expect(describeEvent(surgedMany, () => '').text).toBe('3 deep creatures surge onto floor 2.');
+  });
+
   it('mentions the first floor type in runStarted when present and omits it for hand-built floors (ETH-079)', () => {
     type RunStartedEvent = Extract<SimEvent, { type: 'runStarted' }>;
     const party = [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }];

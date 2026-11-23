@@ -42,6 +42,9 @@ export const FLOORS_LOG_TEXT: LogTextRecord<FloorsEvent> = {
   floorRespawned: {
     category: 'discovery',
     quiet: true,
-    text: (e) => `${e.count} new ${e.count === 1 ? 'creature stirs' : 'creatures stir'} on floor ${e.depth}.`,
+    text: (e) =>
+      e.surged === true
+        ? `${e.count} deep ${e.count === 1 ? 'creature surges' : 'creatures surge'} onto floor ${e.depth}.`
+        : `${e.count} new ${e.count === 1 ? 'creature stirs' : 'creatures stir'} on floor ${e.depth}.`,
   },
 };
