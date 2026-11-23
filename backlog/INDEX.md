@@ -115,14 +115,14 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Guild Hall doctrine: prioritize clearing floors or prioritize the stairs | town-meta | M2 | P2 | ready | S |
 | [ETH-083](town-meta/ETH-083-gold-to-trophies.md) | Leftover gold converts to Trophies when the party exits | town-meta | M2 | P2 | ready | S |
 | [ETH-084](ui-shell/ETH-084-rematch-same-seed.md) | Rematch button on the run summary replays the same seed | ui-shell | M2 | P2 | done | S |
-| [ETH-085](town-meta/ETH-085-depth-weighted-renown.md) | Depth-weighted Renown rewards | town-meta | M2 | P2 | pending-review | S |
+| [ETH-085](town-meta/ETH-085-depth-weighted-renown.md) | Depth-weighted Renown rewards | town-meta | M2 | P2 | done | S |
 | [ETH-086](town-meta/ETH-086-foundations-and-tactics-trees.md) | Split upgrade trees into permanent Foundations and free Tactics | town-meta | M2 | P2 | ready | M |
 | [ETH-087](characters/ETH-087-class-mastery-levels.md) | Class Mastery: a shared level per class that earns tree points | characters | M2 | P2 | idea | M |
-| [ETH-091](codex-tooltips/ETH-091-codex-hints-kill-tiers.md) | Codex hints for undiscovered entries and kill-count tiers | codex-tooltips | M2 | P2 | pending-review | M |
+| [ETH-091](codex-tooltips/ETH-091-codex-hints-kill-tiers.md) | Codex hints for undiscovered entries and kill-count tiers | codex-tooltips | M2 | P2 | done | M |
 | [ETH-092](codex-tooltips/ETH-092-codex-two-pane-modal.md) | Codex as a wide two-pane modal | codex-tooltips | M2 | P2 | done | M |
 | [ETH-093](town-meta/ETH-093-building-unlock-quests.md) | Unlock town buildings by finishing a quest for each | town-meta | M2 | P2 | idea | M |
 | [ETH-129](town-meta/ETH-129-guild-hall-constant-respawn.md) | Guild Hall upgrade: constant floor respawns on revisit | town-meta | M2 | P2 | idea | S |
-| [ETH-131](tools-balance/ETH-131-contract-and-property-guards.md) | Cross-domain contract and property-based test guards (honesty, secrecy, potency, discoverability) | tools-balance | M2 | P2 | pending-review | S |
+| [ETH-131](tools-balance/ETH-131-contract-and-property-guards.md) | Cross-domain contract and property-based test guards (honesty, secrecy, potency, discoverability) | tools-balance | M2 | P2 | done | S |
 | [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rescale Guild Hall Renown costs for depth-weighted rewards | town-meta | M2 | P2 | idea | S |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |
@@ -142,7 +142,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-030](quests/ETH-030-bounty-encounters.md) | Bounty encounters inside the dungeon | quests | M4 | P3 | idea | M |
 | [ETH-046](dungeon-gen/ETH-046-traps-searching.md) | Traps and searching | dungeon-gen | M4 | P3 | idea | M |
 | [ETH-053](risk-omens/ETH-053-ravenous-omen-without-food.md) | Redefine the Ravenous Omen for food buffs (no hunger) | risk-omens | M4 | P3 | idea | S |
-| [ETH-094](adventurer-ai/ETH-094-fountain-avoid-harmful.md) | The AI avoids fountain draughts known to be harmful | adventurer-ai | M4 | P3 | pending-review | S |
+| [ETH-094](adventurer-ai/ETH-094-fountain-avoid-harmful.md) | The AI avoids fountain draughts known to be harmful | adventurer-ai | M4 | P3 | done | S |
 | [ETH-097](bestiary/ETH-097-sleeping-monsters-stealth.md) | Sleeping monsters and stealth | bestiary | M4 | P3 | idea | M |
 | [ETH-105](risk-omens/ETH-105-cursed-modifiers-mid-run.md) | Cursed modifiers found in the dungeon | risk-omens | M4 | P3 | idea | M |
 | [ETH-122](content/ETH-122-seeded-text-generator.md) | Seeded text generator: grammar templates for names, titles, epitaphs, ballads and backstories | content | M5 | P1 | done | M |
