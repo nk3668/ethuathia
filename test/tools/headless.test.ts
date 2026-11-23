@@ -123,6 +123,19 @@ describe('tools/headless', () => {
     expect(report.split('\n')[1]).toMatch(/done \(retreat\)/);
   });
 
+  it('names every death cause and reports mean member level beside the highest (ETH-145)', () => {
+    // A party of 4 on progressed upgrades dies often; status deaths (poison) must name the status.
+    const results = runSeeds(1, 6, { preset: 'progressed', party: headlessParty(4) });
+    const causes = new Set(results.flatMap((r) => Object.keys(r.deathCauses ?? {})));
+    expect(causes.has('other')).toBe(false);
+    expect(causes.has('unknown')).toBe(false);
+    expect([...causes].every((c) => c.startsWith('monster.') || c.startsWith('status.') || c.startsWith('trap.'))).toBe(true);
+    for (const r of results) expect(r.meanLevel).toBeLessThanOrEqual(r.level ?? 0);
+    const summary = summarizeReport([result(1, { level: 6, meanLevel: 4 }), result(2, { level: 4, meanLevel: 3 })]);
+    expect(summary.memberLevelMean).toBeCloseTo(3.5, 6);
+    expect(formatReport([result(1, { level: 6, meanLevel: 4 })])).toContain('Member level (mean of members): mean 4.00.');
+  });
+
   it('reports kills and what killed the party', () => {
     const results = [
       result(1, { kills: 10, deaths: 0, deathCauses: {} }),
@@ -374,7 +387,7 @@ describe('tools/headless', () => {
     expect(report).toContain('Turns to the bottom (done runs): mean 190, min 180, max 200. Median: 190.');
     expect(report).toContain('Turns (all runs): mean 208, median 220, min 80, max 310.');
     expect(report).toContain('Median depth: 4.5, floor 3+: 75.0% (3/4).');
-    expect(report).toContain('Party level: mean 3.50, median 3.5 (min 2, max 5).');
+    expect(report).toContain('Party level (highest member): mean 3.50, median 3.5 (min 2, max 5).');
     expect(report).toContain('Deaths per run: 0.50.');
     expect(report).toContain('/hr at 1x (5 steps/s).');
   });

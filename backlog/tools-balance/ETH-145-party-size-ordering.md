@@ -2,7 +2,7 @@
 id: ETH-145
 title: Fix the party-size inversion so solo is the hardest way to play
 type: bug
-status: ready
+status: in-progress
 priority: P1
 milestone: M1.5
 epic: tools-balance

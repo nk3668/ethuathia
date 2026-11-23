@@ -311,6 +311,8 @@ export interface SeedResult {
   resisted?: number;
   /** The party's highest level where the run stopped (ETH-034). Missing from older reports. */
   level?: number;
+  /** The mean level of the party's members where the run stopped (ETH-145): a fair size-to-size comparison. */
+  meanLevel?: number;
   /** Contracts complete when the run stopped (ETH-024). Missing from reports before it. */
   contracts?: number;
   /** Times a party member put on a piece of gear (ETH-043). */
@@ -375,6 +377,11 @@ function createRunner(config: RunConfig, seed: number, ownRules: readonly Rule[]
   };
 }
 
+/** The mean of the members' levels, `1` for an empty party. */
+function meanMemberLevel(levels: readonly number[]): number {
+  return levels.length === 0 ? 1 : levels.reduce((a, b) => a + b, 0) / levels.length;
+}
+
 /** Runs one seed until the party settles, the cap is hit or the run stalls. */
 export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult {
   const cap = options.cap ?? DEFAULT_TURN_CAP;
@@ -424,7 +431,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
       chronicle = CHRONICLE_TRACKER.reduce(chronicle, e);
       if (e.type === 'fell') {
         deaths++;
-        const cause = slain.get(e.actor) ?? 'other';
+        const cause = e.killer?.def ?? slain.get(e.actor) ?? 'unknown';
         deathCauses[cause] = (deathCauses[cause] ?? 0) + 1;
       }
       if (e.type !== 'stuck') continue;
@@ -485,6 +492,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     fleeFails,
     resisted,
     level: Math.max(1, ...Object.values(snap.domains.stats.members).map((m) => m.level.level)),
+    meanLevel: meanMemberLevel(Object.values(snap.domains.stats.members).map((m) => m.level.level)),
     contracts: snap.domains.quests.contracts.filter((c) => c.complete).length,
     equips,
     moments: chronicle.entries.length,
@@ -595,6 +603,8 @@ export interface ReportSummary {
   depthMin: number | null;
   depthMax: number | null;
   levelMean: number | null;
+  /** Mean over runs of the mean member level (ETH-145). */
+  memberLevelMean: number | null;
   levelMedian: number | null;
   levelMin: number | null;
   levelMax: number | null;
@@ -681,6 +691,7 @@ export function summarizeReport(results: readonly SeedResult[]): ReportSummary {
     depthMin: depths.length === 0 ? null : Math.min(...depths),
     depthMax: depths.length === 0 ? null : Math.max(...depths),
     levelMean: avg(levels),
+    memberLevelMean: avg(results.flatMap((r) => (r.meanLevel === undefined ? [] : [r.meanLevel]))),
     levelMedian: median(levels),
     levelMin: levels.length === 0 ? null : Math.min(...levels),
     levelMax: levels.length === 0 ? null : Math.max(...levels),
@@ -758,7 +769,8 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
   const levelLine =
     s.levelMean === null || s.levelMedian === null
       ? ''
-      : `Party level: mean ${s.levelMean.toFixed(2)}, median ${fmtWholeOrOne(s.levelMedian)} (min ${s.levelMin}, max ${s.levelMax}).`;
+      : `Party level (highest member): mean ${s.levelMean.toFixed(2)}, median ${fmtWholeOrOne(s.levelMedian)} (min ${s.levelMin}, max ${s.levelMax}).` +
+        (s.memberLevelMean === null ? '' : ` Member level (mean of members): mean ${s.memberLevelMean.toFixed(2)}.`);
 
   const lootLine =
     s.itemsMean === null || s.goldMean === null
