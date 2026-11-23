@@ -34,6 +34,14 @@ import { actorName, killActor, reapDead } from './death';
 import type { DroppedLoot } from './death';
 import { FLEE_ACTION } from './flee';
 import type { FleeRequest } from './flee';
+import {
+  alertMonsterOnDamage,
+  GROUP_CONDITIONS,
+  GROUP_RULE_ACTIONS,
+  groupInvariantProblems,
+  patrolInvariantProblems,
+  updateMonsterTurnState,
+} from './groupAi';
 import { GEN_MONSTERS } from './monsters';
 import type { MonsterPart } from './monsters';
 import { CHRONICLE_OOD_SIGHTED } from './ood';
@@ -43,7 +51,9 @@ import { boltable, canSee, isAlly, rolePowers, ROLE_CONDITIONS, ROLE_RULE_ACTION
 import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, hpPercent, isHostile } from './rules';
 
 export * from './death';
+export * from './encounters';
 export * from './flee';
+export * from './groupAi';
 export * from './monsters';
 export * from './ood';
 export * from './overlay';
@@ -361,6 +371,7 @@ function strike(state: RunState, actor: ActorEntity, target: ActorEntity, emit: 
     ...how,
     ...namesOf(actor, target),
   });
+  alertMonsterOnDamage(state, target, actor);
   if (target.actor.hp > 0) fireTrigger(state, target, TRIGGER_STRUCK.id, emit, actor.id);
   if (actor.actor.hp > 0) fireTrigger(state, actor, TRIGGER_HIT.id, emit, target.id);
   const floor = actor.floor;
@@ -402,9 +413,12 @@ export const TRIGGER_STRUCK: TriggerKindDef = {
 /** An adventurer with no enemy next to them gets back 1 HP every this many game turns. */
 export const RECOVERY_INTERVAL = 2;
 
-/** Turn start: anyone left at 0 HP by the stats domain's turn-start triggers dies. */
+/** Turn start: reap any 0 HP actors, then refresh group alerts and patrol progress for living monsters. */
 function combatTurnStart({ state, actor, emit }: TurnCtx): void {
   reapDead(state, actor.floor, emit);
+  if (state.entities[actor.id] !== undefined && actor.actor.hp > 0 && actor.monster !== undefined) {
+    updateMonsterTurnState(state, actor);
+  }
 }
 
 /**
@@ -492,6 +506,9 @@ registerInvariant('combat.overlay', (state) => {
   return problems;
 });
 
+registerInvariant('combat.groups', groupInvariantProblems);
+registerInvariant('combat.patrols', patrolInvariantProblems);
+
 /** The share of max HP under which a blow on an adventurer leaves them near death (a highlight, ETH-047). */
 export const NEAR_DEATH_FRACTION = 0.25;
 
@@ -518,8 +535,8 @@ export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
   commands: COMBAT_COMMANDS,
   init: initCombat,
   snapshot: combatSnapshot,
-  conditions: [...COMBAT_CONDITIONS, ...ROLE_CONDITIONS],
-  ruleActions: [...COMBAT_RULE_ACTIONS, ...ROLE_RULE_ACTIONS],
+  conditions: [...COMBAT_CONDITIONS, ...ROLE_CONDITIONS, ...GROUP_CONDITIONS],
+  ruleActions: [...COMBAT_RULE_ACTIONS, ...ROLE_RULE_ACTIONS, ...GROUP_RULE_ACTIONS],
   genSteps: [GEN_MONSTERS],
   triggers: [TRIGGER_HIT, TRIGGER_STRUCK],
   statProviders: [PROVIDER_OVERLAY],

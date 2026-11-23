@@ -28,6 +28,7 @@ export { defineTerrain, TERRAIN, TERRAIN_FLOOR, TERRAIN_KIND, TERRAIN_WALL } fro
 export type { TerrainDef } from './terrain';
 export * from './monsters';
 export * from './monsterTemplates';
+export * from './squads';
 export * from './items';
 export * from './enchantments';
 export * from './objectives';

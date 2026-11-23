@@ -32,8 +32,8 @@ const result = (seed: number, over: Partial<SeedResult> = {}): SeedResult => ({
 
 describe('tools/headless', () => {
   it('runs seeded dungeons to the bottom and reports depth, turns per floor and explored share', () => {
-    // Two floors keep the test quick; the command line runs the default ten.
-    const results = runSeeds(1, 3, { depth: 2 });
+    // Two floors with a full party keep the test quick and reliably victorious; CLI defaults apply elsewhere.
+    const results = runSeeds(1, 3, { depth: 2, party: headlessParty(4) });
     expect(results.map((r) => r.seed)).toEqual([1, 2, 3]);
     for (const r of results) {
       expect(r.outcome, `seed ${r.seed}`).toBe('done');
@@ -60,7 +60,7 @@ describe('tools/headless', () => {
       expect(r.steps).toBeLessThan(DEFAULT_TURN_CAP);
     }
     // The same seed gives the same run.
-    expect(runSeed(2, { depth: 2 })).toEqual(results[1]);
+    expect(runSeed(2, { depth: 2, party: headlessParty(4) })).toEqual(results[1]);
   });
 
   it('stops at the turn cap with the floor part-explored', () => {

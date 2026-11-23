@@ -11,10 +11,14 @@ import { actorsAt, addEntity, blockerAt, featureAt, getFloor } from '../entities
 import { floorDanger, runDungeon } from '../floors/dungeon';
 import type { NewEntity } from '../entities';
 import { readParams } from '../gen/params';
-import { defineGenStep, rectTiles } from '../gen/types';
+import { defineGenStep } from '../gen/types';
+import type { Rect } from '../gen/types';
 import { Terrain } from '../state';
 import type { Entity, FloorId, RunState } from '../state';
 import { fillVitals, newStatsPart } from '../stats/getStat';
+import { populateEncounters } from './encounters';
+import { withGroupAiRules } from './groupAi';
+import type { MonsterAlert, MonsterPatrol } from './groupAi';
 import { computeOodDanger, computeTemplateChance } from './ood';
 import { overlayProblems, rollTemplates, spawnHp } from './overlay';
 import type { MonsterOverlay } from './overlay';
@@ -27,47 +31,87 @@ export interface MonsterPart {
   ood?: true;
   /** What is layered on its def (ETH-117): templates, a name, stat changes, carried items. Absent on a plain monster. */
   overlay?: MonsterOverlay;
+  /** Shared encounter pack/squad id on the floor (ETH-135). */
+  groupId?: number;
+  /** Room rectangle that an unalerted room encounter tethers to (ETH-135). */
+  homeRoom?: Rect;
+  /** Active threat memory `{ pos, untilTurn }` for group alert and pursuit (ETH-135). */
+  alert?: MonsterAlert;
+  /** Corridor patrol waypoint loop and next target index (ETH-135). */
+  patrol?: MonsterPatrol;
+}
+
+/** Optional OOD, group, room-tether, alert, and patrol state attached when creating or spawning a monster. */
+export interface NewMonsterOptions {
+  ood?: true;
+  groupId?: number;
+  homeRoom?: Rect;
+  alert?: MonsterAlert;
+  patrol?: MonsterPatrol;
 }
 
 /**
  * A new monster of `def` at `pos`, ready for `addEntity` or a floor plan's `spawns`: full HP, the
- * rules of its role (its templates' role, if one changes it), and `overlay` when given. The
- * overlay is copied and not checked here (`spawnMonster` checks it).
+ * rules of its role (its templates' role, if one changes it, adapted with `withGroupAiRules`), and
+ * `overlay` / `options` when given. The overlay is copied and not checked here (`spawnMonster`
+ * checks it).
  */
-export function newMonster(def: MonsterDef, pos: Pos, overlay?: MonsterOverlay, ood?: true): Omit<NewEntity, 'floor'> {
+export function newMonster(
+  def: MonsterDef,
+  pos: Pos,
+  overlay?: MonsterOverlay,
+  options?: NewMonsterOptions,
+): Omit<NewEntity, 'floor'> {
   const { hp, damage, accuracy, evasion, armor, speed, sight } = def.stats;
   const kept = overlay === undefined || Object.keys(overlay).length === 0 ? undefined : clonePlain(overlay);
+  const monster: MonsterPart = { sighted: false };
+  if (options?.ood === true) monster.ood = true;
+  if (kept !== undefined) monster.overlay = kept;
+  if (options?.groupId !== undefined) monster.groupId = options.groupId;
+  if (options?.homeRoom !== undefined) monster.homeRoom = clonePlain(options.homeRoom);
+  if (options?.alert !== undefined) monster.alert = clonePlain(options.alert);
+  if (options?.patrol !== undefined) monster.patrol = clonePlain(options.patrol);
+
+  const rules = withGroupAiRules(monsterRules(def, templateDefs(kept?.templates)), {
+    hasHomeRoom: monster.homeRoom !== undefined,
+    hasPatrol: monster.patrol !== undefined,
+    hasGroup: monster.groupId !== undefined,
+  });
+
   return {
     def: def.id,
     pos: { x: pos.x, y: pos.y },
     actor: { energy: 0, hp: spawnHp(def, kept), mp: 0, faction: 'monster' },
     stats: newStatsPart({ hp, damage, accuracy, evasion, armor, speed, ...(sight === undefined ? {} : { sight }) }),
     ai: newAiPart(
-      monsterRules(def, templateDefs(kept?.templates)).map((r) => ({
+      rules.map((r) => ({
         condition: r.condition.params === undefined ? { id: r.condition.id } : { id: r.condition.id, params: r.condition.params },
         action: r.action.params === undefined ? { id: r.action.id } : { id: r.action.id, params: r.action.params },
         enabled: true,
       })),
     ),
-    monster: {
-      sighted: false,
-      ...(ood === true ? { ood: true as const } : {}),
-      ...(kept === undefined ? {} : { overlay: kept }),
-    },
+    monster,
   };
 }
 
 /**
  * Puts a monster of def `defId` on a built floor at `pos` and returns it, at full HP. For
  * hand-built test maps, summons and profile-made monsters (a nemesis, an heirloom carrier), which
- * pass an `overlay` (ETH-117). Throws on an unknown def, a malformed overlay, a wall, or a tile
- * someone it can't share with already stands on.
+ * pass an `overlay` (ETH-117), or `options` (OOD/group/homeRoom/patrol, ETH-135). Throws on an
+ * unknown def, a malformed overlay, a wall, or a tile someone it can't share with already stands on.
  */
-export function spawnMonster(state: RunState, defId: string, floorId: FloorId, pos: Pos, overlay?: MonsterOverlay): Entity {
+export function spawnMonster(
+  state: RunState,
+  defId: string,
+  floorId: FloorId,
+  pos: Pos,
+  overlay?: MonsterOverlay,
+  options?: NewMonsterOptions,
+): Entity {
   const def = MONSTERS.get(defId);
   const problems = overlay === undefined ? [] : overlayProblems(overlay, defId);
   if (problems.length > 0) throw new RangeError(`Bad overlay for a ${def.name}: ${problems.join('; ')}`);
-  const template = { ...newMonster(def, pos, overlay), floor: floorId };
+  const template = { ...newMonster(def, pos, overlay, options), floor: floorId };
   if (Grid.wrap(getFloor(state, floorId).terrain).get(pos.x, pos.y) !== Terrain.Floor) {
     throw new RangeError(`Can't put a ${def.name} inside a wall at (${pos.x}, ${pos.y})`);
   }
@@ -270,34 +314,6 @@ export const GEN_MONSTERS = defineGenStep({
     });
   },
   run(draft, p, rng) {
-    const ecology = draft.dungeon?.ecology;
-    const defs = monstersForDanger(draft.danger, ecology);
-    const count = Math.round(p.base + p.perDepth * draft.depth);
-    if (defs.length === 0 || count <= 0) return;
-    const stairs = draft.features.filter((f) => f.feature.kind === 'stairs').map((f) => f.pos);
-    const taken = new Set(draft.features.map((f) => f.pos.y * draft.terrain.width + f.pos.x));
-    const tiles = draft.rooms
-      .flatMap(rectTiles)
-      .filter(
-        (t) =>
-          draft.terrain.get(t.x, t.y) === Terrain.Floor &&
-          !taken.has(t.y * draft.terrain.width + t.x) &&
-          stairs.every((s) => Math.max(Math.abs(s.x - t.x), Math.abs(s.y - t.y)) >= p.stairsDistance),
-      );
-    const templateChance = templateChanceFor(draft.dungeon, draft.danger, p.templateChance);
-    for (let i = 0; i < count && tiles.length > 0; i++) {
-      const oodRoll = rollOodDanger(draft.dungeon, draft.danger, rng);
-      const oodDefs = oodRoll.ood ? monstersForDanger(oodRoll.danger, ecology) : defs;
-      const pool = oodDefs.length > 0 ? oodDefs : defs;
-      const spawnDanger = oodDefs.length > 0 ? oodRoll.danger : draft.danger;
-      const strictOod = oodRoll.ood ? pool.filter((m) => m.danger.min > draft.danger) : pool;
-      const pickPool = strictOod.length > 0 ? strictOod : pool;
-      const def = pickWeightedForDanger(pickPool, spawnDanger, rng, ecology);
-      const at = rng.int(0, tiles.length - 1);
-      const [pos] = tiles.splice(at, 1) as [Pos];
-      const templates = rollTemplates(def, rng, templateChance);
-      const ood = oodRoll.ood && def.danger.min > draft.danger ? true : undefined;
-      draft.spawns.push(newMonster(def, pos, templates.length === 0 ? undefined : { templates }, ood));
-    }
+    populateEncounters(draft, p, rng);
   },
 });
