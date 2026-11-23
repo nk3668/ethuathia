@@ -51,11 +51,23 @@ function main(argv: readonly string[]): number {
   }
 
   const last = args.from + args.seeds - 1;
-  console.log(
-    `Headless run: seeds ${args.from}-${last}, party of ${args.party}, cap ${args.cap} party turns per run\n`,
-  );
+  const details = [
+    `seeds ${args.from}-${last}`,
+    `party of ${args.party}`,
+    `cap ${args.cap} party turns per run`,
+    `preset ${args.preset}`,
+    `rules ${args.rules}`,
+    ...(args.upgrades.length === 0 ? [] : [`upgrades ${args.upgrades.join(',')}`]),
+  ].join(', ');
+  console.log(`Headless run: ${details}\n`);
   const started = performance.now();
-  const results = runSeeds(args.from, args.seeds, { cap: args.cap, party: headlessParty(args.party) });
+  const results = runSeeds(args.from, args.seeds, {
+    cap: args.cap,
+    party: headlessParty(args.party),
+    preset: args.preset,
+    upgrades: args.upgrades,
+    rules: args.rules,
+  });
   const seconds = (performance.now() - started) / 1000;
   console.log(formatReport(results, args.cap));
   console.log(`\nRan in ${seconds.toFixed(2)} s.`);

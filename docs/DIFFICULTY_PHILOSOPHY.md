@@ -6,11 +6,20 @@ The living design and tuning guide for difficulty, danger progression, bestiary 
 
 ## 1. Core principles
 
-1. **No level-scaling or party-size rubber-banding.** Monsters never scale up to match adventurer levels or party size. Stronger creatures live on deeper floors and inside harder dungeons. Unlocking a second berth, buying Smithy gear, or drafting a balanced party must make earlier content genuinely easier, pushing players toward higher Omen levels, additional contracts, and deeper dungeons instead of punishing progression (`CLAUDE.md` §1, Principle 3).
+1. **No level-scaling, and only a small party-size surcharge.** Monster stats never scale to adventurer levels or party size. Stronger creatures live on deeper floors and inside harder dungeons. The one concession to party size is that a bigger party draws a *slightly* bigger encounter budget: a few more monsters or an extra pack per floor, never stronger monsters. The **(default)** is about +10% floor threat budget for each adventurer after the first, so a party of 4 faces about +30%. The surcharge must never cancel the party's advantage (Principle 6). Unlocking a second berth, buying Smithy gear, or drafting a balanced party must make earlier content genuinely easier, pushing players toward higher Omen levels, additional contracts, and deeper dungeons instead of punishing progression (`CLAUDE.md` §1, Principle 3).
 2. **Loss early; mastery raises the ceiling.** A fresh company with zero upgrades should expect to lose most attempts on a starter delve. Survival and victory come from town meta-progression, party composition, gear upgrades, and behavior rules that match the threats ahead.
 3. **Attrition and tactics over one-shot spikes.** Combat should wear down HP, healing potions, fountain draughts, and positioning across an entire floor rather than deciding runs on a single coin-flip blow. Every combat death should be readable in hindsight (`CLAUDE.md` §1, Principle 2).
 4. **Readable danger.** Out-of-depth spawns, templated/elite variants, return-trip surges, and killer identities are surfaced clearly in the log, highlights, Codex, and tooltips. Never balance through hidden luck values or silent scaling (`ROGUELIKE-SURVEY.md`).
 5. **Extensible as pure data.** Adding a new monster, template, encounter pattern, or themed dungeon must be a data entry in `src/content/`, not a rewrite of spawning or difficulty logic (`ARCHITECTURE.md`).
+6. **Solo is the hardest way to play.** On the same profile and dungeon, win rate rises with party size: 1 < 2 < 3 < 4, and a party of 4 wins at least twice as often as a solo adventurer. Bigger parties pay for their safety through shared XP, shared floor loot and consumables, crowding in narrow corridors, and the small encounter-budget surcharge from Principle 1. They never face stronger monsters because of their size. A solo adventurer must never out-level the dungeon by hoarding XP. The harness checks this ordering (`ETH-145`).
+7. **Balance is re-checked, not finished.** Every milestone, and every major content addition (a class, a dungeon, a bestiary expansion, a new item family, a town tree), ends with a balance check against §2 using the §9 procedure. A milestone isn't done until its check passes or the targets are deliberately changed in this document (§9.1).
+8. **Composition and synergy beat headcount.** Once more classes exist, a mixed party whose classes cover each other (frontline, ranged, support, with matching rules) is clearly stronger than the same number of Vanguards. A single-class party is the floor, not the ceiling. Each new class must make at least one party it joins stronger than its single-class equivalent, and no one composition may be best everywhere (Principle 13). This is measured from M3 on (`ETH-146`).
+9. **The best gear is found, not bought.** Smithy kits, starting enchantments and other starting gear raise the floor: modest and reliable, roughly what a typical run finds by floor 2–3 **(default)**. The strongest items (high enchantments, affixes, artifacts, heirlooms) come from inside runs: floor loot, elites, mini-bosses and graves. On a typical delve, the starting kit should be outclassed by mid-run finds.
+10. **Meta power adds consistency more than ceiling.** Town and roster progression (Guild Hall, Smithy, Temple, Tavern, unlocks) gives small, permanent stat boosts. Its bigger job is making runs **more consistent**: fewer early deaths, more reliable floor reach, better recruits and more options. The ceiling comes from what happens in the run: found gear, in-run levels, party composition and rules. In-run levels matter, but they never overshadow gear and party makeup (target end level in §7).
+11. **Balanced for the hands-off player.** The player may simply watch. Every target in §2 is measured on AI-only runs, using the baseline AI and the rule presets available at that stage of progression. Manual control (possession, possibly unlocked later rather than available from the start) is a bonus. No target may depend on it.
+12. **Retreating always pays.** A retreat banks everything earned, so it should rarely be worse than pushing on. Retreat rules must have a real payoff, never only a cost.
+13. **No dead runs, and no dominant strategy.** Even a lost run moves the player toward their next unlock. A fresh player should unlock something within about **3–5 runs (default)** at a ~20% win rate. No single rule preset, party makeup or Omen combination should be best in every dungeon.
+14. **Risk is priced fairly.** Every Omen and extra contract must pay more than the win rate it costs, as the harness measures it. Opting into risk should be a good bet for a strong party, never a trap.
 
 ---
 
@@ -24,7 +33,8 @@ Targets are measured with the headless balance harness (`npm run sim -- --seeds 
   - **Victory rate:** **~15–25%** (target **~20%**). Wins come mostly from shorter rolled depths, favorable gear/fountain drops, or smart retreat/healing rules; deeper rolls and the return trip claim most early runs.
   - **Onboarding floor reach:** **>85–90%** reach **Floor 3+** so early runs consistently earn Renown/Trophies and unlock early milestones (such as the Smithy at depth 3) without feeling brick-walled at the entrance.
 - **Progressed profile (unlocked berths, early Guild Hall / Smithy upgrades):**
-  - **Victory rate:** **~45–60%** (target **~50%**), varying meaningfully with **party composition** and **behavior rules**. A naive, corridor-bottlenecked mono-melee stack should sit closer to **~35–40%**, while a well-composed party (frontline + ranged/support + tailored rules) should climb past **~55–65%**.
+  - **Victory rate:** **~45–60%** (target **~50%**), varying meaningfully with **party composition** and **behavior rules**. A naive, corridor-bottlenecked mono-melee stack should sit closer to **~35–40%**, while a well-composed party (frontline + ranged/support + tailored rules) should climb past **~55–65%**. *The composition spread can only be measured once several classes and the rules editor exist (M3, `ETH-146`). Until then, measure a progressed party of 4 Vanguards against the ~45–60% band.*
+- **Party-size ordering (Principle 6):** on each preset, win rate rises from party 1 to 4, and party 4 wins at least **2×** as often as solo.
 - **Return-trip lethality:** **~15–25%** of relic-bearing runs wipe on the climb back out, making post-objective retreat rules matter rather than turning the ascent into a victory lap.
 
 ### Later dungeons and opt-in escalation
@@ -42,7 +52,7 @@ Hardcoding monster lists or tying monsters permanently to floors `1–10` of a s
 
 - Avoid closed difficulty enums (`easy` / `medium` / `hard`) and avoid assuming "depth 1 = weakest possible monster everywhere."
 - Define every `MonsterDef` over an open-ended **Danger** band (`danger: { min, peak?, max }` — extending seamlessly from `1` through `10`, `15`, `20+`) plus **family/ecology tags** (`beast`, `small_folk`, `undead`, `fungus`, `construct`, `aquatic`, etc.).
-- Existing `depth: { min, max }` on `MonsterDef` (`src/content/monsters.ts`) serves as the Danger-1-per-floor baseline in *The Old Delve* and should evolve into (or map cleanly onto) this Danger band before adding multi-dungeon variants.
+- `MonsterDef.danger` (`src/content/monsters.ts`) holds this band, added in `ETH-133`. *The Old Delve* maps one floor to one Danger step.
 
 ### 3.2 Dungeon difficulty profiles as data (`DungeonDef`)
 
@@ -124,7 +134,7 @@ Alongside room-bound packs, a small number of **patrols** (solo scouts at low Da
 - Patrols can wander into an ongoing room fight and create emergent flanking pressure.
 - Return-trip hunter patrols actively pressure a retreating or relic-carrying party.
 
-### 4.4 How groups reward party composition without party-size scaling
+### 4.4 How groups reward party composition without scaling monsters to party size
 
 Three existing mechanics in Ethuathia naturally reward balanced compositions when facing coordinated groups:
 
@@ -165,6 +175,7 @@ Adjusting monster stats in isolation causes swingy combat if the surrounding sim
 - **Passive out-of-combat recovery (`RECOVERY_INTERVAL`):** Healing `1 HP` every 2 turns out of combat erases attrition between rooms. Slowing `RECOVERY_INTERVAL` (target band ~`8–12` turns, or scaling modestly with Grit / food / healer skills later) ensures multi-room damage persists and gives Mending Draughts, Scrolls of Renewal, fountains, and food buffs real value.
 - **In-run leveling pace (`src/sim/stats/leveling.ts`):** With 4–5× more monsters per floor, `XP_PER_THREAT`, `XP_PER_DEPTH`, and `XP_STEP` must be tuned so a full starter delve finishes around **Level 5–8** (rather than Level 12+). This keeps found gear (`+1/+2/+3` weapons, armor, rings) and Smithy upgrades meaningful and preserves clear headroom for 15–20+ floor dungeons later.
 - **Built-in group dilution:** Floor item counts (`3–6` per floor) do not multiply with party size, and kill XP splits across nearby sharers (`KILL_GROUP_BONUS = 0.25` within `KILL_SHARE_RADIUS = 6`). Larger parties gain action economy and combined-arms synergy while growing slightly slower per adventurer and sharing limited consumables.
+- **Party-size encounter surcharge (Principle 1):** the floor threat budget (§3.4, §4.1) grows by about +10% **(default)** per adventurer after the first. It adds headcount or an extra pack, never stats or templates, and it is shown in the floor tooltip so it stays readable. Tune it last among the party levers, and only while the Principle 6 ordering still holds.
 - **Meta-economy pacing:** Size early Renown/Trophy rates and Guild Hall/Smithy costs (e.g., `UPGRADE_SECOND_BERTH`) so players experience several tense ~20% starter runs before unlocking a second adventurer, rather than buying out Tier 1 after a single lucky run.
 
 ---
@@ -228,4 +239,33 @@ Track these metrics together:
 - **Onboarding reach rate:** share of fresh runs reaching Floor 3+.
 - **Return-trip deaths:** wipes occurring *after* `turnedBack` vs. on the descent.
 - **Leveling & economy:** mean max level reached, kills per run, items picked up, and Renown / Trophies earned per run and per hour.
-- **Death-cause diversity:** ensure no single monster or status accounts for an accidental majority of wipes due to a silent stat cliff.
+- **Death-cause diversity:** ensure no single monster or status accounts for an accidental majority of wipes due to a silent stat cliff, and that no death is unattributed (`other`).
+- **Party-size ordering:** sweep party sizes 1–4 on each preset (Principle 6).
+- **Runs to next unlock** (from M2 on): how many fresh-profile runs it takes to afford the first Guild Hall and Smithy nodes (Principle 13).
+- **Composition spread** (from M3 on): mixed-class parties against same-size Vanguard parties (Principle 8).
+- **Risk pricing** (from M4 on): win-rate drop against reward multiplier for each Omen rank (Principle 14).
+
+## 10. Open questions
+
+- **Does every threat need a counter the player already has?** One candidate principle: whenever a threat first appears, a counter to it (a rule, an item or an upgrade) is already available, so every death teaches "I could have done X". It is undecided because the player may be hands-off and possession may come later as an unlock, so any counter would have to come from the built-in AI, rule presets or upgrades. Revisit once the rules editor lands (M3).
+
+**Sample size.** Use **200 seeds** when checking acceptance against a target band. At 100 seeds the 95% interval on a ~20% rate is about ±8 points, as wide as the bands in §2. 50 seeds is fine for direction while tuning.
+
+**Measure on a clean tree.** Run balance numbers on committed code, or with `--compare` against a named ref, and record the commit hash next to every number you report.
+
+### 9.1 Milestone balance checks
+
+Per Principle 7, every milestone ends with a balance check, and so does any major content addition within a milestone. Each check is a backlog item in `tools-balance` that:
+
+1. Runs the full §9 sweep (presets × party sizes 1–4, 200 seeds) on the milestone's integration branch.
+2. Compares against the previous baseline in §9.2 and explains every target that moved.
+3. Retunes with data in `src/content/` and shared balance constants, or updates the §2 targets here with the reason.
+4. Records the new baseline in §9.2.
+
+Lever order when retuning (fix the earliest one that's off first, since each distorts the ones after it): party AI faults and unattributed deaths → XP and leveling curve → `RECOVERY_INTERVAL` and healing supply → monster stats against §8 → spawn budgets and templates → loot and drop rates → meta-economy pacing.
+
+### 9.2 Baselines
+
+| Milestone | Commit | Fresh solo win | Progressed ×4 win | Floor 3+ (fresh) | Return-trip lethality | Mean end level (solo / ×4) |
+|---|---|---|---|---|---|---|
+| M1.5 (`ETH-080`) | *pending* | | | | | |

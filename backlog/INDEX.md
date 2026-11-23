@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-145**
+**Next ID: ETH-147**
 
 **Assigned to Antigravity** (low risk; pick any whose dependencies are done): ETH-090, ETH-077, ETH-019, then ETH-094, ETH-085, ETH-084.
 
@@ -25,7 +25,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ui-shell](ui-shell/_epic.md) | UI shell and kit | active | M0, M1, M2 |
 | [map-renderer](map-renderer/_epic.md) | Map renderer | active | M0, M1 |
 | [codex-tooltips](codex-tooltips/_epic.md) | Codex and tooltips | active | M1.6, M2 |
-| [tools-balance](tools-balance/_epic.md) | Test and balance tooling | active | M0, M1, M1.5, M1.6, M2 |
+| [tools-balance](tools-balance/_epic.md) | Test and balance tooling | active | M0, M1, M1.5, M1.6, M2, M3 |
 | [quests](quests/_epic.md) | Quests: contracts and bounties | active | M1, M1.5, M2, M3, M4, M5 |
 | [characters](characters/_epic.md) | Characters: attributes, classes and races | active | M1, M2, M3, M5 |
 | [bestiary](bestiary/_epic.md) | Bestiary: monsters, uniques and elites | active | M1, M1.5, M2, M4, M5, later |
@@ -86,6 +86,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-134](bestiary/ETH-134-expand-old-delve-bestiary-and-templates.md) | Expand The Old Delve bestiary and templates across Danger bands | bestiary | M1.5 | P1 | done | M |
 | [ETH-135](dungeon-gen/ETH-135-density-encounters-groups-and-patrols.md) | Threat-budget room encounters, cohesive group engagement, and corridor patrols | dungeon-gen | M1.5 | P1 | done | M |
 | [ETH-136](quests/ETH-136-return-trip-deep-surge.md) | Return-trip deep surge: lower-floor threats and hunter patrols on ascent | quests | M1.5 | P1 | done | S |
+| [ETH-145](tools-balance/ETH-145-party-size-ordering.md) | Fix the party-size inversion so solo is the hardest way to play | tools-balance | M1.5 | P1 | ready | M |
 | [ETH-080](tools-balance/ETH-080-monster-balance-pass.md) | Systemic monster, loot and progression balance pass (M1.5 capstone) | tools-balance | M1.5 | P1 | ready | M |
 | [ETH-142](combat-items/ETH-142-identify-secrecy-and-curse-safety.md) | Identification secrecy and curse safety for the idle player | combat-items | M1.6 | P1 | ready | M |
 | [ETH-143](tools-balance/ETH-143-content-spawn-reachability-check.md) | Content check that every discoverable def can actually appear in a run | tools-balance | M1.6 | P2 | ready | S |
@@ -138,6 +139,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-038](characters/ETH-038-class-aware-ai-roles.md) | Class-aware AI roles | characters | M3 | P2 | idea | M |
 | [ETH-088](characters/ETH-088-class-mastery-trees.md) | Class Mastery trees with class-specific nodes | characters | M3 | P2 | idea | M |
 | [ETH-112](combat-items/ETH-112-weighted-gear-score.md) | Weighted gear score so auto-equip can take trade-offs | combat-items | M3 | P3 | idea | M |
+| [ETH-146](tools-balance/ETH-146-composition-balance-pass.md) | Composition and rules balance pass (M3 milestone balance check) | tools-balance | M3 | P2 | idea | M |
 | [ETH-116](dungeon-gen/ETH-116-dungeon-encounters.md) | Dungeon encounters: placed interactive features with an interact action, choices and outcomes | dungeon-gen | M4 | P1 | ready | M |
 | [ETH-067](risk-omens/ETH-067-omens-conducts-core.md) | Omens with ranks, the reward multiplier and conduct tracking | risk-omens | M4 | P2 | idea | M |
 | [ETH-072](dungeon-gen/ETH-072-fountains.md) | Fountains with a documented effect table and a drink action | dungeon-gen | M4 | P2 | done | M |
