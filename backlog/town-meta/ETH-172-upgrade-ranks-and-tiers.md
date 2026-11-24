@@ -2,7 +2,7 @@
 id: ETH-172
 title: Upgrade engine supports ranked nodes and quest-locked tiers
 type: feature
-status: idea
+status: ready
 priority: P1
 milestone: M2
 epic: town-meta
@@ -19,7 +19,7 @@ Extend the upgrade engine so a node can be bought several times (ranks, each wit
 Nate (2026-11-24) wants deeper, slower trees where every run can buy something, ranked numeric nodes (e.g. Hardy Recruits I–V), and building tiers opened by quests. The talent trees (ETH-088) also use ranks. See `CLAUDE.md` §4.
 
 ## Acceptance criteria
-- [ ] Spec reviewed by Nate before building (spec gate)
+- [x] Spec reviewed by Nate before building (spec gate)
 - [ ] **Ranks in content.** `UpgradeNodeDef` gets an optional `ranks?: { max: number; costGrowth: number }` (`max` 2–10, `costGrowth` ≥ 1). Without it a node has one rank, as today. Rank `r` costs `cost × costGrowth^(r−1)` per currency, rounded to a readable number (`roundCost`: 2 significant figures, never below rank `r−1`'s cost). Each rank adds the node's `grants` once more: a capacity `+1` node at rank 3 gives `+3`, a bundle's modifiers stack 3 times. A ranked node may only have `capacity` and `bundle` grants (an `unlock` can't stack); `UPGRADE_KIND.check` rejects the rest.
 - [ ] **Ranks in the profile.** The `upgrades` slice goes to version 2: `{ owned, ranks }`, where `ranks: Record<nodeId, number>` holds the rank of every owned node bought past rank 1 (absent means rank 1). `owned` keeps its meaning (rank ≥ 1, first purchase order), so prerequisites, pick-one groups and everything reading `owned` work unchanged. Migration v1 → v2 adds `ranks: {}`. Invariants: every `ranks` key is in `owned`; values are integers ≥ 2.
 - [ ] **Engine.** `rankOf(profile, id)`, `rankCost(node, rank)`, `nextRankCost(profile, id)`. `purchase` buys the next rank. `canPurchase` returns `owned` only when the node is at its max rank (shown as "maxed"); a partly bought node is `available` or `expensive` for its next rank. `profileGrants` repeats each owned node's grants `rankOf` times, so `capacity`, `isUnlocked` and `buildRunConfig` need no change. Prerequisites need rank ≥ 1 of the required node.
@@ -43,3 +43,4 @@ Open decisions:
 ## Log
 - 2026-11-24: Created from the progression discussion with Nate.
 - 2026-11-24: (spec gate) Spec written against the code (engine `src/meta/upgrades.ts`, slice `src/meta/slices/upgrades.ts`, content `src/content/upgrades.ts`, milestones `src/meta/milestones.ts`); awaiting Nate's review.
+- 2026-11-24: Spec approved by Nate with all defaults as written. Status ready.

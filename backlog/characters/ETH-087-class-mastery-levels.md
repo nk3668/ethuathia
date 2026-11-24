@@ -2,7 +2,7 @@
 id: ETH-087
 title: Class Mastery XP: every run banks XP toward a guild-wide level per class
 type: feature
-status: idea
+status: ready
 priority: P1
 milestone: M2
 epic: characters
@@ -19,7 +19,7 @@ Each class has one guild-wide Mastery level, and from M2 on every run adds Maste
 With levels resetting (Nate, 2026-11-24), each run has to leave something behind for its classes. Counting from M2 means runs played before the trees arrive still count. See `CLAUDE.md` §4 (Class Mastery and talents).
 
 ## Acceptance criteria
-- [ ] Spec reviewed by Nate before building (spec gate)
+- [x] Spec reviewed by Nate before building (spec gate)
 - [ ] **Profile slice `mastery`** (`src/meta/slices/mastery.ts`, one line in `PROFILE_SLICES`): `{ classes: Record<classId, { xp: number; runs: number }> }`. Only XP is stored; level and points are derived from it by the curve, so retuning the curve never needs a migration. Old saves load with `classes: {}`. Invariants: non-negative integer `xp` and `runs`; keys are class ids (unknown ids kept but ignored, like upgrade ids).
 - [ ] **Per-member XP** comes from `RunResult.extras['track.xp'].byActor` (already recorded, the fallen included), joined to `extras['run.party']` for the class.
 - [ ] **Diminishing returns per class, per run:** sort that class's members by run XP, highest first; they contribute `MASTERY_SHARES = [1, 0.75, 0.5, 0.25]`, and any further member 0.25. Members marked as companions contribute `MASTERY_COMPANION_SHARE = 0.5` and are left out of that ordering. This item adds the optional `companion?: true` to `PartyMemberRecord`; nothing sets it until ETH-089.
@@ -48,3 +48,4 @@ Open decisions:
 - 2026-11-24: Moved from M2 to M4 in the backlog reorganization by theme.
 - 2026-11-24: Progression discussion with Nate: levels reset each run and Mastery XP starts counting in M2, so this item moves back to M2 as XP tracking only. The trees and spending stay in M4 (ETH-088). Added diminishing returns, run-end bonus, companion share; dropped the ETH-086 dependency.
 - 2026-11-24: (spec gate) Spec written against the code (`track.xp` in `src/sim/stats/leveling.ts`, `run.party` in `src/sim/run/end.ts`, `quests.objectives`); awaiting Nate's review.
+- 2026-11-24: Spec approved by Nate with all defaults as written. Status ready.
