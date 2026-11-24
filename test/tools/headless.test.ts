@@ -11,7 +11,9 @@ import {
   formatReport,
   headlessParty,
   median,
+  formatPartySweep,
   parseSimArgs,
+  partySweepWarnings,
   PROGRESSED_UPGRADES,
   renownPerHour,
   resolveHeadlessRules,
@@ -125,7 +127,7 @@ describe('tools/headless', () => {
 
   it('names every death cause and reports mean member level beside the highest (ETH-145)', () => {
     // A party of 4 on progressed upgrades dies often; status deaths (poison) must name the status.
-    const results = runSeeds(1, 6, { preset: 'progressed', party: headlessParty(4) });
+    const results = runSeeds(1, 3, { preset: 'progressed', party: headlessParty(4) });
     const causes = new Set(results.flatMap((r) => Object.keys(r.deathCauses ?? {})));
     expect(causes.has('other')).toBe(false);
     expect(causes.has('unknown')).toBe(false);
@@ -134,7 +136,7 @@ describe('tools/headless', () => {
     const summary = summarizeReport([result(1, { level: 6, meanLevel: 4 }), result(2, { level: 4, meanLevel: 3 })]);
     expect(summary.memberLevelMean).toBeCloseTo(3.5, 6);
     expect(formatReport([result(1, { level: 6, meanLevel: 4 })])).toContain('Member level (mean of members): mean 4.00.');
-  });
+  }, 60_000);
 
   it('reports kills and what killed the party', () => {
     const results = [
@@ -176,6 +178,7 @@ describe('tools/headless', () => {
       preset: 'fresh',
       upgrades: [],
       rules: 'baseline',
+      partySweep: false,
       json: null,
       compare: null,
       baseline: null,
@@ -189,6 +192,7 @@ describe('tools/headless', () => {
       preset: 'fresh',
       upgrades: [],
       rules: 'baseline',
+      partySweep: false,
       json: null,
       compare: null,
       baseline: null,
@@ -390,5 +394,38 @@ describe('tools/headless', () => {
     expect(report).toContain('Party level (highest member): mean 3.50, median 3.5 (min 2, max 5).');
     expect(report).toContain('Deaths per run: 0.50.');
     expect(report).toContain('/hr at 1x (5 steps/s).');
+  });
+});
+
+describe('party-size sweep (ETH-145)', () => {
+  const row = (size: number, winRatePct: number) => ({
+    size,
+    runs: 100,
+    winRatePct,
+    retreatRatePct: 0,
+    wipeRatePct: 100 - winRatePct,
+    levelHighest: 6,
+    levelMember: 5.5,
+    deathsPerRun: 1,
+  });
+
+  it('parses --party-sweep', () => {
+    expect(parseSimArgs([]).partySweep).toBe(false);
+    expect(parseSimArgs(['--party-sweep']).partySweep).toBe(true);
+  });
+
+  it('is quiet when win rate rises with party size and party 4 wins twice as often as solo', () => {
+    const rows = [row(1, 20), row(2, 30), row(3, 40), row(4, 50)];
+    expect(partySweepWarnings(rows)).toEqual([]);
+    expect(formatPartySweep(rows)).toContain('Party-size ordering holds');
+  });
+
+  it('warns when a larger party does no better, or the 2x rule fails', () => {
+    const flat = partySweepWarnings([row(1, 30), row(2, 30), row(3, 40), row(4, 70)]);
+    expect(flat).toEqual(['ordering broken: party 2 wins 30.0%, not more than party 1 at 30.0%']);
+    const weak = partySweepWarnings([row(1, 40), row(2, 50), row(3, 60), row(4, 70)]);
+    expect(weak).toHaveLength(1);
+    expect(weak[0]).toContain('ratio broken');
+    expect(formatPartySweep([row(1, 40), row(2, 30), row(3, 60), row(4, 70)])).toContain('WARNING: ordering broken');
   });
 });

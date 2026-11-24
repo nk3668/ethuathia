@@ -242,9 +242,9 @@ describe('configDepthRange, resolveRunDepth, and Danger curves', () => {
   it('provides pure Wave-2 extension hooks templateChanceFor and rollOodDanger', () => {
     expect(templateChanceFor(DUNGEON_OLD_DELVE, 1)).toBe(0);
     expect(templateChanceFor(DUNGEON_OLD_DELVE, 2)).toBe(0);
-    expect(templateChanceFor(DUNGEON_OLD_DELVE, 3)).toBeCloseTo(0.035);
-    expect(templateChanceFor(DUNGEON_OLD_DELVE, 5)).toBeCloseTo(0.105);
-    expect(templateChanceFor(DUNGEON_OLD_DELVE, 20)).toBeCloseTo(0.35);
+    expect(templateChanceFor(DUNGEON_OLD_DELVE, 3)).toBeCloseTo(0.03);
+    expect(templateChanceFor(DUNGEON_OLD_DELVE, 5)).toBeCloseTo(0.09);
+    expect(templateChanceFor(DUNGEON_OLD_DELVE, 20)).toBeCloseTo(0.3);
     expect(templateChanceFor(undefined, 4, 0.25)).toBe(0.25);
 
     const rng = Rng.seeded(9, 'test-ood');

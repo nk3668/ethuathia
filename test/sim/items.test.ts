@@ -148,8 +148,8 @@ describe('loot generation', () => {
     const b = generateFloor(type, new Rng([1, 2, 3, 4]), { depth: 3, loot: new Rng([9, 9, 9, 9]) });
     expect(Array.from(a.terrain.cells)).toEqual(Array.from(b.terrain.cells));
     expect(a.features).toEqual(b.features);
-    expect(a.items?.length).toBeGreaterThanOrEqual(3);
-    expect(a.items?.length).toBeLessThanOrEqual(6);
+    expect(a.items?.length).toBeGreaterThanOrEqual(5);
+    expect(a.items?.length).toBeLessThanOrEqual(8);
     const taken = new Set(a.features.map((f) => `${f.pos.x},${f.pos.y}`));
     for (const { pos, item } of a.items ?? []) {
       expect(a.terrain.get(pos.x, pos.y)).toBe(1);
