@@ -7,7 +7,13 @@ export {
   CURRENCY_IDS,
   CURRENCY_INFO,
   emptyCurrencies,
+  goldConversionText,
+  itemSaleText,
   subtractCurrencies,
+  TROPHIES_KILLS_TEXT,
+  TROPHIES_OMEN_TEXT,
+  TROPHIES_SPENT_TEXT,
+  trophiesAbout,
   totalFavor,
 } from './currencies';
 export type { Currencies, CurrencyId } from './currencies';
