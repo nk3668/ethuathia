@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { GOLD_PER_TROPHY } from '../../content';
+import { GOLD_PER_TROPHY, VALUE_PER_TROPHY } from '../../content';
 import { formatNumber } from '../../core';
 import { masteryGainBanked } from '../../meta';
 import { RENOWN, TROPHIES } from '../../sim';
-import type { GoldConversionRecord, RunOutcome, RunReport } from '../../sim';
+import type { GoldConversionRecord, ItemSaleRecord, RunOutcome, RunReport } from '../../sim';
 import { Button, Tooltip } from '../kit';
 import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
@@ -20,6 +20,8 @@ import {
   fallenOf,
   GOLD_CONVERSION_TOOLTIP,
   goldConversionOf,
+  ITEM_SALE_TOOLTIP,
+  itemSaleOf,
   lossNote,
   momentsOf,
   OUTCOME_LOOK,
@@ -80,6 +82,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const moments = momentsOf(report);
   const renown = renownBreakdown(report);
   const goldInfo = goldConversionOf(report);
+  const itemInfo = itemSaleOf(report);
   const renownSources =
     renown === null
       ? []
@@ -190,7 +193,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
                     {row.key === RENOWN ? (
                       <Tooltip content={<RenownFormulaContent />}>{currencyName(row.key)}</Tooltip>
                     ) : row.key === TROPHIES ? (
-                      <Tooltip content={<TrophiesFormulaContent gold={goldInfo} outcome={report.end.outcome} />}>
+                      <Tooltip content={<TrophiesFormulaContent gold={goldInfo} items={itemInfo} outcome={report.end.outcome} />}>
                         {currencyName(row.key)}
                       </Tooltip>
                     ) : (
@@ -217,6 +220,26 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
                   {formatNumber(goldInfo.gold)} gold →{' '}
                   <span className={styles.goldTrophies}>
                     +{formatNumber(goldInfo.trophies)} {goldInfo.trophies === 1 ? 'Trophy' : 'Trophies'}
+                  </span>
+                </span>
+              )}
+            </p>
+          )}
+          {itemInfo !== null && (
+            <p className={styles.goldLine}>
+              <Tooltip content={ITEM_SALE_TOOLTIP(itemInfo.rate)}>
+                {report.end.outcome === 'wipe' ? 'Items lost' : 'Items sold'}
+              </Tooltip>
+              {': '}
+              {report.end.outcome === 'wipe' ? (
+                <span className={styles.goldLost}>
+                  {formatNumber(itemInfo.items)} {itemInfo.items === 1 ? 'item' : 'items'}
+                </span>
+              ) : (
+                <span>
+                  {formatNumber(itemInfo.items)} {itemInfo.items === 1 ? 'item' : 'items'} →{' '}
+                  <span className={styles.goldTrophies}>
+                    +{formatNumber(itemInfo.trophies)} {itemInfo.trophies === 1 ? 'Trophy' : 'Trophies'}
                   </span>
                 </span>
               )}
@@ -302,7 +325,15 @@ function RenownFormulaContent() {
 }
 
 /** Tooltip body explaining Trophies from kills and leftover gold conversion (ETH-083). */
-function TrophiesFormulaContent({ gold, outcome }: { gold: GoldConversionRecord | null; outcome: RunOutcome }) {
+function TrophiesFormulaContent({
+  gold,
+  items,
+  outcome,
+}: {
+  gold: GoldConversionRecord | null;
+  items: ItemSaleRecord | null;
+  outcome: RunOutcome;
+}) {
   const rate = gold?.rate ?? GOLD_PER_TROPHY;
   return (
     <>
@@ -321,6 +352,22 @@ function TrophiesFormulaContent({ gold, outcome }: { gold: GoldConversionRecord 
         <>
           <br />
           On a wipe all {formatNumber(gold.gold)} leftover gold is lost.
+        </>
+      )}
+      <br />
+      Carried items sell on exit at {items?.rate ?? VALUE_PER_TROPHY} value = 1 Trophy (summed, rounded down, not multiplied by
+      Omens; starting kit is not sold).
+      {items !== null && outcome !== 'wipe' && (
+        <>
+          <br />
+          Items: {formatNumber(items.items)} sold (value {formatNumber(items.value)}) → +{formatNumber(items.trophies)}{' '}
+          {items.trophies === 1 ? 'Trophy' : 'Trophies'}.
+        </>
+      )}
+      {items !== null && outcome === 'wipe' && (
+        <>
+          <br />
+          On a wipe all {formatNumber(items.items)} carried items are lost.
         </>
       )}
     </>

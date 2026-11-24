@@ -75,6 +75,10 @@ export interface SeedResult {
   atRisk?: RewardAmounts;
   /** What a wipe took from `atRisk` (ETH-023); empty otherwise. Missing from reports before ETH-023. */
   lost?: RewardAmounts;
+  /** Trophies the run converted on exit (leftover gold plus sold items, ETH-083/ETH-171); 0 when none. Missing before ETH-171. */
+  convertedTrophies?: number;
+  /** Trophies from sold carried items alone (ETH-171). Missing from reports before it. */
+  itemTrophies?: number;
   /** Party turns (steps) run, including the ones spent confirming the party had settled. */
   steps: number;
   /** How much of the last floor reached the party saw. */
@@ -314,9 +318,17 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
     atRisk: { ...snap.domains.run.atRisk },
     lost: { ...(runner.report()?.result.lost ?? {}) },
+    convertedTrophies: runner.report()?.result.converted?.trophies ?? 0,
+    itemTrophies: itemTrophiesOf(runner.report()),
     ...masteryOf(runner.report()),
     ...(options.recruits === true ? mixedOf(runner.report(), roster, fallen) : {}),
   };
+}
+
+/** The Trophies a finished run's sold items paid (`extras['run.items']`, ETH-171), for `SeedResult.itemTrophies`. */
+function itemTrophiesOf(report: RunReport | null): number {
+  const sale = report?.result.extras['run.items'] as { trophies?: number } | undefined;
+  return sale?.trophies ?? 0;
 }
 
 /** The Mastery XP a finished run banks (ETH-087), for `SeedResult.masteryXp`. */

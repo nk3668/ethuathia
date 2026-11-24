@@ -1,6 +1,6 @@
 import type { ReactNode, Ref } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { DEITIES, GOLD_PER_TROPHY } from '../../content';
+import { DEITIES, GOLD_PER_TROPHY, VALUE_PER_TROPHY } from '../../content';
 import { formatNumber } from '../../core';
 import { CURRENCY_INFO } from '../../meta';
 import type { CurrencyId } from '../../meta';
@@ -97,7 +97,7 @@ function Currencies() {
         tone={styles.trophies}
         value={trophies}
         atRisk={atRisk[TROPHIES] ?? 0}
-        detail={`Leftover gold converts on exit at ${GOLD_PER_TROPHY} gold = 1 Trophy (after Omens; lost on a wipe).`}
+        detail={`Leftover gold converts on exit at ${GOLD_PER_TROPHY} gold = 1 Trophy, and carried items sell at ${VALUE_PER_TROPHY} value = 1 Trophy (after Omens; all lost on a wipe).`}
       />
       <Currency
         icon="♨"

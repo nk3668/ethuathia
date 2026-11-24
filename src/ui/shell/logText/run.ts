@@ -104,6 +104,15 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
         ? `All ${formatNumber(e.gold)} leftover gold is lost in the wipe.`
         : `${formatNumber(e.gold)} leftover gold converts to ${formatNumber(e.trophies)} ${e.trophies === 1 ? 'Trophy' : 'Trophies'}.`,
   },
+  itemsSettled: {
+    category: 'system',
+    text: (e) => {
+      const things = `${formatNumber(e.items)} carried ${e.items === 1 ? 'item' : 'items'}`;
+      return e.lost
+        ? `${things} (worth ${formatNumber(e.value)}) ${e.items === 1 ? 'is' : 'are'} lost in the wipe.`
+        : `${things} ${e.items === 1 ? 'sells' : 'sell'} for ${formatNumber(e.trophies)} ${e.trophies === 1 ? 'Trophy' : 'Trophies'} (value ${formatNumber(e.value)}).`;
+    },
+  },
   runEnded: {
     category: 'system',
     text: (e) => `${OUTCOME_TEXT[e.outcome]} ${e.cause}`,

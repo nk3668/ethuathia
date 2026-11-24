@@ -54,6 +54,7 @@ export * from './mix';
 export * from './enchant';
 export * from './properties';
 export * from './kit';
+export * from './sale';
 export * from './scaling';
 export * from './name';
 export * from './equipment';

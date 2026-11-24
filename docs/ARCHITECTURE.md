@@ -570,6 +570,8 @@ subject to the 25% wipe loss. Instead, when the run ends:
   after `earningsLost` on a wipe).
 - `runResult` always writes `extras['run.gold']` (`GoldConversionRecord`: `{ gold, trophies, rate }`).
 
+**Carried-item sale (ETH-171, `src/sim/items/sale.ts`).** The same exit path also sells gear. `itemSale(state, outcome)` sums the base `value` of every item the *living* members carry or wear that passes `soldOnExit(item)` (not kit items, not zero-value items, not gold; heirlooms join the exceptions in M7) and converts it at `VALUE_PER_TROPHY` (`10`, rounded down once over the sum, not Omen-multiplied). The Trophies add to `RunResult.converted` beside gold's, `extras['run.items']` records `{ items, value, trophies, rate }` (on a wipe the amount lost, `trophies: 0`), and `end` emits `itemsSettled { items, value, trophies, lost }` after `goldSettled` when `items > 0`.
+
 **The wipe loss (ETH-023, `src/sim/run/wipeLoss.ts`).** `WIPE_LOSS_SHARE` (0.25, final per
 Nate) is the one constant. `wipeLoss(atRisk, outcome)` is empty for a victory or a retreat; on a
 wipe each currency keeps `keptAfterWipe(n)` = ⌊0.75 n⌋ and loses the rest (so the loss rounds
@@ -591,10 +593,10 @@ states, so the event's figures equal the `RunResult`'s. No new run state.
   what a wipe took (`wipeLoss`; empty otherwise) and is never more than `atRisk`, while `converted`
   holds post-exit converted amounts (absent on wipe or when 0). `extras` is an open
   record that later trackers write under their own id (`'track.kills'`), plus `'run.end'`, `'run.party'`,
-  and `'run.gold'`.
+  `'run.gold'` and `'run.items'`.
 - `applyRunResult` in meta (§6.4) checks the result (it throws a `RangeError` on a malformed
   one, including non-finite/negative `converted` or positive `converted` on a `wipe`), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
-  `(atRisk - lost) + (converted ?? {})`, the `history` slice (v5, `RunRecord.gold`) records the run, the `adventurers` slice (ETH-119) folds it
+  `(atRisk - lost) + (converted ?? {})`, the `history` slice (v6, `RunRecord.gold` and `RunRecord.items`) records the run, the `adventurers` slice (ETH-119) folds it
   into each party member's record, and the `mastery` slice (ETH-087) adds each class's Mastery XP. A step gets a third argument, `before` (a `ProfileBefore`: the
   history as it was before banking), so it can read the run number without depending on slice order. The reward multiplier is already in
   `atRisk` (see the order above), so the loss follows it, and `converted` is added after both.
