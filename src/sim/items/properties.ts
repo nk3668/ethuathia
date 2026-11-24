@@ -36,7 +36,7 @@
 import { z } from 'zod';
 import type { Bundle } from '../../content';
 import type { Entity, RunState } from '../state';
-import { enchantmentProblems, PROP_BLESSING, PROP_ENCHANT, PROP_ENCHANTMENTS, PROP_IDENTIFIED } from './enchant';
+import { enchantmentProblems, PROP_BLESSING, PROP_ENCHANT, PROP_ENCHANTMENTS, PROP_IDENTIFIED, PROP_IDENTIFY_TRIED } from './enchant';
 import type { ItemInstance, ItemOrigin } from './instance';
 import { PROP_WEAPON_SCALING } from './scaling';
 
@@ -88,8 +88,12 @@ export interface ItemPropertyKind<T = unknown> {
    * with `undefined` when the field is absent; the item is known when no kind says otherwise.
    */
   known?(ctx: ItemPropertyCtx, value: T | undefined): boolean;
-  /** How the field affects stacking: `never` keeps the item apart; `equal` stacks with an equal value. */
-  readonly stacks: 'never' | 'equal';
+  /**
+   * How the field affects stacking: `never` keeps the item apart; `equal` stacks with an equal
+   * value; `ignore` leaves the field out of the comparison (a merged stack keeps it only if every
+   * merged item had it, ETH-142).
+   */
+  readonly stacks: 'never' | 'equal' | 'ignore';
 }
 
 /**
@@ -138,6 +142,7 @@ const ITEM_PROPERTY_LIST: readonly ItemPropertyKind[] = [
   PROP_BLESSING as ItemPropertyKind,
   PROP_ENCHANTMENTS as ItemPropertyKind,
   PROP_IDENTIFIED as ItemPropertyKind,
+  PROP_IDENTIFY_TRIED as ItemPropertyKind,
   PROP_ORIGIN as ItemPropertyKind,
 ];
 

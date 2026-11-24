@@ -14,12 +14,21 @@ import { readParams } from '../gen/params';
 import { defineGenStep, rectTiles } from '../gen/types';
 import type { FloorDraft } from '../gen/types';
 import { Terrain } from '../state';
-import { needsTypeId } from './identify';
 import type { ItemEnchantment, ItemInstance } from './instance';
 
-/** Tunable loot property roll chances (ETH-044; reviewed in ETH-080). */
+/**
+ * Tunable loot property roll chances (ETH-044; reviewed in ETH-080). ETH-142 hands these to
+ * ETH-080 as tunables: `LOOT_CURSE_CHANCE`, `CURSED_MILD_CHANCE` (the cursed enchantment range,
+ * -1 or -2) and `CURSE_LOCK_PREMIUM` (`hiddenValue.ts`). The baseline's gear gate (`hiddenGearMargin`) reads all of them.
+ */
 export const LOOT_BLESS_CHANCE = 0.1;
 export const LOOT_CURSE_CHANCE = 0.1;
+/** Chance a cursed piece of gear rolls -1 (otherwise -2). */
+export const CURSED_MILD_CHANCE = 0.75;
+/** Chance a blessed piece of gear also rolls a +N enchantment. */
+export const BLESSED_ENCHANT_CHANCE = 0.5;
+/** Chance an enchantment, when rolled with a cap above 1, is +1 (otherwise uniform 2..cap). */
+export const ENCHANT_MILD_CHANCE = 0.65;
 export const LOOT_CONSUMABLE_CURSE_CHANCE = 0.08;
 export const LOOT_ENCHANT_CHANCE = 0.25;
 export const LOOT_SPECIAL_BASE_CHANCE = 0.12;
@@ -72,10 +81,10 @@ export function rollItemProperties(def: ItemDef, depth: number, rng: Rng): Parti
     if (base !== undefined) {
       let enchant = 0;
       if (blessing === 'cursed') {
-        enchant = rng.chance(0.75) ? -1 : -2;
-      } else if ((blessing === 'blessed' && rng.chance(0.5)) || rng.chance(LOOT_ENCHANT_CHANCE)) {
+        enchant = rng.chance(CURSED_MILD_CHANCE) ? -1 : -2;
+      } else if ((blessing === 'blessed' && rng.chance(BLESSED_ENCHANT_CHANCE)) || rng.chance(LOOT_ENCHANT_CHANCE)) {
         const cap = Math.min(base.maxLevel, depth >= 6 ? 3 : depth >= 3 ? 2 : 1);
-        enchant = cap <= 1 ? 1 : rng.chance(0.65) ? 1 : rng.int(2, cap);
+        enchant = cap <= 1 ? 1 : rng.chance(ENCHANT_MILD_CHANCE) ? 1 : rng.int(2, cap);
       }
       if (enchant !== 0) out.enchant = Math.max(base.minLevel, Math.min(base.maxLevel, enchant));
     }
@@ -91,9 +100,8 @@ export function rollItemProperties(def: ItemDef, depth: number, rng: Rng): Parti
       }
     }
 
-    if (out.enchant !== undefined || out.blessing !== undefined || out.enchantments !== undefined || needsTypeId(def)) {
-      out.identified = false;
-    }
+    // Every piece of gear starts unidentified, whatever it rolled, so the flag says nothing (ETH-142).
+    out.identified = false;
     return out;
   }
 

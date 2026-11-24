@@ -8,7 +8,7 @@
 import { clonePlain } from '../../core';
 import { findDef, MONSTERS, STATUSES } from '../../content';
 import { getFloor, removeEntity } from '../entities';
-import { isInstanceTypeKnown } from '../items/identify';
+import { isInstanceTypeKnown, secretGear } from '../items/identify';
 import { placeItem } from '../items/inventory';
 import { nameField } from '../items/name';
 import type { Emit, SimEvent } from '../events';
@@ -110,7 +110,8 @@ export function killActor(state: RunState, victim: ActorEntity, emit: Emit, { ca
   if (inParty) return;
   const shown = shownName(victim);
   const viewer = state.party[0] === undefined ? undefined : state.entities[state.party[0]];
-  const carried = overlayOf(victim)?.carries ?? [];
+  // Gear a monster carries starts unidentified like loot, so what it dropped says nothing (ETH-142).
+  const carried = (overlayOf(victim)?.carries ?? []).map(secretGear);
   const drops: DroppedLoot[] = carried.map((item) => ({
     item: item.def,
     qty: item.qty,

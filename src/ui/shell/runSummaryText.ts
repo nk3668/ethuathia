@@ -119,6 +119,13 @@ export function fallenOf(report: RunReport): readonly FallenRecord[] {
   return deaths?.fallen ?? [];
 }
 
+/** How many turns cursed gear was worn this run (`extras['track.cursedGear']`, ETH-142); 0 if the result doesn't say. */
+export function cursedGearTurnsOf(report: RunReport): number {
+  const value = report.result.extras['track.cursedGear'];
+  const turns = typeof value === 'object' && value !== null ? (value as { turns?: unknown }).turns : undefined;
+  return typeof turns === 'number' && Number.isFinite(turns) ? turns : 0;
+}
+
 /** The content ids the Codex tracker discovered this run (`extras['track.codex']`, ETH-065). */
 export function discoveriesOf(report: RunReport): string[] {
   const codex = report.result.extras['track.codex'];

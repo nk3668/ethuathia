@@ -2,14 +2,14 @@
 id: ETH-142
 title: Identification secrecy and curse safety for the idle player
 type: feature
-status: ready
+status: in-progress
 priority: P1
 milestone: M1.6
 epic: combat-items
 size: M
 depends_on: [ETH-044]
 created: 2026-11-23
-updated: 2026-11-23
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -43,3 +43,5 @@ Fix two problems found in the ETH-044 review:
 ## Log
 - 2026-11-23: Created from the review of ETH-044.
 - 2026-11-23: Moved to M1.6 (review follow-ups); ETH-080 no longer waits on it.
+- 2026-11-24: Started. Plan approved (margin option B: expected hidden value plus `CURSE_LOCK_PREMIUM` lock risk).
+- 2026-11-24: Implemented. All gear starts `identified: false`; `hiddenGearMargin` (loot.ts) gates unidentified gear in `evaluateUpgrade`; `act.read_unknown_scroll` under `cond.safe_to_test`; locked-slot trace note, `WornView.locked` and `track.cursedGear`; `prop.identify_tried` makes the pickup Wits roll once per instance. `STATE_VERSION` 34. Tunables handed to ETH-080 (not retuned): `LOOT_CURSE_CHANCE`, `CURSED_MILD_CHANCE` (cursed enchantment -1/-2), the cursed `gearDelta`, `CURSE_LOCK_PREMIUM`. Sim, 50 seeds: win 66.0% to 60.0%, wipe 34.0% to 40.0%, mean depth 6.6 to 6.3, party level 17.3 to 16.2 (the gate holds back +1 gear). Known out-of-scope: potions and scrolls still leak hidden blessing once their type is known.
