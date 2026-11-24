@@ -2,7 +2,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, EQUIP_SLOT_INFO, gearSlots, ITEM_CATEGORY_INFO, ITEMS, STATUSES } from '../../content';
 import type { AttributeId } from '../../content';
 import { isAvailable } from '../../meta';
-import { roundedText, STAT_IDS, STAT_INFO } from '../../sim';
+import { groupLabel, groupStatParts, roundedText, STAT_IDS, STAT_INFO } from '../../sim';
 import type { ActionRequest, EntityId, InventoryView, LevelView, MemberStatsView } from '../../sim';
 import { Explain } from '../codex/Explain';
 import { attributeEffectText, growthLine, xpSourcesText } from '../codex/attributeText';
@@ -214,7 +214,8 @@ function attributeChips(view: MemberStatsView | undefined): AttributeChip[] {
     return {
       attribute,
       value: result.value,
-      from: result.parts.map((p, i) => `${p.source.label} ${i === 0 ? p.value : signed(p.value)}`),
+      // A source that repeats (a ranked upgrade, ETH-180) is named once with its rank count.
+      from: groupStatParts(result.parts).map((g, i) => `${groupLabel(g)} ${i === 0 ? g.value : signed(g.value)}`),
       adds,
       totals,
     };

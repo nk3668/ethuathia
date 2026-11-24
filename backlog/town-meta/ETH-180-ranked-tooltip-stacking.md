@@ -2,7 +2,7 @@
 id: ETH-180
 title: Stat tooltips name a ranked upgrade once, with its rank count
 type: feature
-status: ready
+status: done
 priority: P3
 milestone: M2
 epic: town-meta
@@ -19,9 +19,10 @@ A stat tooltip lists a ranked upgrade once with its count ("Hardy Recruits ×3: 
 ETH-172 applies a ranked node's bundle once per rank, so tooltips that credit bundles by source repeat the node's name for every rank. Found in the ETH-172 review; Nate asked for it (2026-11-24).
 
 ## Acceptance criteria
-- [ ] Stat tooltips (party card and Prepare preview) group identical sources and show "×N" with the summed value
-- [ ] The same grouping applies to run-scope modifiers keyed `<id>#<rank>`
-- [ ] Tests: a rank-3 node shows once with ×3 and the summed value
+- [x] Stat tooltips (party card and Prepare preview) group identical sources and show "×N" with the summed value
+- [x] The same grouping applies to run-scope modifiers keyed `<id>#<rank>`
+- [x] Tests: a rank-3 node shows once with ×3 and the summed value
 
 ## Log
 - 2026-11-24: Created from the ETH-172 review; Nate said yes.
+- 2026-11-24: Done. `groupStatParts`/`groupLabel` (src/sim/stats/groupParts.ts) fold identical sources (base id, label, op; `#n` suffix ignored), used by the party card attribute chip. Prepare preview lists no per-source parts today, so nothing to change there. sim --compare origin/main: identical hashes.
