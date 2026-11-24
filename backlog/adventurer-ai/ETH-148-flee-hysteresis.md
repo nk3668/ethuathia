@@ -2,7 +2,7 @@
 id: ETH-148
 title: Smarter fleeing: hysteresis, only from real threats, and no walking back into danger
 type: bug
-status: in-progress
+status: done
 priority: P2
 milestone: M1.6
 epic: adventurer-ai
@@ -73,3 +73,4 @@ Fix all three so fleeing actually gets the adventurer out of danger.
   title updated.
 - 2026-11-24: Started (Sonnet agent). Interpretation of 'damage above 0': a blow always does at least 1 (rollDamage), and damage-0 swarms, rats and toads do chase and hurt, so a threat is an enemy that will come and hurt the party: damage stat above 0, a bolt, a rule that approaches/surrounds/bolts, or a damaging or harmful-status bundle or template effect. Moss tenders (support, never pursue) are not threats. Constants (FLEE_RELEASE_PERCENT 60, FLEE_CALM_TURNS 12, THREAT_MEMORY_TURNS 60, AVOID_RADIUS 6, AVOID_PENALTY 24) are exported from src/sim/combat/fleeConfig.ts for ETH-080 to tune. STATE_VERSION 37 (AiMemory.fleeing, AiMemory.threats).
 - 2026-11-24: Implemented at 67a8db4 (merged with m1.5-living-dungeon 8e2586f, STATE_VERSION 37). The 100-seed party 1 compare found two regressions in the first cut, fixed here: keep-fleeing made the adventurer fail Flee checks next to enemies (now it fights a threat next to it once HP is back above 35%), and fleeing into a dead end then exploring back caused flee/explore ping-pong stuck events (new act.hold_position, bounded by FLEE_HOLD_TURNS 12). T2 vs m1.5: party 1 win 21 -> 22%, stuck events 12 -> 6; party 4 progressed win 49 -> 51%, stuck events 81 -> 19. Party sweep (progressed, 100 seeds) 31/38/39/51%. run-summary UI tests moved from seed 1 (now a wipe) to seed 5 (victory).
+- 2026-11-24: Reviewed and merged into m1.5-living-dungeon by the orchestrator (096a91d); npm run check green (106 files, 1255 tests). STATE_VERSION 37. T2 within bands; party 4 progressed stuck events 81 -> 19; 100-seed progressed sweep 31/38/39/51%.

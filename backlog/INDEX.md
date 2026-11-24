@@ -92,7 +92,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-143](tools-balance/ETH-143-content-spawn-reachability-check.md) | Content check that every discoverable def can actually appear in a run | tools-balance | M1.6 | P2 | done | S |
 | [ETH-144](codex-tooltips/ETH-144-per-monster-kill-tiers.md) | Per-monster Codex kill-tier thresholds for rare monsters | codex-tooltips | M1.6 | P3 | done | S |
 | [ETH-147](combat-items/ETH-147-consumable-hidden-property-leak.md) | Known-type potions and scrolls stop giving away a hidden blessing or curse | combat-items | M1.6 | P2 | done | S |
-| [ETH-148](adventurer-ai/ETH-148-flee-hysteresis.md) | Smarter fleeing: hysteresis, only from real threats, and no walking back into danger | adventurer-ai | M1.6 | P2 | idea | M |
+| [ETH-148](adventurer-ai/ETH-148-flee-hysteresis.md) | Smarter fleeing: hysteresis, only from real threats, and no walking back into danger | adventurer-ai | M1.6 | P2 | done | M |
 | [ETH-149](tools-balance/ETH-149-tooling-hygiene.md) | Tooling hygiene: formatter policy, line endings and worktree-safe tests | tools-balance | M1.6 | P3 | done | S |
 | [ETH-152](tools-balance/ETH-152-parallel-sim-harness.md) | Run harness seeds in parallel across CPU cores | tools-balance | M1.6 | P2 | done | S |
 | [ETH-059](saves-platform/ETH-059-profile-saves.md) | Profile, banked currencies and versioned local saves | saves-platform | M2 | P0 | done | M |
