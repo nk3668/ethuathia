@@ -52,6 +52,14 @@ export interface RunRecordGold {
   readonly rate: number;
 }
 
+/** Carried-item sale (or loss) record kept on a `RunRecord` (ETH-171). */
+export interface RunRecordItems {
+  readonly items: number;
+  readonly value: number;
+  readonly trophies: number;
+  readonly rate: number;
+}
+
 /** One finished run, as the history keeps it. */
 export interface RunRecord {
   /** 1 for the player's first run, counting every run ever finished. */
@@ -65,6 +73,8 @@ export interface RunRecord {
   readonly lost: Currencies;
   /** Leftover gold conversion or loss record (ETH-083); left out for runs recorded before it. */
   readonly gold?: RunRecordGold;
+  /** Carried-item sale or loss record (ETH-171); left out for runs recorded before it. */
+  readonly items?: RunRecordItems;
   /** Why the run ended (`RunEnd.cause`); empty for runs recorded before ETH-048. */
   readonly cause: string;
   /** Who set out, in party order; empty for runs recorded before ETH-048. */
@@ -129,6 +139,13 @@ const goldRecordSchema = z.object({
   rate: z.number().finite().positive(),
 });
 
+const itemsRecordSchema = z.object({
+  items: count,
+  value: z.number().finite().nonnegative(),
+  trophies: count,
+  rate: z.number().finite().positive(),
+});
+
 const recordSchema = z.object({
   run: z.number().int().positive(),
   outcome: z.enum(['victory', 'retreat', 'wipe']),
@@ -137,6 +154,7 @@ const recordSchema = z.object({
   banked: currenciesSchema,
   lost: currenciesSchema,
   gold: goldRecordSchema.optional(),
+  items: itemsRecordSchema.optional(),
   cause: z.string().max(MAX_CAUSE),
   party: z.array(memberSchema).max(16),
   met: z.array(z.string().max(80)).max(1000),
@@ -188,6 +206,7 @@ export function runRecord(run: number, result: RunResult): RunRecord {
   const contracts = contractsExtras.safeParse(result.extras[CONTRACTS_TRACKER.id]);
   const chronicle = chronicleExtras.safeParse(result.extras[CHRONICLE_TRACKER.id]);
   const gold = goldRecordSchema.safeParse(result.extras['run.gold']);
+  const items = itemsRecordSchema.safeParse(result.extras['run.items']);
   const fallen = deaths.success ? deaths.data.fallen : [];
   return {
     run,
@@ -197,6 +216,7 @@ export function runRecord(run: number, result: RunResult): RunRecord {
     banked: bankedFromRunResult(result),
     lost: currenciesFromRewards(result.lost),
     ...(gold.success ? { gold: gold.data } : {}),
+    ...(items.success ? { items: items.data } : {}),
     cause: end.success ? end.data.cause.slice(0, MAX_CAUSE) : '',
     party: party.success
       ? party.data.map((m) => {
@@ -215,7 +235,7 @@ export function runRecord(run: number, result: RunResult): RunRecord {
 }
 
 export const historySlice = defineSlice<History>({
-  version: 5,
+  version: 6,
   schema: historySchema,
   init: () => ({
     totals: { runs: 0, victories: 0, retreats: 0, wipes: 0, turns: 0, deepestDepth: 0 },
@@ -242,6 +262,8 @@ export const historySlice = defineSlice<History>({
     },
     // v5 (ETH-083): each run optionally keeps its leftover gold conversion record.
     5: (old) => old,
+    // v6 (ETH-171): each run optionally keeps its carried-item sale record.
+    6: (old) => old,
   },
   onRunResult: (history, result) => {
     const { totals } = history;

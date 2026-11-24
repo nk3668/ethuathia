@@ -133,14 +133,13 @@ export const CLASS_OUTRIDER = defineClass({
     'to be the one standing when the fighting starts.',
   hint: 'Ranges ahead of the party and is first to see the trap.',
   tags: ['martial', 'scout'],
-  // 32 starting points and +2 a level, under the Vanguard's 37 and +3.25: Finesse pays for accuracy,
-  // evasion and dagger damage at once, so on the shared budget the Outrider won every run (ETH-160).
-  attributes: { brawn: 8, finesse: 12, wits: 6, grit: 6 },
-  // Each level, on average: Finesse +0.75, Brawn +0.5, Grit +0.5, Wits +0.25.
+  // 37 starting points and +3.25 a level, the Vanguard's budget (ETH-177 repriced Finesse so it fits).
+  attributes: { brawn: 8, finesse: 14, wits: 7, grit: 8 },
+  // Each level, on average: Finesse +1.5, Brawn +0.75, Wits +0.5, Grit +0.5.
   growth: {
-    brawn: { min: 1, max: 1, chance: 0.5 },
-    finesse: { min: 1, max: 1, chance: 0.75 },
-    wits: { min: 1, max: 1, chance: 0.25 },
+    brawn: { min: 1, max: 1, chance: 0.75 },
+    finesse: { min: 1, max: 2 },
+    wits: { min: 1, max: 1, chance: 0.5 },
     grit: { min: 1, max: 1, chance: 0.5 },
   },
   kit: ['item.skinning_knife', 'item.soft_boots'],
@@ -173,14 +172,15 @@ export const CLASS_REAVER = defineClass({
   description: 'A hireling from the border holds who settles every argument with an axe. Hits hard, thinks later.',
   hint: 'Clears a room by making it smaller.',
   tags: ['martial'],
-  // 32 starting points and +2.5 a level (the hatchet's +2 damage is the rest of its edge; ETH-160).
-  attributes: { brawn: 12, finesse: 8, wits: 4, grit: 8 },
-  // Each level, on average: Brawn +1, Grit +0.75, Finesse +0.5, Wits +0.25.
+  // 33 starting points and +3.25 a level: four under the Vanguard's 37, since the hatchet's +2 damage
+  // is the rest of its edge (ETH-177; on 37 it won twice as often as the Vanguard).
+  attributes: { brawn: 11, finesse: 9, wits: 4, grit: 9 },
+  // Each level, on average: Brawn +1.5, Grit +1, Finesse +0.5, Wits +0.25.
   growth: {
-    brawn: { min: 1, max: 1 },
+    brawn: { min: 1, max: 2 },
     finesse: { min: 1, max: 1, chance: 0.5 },
     wits: { min: 1, max: 1, chance: 0.25 },
-    grit: { min: 1, max: 1, chance: 0.75 },
+    grit: { min: 1, max: 1 },
   },
   kit: ['item.iron_hatchet', 'item.iron_cap'],
 });

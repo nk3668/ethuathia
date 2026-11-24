@@ -4,7 +4,7 @@
  */
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets, RUN_RECORD_MOMENTS } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
-import { BUILDINGS, CONTRACTS, defName, DEITIES, describeMilestoneMet, GOLD_PER_TROPHY, tierBand, tierGateId } from '../../content';
+import { BUILDINGS, CONTRACTS, defName, DEITIES, describeMilestoneMet, GOLD_PER_TROPHY, tierBand, tierGateId, VALUE_PER_TROPHY } from '../../content';
 import type { Milestone } from '../../content';
 import {
   CHRONICLE_TRACKER,
@@ -23,7 +23,7 @@ import {
   turnsRenown,
   WIPE_LOSS_SHARE,
 } from '../../sim';
-import type { ChronicleEntry, ContractRecord, FallenRecord, FloorRenown, GoldConversionRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
+import type { ChronicleEntry, ContractRecord, FallenRecord, FloorRenown, GoldConversionRecord, ItemSaleRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
 
 /** Each outcome's heading and icon, so it never rests on color alone. */
 export const OUTCOME_LOOK: Readonly<Record<RunOutcome, { title: string; icon: string }>> = {
@@ -65,6 +65,35 @@ export function currencyRows(report: RunReport): CurrencyRow[] {
 /** Tooltip text explaining the leftover gold to Trophies conversion rule (ETH-083). */
 export function GOLD_CONVERSION_TOOLTIP(rate = GOLD_PER_TROPHY): string {
   return `Leftover gold converts at ${rate} gold = 1 Trophy (rounded down), applied after the Omen multiplier (gold is not multiplied); on a wipe all gold is lost.`;
+}
+
+/** Tooltip text explaining the carried-item sale (ETH-171). */
+export function ITEM_SALE_TOOLTIP(rate = VALUE_PER_TROPHY): string {
+  return `Every item the surviving party carries or wears is sold on exit at its value, ${rate} value = 1 Trophy (summed, then rounded down; not multiplied by Omens). Starting kit, quest relics and gold are not sold, the fallen's items are lost with them, and on a wipe everything is lost.`;
+}
+
+/** The carried-item sale record (`extras['run.items']`, ETH-171), or `null` when absent, malformed or empty. */
+export function itemSaleOf(report: RunReport): ItemSaleRecord | null {
+  const raw = report.result.extras['run.items'];
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { items, value, trophies, rate } = raw as Partial<ItemSaleRecord>;
+  if (
+    typeof items !== 'number' ||
+    !Number.isInteger(items) ||
+    items <= 0 ||
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    value < 0 ||
+    typeof trophies !== 'number' ||
+    !Number.isInteger(trophies) ||
+    trophies < 0 ||
+    typeof rate !== 'number' ||
+    !Number.isFinite(rate) ||
+    rate <= 0
+  ) {
+    return null;
+  }
+  return { items, value, trophies, rate };
 }
 
 /** Leftover gold conversion record (`extras['run.gold']`, ETH-083), or `null` when absent or malformed. */
@@ -244,9 +273,7 @@ export const NO_CAUSE = 'No details were kept for this run.';
 export function reportFromRecord(record: RunRecord): RunReport {
   const earned = addCurrencies(record.banked, record.lost);
   const convertedTrophies =
-    record.outcome !== 'wipe' && record.gold !== undefined && record.gold.trophies > 0
-      ? Math.min(earned.trophies, record.gold.trophies)
-      : 0;
+    record.outcome !== 'wipe' ? Math.min(earned.trophies, (record.gold?.trophies ?? 0) + (record.items?.trophies ?? 0)) : 0;
   const atRiskCurrencies =
     convertedTrophies > 0 ? { ...earned, trophies: earned.trophies - convertedTrophies } : earned;
   const converted = convertedTrophies > 0 ? { [TROPHIES]: convertedTrophies } : undefined;
@@ -268,6 +295,7 @@ export function reportFromRecord(record: RunRecord): RunReport {
         'run.end': end,
         'run.party': party,
         ...(record.gold !== undefined ? { 'run.gold': { ...record.gold } } : {}),
+        ...(record.items !== undefined ? { 'run.items': { ...record.items } } : {}),
         'track.deaths': { fallen },
         'track.codex': Object.fromEntries(record.met.map((id) => [id, []])),
         // Party members in the kept moments are numbered by party place, like `party` above.

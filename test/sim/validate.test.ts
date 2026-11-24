@@ -49,11 +49,11 @@ describe('adventurers from class and race', () => {
   });
 
   it('are created by createRun with HP and MP from their attributes and speed from the race', () => {
-    // Vanguard + Human: Brawn 12, Wits 5, Grit 14 -> max HP 14 + 12 x 0.5 = 20, MP 5.
+    // Vanguard + Human: Brawn 12, Wits 5, Grit 14 -> max HP 4.5 x (14 - 8) + 12 x 0.5 = 33, MP 5.
     const state = createRun({ party: [{ name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }] }, 1);
     const hero = getEntity(state, state.party[0] as number);
-    expect(hero.actor).toMatchObject({ hp: 20, mp: 5 });
-    expect([statValue(state, hero, 'hp'), statValue(state, hero, 'mp'), statValue(state, hero, 'speed')]).toEqual([20, 5, 100]);
+    expect(hero.actor).toMatchObject({ hp: 33, mp: 5 });
+    expect([statValue(state, hero, 'hp'), statValue(state, hero, 'mp'), statValue(state, hero, 'speed')]).toEqual([33, 5, 100]);
   });
 
   it('fail on an unknown class or race, naming the adventurer', () => {

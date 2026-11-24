@@ -15,9 +15,9 @@ import type { StatId } from './statIds';
 import type { StatProvider } from './types';
 
 /**
- * One derivation: `stat` gains `(attribute − from) × perPoint`. With `from` 0 the attribute
- * builds the stat from nothing (Grit → max HP); with `from` at `ATTRIBUTE_NEUTRAL` an average
- * attribute adds nothing and only the points above or below it count (Finesse → accuracy).
+ * One derivation: `stat` gains `(attribute − from) × perPoint`. `from` is where the attribute
+ * starts to count: 0 builds the stat from nothing (Brawn → carry), and a higher `from` makes a low
+ * attribute add little or subtract (Grit 8 adds no HP; Finesse 5 adds no accuracy).
  */
 export interface AttributeFormula {
   readonly stat: StatId;
@@ -26,27 +26,28 @@ export interface AttributeFormula {
   readonly from: number;
 }
 
-/** An unremarkable attribute value: formulas measured from it add nothing at exactly this value. */
-export const ATTRIBUTE_NEUTRAL = 10;
-
 /**
- * Damage from an attribute: half a point per point above 10, from `UNARMED_ATTRIBUTE` (Brawn).
+ * Damage from an attribute: a fifth of a point per point above 3, from `UNARMED_ATTRIBUTE` (Brawn).
  * A wielded weapon whose type `scalesWith` another attribute swaps that attribute in (ETH-082):
  * the weapon scaling item property (`src/sim/items/scaling.ts`) takes this row back off and adds
  * the same formula for the weapon's attribute, so stats, tooltips and gear comparison agree.
  */
-export const DAMAGE_FORMULA: AttributeFormula = { stat: 'damage', attribute: UNARMED_ATTRIBUTE, perPoint: 0.5, from: ATTRIBUTE_NEUTRAL };
+export const DAMAGE_FORMULA: AttributeFormula = { stat: 'damage', attribute: UNARMED_ATTRIBUTE, perPoint: 0.2, from: 3 };
 
 /**
  * Every stat each attribute derives, in tooltip order. A starting Human Vanguard (Brawn 12,
- * Finesse 10, Wits 5, Grit 14) gets 20 max HP, 5 MP, 0 accuracy and evasion, 1 damage, 24 carry.
+ * Finesse 10, Wits 5, Grit 14) gets 33 max HP, 5 MP, 2 accuracy and evasion, 2 damage, 24 carry.
+ *
+ * Pricing (ETH-177): a point of Brawn (through a mace or axe), of Finesse (through a sword or
+ * dagger) and of Grit is worth about the same in a fight. Finesse also feeds accuracy and
+ * evasion, so those pay less per point than damage does, and Grit pays 4.5 HP a point.
  */
 export const ATTRIBUTE_FORMULAS: readonly AttributeFormula[] = [
-  { stat: 'hp', attribute: 'grit', perPoint: 1, from: 0 },
+  { stat: 'hp', attribute: 'grit', perPoint: 4.5, from: 8 },
   { stat: 'hp', attribute: 'brawn', perPoint: 0.5, from: 0 },
   { stat: 'mp', attribute: 'wits', perPoint: 1, from: 0 },
-  { stat: 'accuracy', attribute: 'finesse', perPoint: 1, from: ATTRIBUTE_NEUTRAL },
-  { stat: 'evasion', attribute: 'finesse', perPoint: 1, from: ATTRIBUTE_NEUTRAL },
+  { stat: 'accuracy', attribute: 'finesse', perPoint: 0.3, from: 5 },
+  { stat: 'evasion', attribute: 'finesse', perPoint: 0.3, from: 5 },
   DAMAGE_FORMULA,
   { stat: 'carry', attribute: 'brawn', perPoint: 2, from: 0 },
   // Second jobs (ETH-081): the skill chances, in percent, on top of their `STAT_INFO` bases. The

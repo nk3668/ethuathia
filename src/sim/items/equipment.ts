@@ -102,7 +102,8 @@ export const SOURCE_EQUIPPED: BundleSource = {
 export function modifierText(m: Pick<Modifier, 'stat' | 'op' | 'value'>): string {
   const label = isStatId(m.stat) ? STAT_INFO[m.stat].label : m.stat;
   if (m.op === 'mul') return `${label} ×${m.value}`;
-  return `${label} ${m.value < 0 ? '−' : '+'}${Math.abs(m.value)}`;
+  // Attribute formulas make fractions (ETH-177): round off float noise like 2.4000000000000004.
+  return `${label} ${m.value < 0 ? '−' : '+'}${Number(Math.abs(m.value).toFixed(2))}`;
 }
 
 /** An item's stat changes, keyed `add:<stat>` / `mul:<stat>`; `null` if it has triggers or effects. */
@@ -150,8 +151,9 @@ export function compareGear(
     const neutral = key.startsWith('mul:') ? 1 : 0;
     const va = ta.get(key) ?? neutral;
     const vb = tb.get(key) ?? neutral;
-    if (va > vb) up = true;
-    else if (va < vb) down = true;
+    // Fractional totals (weapon scaling, ETH-177) carry float dust: 3.8 − 1.8 is not exactly 2.
+    if (va - vb > 1e-9) up = true;
+    else if (vb - va > 1e-9) down = true;
   }
   if (up && down) return 'mixed';
   return up ? 'better' : down ? 'worse' : 'same';

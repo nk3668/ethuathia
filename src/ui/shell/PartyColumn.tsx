@@ -199,7 +199,8 @@ function attributeChips(view: MemberStatsView | undefined): AttributeChip[] {
       for (const part of view.stats[stat].parts) {
         if (part.source.id === source && part.op === 'add') total += part.value;
       }
-      if (total !== 0) adds.push(`${STAT_INFO[stat].label} ${signed(total)}${STAT_INFO[stat].percent === true ? '%' : ''}`);
+      // Fractional formulas (ETH-177) leave float dust where the two scaling parts cancel.
+      if (Math.round(total * 100) !== 0) adds.push(`${STAT_INFO[stat].label} ${signed(total)}${STAT_INFO[stat].percent === true ? '%' : ''}`);
     }
     return {
       attribute,

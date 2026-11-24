@@ -79,10 +79,13 @@ describe('damage', () => {
     const unarmed = statValue(state, hero, 'damage');
     hero.inventory = { items: [], equipped: { mainHand: one(SWORD) } };
     const damage = getStat(state, hero, 'damage');
-    // Sword +2, Finesse 14 (+2) in place of Brawn 12 (+1).
-    expect(damage.value).toBe(unarmed + 3);
-    expect(damage.parts).toContainEqual({ op: 'add', value: 2, source: { id: 'attribute.finesse', label: 'Finesse 14 (Arming sword)' } });
-    expect(damage.parts).toContainEqual({ op: 'add', value: -1, source: { id: 'attribute.brawn', label: 'Brawn 12 (unused with Arming sword)' } });
+    // Sword +2, Finesse 14 (+2.2) in place of Brawn 12 (+1.8): 4.2 in all, 2 more than bare hands.
+    expect(damage.value).toBe(unarmed + 2);
+    const part = (label: string) => damage.parts.find((p) => p.source.label === label);
+    expect(part('Finesse 14 (Arming sword)')).toMatchObject({ op: 'add', source: { id: 'attribute.finesse' } });
+    expect(part('Finesse 14 (Arming sword)')?.value).toBeCloseTo(2.2);
+    expect(part('Brawn 12 (unused with Arming sword)')).toMatchObject({ op: 'add', source: { id: 'attribute.brawn' } });
+    expect(part('Brawn 12 (unused with Arming sword)')?.value).toBeCloseTo(-1.8);
     expect(damage.parts).toContainEqual({ op: 'add', value: 2, source: { id: SWORD, label: 'Arming sword' } });
     expect(checkInvariants(state)).toEqual([]);
   });
@@ -94,7 +97,8 @@ describe('damage', () => {
     for (const { hero } of [plain, deft]) hero.inventory = { items: [], equipped: { mainHand: one(HATCHET) } };
     expect(statValue(deft.state, deft.hero, 'damage')).toBe(statValue(plain.state, plain.hero, 'damage'));
     for (const { hero } of [plain, deft]) hero.inventory = { items: [], equipped: { mainHand: one(SWORD) } };
-    expect(statValue(deft.state, deft.hero, 'damage')).toBe(statValue(plain.state, plain.hero, 'damage') + 2);
+    // Finesse 14 against 10 is 0.8 damage, which rounds to one more point here.
+    expect(statValue(deft.state, deft.hero, 'damage')).toBe(statValue(plain.state, plain.hero, 'damage') + 1);
   });
 
   it('adds nothing for axes and maces, nor without a wearer with attributes', () => {
@@ -110,10 +114,11 @@ describe('damage', () => {
   it('can make a weapon worse for an unsuited wielder: a staff for a dim Vanguard', () => {
     const { state, hero } = setup();
     const s = weaponScaling(hero, one(STAFF));
-    expect(s).toMatchObject({ attribute: 'wits', value: 5, unarmed: 'brawn', unarmedValue: 12, change: -3.5 });
-    expect(weaponScalingText(hero, one(STAFF))).toBe('Damage scales with Wits 5 instead of Brawn 12: −3.5 damage');
-    // Staff +1 damage, −3.5 from Wits: the worn-stats text nets them.
-    expect(gearStatsText(state, hero, one(STAFF))).toBe('Damage −2.5, Evasion +1');
+    expect(s).toMatchObject({ attribute: 'wits', value: 5, unarmed: 'brawn', unarmedValue: 12 });
+    expect(s?.change).toBeCloseTo(-1.4);
+    expect(weaponScalingText(hero, one(STAFF))).toBe('Damage scales with Wits 5 instead of Brawn 12: −1.4 damage');
+    // Staff +1 damage, −1.4 from Wits: the worn-stats text nets them.
+    expect(gearStatsText(state, hero, one(STAFF))).toBe('Damage −0.4, Evasion +1');
     expect(compareGear(state, hero, one(STAFF), null)).toBe('mixed');
   });
 });
@@ -143,7 +148,7 @@ describe('choosing a weapon', () => {
       expect(hero.inventory.equipped?.mainHand).toEqual(one(swaps ? SWORD : HATCHET));
       if (swaps) {
         const trace = events.find((e) => e.type === 'ruleFired' && e.action === 'act.equip_upgrade');
-        expect(trace?.type === 'ruleFired' ? trace.detail : '').toContain('Arming sword (Damage +3, Accuracy +1)');
+        expect(trace?.type === 'ruleFired' ? trace.detail : '').toContain('Arming sword (Damage +2.4, Accuracy +1)');
       }
     }
   });
@@ -154,8 +159,8 @@ describe('the snapshot', () => {
     const { state, hero } = setup(4);
     hero.inventory = { items: [one(HATCHET), one(KNIFE)], equipped: { mainHand: one(SWORD) } };
     const view = snapshot(state).domains.items.members[hero.id];
-    expect(view?.equipped[0]?.scaling).toBe('Damage scales with Finesse 14 instead of Brawn 12: +1 damage');
+    expect(view?.equipped[0]?.scaling).toBe('Damage scales with Finesse 14 instead of Brawn 12: +0.4 damage');
     expect(view?.items[0]?.scaling).toBeUndefined();
-    expect(view?.items[1]?.scaling).toBe('Damage scales with Finesse 14 instead of Brawn 12: +1 damage');
+    expect(view?.items[1]?.scaling).toBe('Damage scales with Finesse 14 instead of Brawn 12: +0.4 damage');
   });
 });
