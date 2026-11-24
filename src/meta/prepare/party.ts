@@ -13,6 +13,7 @@ import type { Profile } from '../profile';
 import { capacity } from '../upgrades';
 import { availableClasses, availableRaces } from './available';
 import { defineRunChoice } from './choice';
+import type { BuildCtx } from './choice';
 
 /** Party slots before any Guild Hall upgrade. */
 export const BASE_PARTY_SIZE = 1;
@@ -57,21 +58,28 @@ export function recruitName(seed: number, slot: number, taken: readonly string[]
   return `${last} ${taken.length + 1}`;
 }
 
+/**
+ * Fills `size` party slots into `ctx.config`: a slot's pick where the profile still allows it,
+ * otherwise a random recruit from the available classes and races, with a generated name.
+ * `PARTY_CHOICE` applies it with the profile's party size; the sim harness's `--recruits`
+ * (ETH-178) applies it through `recruitParty` with the size it was given.
+ */
+export function fillParty({ profile, seed, rng, config }: BuildCtx, slots: readonly RecruitPick[], size: number): void {
+  const classes = availableClasses(profile).map((d) => d.id);
+  const races = availableRaces(profile).map((d) => d.id);
+  if (classes.length === 0 || races.length === 0) throw new RangeError('No class or race is available to recruit from');
+  for (let i = 0; i < size; i++) {
+    const pick = slots[i] ?? RANDOM_PICK;
+    // A pick the profile no longer allows is a random recruit instead.
+    const classId = pick.classId !== null && classes.includes(pick.classId) ? pick.classId : rng.pick(classes);
+    const raceId = pick.raceId !== null && races.includes(pick.raceId) ? pick.raceId : rng.pick(races);
+    const name = recruitName(seed, i, config.party.map((m) => m.name));
+    config.party.push({ name, classId, raceId });
+  }
+}
+
 export const PARTY_CHOICE = defineRunChoice<PartyChoice>({
   schema: z.object({ slots: z.array(pickSchema).max(MAX_PARTY_SIZE) }),
   init: () => ({ slots: [] }),
-  apply: ({ profile, seed, rng, config }, choice) => {
-    const classes = availableClasses(profile).map((d) => d.id);
-    const races = availableRaces(profile).map((d) => d.id);
-    if (classes.length === 0 || races.length === 0) throw new RangeError('No class or race is available to recruit from');
-    const size = partySize(profile);
-    for (let i = 0; i < size; i++) {
-      const pick = choice.slots[i] ?? RANDOM_PICK;
-      // A pick the profile no longer allows is a random recruit instead.
-      const classId = pick.classId !== null && classes.includes(pick.classId) ? pick.classId : rng.pick(classes);
-      const raceId = pick.raceId !== null && races.includes(pick.raceId) ? pick.raceId : rng.pick(races);
-      const name = recruitName(seed, i, config.party.map((m) => m.name));
-      config.party.push({ name, classId, raceId });
-    }
-  },
+  apply: (ctx, choice) => fillParty(ctx, choice.slots, partySize(ctx.profile)),
 });

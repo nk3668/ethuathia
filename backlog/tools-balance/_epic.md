@@ -34,7 +34,7 @@ Confidence that the sim is deterministic and that balance changes are measured, 
 - [x] [ETH-145 Fix the party-size inversion so solo is the hardest way to play](ETH-145-party-size-ordering.md)
 - [ ] [ETH-146 Composition and rules balance pass (M4 capstone)](ETH-146-composition-balance-pass.md)
 - [x] [ETH-149 Tooling hygiene: formatter policy, line endings and worktree-safe tests](ETH-149-tooling-hygiene.md)
-- [ ] [ETH-178 Sim harness option for a random mixed party, as players get it](ETH-178-sim-mixed-party.md)
+- [x] [ETH-178 Sim harness option for a random mixed party, as players get it](ETH-178-sim-mixed-party.md)
 - [x] [ETH-152 Run harness seeds in parallel across CPU cores](ETH-152-parallel-sim-harness.md)
 - [ ] [ETH-153 Scale the return-trip surge with party size](ETH-153-party-scaled-return-surge.md)
 - [ ] [ETH-161 Meta-loop economy balance pass (M2 capstone)](ETH-161-meta-loop-economy-balance.md)

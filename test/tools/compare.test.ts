@@ -80,6 +80,9 @@ describe('tools/compare', () => {
       '--preset', 'progressed', '--upgrades', 'upgrade.a,upgrade.b', '--rules', 'cautious',
     ]);
     expect(simArgv({ ...ARGS, preset: 'fresh', upgrades: [], rules: 'baseline' })).toEqual(simArgv(ARGS));
+    expect(simArgv({ ...ARGS, recruits: true })).toEqual([...simArgv(ARGS), '--recruits']);
+    expect(makeReport({ ...ARGS, recruits: true }, []).args.recruits).toBe(true);
+    expect(makeReport(ARGS, []).args).not.toHaveProperty('recruits');
   });
 
   it('compares banked Renown per hour before and after, and prints - for older reports without it (ETH-085)', () => {
