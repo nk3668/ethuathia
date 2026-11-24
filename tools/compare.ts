@@ -330,7 +330,7 @@ export function simArgv(args: ReportArgs): string[] {
 }
 
 /** Whether the checkout at `dir` has a harness that takes `--jobs` (read from its usage text, not an error). */
-function jobsFlagSupported(dir: string): boolean {
+export function jobsFlagSupported(dir: string): boolean {
   try {
     return readFileSync(join(dir, 'tools', 'headless.ts'), 'utf8').includes('--jobs');
   } catch {

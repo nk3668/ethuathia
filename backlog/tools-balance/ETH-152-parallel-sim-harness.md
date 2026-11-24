@@ -43,3 +43,7 @@ alternative to cutting seeds, which would cost reliability (§9 "Seed tiers").
   `--jobs N` is 1..64, default cores - 1. `--compare` appends `--jobs` only when the ref's
   `tools/headless.ts` mentions it. `--seeds 50`: 57.35 s at `--jobs 1`, 18.10 s at 15 jobs (16
   cores); JSON and printed report identical. No change under `src/`.
+- 2026-11-23: Wrap-up checks (left unmerged): exported `jobsFlagSupported` and added unit tests in
+  `test/tools/parallel.test.ts` for `jobsFlagSupported` and `makeReport` omitting `jobs`. Verified
+  `npm run check` (103 files, 1198 tests passed), `npm run build`, and `--compare` (`--seeds 6 --cap 300 --jobs 3`)
+  against `62cc704` (serial fallback, 0 hash diffs) and `205a9a3` (parallel ref, 0 hash diffs).

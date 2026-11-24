@@ -1,7 +1,9 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { defaultJobs, formatReport, headlessParty, MAX_JOBS, parseSimArgs, runSeeds } from '../../tools/headless';
 import { runPartySweep, runSeedsParallel } from '../../tools/parallel';
-import { makeReport } from '../../tools/compare';
+import { formatComparison, jobsFlagSupported, makeReport } from '../../tools/compare';
 
 describe('parallel harness (ETH-152)', () => {
   it('gives the same report for --jobs 1 and --jobs 3', async () => {
@@ -28,5 +30,22 @@ describe('parallel harness (ETH-152)', () => {
     expect(parseSimArgs(['--jobs', '4']).jobs).toBe(4);
     expect(() => parseSimArgs(['--jobs', '0'])).toThrow(/--jobs/);
     expect(() => parseSimArgs(['--jobs', String(MAX_JOBS + 1)])).toThrow(/--jobs/);
+  });
+
+  it('omits jobs from report args so reports with different --jobs compare cleanly', () => {
+    const results = runSeeds(1, 2, { cap: 200, party: headlessParty(1) });
+    const base = { from: 1, seeds: 2, cap: 200, party: 1 };
+    const r1 = makeReport({ ...base, jobs: 1 }, results);
+    const r4 = makeReport({ ...base, jobs: 4 }, results);
+    expect(r1.args).toEqual(base);
+    expect(r4.args).toEqual(base);
+    const comparison = formatComparison(r1, r4);
+    expect(comparison).toContain('all 2 shared seeds end the same');
+    expect(comparison).not.toContain('different arguments');
+  });
+
+  it('detects whether a checkout supports --jobs', () => {
+    expect(jobsFlagSupported(join(import.meta.dirname, '..', '..'))).toBe(true);
+    expect(jobsFlagSupported(tmpdir())).toBe(false);
   });
 });
