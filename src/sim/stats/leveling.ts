@@ -41,7 +41,7 @@ export const XP_STEP = 26;
 export const KILL_SHARE_RADIUS = 6;
 
 /** A shared kill is worth this much more per extra sharer, before it is split. */
-export const KILL_GROUP_BONUS = 0.4;
+export const KILL_GROUP_BONUS = 0.55;
 
 /** Attribute points an actor's level-ups have added, per attribute. */
 export type GrowthGains = Partial<Record<AttributeId, number>>;
