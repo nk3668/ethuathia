@@ -9,6 +9,7 @@ import { adventurersSlice } from './adventurers';
 import { codexSlice } from './codex';
 import { currenciesSlice } from './currencies';
 import { historySlice } from './history';
+import { masterySlice } from './mastery';
 import { milestonesSlice } from './milestones';
 import { prepareSlice } from './prepare';
 import { settingsSlice } from './settings';
@@ -23,4 +24,5 @@ export const PROFILE_SLICES = {
   milestones: milestonesSlice,
   prepare: prepareSlice,
   adventurers: adventurersSlice,
+  mastery: masterySlice,
 } as const;

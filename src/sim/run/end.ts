@@ -52,6 +52,11 @@ export interface PartyMemberRecord {
   raceId: string;
   /** The adventurer's profile record id (ETH-119), when they have one. */
   recordId?: string;
+  /**
+   * A temporary companion (ETH-089): they count for 50% of their XP toward their class's Mastery,
+   * outside the diminishing-share order (ETH-087). Nothing sets it yet.
+   */
+  companion?: true;
 }
 
 /** What the host hands the UI when a run ends: the result to bank and how it ended. */
