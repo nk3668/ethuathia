@@ -31,6 +31,8 @@ export interface ReportArgs {
   preset?: HeadlessPreset;
   upgrades?: string[];
   rules?: HeadlessRulesPreset;
+  /** Worker threads (`--jobs`). Not part of a report: it never changes the results. */
+  jobs?: number;
 }
 
 /** What `--json` writes. */
@@ -327,6 +329,15 @@ export function simArgv(args: ReportArgs): string[] {
   ];
 }
 
+/** Whether the checkout at `dir` has a harness that takes `--jobs` (read from its usage text, not an error). */
+export function jobsFlagSupported(dir: string): boolean {
+  try {
+    return readFileSync(join(dir, 'tools', 'headless.ts'), 'utf8').includes('--jobs');
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Runs the headless harness of git ref `ref` with `args` and returns its report. The ref is
  * checked out (detached) into a temporary worktree, run with this checkout's `tsx` and
@@ -342,8 +353,10 @@ export function runRef(ref: string | ResolvedCompareRef, args: ReportArgs): SimR
     // Resolved the way Node does, so it also works in a git worktree whose node_modules lives in a parent checkout.
     const tsx = join(dirname(createRequire(join(REPO_ROOT, 'package.json')).resolve('tsx/package.json')), 'dist', 'cli.mjs');
     const out = join(dir, 'sim-report.json');
+    // Only refs from after ETH-152 know --jobs; older ones run serially.
+    const jobs = args.jobs !== undefined && jobsFlagSupported(dir) ? ['--jobs', String(args.jobs)] : [];
     const run = (extra: string[]) =>
-      spawnSync(process.execPath, [tsx, 'tools/sim.ts', ...simArgv(args), ...extra], {
+      spawnSync(process.execPath, [tsx, 'tools/sim.ts', ...simArgv(args), ...jobs, ...extra], {
         cwd: dir,
         encoding: 'utf8',
         maxBuffer: 256 * 1024 * 1024,

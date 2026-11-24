@@ -2552,6 +2552,11 @@ cards show every member, and the top bar and log show the run.
 
 ### 11.4 Sim compare (`tools/compare.ts`)
 
+- `npm run sim -- --jobs N` (1 to 64, default CPU cores - 1; 1 is today's serial run) runs seeds on
+  worker threads (`tools/parallel.ts`, `tools/parallel-worker.mjs`, which loads the harness through
+  `tsx/esm/api`). Seeds are handed out one at a time and results are stored by seed, so the report is
+  identical for any N; lower it to leave CPU free. `--compare` passes the same `--jobs` to a ref
+  whose `tools/headless.ts` mentions it and runs older refs serially.
 - `npm run sim -- --json FILE` also saves the report: `{ version, args, results }`, every
   seed's `SeedResult`.
 - `npm run sim -- --seeds N --compare REF` checks git ref `REF` out into a temporary detached
