@@ -425,7 +425,11 @@ function Unlocked({ run }: { run?: number }) {
         {lines.map((line) => (
           <li key={line.id}>
             <span aria-hidden="true">🔓 </span>
-            {line.tier === undefined ? (
+            {line.reveals !== undefined ? (
+              <>
+                The {line.reveals.building} now offers <span className={styles.name}>{line.name}</span>: {line.why}.
+              </>
+            ) : line.tier === undefined ? (
               <>
                 <span className={styles.name}>{line.name}</span> opens in town: {line.why}.
               </>

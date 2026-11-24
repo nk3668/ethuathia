@@ -15,7 +15,7 @@
  * - `isUnlocked(profile, id)`: whether an upgrade unlocked a content id (ETH-036 class unlocks).
  */
 import { BUILDINGS, defName, describeMilestone, findDef, groupNodes, maxRank, rankPrice, tierGateId, UPGRADES } from '../content';
-import type { CapacityKey, TierGate, UpgradeGrant, UpgradeNodeDef } from '../content';
+import type { CapacityKey, Milestone, TierGate, UpgradeGrant, UpgradeNodeDef } from '../content';
 import { formatNumber } from '../core';
 import { describeRequirement } from '../sim';
 import { CURRENCY_INFO, subtractCurrencies } from './currencies';
@@ -156,6 +156,12 @@ export function describeGate(gate: TierGate): string {
   return `Tier ${gate.fromTier} and up open when you ${what.charAt(0).toLowerCase()}${what.slice(1)}.`;
 }
 
+/** "Revealed when you reach floor 4": what keeps a sealed node (`UpgradeNodeDef.reveal`) from being bought. */
+export function revealText(milestone: Milestone): string {
+  const goal = describeMilestone(milestone, describeRequirement, defName);
+  return `Revealed when you ${goal.charAt(0).toLowerCase()}${goal.slice(1)}.`;
+}
+
 // --- Buying ----------------------------------------------------------------------------------
 
 /**
@@ -177,6 +183,9 @@ export function canPurchase(profile: Profile, nodeId: string): PurchaseCheck {
 
   const gate = tierGate(profile, node.building, node.tier);
   if (gate !== null) return { ok: false, status: 'locked', missing: [], reason: describeGate(gate) };
+
+  const hidden = lockingMilestone(profile, node.id);
+  if (hidden !== null) return { ok: false, status: 'locked', missing: [], reason: revealText(hidden) };
 
   if (node.exclusiveGroup !== undefined) {
     const chosen = chosenInGroup(profile, node.exclusiveGroup);

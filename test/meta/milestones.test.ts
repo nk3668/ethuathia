@@ -96,13 +96,15 @@ describe('milestone unlocks', () => {
 
     profile = applyRunResult(profile, anvilRun('victory'));
     expect(isMilestoneOpen(profile, SMITHY)).toBe(true);
-    expect(profile.milestones.unlocked).toEqual([{ id: SMITHY, run: 2 }]);
-    expect(latestUnlocks(profile)).toEqual([{ id: SMITHY, run: 2 }]);
+    // The win also reveals the Stonekin (ETH-036), recorded under its node's id.
+    const opened = [{ id: SMITHY, run: 2 }, { id: 'upgrade.stonekin_recruitment', run: 2 }];
+    expect(profile.milestones.unlocked).toEqual(opened);
+    expect(latestUnlocks(profile)).toEqual(opened);
     expect(checkProfile(profile)).toEqual([]);
 
     // Stays open, recorded once; a later run opened nothing new.
     profile = applyRunResult(profile, anvilRun('retreat', false));
-    expect(profile.milestones.unlocked).toEqual([{ id: SMITHY, run: 2 }]);
+    expect(profile.milestones.unlocked).toEqual(opened);
     expect(latestUnlocks(profile)).toEqual([]);
   });
 
@@ -129,7 +131,10 @@ describe('milestone unlocks', () => {
     const before = newProfile();
     const many: Profile = { ...before, history: { ...before.history, totals: { ...before.history.totals, runs: 4, deepestDepth: 5 } } };
     // A lifetime total no longer opens the Smithy; only its quest does.
-    expect(unlockMilestones(many)).toBe(many);
+    const opened = unlockMilestones(many).milestones.unlocked.map((u) => u.id);
+    expect(opened).not.toContain(SMITHY);
+    // The depth reveals (ETH-036) do read lifetime totals: floors 4 and 5 are reached.
+    expect(opened).toEqual(['upgrade.outrider_training', 'upgrade.reaver_training']);
     expect(milestoneMet({ kind: 'finishRuns', count: 4 }, milestoneProgress(many))).toBe(true);
     expect(milestoneMet({ kind: 'reachDepth', depth: 6 }, milestoneProgress(many))).toBe(false);
   });

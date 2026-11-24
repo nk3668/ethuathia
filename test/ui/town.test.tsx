@@ -56,6 +56,9 @@ describe('Town tab', () => {
       'Fourth Berth',
       'Drill Yard',
       'Open Muster',
+      'Outrider Training',
+      'Lorekeeper Training',
+      'Fenling Recruitment',
     ]);
     // Status is in words, not color alone.
     expect(nodeButton('Second Berth').textContent).toContain('Too expensive');

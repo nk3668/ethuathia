@@ -45,10 +45,10 @@ const own = (profile: Profile, ...ids: string[]): Profile => ({ ...profile, upgr
 
 describe('buildRunConfig', () => {
   it('fills the party with seeded random recruits from the available classes and races', () => {
-    const profile = newProfile();
+    const profile = own(newProfile(), 'upgrade.outrider_training', 'upgrade.fenling_recruitment');
     const config = buildRunConfig(profile, defaultRunChoices(), 42);
     expect(config.party).toHaveLength(1);
-    // Every starter class and race is open (ETH-160), so a random recruit may be any of them.
+    // The Vanguard and Human plus whatever the town has sold (ETH-036); a random recruit may be any of them.
     expect(availableClasses(profile).map((d) => d.id)).toContain(config.party[0]?.classId);
     expect(availableRaces(profile).map((d) => d.id)).toContain(config.party[0]?.raceId);
     expect(config.dungeonId).toBe('dungeon.old_delve');

@@ -1,6 +1,6 @@
 /**
  * The Guild Hall (CLAUDE.md §4): party size, roster size and contract slots, paid in Renown.
- * Class and race unlocks join this tree with ETH-036.
+ * The Outrider, Lorekeeper and Fenling are bought here too (ETH-036), revealed by a milestone.
  *
  * Layout: the berths and the roster ledger form the left column; each pick-one tier sits to
  * their right and pairs a numeric node with one that adds a capability (CLAUDE.md §4).
@@ -125,4 +125,46 @@ export const UPGRADE_OPEN_MUSTER = defineUpgrade({
   requires: [UPGRADE_THIRD_BERTH.id],
   exclusiveGroup: 'guild_hall.tier4',
   grants: [{ kind: 'capacity', key: 'rosterSize', amount: 4 }],
+});
+
+export const UPGRADE_OUTRIDER_TRAINING = defineUpgrade({
+  id: 'upgrade.outrider_training',
+  name: 'Outrider Training',
+  description: 'A rider of the wild paths takes a post at the hall. Outriders can be recruited, and a random recruit may be one.',
+  tags: ['roster', 'class'],
+  building,
+  tier: 1,
+  column: 1,
+  cost: { renown: 150 },
+  requires: [],
+  reveal: { kind: 'reachDepth', depth: 4 },
+  grants: [{ kind: 'unlock', id: 'class.outrider' }],
+});
+
+export const UPGRADE_LOREKEEPER_TRAINING = defineUpgrade({
+  id: 'upgrade.lorekeeper_training',
+  name: 'Lorekeeper Training',
+  description: 'A reading room opens off the hall. Lorekeepers can be recruited, and a random recruit may be one.',
+  tags: ['roster', 'class'],
+  building,
+  tier: 1,
+  column: 2,
+  cost: { renown: 250 },
+  requires: [],
+  reveal: { kind: 'finishRuns', count: 5 },
+  grants: [{ kind: 'unlock', id: 'class.lorekeeper' }],
+});
+
+export const UPGRADE_FENLING_RECRUITMENT = defineUpgrade({
+  id: 'upgrade.fenling_recruitment',
+  name: 'Fenling Recruitment',
+  description: 'Word reaches the marsh villages that the hall pays well. Fenlings can be recruited, and a random recruit may be one.',
+  tags: ['roster', 'race'],
+  building,
+  tier: 3,
+  column: 1,
+  cost: { renown: 200 },
+  requires: [],
+  reveal: { kind: 'finishRuns', count: 8 },
+  grants: [{ kind: 'unlock', id: 'race.fenling' }],
 });

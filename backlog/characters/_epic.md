@@ -32,9 +32,9 @@ Nate (2026-11-24): leave room in the town trees for future classes and races; no
 | Class or race | Kind | Building | Status |
 |---|---|---|---|
 | Vanguard | class | — (start) | built |
-| Outrider | class | Guild Hall | built (ETH-160), unlock ETH-036 |
-| Lorekeeper | class | Guild Hall | built (ETH-160), unlock ETH-036 |
-| Reaver | class | Smithy | built (ETH-160), unlock ETH-036 |
+| Outrider | class | Guild Hall | built (ETH-160), sold in town (ETH-036) |
+| Lorekeeper | class | Guild Hall | built (ETH-160), sold in town (ETH-036) |
+| Reaver | class | Smithy | built (ETH-160), sold in town (ETH-036) |
 | Tinker (traps and gadgets) | class | Smithy | placeholder |
 | Hexer (curses) | class | Library | placeholder |
 | Mender (healer, can raise the fallen) | class | Temple | placeholder (ETH-173) |
@@ -42,8 +42,8 @@ Nate (2026-11-24): leave room in the town trees for future classes and races; no
 | Gravecaller (calls on the dead) | class | Ossuary | placeholder |
 | Chanter (party buffs) | class | Tavern | placeholder |
 | Human | race | — (start) | built |
-| Fenling | race | Guild Hall | built (ETH-160), unlock ETH-036 |
-| Stonekin | race | Smithy | built (ETH-160), unlock ETH-036 |
+| Fenling | race | Guild Hall | built (ETH-160), sold in town (ETH-036) |
+| Stonekin | race | Smithy | built (ETH-160), sold in town (ETH-036) |
 | Ashborn (fire-touched) | race | Temple | placeholder |
 | Tidefolk (flooded floors) | race | Cartographer | placeholder |
 | Woodland race (consumes the fallen) | race | Ossuary | placeholder (ETH-179) |
@@ -52,7 +52,7 @@ Nate (2026-11-24): leave room in the town trees for future classes and races; no
 - [x] [ETH-033 Four attributes and the stats derived from them](ETH-033-attributes-derived-stats.md)
 - [x] [ETH-034 XP, leveling and per-class attribute growth](ETH-034-xp-leveling-class-growth.md)
 - [ ] [ETH-035 Class equipment proficiencies and race aptitudes](ETH-035-proficiencies-aptitudes.md)
-- [ ] [ETH-036 Milestone-gated class and race unlocks bought at the Guild Hall](ETH-036-milestone-unlocks-guild-hall.md)
+- [x] [ETH-036 Milestone-gated class and race unlocks bought at the Guild Hall](ETH-036-milestone-unlocks-guild-hall.md)
 - [ ] [ETH-037 A signature ability per class](ETH-037-class-signature-abilities.md)
 - [ ] [ETH-038 Class-aware AI roles](ETH-038-class-aware-ai-roles.md)
 - [x] [ETH-039 Survey ideas from DCSS and NetHack with clean-room notes](ETH-039-survey-roguelike-ideas.md)
