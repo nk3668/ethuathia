@@ -4,12 +4,12 @@ title: Ghosts at graves, hostile or allied with the Ossuary
 type: feature
 status: idea
 priority: P3
-milestone: M5
+milestone: M7
 epic: lineage
 size: M
 depends_on: [ETH-069, ETH-123, ETH-117]
 created: 2026-11-19
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -26,3 +26,4 @@ Some gravestones raise a ghost of the fallen adventurer: hostile by default, an 
 
 ## Log
 - 2026-11-19: Created from the shared-systems spec review (2026-11-19).
+- 2026-11-24: Moved from M5 to M7 in the backlog reorganization by theme.

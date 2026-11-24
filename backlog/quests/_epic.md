@@ -2,7 +2,7 @@
 epic: quests
 title: Quests: contracts and bounties
 status: active
-milestones: [M1, M1.5, M2, M3, M4, M5]
+milestones: [M1, M1.5, M2, M6, M7]
 ---
 
 ## Goal

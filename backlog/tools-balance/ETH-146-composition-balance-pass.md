@@ -1,15 +1,15 @@
 ---
 id: ETH-146
-title: Composition and rules balance pass (M3 milestone balance check)
+title: Composition and rules balance pass (M4 capstone)
 type: chore
 status: idea
 priority: P2
-milestone: M3
+milestone: M4
 epic: tools-balance
 size: M
 depends_on: [ETH-080]
 created: 2026-11-23
-updated: 2026-11-23
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -35,3 +35,4 @@ as M3's milestone balance check (§9.1).
 
 ## Log
 - 2026-11-23: Created. Composition-spread criterion moved here from ETH-080.
+- 2026-11-24: Moved from M3 to M4 in the backlog reorganization by theme.

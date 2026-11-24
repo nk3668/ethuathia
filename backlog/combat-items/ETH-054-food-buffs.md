@@ -4,12 +4,12 @@ title: Food as consumables that grant short-term buffs
 type: feature
 status: idea
 priority: P2
-milestone: M2
+milestone: M5
 epic: combat-items
 size: M
 depends_on: [ETH-043, ETH-057]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -35,3 +35,4 @@ Adds a small, readable consumable layer without the chore of managing hunger. Se
 - 2026-11-17: Created. The player wants food only for short-term buffs, with no hunger or starvation.
 - 2026-11-17: Stacking decided: different effect types stack, the same type refreshes instead.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
+- 2026-11-24: Moved from M2 to M5 in the backlog reorganization by theme.

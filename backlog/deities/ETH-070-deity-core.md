@@ -4,12 +4,12 @@ title: Patron deities with a blessing, a taboo and Favor
 type: feature
 status: idea
 priority: P2
-milestone: M6
+milestone: M8
 epic: deities
 size: M
 depends_on: [ETH-064, ETH-067, ETH-114, ETH-115, ETH-116, ETH-121]
 created: 2026-11-17
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -31,3 +31,4 @@ Acceptance criteria to be refined against the real code before starting (plannin
 ## Log
 - 2026-11-17: Created as part of the backlog fan-out plan.
 - 2026-11-19: Added ETH-114 (objective engine), ETH-115 (run-wide modifiers), ETH-116 (dungeon encounters), ETH-121 (shared conditions) to `depends_on`: build on the shared system instead of a parallel version.
+- 2026-11-24: Moved from M6 to M8 in the backlog reorganization by theme.

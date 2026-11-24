@@ -4,7 +4,7 @@ title: Codex polish for rare monsters: a faster-reveal hint and a lore-tier cont
 type: feature
 status: idea
 priority: P3
-milestone: M2
+milestone: M5
 epic: codex-tooltips
 size: S
 depends_on: [ETH-144]
@@ -34,3 +34,4 @@ tier keeps its lore hidden in practice. `CLAUDE.md` §1 ("Readable") and §8 (Co
 
 ## Log
 - 2026-11-24: Created from the ETH-144 review (Nate approved filing).
+- 2026-11-24: Moved from M2 to M5 in the backlog reorganization by theme.

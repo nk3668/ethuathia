@@ -4,12 +4,12 @@ title: Elite monsters and mini-bosses with better loot
 type: feature
 status: idea
 priority: P2
-milestone: M2
+milestone: M5
 epic: bestiary
 size: M
-depends_on: [ETH-041, ETH-045, ETH-067, ETH-117]
+depends_on: [ETH-041, ETH-045, ETH-117]
 created: 2026-11-17
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -23,7 +23,7 @@ Regular peaks of danger and reward between floors. See `CLAUDE.md` §6.
 - [ ] A mini-boss is placed every N floors (N tunable, default 3), seeded
 - [ ] Elites and mini-bosses drop from a better loot table: more affixes, higher rolls, more enchantment, and a chance of an artifact
 - [ ] Log lines on engaging and killing an elite or mini-boss
-- [ ] The Elite Spawns Omen raises how often elites appear
+- [ ] Elite frequency is a run parameter, so an Omen can raise it later
 
 ## Notes
 - Mini-bosses can reuse named uniques or be elite versions of the floor's family leader.
@@ -32,3 +32,5 @@ Regular peaks of danger and reward between floors. See `CLAUDE.md` §6.
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
 - 2026-11-19: Added ETH-117 (monster templates) to `depends_on`: build on the shared system instead of a parallel version.
+- 2026-11-24: Moved from M2 to M5 in the backlog reorganization by theme.
+- 2026-11-24: Removed ETH-067 from depends_on (elites are M5, Omens M6). The Elite Spawns Omen criterion moved to ETH-067.

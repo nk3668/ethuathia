@@ -2,7 +2,7 @@
 epic: risk-omens
 title: Omens and conducts
 status: active
-milestones: [M2, M4]
+milestones: [M2, M6]
 ---
 
 ## Goal

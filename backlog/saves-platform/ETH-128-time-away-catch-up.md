@@ -4,12 +4,12 @@ title: Time-away catch-up simulation and summary
 type: feature
 status: idea
 priority: P2
-milestone: M6
+milestone: M8
 epic: saves-platform
 size: M
 depends_on: [ETH-095, ETH-120]
 created: 2026-11-19
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -26,3 +26,4 @@ On load, simulate the time the game was closed (capped at 8h, raised by Tavern u
 
 ## Log
 - 2026-11-19: Created from the shared-systems spec review (2026-11-19).
+- 2026-11-24: Moved from M6 to M8 in the backlog reorganization by theme.

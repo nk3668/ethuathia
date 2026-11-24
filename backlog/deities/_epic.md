@@ -2,7 +2,7 @@
 epic: deities
 title: Deities and altars
 status: active
-milestones: [M6]
+milestones: [M8]
 ---
 
 ## Goal

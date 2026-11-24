@@ -4,12 +4,12 @@ title: Dungeon merchants
 type: feature
 status: idea
 priority: P3
-milestone: M6
+milestone: M8
 epic: dungeon-gen
 size: M
 depends_on: [ETH-043, ETH-061, ETH-116]
 created: 2026-11-17
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -32,3 +32,4 @@ Gives in-run loot a use beyond equipping. See `CLAUDE.md` §6 (Floor variety).
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
 - 2026-11-19: Added ETH-116 (dungeon encounters) to `depends_on`: build on the shared system instead of a parallel version.
 - 2026-11-24: Added a note from the M1.5/M1.6 fan-out (Nate approved).
+- 2026-11-24: Moved from M6 to M8 in the backlog reorganization by theme.

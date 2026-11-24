@@ -4,12 +4,12 @@ title: Named uniques and bosses
 type: feature
 status: idea
 priority: P2
-milestone: M2
+milestone: M5
 epic: bestiary
 size: M
 depends_on: [ETH-040, ETH-065, ETH-117]
 created: 2026-11-17
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -31,3 +31,4 @@ Memorable foes for the Slay contract and mini-bosses. See `CLAUDE.md` §6.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
 - 2026-11-18: Ethan, an extremely rare and very weak boss, is filed as ETH-109.
 - 2026-11-19: Added ETH-117 (monster templates) to `depends_on`: build on the shared system instead of a parallel version.
+- 2026-11-24: Moved from M2 to M5 in the backlog reorganization by theme.

@@ -4,12 +4,12 @@ title: Monster families and floor themes
 type: feature
 status: idea
 priority: P2
-milestone: M2
+milestone: M5
 epic: bestiary
 size: M
 depends_on: [ETH-040, ETH-065, ETH-117]
 created: 2026-11-17
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ Floors feel distinct and the Codex groups well. See `CLAUDE.md` §6 (Floor varie
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
 - 2026-11-19: Added ETH-117 (monster templates) to `depends_on`: build on the shared system instead of a parallel version.
+- 2026-11-24: Moved from M2 to M5 in the backlog reorganization by theme.

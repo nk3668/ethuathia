@@ -4,12 +4,12 @@ title: Hand-made room vaults
 type: content
 status: idea
 priority: P3
-milestone: M6
+milestone: M8
 epic: dungeon-gen
 size: M
 depends_on: [ETH-006, ETH-116]
 created: 2026-11-18
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -26,3 +26,4 @@ Idea accepted in Nate's interview answers (2026-11-18).
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-19: Added ETH-116 (dungeon encounters) to `depends_on`: build on the shared system instead of a parallel version.
+- 2026-11-24: Moved from M6 to M8 in the backlog reorganization by theme.

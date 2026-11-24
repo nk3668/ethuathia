@@ -4,12 +4,12 @@ title: Class equipment proficiencies and race aptitudes
 type: feature
 status: idea
 priority: P2
-milestone: M2
+milestone: M4
 epic: characters
 size: M
 depends_on: [ETH-033, ETH-043]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -28,3 +28,4 @@ Makes class and race choices matter for gear. See `CLAUDE.md` §5.
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-24: Moved from M2 to M4 in the backlog reorganization by theme.

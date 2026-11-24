@@ -4,12 +4,12 @@ title: Allied non-party creatures: actors that fight with the party without bein
 type: feature
 status: ready
 priority: P1
-milestone: M5
+milestone: M7
 epic: combat-items
 size: M
 depends_on: [ETH-040, ETH-058, ETH-060]
 created: 2026-11-19
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -126,3 +126,4 @@ Because several existing systems previously assumed "`actor.faction === 'party'`
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
 - 2026-11-19: Implementation instructions drafted by Antigravity; reviewed and amended by Claude (bugs fixed, open either/or choices decided, missing cases added). Ready to build.
+- 2026-11-24: Moved from M5 to M7 in the backlog reorganization by theme.

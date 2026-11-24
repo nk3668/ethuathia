@@ -4,12 +4,12 @@ title: Gravestone interactions: minor loot, a patron boon and an epitaph
 type: feature
 status: idea
 priority: P2
-milestone: M5
+milestone: M8
 epic: lineage
 size: M
 depends_on: [ETH-069, ETH-070, ETH-116]
 created: 2026-11-17
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -31,3 +31,4 @@ Makes past runs matter in new ones. See `CLAUDE.md` §7.
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
 - 2026-11-19: Added ETH-116 (dungeon encounters) to `depends_on`: build on the shared system instead of a parallel version.
+- 2026-11-24: Moved from M5 to M8 in the backlog reorganization by theme.

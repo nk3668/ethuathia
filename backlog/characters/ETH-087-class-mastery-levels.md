@@ -4,12 +4,12 @@ title: Class Mastery: a shared level per class that earns tree points
 type: feature
 status: idea
 priority: P2
-milestone: M2
+milestone: M4
 epic: characters
 size: M
 depends_on: [ETH-034, ETH-086, ETH-119]
 created: 2026-11-18
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ Spec gate: write detailed acceptance criteria against the real code and get Nate
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-19: Added ETH-119 (adventurer records) to `depends_on`: build on the shared system instead of a parallel version.
+- 2026-11-24: Moved from M2 to M4 in the backlog reorganization by theme.

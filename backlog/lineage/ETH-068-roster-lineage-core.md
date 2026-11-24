@@ -4,12 +4,12 @@ title: Persistent roster, graveyard and Graveyard tab
 type: feature
 status: idea
 priority: P2
-milestone: M5
+milestone: M7
 epic: lineage
 size: M
 depends_on: [ETH-034, ETH-062, ETH-064, ETH-119, ETH-120, ETH-122]
 created: 2026-11-17
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -32,3 +32,4 @@ Acceptance criteria to be refined against the real code before starting (plannin
 - 2026-11-17: Created as part of the backlog fan-out plan.
 - 2026-11-18: Rare dungeon recruits (ETH-089) join the roster if they survive.
 - 2026-11-19: Added ETH-119 (adventurer records), ETH-120 (run chronicle), ETH-122 (seeded text generator) to `depends_on`: build on the shared system instead of a parallel version.
+- 2026-11-24: Moved from M5 to M7 in the backlog reorganization by theme.

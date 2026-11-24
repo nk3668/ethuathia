@@ -4,13 +4,13 @@ title: The AI avoids fountain draughts known to be harmful
 type: feature
 status: done
 priority: P3
-milestone: M4
+milestone: M6
 epic: adventurer-ai
 size: S
 depends_on: [ETH-072]
 assignee: antigravity
 created: 2026-11-18
-updated: 2026-11-23
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -32,3 +32,4 @@ Decided in Nate's interview answers (2026-11-18).
   - (default) Skip explanations travel as `RuleSkipped` notes appended to the fired `ruleFired.detail` and `ai.memory.intent.detail` (so the party card shows them and consecutive identical decisions still fold in `logLines`) — alternative: emit a separate `ruleSkipped` event each turn.
 - 2026-11-23: Rebased onto main (STATE_VERSION 29) and merged to main (PR #81); PENDING REVIEW.
 - 2026-11-23: Reviewed; done. No major issues; avoidance reads only draughts the party has seen and doesn't peek at hidden ones.
+- 2026-11-24: Moved from M4 to M6 in the backlog reorganization by theme.

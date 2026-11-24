@@ -2,7 +2,7 @@
 epic: ui-shell
 title: UI shell and kit
 status: active
-milestones: [M0, M1, M2]
+milestones: [M0, M1, M2, later]
 ---
 
 ## Goal

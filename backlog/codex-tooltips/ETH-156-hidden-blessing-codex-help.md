@@ -4,7 +4,7 @@ title: Codex help text: hidden blessings and mixed stacks of potions and scrolls
 type: feature
 status: idea
 priority: P3
-milestone: M2
+milestone: M5
 epic: codex-tooltips
 size: S
 depends_on: [ETH-147]
@@ -36,3 +36,4 @@ turns out cursed (`CLAUDE.md` §1 "Readable").
 
 ## Log
 - 2026-11-24: Created (Nate approved filing).
+- 2026-11-24: Moved from M2 to M5 in the backlog reorganization by theme.

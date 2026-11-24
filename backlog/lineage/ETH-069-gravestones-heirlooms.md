@@ -4,12 +4,12 @@ title: Gravestones and heirlooms in the dungeon
 type: feature
 status: idea
 priority: P2
-milestone: M5
+milestone: M7
 epic: lineage
 size: M
 depends_on: [ETH-068, ETH-058, ETH-043, ETH-116, ETH-118, ETH-119, ETH-122]
 created: 2026-11-17
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -31,3 +31,4 @@ Acceptance criteria to be refined against the real code before starting (plannin
 ## Log
 - 2026-11-17: Created as part of the backlog fan-out plan.
 - 2026-11-19: Added ETH-116 (dungeon encounters), ETH-118 (item properties), ETH-119 (adventurer records), ETH-122 (seeded text generator) to `depends_on`: build on the shared system instead of a parallel version.
+- 2026-11-24: Moved from M5 to M7 in the backlog reorganization by theme.

@@ -4,12 +4,12 @@ title: Retire veterans to Tavern jobs for permanent passive bonuses
 type: feature
 status: idea
 priority: P2
-milestone: M5
+milestone: M7
 epic: town-meta
 size: M
 depends_on: [ETH-068, ETH-119, ETH-115]
 created: 2026-11-19
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -26,3 +26,4 @@ A living veteran can retire from the roster to a Tavern job (smith, cartographer
 
 ## Log
 - 2026-11-19: Created from the shared-systems spec review (2026-11-19).
+- 2026-11-24: Moved from M5 to M7 in the backlog reorganization by theme.

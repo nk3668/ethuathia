@@ -182,7 +182,7 @@ door) into a floor, written as text with the same format as `parseFloorText`.
 
 **4.2 Themed side branches.**
 *Source (DCSS):* side branches have their own monster sets and a prize at the bottom.
-*Ours:* route forks (M6) lead to a themed stretch of floors with one family of monsters and a
+*Ours:* route forks (M8) lead to a themed stretch of floors with one family of monsters and a
 better loot table at its end.
 *Differs:* the fork choice comes from rules or a pre-set route preference, and the reward is
 listed on the fork tooltip.

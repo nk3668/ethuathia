@@ -4,12 +4,12 @@ title: Scale contract rewards by completion depth and balance M2 payouts
 type: chore
 status: idea
 priority: P3
-milestone: M2
+milestone: M6
 epic: quests
 size: S
 depends_on: [ETH-024, ETH-085, ETH-132, ETH-133]
 created: 2026-11-23
-updated: 2026-11-23
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -29,3 +29,4 @@ Under variable hidden depth (`ETH-133`, 6–10 floors in *The Old Delve*) and mu
 
 ## Log
 - 2026-11-23: Created per M1.5 planning decision to defer depth-scaled contract reward balancing until the end of M2.
+- 2026-11-24: Moved from M2 to M6 in the backlog reorganization by theme.

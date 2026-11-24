@@ -4,7 +4,7 @@ title: Smarter Scroll of Identify use: better targets, optionally skip consumabl
 type: feature
 status: idea
 priority: P2
-milestone: M2
+milestone: M5
 epic: combat-items
 size: S
 depends_on: [ETH-147]
@@ -43,3 +43,4 @@ matter", §5.3).
 
 ## Log
 - 2026-11-24: Created (Nate approved filing).
+- 2026-11-24: Moved from M2 to M5 in the backlog reorganization by theme.

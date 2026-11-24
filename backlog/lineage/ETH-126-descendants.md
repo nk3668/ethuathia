@@ -4,12 +4,12 @@ title: Descendant recruits inherit a trait from a fallen adventurer
 type: feature
 status: idea
 priority: P3
-milestone: M5
+milestone: M7
 epic: lineage
 size: S
 depends_on: [ETH-068, ETH-119, ETH-122]
 created: 2026-11-19
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -25,3 +25,4 @@ New recruits can be kin of a fallen adventurer: they share the family name and i
 
 ## Log
 - 2026-11-19: Created from the shared-systems spec review (2026-11-19).
+- 2026-11-24: Moved from M5 to M7 in the backlog reorganization by theme.

@@ -4,12 +4,12 @@ title: "Themed dungeon: The Mycelial Warren"
 type: content
 status: idea
 priority: P3
-milestone: M6
+milestone: M8
 epic: dungeon-gen
 size: M
 depends_on: [ETH-133, ETH-042]
 created: 2026-11-23
-updated: 2026-11-23
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -27,3 +27,4 @@ Provides a status-resistance and area/cleansing challenge built purely as data o
 
 ## Log
 - 2026-11-23: Created as a future themed dungeon placeholder leveraging ETH-133's extensible Danger schema.
+- 2026-11-24: Moved from M6 to M8 in the backlog reorganization by theme.

@@ -2,7 +2,7 @@
 epic: codex-tooltips
 title: Codex and tooltips
 status: active
-milestones: [M1.6, M2]
+milestones: [M1.6, M2, M5]
 ---
 
 ## Goal
