@@ -102,7 +102,7 @@ The town is a set of buildings. Each building has its own upgrade tree, and each
 
 | Building | Tree contents |
 |---|---|
-| **Guild Hall** | Class and race unlocks (first random, then selectable, as in Roguathia), party size, roster size |
+| **Guild Hall** | Class and race unlocks (first random, then selectable, as in Roguathia), party size, contract slots and rewards. The roster is a flat 50 adventurers, not an upgrade. |
 | **Library** | New rule **conditions** and **actions**, and more rule slots per adventurer |
 | **Smithy** | Starting gear kits, starting enchantment, item identification knowledge |
 | **Temple** | Deities, blessings, altar frequency in the dungeon |
