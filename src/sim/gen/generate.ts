@@ -53,6 +53,8 @@ export interface GenerateOptions {
   loot?: Rng;
   /** Adventurers the run sets out with, for the party-size encounter surcharge (ETH-145). Default 1. */
   partySize?: number;
+  /** Overrides `PARTY_SIZE_BUDGET_STEP` for this floor (tests and tuning runs). */
+  partyBudgetStep?: number;
 }
 
 /**
@@ -70,6 +72,7 @@ export function generateFloor(type: FloorTypeDef, rng: Rng, options: GenerateOpt
     depth,
     danger: options.danger ?? depth,
     partySize: options.partySize ?? 1,
+    ...(options.partyBudgetStep === undefined ? {} : { partyBudgetStep: options.partyBudgetStep }),
     ...(options.dungeon === undefined ? {} : { dungeon: options.dungeon }),
     loot: options.loot ?? rng,
     items: [],

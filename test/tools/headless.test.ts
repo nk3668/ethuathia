@@ -425,7 +425,8 @@ describe('party-size sweep (ETH-145)', () => {
     expect(flat).toEqual(['ordering broken: party 2 wins 30.0%, not more than party 1 at 30.0%']);
     const weak = partySweepWarnings([row(1, 40), row(2, 50), row(3, 60), row(4, 70)]);
     expect(weak).toHaveLength(1);
-    expect(weak[0]).toContain('ratio broken');
+    expect(weak[0]).toContain('ratio not met');
+    expect(weak[0]).toContain('ETH-080');
     expect(formatPartySweep([row(1, 40), row(2, 30), row(3, 60), row(4, 70)])).toContain('WARNING: ordering broken');
   });
 });

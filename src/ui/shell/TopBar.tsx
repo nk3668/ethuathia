@@ -250,7 +250,7 @@ function RunPosition() {
           <br />
           {floorAbout}
           <br />
-          {partySize > 1 && (
+          {partySize > 1 && PARTY_SIZE_BUDGET_STEP > 0 && (
             <>
               Bigger parties meet more monsters: +{Math.round(PARTY_SIZE_BUDGET_STEP * 100)}% for each adventurer after the first (+
               {Math.round(PARTY_SIZE_BUDGET_STEP * 100 * (partySize - 1))}% for your party of {partySize}). Only the numbers and packs

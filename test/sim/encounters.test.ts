@@ -280,16 +280,20 @@ describe('Danger-scaled threat-budget encounters', () => {
   });
 
   it('grows the floor budget by about 10% per adventurer after the first, as headcount only (ETH-145)', () => {
-    expect(PARTY_SIZE_BUDGET_STEP).toBeCloseTo(0.1);
+    // The shipped step is a small tunable (0 while the ordering can't afford it); the mechanism is
+    // tested with an explicit 10% step.
+    expect(PARTY_SIZE_BUDGET_STEP).toBeGreaterThanOrEqual(0);
+    expect(PARTY_SIZE_BUDGET_STEP).toBeLessThanOrEqual(0.1);
     expect(partySizeBudgetMul(1)).toBe(1);
-    expect(partySizeBudgetMul(4)).toBeCloseTo(1.3);
+    expect(partySizeBudgetMul(4, 0.1)).toBeCloseTo(1.3);
+    expect(partySizeBudgetMul(4)).toBeCloseTo(1 + 3 * PARTY_SIZE_BUDGET_STEP);
 
-    const spawnsFor = (partySize: number, danger: number) => {
+    const spawnsFor = (partySize: number, danger: number, partyBudgetStep = 0.1) => {
       let count = 0;
       let threat = 0;
       const templated = new Set<string>();
       for (let seed = 1; seed <= 12; seed++) {
-        const plan = generateFloor(FLOOR_HALLS, Rng.seeded(seed, 'party-size'), { depth: danger, danger, dungeon: DUNGEON_OLD_DELVE, partySize });
+        const plan = generateFloor(FLOOR_HALLS, Rng.seeded(seed, 'party-size'), { depth: danger, danger, dungeon: DUNGEON_OLD_DELVE, partySize, partyBudgetStep });
         for (const s of plan.spawns ?? []) {
           count++;
           threat += MONSTERS.get(s.def).threat;
@@ -305,16 +309,8 @@ describe('Danger-scaled threat-budget encounters', () => {
     // Monster stats never scale: the same defs, unchanged, only more of them.
     expect(spawnsFor(1, 6)).toEqual(solo);
 
-    // The run feeds it from the party it sets out with.
-    const planned = (party: (typeof HERO)[]) => {
-      let total = 0;
-      for (let seed = 1; seed <= 6; seed++) {
-        const state = createRun({ party }, seed);
-        total += planFloor(state, 'd2').spawns?.length ?? 0;
-      }
-      return total;
-    };
-    expect(planned([HERO, HERO, HERO, HERO].map((h, i) => ({ ...h, name: `Hero${i}` })))).toBeGreaterThan(planned([HERO]));
+    // With no step set a party of 4 gets exactly the solo floor, so a shipped step of 0 changes nothing.
+    expect(spawnsFor(4, 6, 0)).toEqual(spawnsFor(1, 6, 0));
   });
 
   it('produces identical RunState plans across repeated planFloor calls with valid invariants', () => {

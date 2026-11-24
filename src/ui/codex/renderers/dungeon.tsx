@@ -23,8 +23,10 @@ export default defineCodexRenderer({
     },
     {
       label: 'Crowding',
-      value: `+${Math.round(PARTY_SIZE_BUDGET_STEP * 100)}% monsters per extra adventurer`,
-      hint: 'Every adventurer after the first adds this much to each floor’s monster threat budget: more monsters and packs, never stronger ones.',
+      value: PARTY_SIZE_BUDGET_STEP > 0 ? `+${Math.round(PARTY_SIZE_BUDGET_STEP * 100)}% monsters per extra adventurer` : 'None yet',
+      hint:
+        'A bigger party can face a slightly bigger monster threat budget on each floor: more monsters and packs, never stronger ones. ' +
+        (PARTY_SIZE_BUDGET_STEP > 0 ? 'Every adventurer after the first adds this much.' : 'It is switched off for now while the game is balanced.'),
     },
     { label: 'Floors', value: findDef(def.floorType)?.name ?? def.floorType, hint: 'The kind of floor it is built from.', key: true },
   ],
