@@ -5,6 +5,7 @@
  * M1 it grows death causes and currency per hour. `tools/sim.ts` is the command line for it
  * (`npm run sim -- --seeds N`); `test/tools/headless.test.ts` runs it in the test suite.
  */
+import { availableParallelism } from 'node:os';
 import { parseArgs } from 'node:util';
 import {
   CLASS_VANGUARD,
@@ -70,6 +71,14 @@ import type {
  * turns a floor, so a ten-floor dungeon fits with room to spare.
  */
 export const DEFAULT_TURN_CAP = 6000;
+
+/** The most worker threads `--jobs` accepts (`tools/parallel.ts`). */
+export const MAX_JOBS = 64;
+
+/** The default for `--jobs`: every core but one, so the machine stays usable. */
+export function defaultJobs(): number {
+  return Math.min(MAX_JOBS, Math.max(1, availableParallelism() - 1));
+}
 
 /** The most adventurers a party can have (CLAUDE.md §2). */
 export const MAX_PARTY = 4;
@@ -915,6 +924,8 @@ export interface SimArgs {
   preset: HeadlessPreset;
   upgrades: string[];
   rules: HeadlessRulesPreset;
+  /** Worker threads to run seeds on (`--jobs`); 1 is a serial run. Doesn't change the results. */
+  jobs: number;
   /** Write the report as JSON to this file (`--json`). */
   json: string | null;
   /** Compare with the report in this file (`--baseline`). */
@@ -926,7 +937,7 @@ export interface SimArgs {
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
                       [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious]
-                      [--party-sweep] [--json FILE] [--compare REF | --baseline FILE]
+                      [--party-sweep] [--jobs N] [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
 hit, and reports per seed the turns taken, the depth reached, how much of the last floor was
@@ -944,6 +955,8 @@ above the bottom or trigger stuck detection are listed at the end.
                           level per size, and warn when win rate does not rise with party size or party
                           ${MAX_PARTY} wins less than ${PARTY_SWEEP_MIN_RATIO}x as often as solo (--party is ignored; not with
                           --compare, --baseline or --json)
+  --jobs N                worker threads to run seeds on, 1 to ${MAX_JOBS} (default: CPU cores - 1; 1 runs
+                          serially). The report is identical for any N. Lower it to leave CPU free
   --json FILE             also write the report as JSON, to keep as a baseline
   --compare REF           run the same seeds on git ref REF (e.g. origin/main, or merge-base for the
                           merge base with origin/main) and print a before/after table of the report
@@ -984,6 +997,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       upgrades: { type: 'string' },
       rules: { type: 'string' },
       'party-sweep': { type: 'boolean' },
+      jobs: { type: 'string' },
       json: { type: 'string' },
       compare: { type: 'string' },
       baseline: { type: 'string' },
@@ -1008,6 +1022,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     upgrades,
     rules,
     partySweep: values['party-sweep'] ?? false,
+    jobs: int('--jobs', values.jobs, defaultJobs(), 1, MAX_JOBS),
     json: values.json ?? null,
     compare: values.compare ?? null,
     baseline: values.baseline ?? null,
