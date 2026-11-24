@@ -238,6 +238,12 @@ export const ACT_FLEE = defineRuleAction({
       if (harmless.length === 0) return null;
       return { skipped: `ignoring ${listNames(harmless)}: ${harmless.length === 1 ? "it can't" : "they can't"} hurt anyone` };
     }
+    // Still running after recovering above the start threshold, but cornered by a threat next to
+    // it: turning to fight beats failing Flee checks and taking free hits (ETH-148).
+    if (actor.actor.faction === 'party' && hpPercent(state, actor) >= BASELINE_FLEE_PERCENT) {
+      const close = enemies.filter((e) => distance(e.pos, actor.pos) <= 1);
+      if (close.length > 0) return { skipped: `not breaking away from ${listNames(close)} next to me: HP is above ${BASELINE_FLEE_PERCENT}%` };
+    }
     // Enemy tiles stay enterable here, so the distance map spreads from them; the step taken
     // never leads onto one, since it is the highest ground on the flee map.
     const paths = pathGridFor(ctx);
