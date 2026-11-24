@@ -53,3 +53,4 @@ criteria in `docs/ARCHITECTURE.md`.
 ## Log
 - 2026-11-24: Created from the ETH-142 review (Nate approved filing).
 - 2026-11-24: Nate chose display option 1 (every copy of a known type looks the same until identified; mixed stacks). Marked ready.
+- 2026-11-24: Implemented. Unidentified potions and scrolls stack whatever their blessing (ItemInstance.mix, STATE_VERSION 36); use and partial drop draw copies on the loot stream; identifying a mixed stack splits it by blessing; clearPlainTypeFlags removed. T1 compare (seeds 1-50): party 1 win 30.0% to 24.0%, party 4 46.0% to 40.0%; seeds 101-300 show -0.5 and +3.5 points, so the T1 dip was noise from the shifted loot stream (more Wits rolls).
