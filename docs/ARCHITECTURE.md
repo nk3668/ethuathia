@@ -1846,9 +1846,10 @@ As built in `src/sim/ai/` (ETH-009):
   - `act.explore` is frontier-based: the goals are tiles the actor could enter (on the party
     memory's path grid, closed doors at `OPEN_DOOR_COST`) with an unseen neighbor. Standing on one
     always reveals its neighbors, so each goal reached shrinks the frontier, and explored dead
-    ends are never goals nor on a shortest route to one. Party followers share the floor lead's
-    current `act.explore` `goal` when it is still on the frontier and reachable (ETH-145), so the
-    party explores one corridor together instead of splitting and ping-ponging. A closed door next on the route becomes
+    ends are never goals nor on a shortest route to one. Both the floor lead and party followers
+    stay committed to the lead's current `act.explore` `goal` until it leaves the frontier or
+    becomes unreachable (ETH-145), preventing adjacent ally costs from flipping branches and
+    keeping the party pushing one corridor together. A closed door next on the route becomes
     `openDoor`; another actor on the next tile becomes a wait ("waiting for X to get out of the
     way"), recorded as `memory.waitingFor`, unless it is a party member willing to swap
     (`willingToSwap`, ETH-017): one whose own last decision waited on this actor, or one with no

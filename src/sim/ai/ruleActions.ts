@@ -15,16 +15,17 @@ import { defineRuleAction, noParams } from './types';
 import type { AiCtx, RuleActionDef } from './types';
 
 /**
- * If `ctx.actor` is a party follower whose lead on the same floor is currently exploring a
- * frontier tile that is still in `goals`, share that single goal so followers push the same
- * corridor instead of splitting across opposite branches (ETH-145).
+ * If `ctx.actor` is in the party and the floor's lead is currently exploring a frontier tile that
+ * is still in `goals`, both the lead and its followers stay committed to that goal so adjacent
+ * ally costs can't flip the lead between opposite branches and followers explore one corridor
+ * together (ETH-145).
  */
-function leadExploreGoal(ctx: AiCtx, goals: readonly Pos[]): Pos[] | null {
+function sharedExploreGoal(ctx: AiCtx, goals: readonly Pos[]): Pos[] | null {
   if (ctx.actor.actor.faction !== 'party') return null;
   const lead = ctx.state.party
     .map((id) => ctx.state.entities[id])
     .find((e) => e?.actor !== undefined && e.actor.hp > 0 && e.floor === ctx.actor.floor);
-  if (lead === undefined || lead.id === ctx.actor.id) return null;
+  if (lead === undefined) return null;
   const intent = lead.ai?.memory.intent;
   const goal = intent?.action === 'act.explore' ? intent.goal : undefined;
   if (goal === undefined) return null;
@@ -48,7 +49,7 @@ export const ACT_EXPLORE = defineRuleAction({
     const paths = aiPathGrid(ctx);
     const goals = frontier(ctx, paths);
     if (goals.length === 0) return null;
-    const shared = leadExploreGoal(ctx, goals);
+    const shared = sharedExploreGoal(ctx, goals);
     let map = buildGoalMap(paths, shared ?? goals);
     let cost = map.get(ctx.actor.pos.x, ctx.actor.pos.y);
     if (cost === UNREACHABLE && shared !== null) {

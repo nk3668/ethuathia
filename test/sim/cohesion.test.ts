@@ -224,4 +224,47 @@ describe('party cohesion baseline', () => {
     expect(explored(state, 'd1').fraction).toBe(1);
     expect(events.filter((e) => e.type === 'stuck')).toEqual([]);
   });
+
+  it('keeps the lead committed to its explore frontier even when an adjacent ally stands on that route', () => {
+    // East door (13,2) is 5 steps from (8,2) vs 6 to west door (2,2). With ALLY_OCCUPIED_COST (2)
+    // on an ally ahead at (9,2), east costs 7 > west 6, which used to flip the lead back and
+    // forth across turns (seed 196 stuck storm).
+    const ANTI_OSCILLATION = [
+      '##################',
+      '#.#..........#...#',
+      '#.+..@@......+...#',
+      '#.#..........#...#',
+      '##################',
+    ];
+    const state = createRun({ party: [HERO, ALLY], floorText: ANTI_OSCILLATION, depth: 1, monsters: false }, 1);
+    const [lead, follower] = state.party.map((id) => getEntity(state, id) as AiActor) as [AiActor, AiActor];
+    place(lead, 8, 2);
+    place(follower, 6, 2);
+    step(state, []);
+    expect(lead.ai.memory.intent?.goal).toEqual({ x: 13, y: 2 });
+
+    // Put lead back at (8,2) with follower blocking east at (9,2). Lead stays on (13,2) and
+    // advances east over 6 turns to open/reveal it with zero goal flip-flops and zero stuck events.
+    place(lead, 8, 2);
+    place(follower, 9, 2);
+    expect(chooseRule({ state, actor: lead })?.goal).toEqual({ x: 13, y: 2 });
+
+    const events: SimEvent[] = [];
+    const goalsBeforeDoor: { x: number; y: number }[] = [];
+    let maxLeadX = lead.pos.x;
+    for (let i = 0; i < 6; i++) {
+      const now = step(state, []);
+      events.push(...now);
+      maxLeadX = Math.max(maxLeadX, lead.pos.x);
+      if (!events.some((e) => e.type === 'doorOpened') && lead.ai.memory.intent?.action === 'act.explore' && lead.ai.memory.intent.goal) {
+        goalsBeforeDoor.push(lead.ai.memory.intent.goal);
+      }
+      expect(checkInvariants(state)).toEqual([]);
+    }
+    expect(goalsBeforeDoor.length).toBeGreaterThan(0);
+    expect(goalsBeforeDoor.every((g) => g.x === 13 && g.y === 2)).toBe(true);
+    expect(events.some((e) => e.type === 'doorOpened' && e.pos.x === 13 && e.pos.y === 2)).toBe(true);
+    expect(events.filter((e) => e.type === 'stuck')).toEqual([]);
+    expect(maxLeadX).toBeGreaterThanOrEqual(10);
+  });
 });
