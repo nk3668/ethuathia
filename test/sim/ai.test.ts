@@ -85,6 +85,16 @@ CONDITIONS.register(
     describe: () => 'never',
   }),
 );
+CONDITIONS.register(
+  defineCondition({
+    id: 'cond.test_odd_x',
+    name: 'Odd column',
+    description: 'True while the actor stands on an odd column.',
+    parse: noParams,
+    evaluate: ({ actor }) => ({ ok: actor.pos.x % 2 === 1, detail: '' }),
+    describe: () => 'on an odd column',
+  }),
+);
 RULE_ACTIONS.register(
   defineRuleAction<Pos>({
     id: 'act.test_step',
@@ -386,6 +396,32 @@ describe('stuck detection', () => {
     }
     expect(backedOff).toBe(true);
     expect(hero.pos).toEqual({ x: 1, y: 1 });
+  });
+
+  it('catches two rules that undo each other, swapping the actor between neighbouring tiles (turn-cap regression)', () => {
+    // The real loop (party of 4, seeds 189, 185 and 105): a wounded adventurer flees from an enemy
+    // in sight, which takes it out of sight, and then walks back toward what it was after. It
+    // changes tile every turn, so an exact-position check never saw it stand still.
+    const { state, hero } = setup(CORRIDOR);
+    hero.ai = newAiPart([
+      rule('cond.test_odd_x', 'act.test_step', { x: -1, y: 0 }),
+      rule('cond.always', 'act.test_step', { x: 1, y: 0 }),
+    ]);
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 4 * STUCK_TURNS; i++) events.push(...step(state, []));
+    const stuck = events.filter((e): e is Stuck => e.type === 'stuck');
+    expect(stuck.length).toBeGreaterThan(0);
+    expect(stuck[0]?.turns).toBe(STUCK_TURNS);
+    expect(stuck[0]?.detail).toContain('No progress');
+    expect(checkInvariants(state)).toEqual([]);
+  });
+
+  it('does not count walking along a seen corridor as loitering', () => {
+    const { state, hero } = setup(CORRIDOR);
+    hero.ai = newAiPart([rule('cond.always', 'act.test_step', { x: 1, y: 0 })]);
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 18; i++) events.push(...step(state, []));
+    expect(events.filter((e) => e.type === 'stuck')).toEqual([]);
   });
 
   it('never counts waiting with nothing to do as being stuck', () => {

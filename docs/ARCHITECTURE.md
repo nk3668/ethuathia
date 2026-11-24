@@ -1862,7 +1862,9 @@ As built in `src/sim/ai/` (ETH-009):
   that validates (`bumpTarget`); when none does, it fails with the move's reason. Snapshots carry
   `possessed` and `awaitingInput` on each `PartyMemberView`.
 - **Stuck detection** runs before the walk. Each decision records the actor's floor, position and
-  the party's seen-tile count (`memory.last`). After `STUCK_TURNS` (10) decisions in a row with
+  the party's seen-tile count (`memory.last`). Staying within `LOITER_RADIUS` (1) tile of where the count
+  began counts as not moving, so two rules that undo each other (flee, then walk back toward the
+  item behind the enemy) are caught too (ETH-142 turn-cap fix). After `STUCK_TURNS` (10) decisions in a row with
   none of them changing while the last rule fired was not `idle`, that rule becomes
   `memory.dropped` and is skipped for `DROP_TURNS` (20) turns, a `stuck` event says why, and
   `cond.stuck` holds meanwhile, so the actor backs off and then waits until the goal comes back.
