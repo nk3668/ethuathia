@@ -121,7 +121,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-065](codex-tooltips/ETH-065-codex-framework.md) | Codex tab, discovery tracking and Explain tooltips from content | codex-tooltips | M2 | P1 | done | M |
 | [ETH-086](town-meta/ETH-086-foundations-and-tactics-trees.md) | Split upgrade trees into permanent Foundations and free Tactics | town-meta | M2 | P1 | done | M |
 | [ETH-087](characters/ETH-087-class-mastery-levels.md) | Class Mastery XP: every run banks XP toward a guild-wide level per class | characters | M2 | P1 | done | M |
-| [ETH-095](saves-platform/ETH-095-tauri-packaging-saves.md) | Tauri desktop packaging and save backend | saves-platform | M2 | P1 | ready | M |
+| [ETH-095](saves-platform/ETH-095-tauri-packaging-saves.md) | Tauri desktop packaging and save backend | saves-platform | M2 | P1 | pending-review | M |
 | [ETH-114](quests/ETH-114-objective-engine.md) | Objective engine: reusable objectives with progress, generalized from contracts | quests | M2 | P1 | done | M |
 | [ETH-115](risk-omens/ETH-115-run-wide-modifiers.md) | Run-wide modifiers: a run-level BundleSource with sources, scopes, flags and tooltips | risk-omens | M2 | P1 | done | M |
 | [ETH-117](bestiary/ETH-117-monster-templates.md) | Monster templates: prefixes, traits and named overrides layered on a base MonsterDef | bestiary | M2 | P1 | done | M |

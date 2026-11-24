@@ -45,7 +45,7 @@ Ethuathia packages with **Tauri v2** (`src-tauri/`) as a standalone, offline-onl
   ```sh
   npm run tauri build
   ```
-  Runs `npm run build` (`dist/`), compiles `src-tauri/`, and emits installers under `src-tauri/target/release/bundle/` (for example `nsis/*.exe` and `msi/*.msi` on Windows, `.app`/`.dmg` on macOS, and `.deb`/`.AppImage`/`.rpm` on Linux).
+  Runs `npm run build` (`dist/`), compiles `src-tauri/`, and emits installers under `src-tauri/target/release/bundle/` (for example `nsis/*.exe` and `msi/*.msi` on Windows, `.app`/`.dmg` on macOS, and `.deb`/`.AppImage`/`.rpm` on Linux). On deeply nested Windows checkout paths, set `CARGO_TARGET_DIR` to a shorter directory (for example `$env:TEMP\ethuathia-target`) to avoid MSVC `LNK1104` (`MAX_PATH`) linker errors.
 
 ### Save file location
 
