@@ -329,13 +329,20 @@ export function simArgv(args: ReportArgs): string[] {
   ];
 }
 
-/** Whether the checkout at `dir` has a harness that takes `--jobs` (read from its usage text, not an error). */
-export function jobsFlagSupported(dir: string): boolean {
+function fileIncludes(path: string, needle: string): boolean {
   try {
-    return readFileSync(join(dir, 'tools', 'headless.ts'), 'utf8').includes('--jobs');
+    return readFileSync(path, 'utf8').includes(needle);
   } catch {
     return false;
   }
+}
+
+/** Whether the checkout at `dir` has a harness that takes `--jobs` (read from its usage text, not an error). */
+export function jobsFlagSupported(dir: string): boolean {
+  return (
+    fileIncludes(join(dir, 'tools', 'headless', 'args.ts'), '--jobs') ||
+    fileIncludes(join(dir, 'tools', 'headless.ts'), '--jobs')
+  );
 }
 
 /**
