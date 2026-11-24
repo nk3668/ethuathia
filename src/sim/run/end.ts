@@ -12,6 +12,7 @@ import { deathPredicate, killerOf } from '../combat/death';
 import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
 import { depthRevealed, dungeonDepth, floorNode, floorTypeOf } from '../floors/dungeon';
+import { kitOf } from '../items/kit';
 import { VICTORY_CHECKS } from '../registries';
 import type { EntityId, RunState } from '../state';
 import type { RunOutcome, RunResult } from './result';
@@ -79,6 +80,10 @@ export function announceStart(state: RunState, emit: Emit): void {
     depth: depthRevealed(state) ? dungeonDepth(state) : null,
     floorType: floorTypeOf(state, state.dungeon.entry),
   });
+  for (const m of partyRecords(state)) {
+    const items = kitOf(m.classId);
+    if (items.length > 0) emit({ type: 'kitIssued', actor: m.actor, name: m.name, items: [...items] });
+  }
 }
 
 /** True once the run has ended. */

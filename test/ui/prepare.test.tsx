@@ -77,7 +77,7 @@ describe('PrepareScreen', () => {
     expect(party.getByText('Attributes rolled on descent')).toBeTruthy();
 
     await user.selectOptions(classSelect, 'class.vanguard');
-    expect(party.getByText('BRN 11 · FIN 9 · WIT 4 · GRT 13 · HP 19 · MP 4 (before race)')).toBeTruthy();
+    expect(party.getByText('BRN 11 · FIN 9 · WIT 4 · GRT 13 · HP 19 · MP 4 · Kit: Oak cudgel, Round shield (before race)')).toBeTruthy();
 
     await user.selectOptions(raceSelect, 'race.human');
     expect(party.getByText('BRN 12 · FIN 10 · WIT 5 · GRT 14 · HP 20 · MP 5')).toBeTruthy();

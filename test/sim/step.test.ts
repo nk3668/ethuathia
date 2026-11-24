@@ -34,7 +34,7 @@ function setSpeed(state: RunState, id: EntityId, speed: number): void {
 
 /** A step's events without the run's first event, `runStarted`, which a first step always has. */
 function stepped(state: RunState, commands: Command[] = [], options?: { decide?: Decide }): SimEvent[] {
-  return step(state, commands, options).filter((e) => e.type !== 'runStarted');
+  return step(state, commands, options).filter((e) => e.type !== 'runStarted' && e.type !== 'kitIssued');
 }
 
 /** The ids of the actors that took a turn, in order. */

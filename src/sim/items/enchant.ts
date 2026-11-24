@@ -176,6 +176,18 @@ export const PROP_IDENTIFY_TRIED: ItemPropertyKind<true> = {
 };
 
 /**
+ * "A class starting kit item" (`prop.kit`, ETH-176). Only ever `true`; absent means not kit.
+ * Never stacks, so a kit item doesn't merge into a stack of found ones. It changes nothing about
+ * the item's stats, name or value; `isKitItem` (`kit.ts`) reads it and `itemStateNote` words it.
+ */
+export const PROP_KIT: ItemPropertyKind<true> = {
+  id: 'prop.kit',
+  field: 'kit',
+  schema: z.literal(true),
+  stacks: 'never',
+};
+
+/**
  * Hidden blessing counts of an unidentified potion or scroll stack whose copies differ
  * (`prop.mix`, ETH-147). Changes nothing visible: not its name, value or note. `canStack` skips
  * it (and `blessing`) for unidentified consumables, so they share stacks whatever they hold.
@@ -252,6 +264,9 @@ export function enchantmentProblems(item: ItemInstance): string[] {
   return problems;
 }
 
+/** The tooltip line on a class starting kit item (ETH-176). */
+export const KIT_NOTE = 'Starting kit: issued with the class each run, so it is not sold for Trophies when carried out.';
+
 /**
  * Concise tooltip note describing `item`'s visible states (enchantment, blessing, special
  * enchantments, or unidentified status) for `viewer`, or `null` for plain identified items.
@@ -280,5 +295,6 @@ export function itemStateNote(state: RunState, item: ItemInstance, viewer?: Enti
     const ench = ENCHANTMENTS.get(entry.id);
     parts.push(`${ench.name}${roman(entry.level)}: ${ench.description}`);
   }
+  if (item.kit === true) parts.push(KIT_NOTE);
   return parts.length === 0 ? null : parts.join(' ');
 }

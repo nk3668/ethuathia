@@ -5,7 +5,7 @@ import { ATTRIBUTE_IDS } from '../../../content';
 import type { Attributes, ClassDef, RaceDef } from '../../../content';
 import { ATTRIBUTE_FORMULAS, STAT_INFO } from '../../../sim';
 import type { StatId } from '../../../sim';
-import { attributeLine } from '../../codex/attributeText';
+import { attributeLine, kitLine } from '../../codex/attributeText';
 
 function deriveStat(stat: StatId, attrs: Attributes): number {
   let add = STAT_INFO[stat].base;
@@ -27,8 +27,9 @@ function raceModifiersText(race: RaceDef): string {
   return ATTRIBUTE_IDS.some((id) => (race.attributes[id] ?? 0) !== 0) ? attributeLine(race.attributes, true) : '';
 }
 
-function formatDerivedLine(attrs: Attributes): string {
-  return `${attributeLine(attrs)} · HP ${deriveStat('hp', attrs)} · MP ${deriveStat('mp', attrs)}`;
+function formatDerivedLine(attrs: Attributes, cls?: ClassDef): string {
+  const kit = cls?.kit === undefined ? '' : ` · Kit: ${kitLine(cls.kit)}`;
+  return `${attributeLine(attrs)} · HP ${deriveStat('hp', attrs)} · MP ${deriveStat('mp', attrs)}${kit}`;
 }
 
 /** Class `<option>` label: `Vanguard (BRN 11 · FIN 9 · WIT 4 · GRT 13)`. */
@@ -53,10 +54,10 @@ export interface SlotPreview {
  */
 export function slotAttributePreview(cls: ClassDef | undefined, race: RaceDef | undefined): SlotPreview {
   if (cls && race) {
-    return { text: formatDerivedLine(combineAttributes(cls, race)), resolved: true };
+    return { text: formatDerivedLine(combineAttributes(cls, race), cls), resolved: true };
   }
   if (cls) {
-    return { text: `${formatDerivedLine(cls.attributes)} (before race)`, resolved: true };
+    return { text: `${formatDerivedLine(cls.attributes, cls)} (before race)`, resolved: true };
   }
   if (race) {
     const mod = raceModifiersText(race);

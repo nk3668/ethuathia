@@ -53,6 +53,11 @@ export interface ItemInstance {
    * (ETH-147, `prop.mix`). Only ever on an `identified: false` stack, never in a snapshot.
    */
   mix?: ItemMix;
+  /**
+   * Part of a class's starting kit (ETH-176, `prop.kit`): issued with the run, so it is never
+   * sold for Trophies. Only ever `true`. Never stacks.
+   */
+  kit?: true;
   /** Heirloom history and flavor (ETH-118 `prop.origin`; ETH-069, ETH-109). Never stacks. */
   origin?: ItemOrigin;
 }
