@@ -47,6 +47,25 @@ export {
 } from './adventurers';
 export type { NewRecordInit } from './adventurers';
 export { FALLEN_RECORD_CAP } from './slices/adventurers';
+export {
+  classMastery,
+  MASTERY_BONUS_PER_DEPTH,
+  MASTERY_BONUS_PER_OBJECTIVE,
+  MASTERY_COMPANION_SHARE,
+  MASTERY_CURVE,
+  MASTERY_SHARES,
+  masteryGain,
+  masteryGainBanked,
+  masteryLevel,
+  masteryOf,
+  masteryPoints,
+  masteryProgress,
+  masteryShares,
+  masteryStepCost,
+  masteryXpForLevel,
+} from './mastery';
+export type { ClassMasteryGain, MasteryBonus, MasteryMemberGain, MasteryProgress, MasteryShare, MasteryView } from './mastery';
+export type { ClassMastery, Mastery } from './slices/mastery';
 export type {
   AdventurerDeath,
   AdventurerHistory,
