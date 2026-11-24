@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { defineDungeon, defineUpgrade } from '../../src/content';
 import {
+  availableClasses,
   availableDungeons,
+  availableRaces,
   buildRunConfig,
   checkRunConfig,
   completeRunChoices,
@@ -46,7 +48,9 @@ describe('buildRunConfig', () => {
     const profile = newProfile();
     const config = buildRunConfig(profile, defaultRunChoices(), 42);
     expect(config.party).toHaveLength(1);
-    expect(config.party[0]).toMatchObject({ classId: 'class.vanguard', raceId: 'race.human' });
+    // Every starter class and race is open (ETH-160), so a random recruit may be any of them.
+    expect(availableClasses(profile).map((d) => d.id)).toContain(config.party[0]?.classId);
+    expect(availableRaces(profile).map((d) => d.id)).toContain(config.party[0]?.raceId);
     expect(config.dungeonId).toBe('dungeon.old_delve');
     expect(config.depth).toBeUndefined();
     expect(checkRunConfig(config)).toEqual([]);
@@ -54,6 +58,8 @@ describe('buildRunConfig', () => {
     expect(buildRunConfig(profile, defaultRunChoices(), 42)).toEqual(config);
     const names = new Set([1, 2, 3, 4, 5, 6, 7, 8].map((seed) => buildRunConfig(profile, defaultRunChoices(), seed).party[0]?.name));
     expect(names.size).toBeGreaterThan(1);
+    const kinds = new Set([...Array(40).keys()].map((seed) => buildRunConfig(profile, defaultRunChoices(), seed).party[0]?.classId));
+    expect(kinds.size).toBeGreaterThan(1);
   });
 
   it('takes as many adventurers as the Guild Hall allows, with distinct names', () => {
@@ -80,7 +86,8 @@ describe('buildRunConfig', () => {
     expect(buildRunConfig(surveyed, choices, 1).dungeonId).toBe('dungeon.test_pit');
 
     const unknown = completeRunChoices({ party: { slots: [{ classId: 'class.nobody', raceId: null }] } });
-    expect(buildRunConfig(newProfile(), unknown, 1).party[0]?.classId).toBe('class.vanguard');
+    // An unknown pick falls back to a random available recruit.
+    expect(availableClasses(newProfile()).map((d) => d.id)).toContain(buildRunConfig(newProfile(), unknown, 1).party[0]?.classId);
   });
 
   it('gives every adventurer the party bundles of owned upgrades, credited to the upgrade', () => {

@@ -3,7 +3,7 @@
  * May import: core. See docs/ARCHITECTURE.md §1 and §5.
  */
 export * from './attributes';
-export { CLASS_KIND, CLASS_VANGUARD, CLASSES, defineClass, expectedGrowth, MAX_GROWTH_RATE } from './classes';
+export { CLASS_KIND, CLASS_LOREKEEPER, CLASS_OUTRIDER, CLASS_REAVER, CLASS_VANGUARD, CLASSES, defineClass, expectedGrowth, MAX_GROWTH_RATE } from './classes';
 export type { AttributeGrowth, ClassDef, GrowthRoll } from './classes';
 export {
   defineFeature,
@@ -19,7 +19,7 @@ export { defineFloorType, FLOOR_HALLS, FLOOR_TYPE_KIND, FLOOR_TYPES } from './fl
 export type { FloorStepRef, FloorTypeDef } from './floors';
 export { checkKinds, ContentError } from './kind';
 export type { ContentKind, ContentRef, RefTarget } from './kind';
-export { defineRace, RACE_HUMAN, RACE_KIND, RACES } from './races';
+export { defineRace, RACE_FENLING, RACE_HUMAN, RACE_KIND, RACE_STONEKIN, RACES } from './races';
 export type { RaceDef } from './races';
 export { checkContent, checkDefHints, CONTENT_KINDS, defName, findDef, findGlyph, HINT_REQUIRED_KINDS, validateContent } from './registries';
 export { defShape, glyphSchema, idSchema, nonNegativeInt, positiveInt } from './schema';

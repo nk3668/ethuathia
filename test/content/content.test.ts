@@ -47,9 +47,9 @@ describe('shipped content', () => {
     for (const def of [...TERRAIN.all(), ...FEATURES.all()]) expect([...def.glyph.ch]).toHaveLength(1);
   });
 
-  it('defines one class and one race', () => {
-    expect(CLASSES.all().map((d) => d.id)).toEqual(['class.vanguard']);
-    expect(RACES.all().map((d) => d.id)).toEqual(['race.human']);
+  it('defines the starter classes and races', () => {
+    expect(CLASSES.all().map((d) => d.id)).toEqual(['class.vanguard', 'class.outrider', 'class.lorekeeper', 'class.reaver']);
+    expect(RACES.all().map((d) => d.id)).toEqual(['race.human', 'race.stonekin', 'race.fenling']);
   });
 
   it('gives every def a name, Codex description and (for discoverable kinds) a riddle hint', () => {

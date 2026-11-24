@@ -1,6 +1,5 @@
-import { CLASSES } from '../../content';
 import { formatNumber } from '../../core';
-import { masteryOf } from '../../meta';
+import { masteryClasses, masteryOf } from '../../meta';
 import { Bar, Tooltip } from '../kit';
 import { MASTERY_HELP } from '../shell/masteryText';
 import { useProfileStore } from '../stores/profileStore';
@@ -20,7 +19,7 @@ export function MasteryList() {
         </Tooltip>
       </h3>
       <ul className={styles.rows}>
-        {CLASSES.all().map((def) => {
+        {masteryClasses(profile).map((def) => {
           const m = masteryOf(profile, def.id);
           const step = m.into + m.toNext;
           return (
