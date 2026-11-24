@@ -220,6 +220,21 @@ describe('testing unknown scrolls (ETH-142)', () => {
     expect(state.domains.items.identifiedTypes).toContain(SCROLL_UNCURSE);
   });
 
+  it('every scroll is harmless to read', () => {
+    // act.read_unknown_scroll reads without weighing risk. If this fails, a harmful scroll was added:
+    // teach act.read_unknown_scroll (src/sim/items/rules.ts) to weigh that risk, then extend this list.
+    const harmless = new Set(['identify', 'uncurse', 'applyStatus:status.hasted', 'applyStatus:status.regenerating']);
+    for (const def of ITEMS.all().filter((d) => d.category === 'scroll')) {
+      for (const effect of def.bundle?.effects ?? []) {
+        const key = effect.kind === 'applyStatus' ? `applyStatus:${effect.status}` : effect.kind;
+        expect(
+          harmless.has(key),
+          `${def.id} has the effect ${key}, which is not on the harmless list. Adding a harmful scroll means act.read_unknown_scroll must learn to weigh risk.`,
+        ).toBe(true);
+      }
+    }
+  });
+
   it('does not read it with an enemy in sight, when hurt, or with no way out known', () => {
     const withEnemy = setup(ROOM_STAIRS);
     withEnemy.hero.inventory = { items: [{ ...unknownScroll }] };

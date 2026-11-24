@@ -13,6 +13,7 @@ import type { AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, Rule, R
 import { getFloor } from '../entities';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { statValue } from '../stats/getStat';
+import type { Entity, RunState } from '../state';
 import { isCursed } from './enchant';
 import { visibleEnemies } from '../combat/rules';
 import { knownStairs } from '../floors/rules';
@@ -77,15 +78,27 @@ export const COND_OVERLOADED = defineCondition({
   describe: () => 'overloaded',
 });
 
-/** True while the actor can test an unknown scroll without risk: no enemy in sight, healthy, a known way out. */
+/** The pack index of the first scroll whose type is still unknown, or `null`. */
+function unknownScrollIndex(state: RunState, actor: Entity): number | null {
+  const index = inventoryOf(actor).findIndex((item) => itemDef(item).category === 'scroll' && !isInstanceTypeKnown(state, item));
+  return index < 0 ? null : index;
+}
+
+/**
+ * True while the actor carries a scroll it can't identify yet and can test it without risk: no
+ * enemy in sight, healthy, a known way out. The engine checks a rule's condition before its action
+ * resolves, so the cheap test (is there anything to test?) comes first and the goal maps behind
+ * "a known way out" are built only for an adventurer that holds an unknown scroll.
+ */
 export const COND_SAFE_TO_TEST = defineCondition({
   id: 'cond.safe_to_test',
-  name: 'Safe to test',
+  name: 'Safe to test a scroll',
   description:
-    'True while no enemy is in sight, HP is above the healing threshold and stairs the adventurer remembers can be reached: a calm moment to try something unknown.',
+    'True while the adventurer carries a scroll of unknown type, no enemy is in sight, HP is above the healing threshold and stairs it remembers can be reached: a calm moment to try something unknown.',
   parse: noParams,
   evaluate(ctx) {
     const { state, actor } = ctx;
+    if (unknownScrollIndex(state, actor) === null) return { ok: false, detail: '' };
     if (visibleEnemies(state, actor).length > 0) return { ok: false, detail: '' };
     const max = statValue(state, actor, 'hp');
     if (actor.actor.hp * 100 < max * HEAL_BELOW_PERCENT) return { ok: false, detail: '' };
@@ -99,7 +112,7 @@ export const COND_SAFE_TO_TEST = defineCondition({
     }
     return { ok: false, detail: '' };
   },
-  describe: () => 'safe to test something unknown',
+  describe: () => 'safe to test an unknown scroll',
 });
 
 /** True while the actor is wearing at least one cursed item (ETH-044). */
@@ -324,8 +337,10 @@ export const ACT_USE_IDENTIFY = defineRuleAction({
 
 /**
  * Read a scroll whose type is still unknown, at a safe moment (ETH-142). Every scroll is harmless
- * to read, so this is how Identify and Uncursing get learned; the effect is as seeded and logged
- * as any other reading.
+ * to read today, so this is how Identify and Uncursing get learned; the effect is as seeded and
+ * logged as any other reading. Nothing here weighs risk: `test/sim/identifySecrecy.test.ts`
+ * ("every scroll is harmless to read") fails when a harmful scroll is added, and this action must
+ * then learn to weigh it.
  */
 export const ACT_READ_UNKNOWN_SCROLL = defineRuleAction({
   id: 'act.read_unknown_scroll',
@@ -335,8 +350,8 @@ export const ACT_READ_UNKNOWN_SCROLL = defineRuleAction({
   parse: noParams,
   resolve({ state, actor }): Resolved | null {
     const pack = inventoryOf(actor);
-    const index = pack.findIndex((item) => itemDef(item).category === 'scroll' && !isInstanceTypeKnown(state, item));
-    if (index < 0) return null;
+    const index = unknownScrollIndex(state, actor);
+    if (index === null) return null;
     return { request: { id: 'use', index }, detail: `reading the unknown ${itemName(state, pack[index] as ItemInstance, actor)} to learn what it does` };
   },
   describe: () => 'read an unknown scroll when safe',

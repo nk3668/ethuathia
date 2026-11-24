@@ -828,7 +828,7 @@ Content in `src/content/items.ts`, sim in `src/sim/items/equipment.ts` and `acti
   through `evaluateUpgrade`, which reads known stats, the def and the floor's depth number, never the
   hidden properties. It waits while the pack holds a known Scroll of Identify. Otherwise the gain in
   base stats (in enhancement points of the def's base enchantment) must beat `hiddenGearMargin(def,
-  depth)` from `loot.ts`: the expected value of what `rollItemProperties` may have rolled (computed from
+  depth)` from `hiddenValue.ts`: the expected value of what `rollItemProperties` may have rolled (computed from
   its chances, specials converted by `valuePerLevel`) plus `CURSE_LOCK_PREMIUM × P(cursed) × expected
   curse penalty`, the price of the rest-of-run slot lock. The trace shows the numbers ("gain +2 vs margin
   1.04 (expected hidden +0.14, curse lock risk +0.9)"). Items held back, and gear that would beat a cursed

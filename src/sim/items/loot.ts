@@ -8,7 +8,7 @@
  * in never changes what lies on them.
  */
 import type { Pos, Rng } from '../../core';
-import { baseEnchantmentFor, BLESSING_INFO, ITEMS, specialEnchantmentsFor } from '../../content';
+import { baseEnchantmentFor, ITEMS, specialEnchantmentsFor } from '../../content';
 import type { EnchantmentDef, ItemBlessing, ItemDef } from '../../content';
 import { readParams } from '../gen/params';
 import { defineGenStep, rectTiles } from '../gen/types';
@@ -19,7 +19,7 @@ import type { ItemEnchantment, ItemInstance } from './instance';
 /**
  * Tunable loot property roll chances (ETH-044; reviewed in ETH-080). ETH-142 hands these to
  * ETH-080 as tunables: `LOOT_CURSE_CHANCE`, `CURSED_MILD_CHANCE` (the cursed enchantment range,
- * -1 or -2) and `CURSE_LOCK_PREMIUM`. The baseline's gear gate (`hiddenGearMargin`) reads all of them.
+ * -1 or -2) and `CURSE_LOCK_PREMIUM` (`hiddenValue.ts`). The baseline's gear gate (`hiddenGearMargin`) reads all of them.
  */
 export const LOOT_BLESS_CHANCE = 0.1;
 export const LOOT_CURSE_CHANCE = 0.1;
@@ -29,13 +29,6 @@ export const CURSED_MILD_CHANCE = 0.75;
 export const BLESSED_ENCHANT_CHANCE = 0.5;
 /** Chance an enchantment, when rolled with a cap above 1, is +1 (otherwise uniform 2..cap). */
 export const ENCHANT_MILD_CHANCE = 0.65;
-/**
- * Prices the rest-of-run slot lock of a curse (ETH-142). Cursed gear cannot be removed or
- * replaced unless a Scroll of Uncursing turns up, which costs more than the points it starts
- * with. The baseline AI puts on unidentified gear only when its known gain beats the expected
- * hidden value plus `CURSE_LOCK_PREMIUM × P(cursed) × expected curse penalty`.
- */
-export const CURSE_LOCK_PREMIUM = 4;
 export const LOOT_CONSUMABLE_CURSE_CHANCE = 0.08;
 export const LOOT_ENCHANT_CHANCE = 0.25;
 export const LOOT_SPECIAL_BASE_CHANCE = 0.12;
@@ -119,49 +112,6 @@ export function rollItemProperties(def: ItemDef, depth: number, rng: Rng): Parti
     out.identified = false;
   }
   return out;
-}
-
-/** What the baseline weighs before putting on unidentified gear, in enhancement points of the def's base enchantment. */
-export interface HiddenGearMargin {
-  /** Expected value of the hidden properties (blessing, enchantment, specials); may be negative. */
-  expected: number;
-  /** `CURSE_LOCK_PREMIUM × P(cursed) × expected curse penalty`: the rest-of-run slot lock, priced. */
-  curseRisk: number;
-  /** `max(expected, 0) + curseRisk`: the gain base stats must beat. */
-  margin: number;
-}
-
-/**
- * The margin unidentified `def` gear at `depth` has to beat (ETH-142), computed from the roll
- * chances in `rollItemProperties` rather than written down: it enumerates the same distribution.
- * It depends only on the def and the depth, never on what a particular item rolled. Specials are
- * converted to enhancement points through `valuePerLevel` ratios.
- */
-export function hiddenGearMargin(def: ItemDef, depth: number): HiddenGearMargin {
-  const base = baseEnchantmentFor(def);
-  if (base === undefined || def.gear === undefined) return { expected: 0, curseRisk: 0, margin: 0 };
-  const cap = Math.min(base.maxLevel, depth >= 6 ? 3 : depth >= 3 ? 2 : 1);
-  const meanEnchant = cap <= 1 ? 1 : ENCHANT_MILD_CHANCE + (1 - ENCHANT_MILD_CHANCE) * ((2 + cap) / 2);
-  const pBlessedEnchant = BLESSED_ENCHANT_CHANCE + (1 - BLESSED_ENCHANT_CHANCE) * LOOT_ENCHANT_CHANCE;
-  const cursedEnchant = CURSED_MILD_CHANCE * -1 + (1 - CURSED_MILD_CHANCE) * -2;
-  const cursePenalty = -(cursedEnchant + BLESSING_INFO.cursed.gearDelta);
-  let expected =
-    LOOT_BLESS_CHANCE * (pBlessedEnchant * meanEnchant + BLESSING_INFO.blessed.gearDelta) -
-    LOOT_CURSE_CHANCE * cursePenalty +
-    (1 - LOOT_BLESS_CHANCE - LOOT_CURSE_CHANCE) * LOOT_ENCHANT_CHANCE * meanEnchant;
-  const specials = specialEnchantmentsFor(def, depth);
-  if (specials.length > 0 && base.valuePerLevel > 0) {
-    const chance = Math.min(LOOT_SPECIAL_MAX_CHANCE, LOOT_SPECIAL_BASE_CHANCE + Math.max(0, depth - 2) * LOOT_SPECIAL_PER_DEPTH);
-    const total = specials.reduce((n, e) => n + e.weight, 0);
-    let points = 0;
-    for (const e of specials) {
-      const meanLevel = e.maxLevel >= 2 && depth >= 5 ? 0.75 * e.minLevel + 0.25 * 2 : e.minLevel;
-      points += (e.weight / total) * ((meanLevel * e.valuePerLevel) / base.valuePerLevel);
-    }
-    expected += chance * points;
-  }
-  const curseRisk = CURSE_LOCK_PREMIUM * LOOT_CURSE_CHANCE * cursePenalty;
-  return { expected, curseRisk, margin: Math.max(expected, 0) + curseRisk };
 }
 
 /** Room tiles (every floor tile if there are no rooms) with no feature, start or item on them, in order. */

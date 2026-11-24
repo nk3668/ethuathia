@@ -59,6 +59,7 @@ export * from './inventory';
 export * from './effects';
 export * from './actions';
 export * from './loot';
+export * from './hiddenValue';
 export * from './cursedGear';
 export * from './rules';
 

@@ -21,7 +21,7 @@
  * scaling depends on the wielder, `compareGear` weighs a sword higher for a deft wielder than for
  * a strong one.
  */
-import { baseEnchantmentFor, EQUIP_SLOT_INFO, EQUIP_SLOTS, gearSlots, hasEffectKind } from '../../content';
+import { baseEnchantmentFor, EQUIP_SLOT_INFO, EQUIP_SLOTS, gearSlots, hasEffectKind, ITEM_SCROLL_OF_IDENTIFY } from '../../content';
 import type { Bundle, EquipSlot, Modifier } from '../../content';
 import type { Entity, RunState } from '../state';
 import { scaleModifier } from '../stats/getStat';
@@ -32,7 +32,7 @@ import { isInstanceTypeKnown, isItemIdentified } from './identify';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
 import { inventoryOf } from './inventory';
-import { hiddenGearMargin } from './loot';
+import { hiddenGearMargin } from './hiddenValue';
 import { itemName } from './name';
 import { propertyBundleParts } from './properties';
 import type { ItemBundle } from './properties';
@@ -251,7 +251,7 @@ export function evaluateUpgrade(state: RunState, entity: Entity, item: ItemInsta
   if (slot === null || isItemIdentified(state, item)) return { slot };
 
   const name = itemName(state, item, entity);
-  if (canIdentifyFirst(state, entity)) return { slot: null, held: `the ${name} can wait: a Scroll of identify will name it first` };
+  if (canIdentifyFirst(state, entity)) return { slot: null, held: `the ${name} can wait: a ${ITEM_SCROLL_OF_IDENTIFY.name} will name it first` };
   const gain = knownGainPoints(state, entity, item, equippedIn(entity, slot));
   const { expected, curseRisk, margin } = hiddenGearMargin(def, floorDepth(state, entity));
   const numbers = `gain +${fmt(gain)} vs margin ${fmt(margin)} (expected hidden ${expected < 0 ? '' : '+'}${fmt(expected)}, curse lock risk +${fmt(curseRisk)})`;
