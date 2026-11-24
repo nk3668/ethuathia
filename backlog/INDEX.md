@@ -4,7 +4,7 @@
 
 **Current milestone: M2 (Meta loop).**
 
-**Assigned to Gemini (Antigravity)**; Claude reviews each PR: ETH-095 and ETH-175 (ETH-172 is done, so it can start). ETH-083, ETH-157 and ETH-158 are merged.
+**Assigned to Gemini (Antigravity)**; Claude reviews each PR: ETH-095. ETH-083, ETH-157, ETH-158 and ETH-175 are merged.
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
@@ -146,7 +146,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-158](tools-balance/ETH-158-split-headless-tool.md) | Split tools/headless.ts into focused modules | tools-balance | M2 | P2 | done | M |
 | [ETH-170](town-meta/ETH-170-building-tier-quests.md) | Building-tier quests open each building's next tier | town-meta | M2 | P2 | ready | M |
 | [ETH-171](town-meta/ETH-171-sell-carried-items.md) | Items carried out of the dungeon sell for Trophies | town-meta | M2 | P2 | idea | S |
-| [ETH-175](ui-shell/ETH-175-disabled-button-tooltips.md) | Kit button that explains why it is disabled, with a tooltip | ui-shell | M2 | P2 | pending-review | S |
+| [ETH-175](ui-shell/ETH-175-disabled-button-tooltips.md) | Kit button that explains why it is disabled, with a tooltip | ui-shell | M2 | P2 | done | S |
 | [ETH-176](characters/ETH-176-class-starting-kits.md) | Classes start each run with a kit of gear | characters | M2 | P1 | done | S |
 | [ETH-177](characters/ETH-177-reprice-finesse.md) | Reprice Finesse so classes can share one point budget | characters | M2 | P1 | ready | M |
 | [ETH-178](tools-balance/ETH-178-sim-mixed-party.md) | Sim harness option for a random mixed party, as players get it | tools-balance | M2 | P2 | ready | S |

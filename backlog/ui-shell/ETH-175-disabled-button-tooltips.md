@@ -2,7 +2,7 @@
 id: ETH-175
 title: Kit button that explains why it is disabled, with a tooltip
 type: feature
-status: pending-review
+status: done
 priority: P2
 milestone: M2
 epic: ui-shell
@@ -32,3 +32,4 @@ Found while reviewing ETH-086 (PR #91).
 - 2026-11-24: Created from the ETH-086 review; Nate asked for it in M2.
 - 2026-11-24: Assigned to Antigravity (Gemini) by Nate. Added ETH-172 to depends_on: it adds rank labels and tier dividers to the same Town tree, so start after it is done and cover its buttons too.
 - 2026-11-24: Implemented on `eth-175-disabled-button-tooltips` (commit `a498b6d`): added `disabledReason` and `tooltipPlacement` to `Button` (`src/ui/kit/Button.tsx`, `Button.module.css`) with a focusable `.disabledTrigger` span (`pointer-events: none` on the disabled `<button>`), `Tooltip`, and `sr-only` `aria-describedby` reason. Replaced `GuardedButton` and switched disabled-with-reason buttons in `UpgradeTree` (`Reset tree`, `Respec`, and `Buy` including ETH-172 ranked/tier-gated nodes), `PartyColumn` (`PackAction` / cursed worn gear `Cursed`), and `SaveOptions` (`Save now` and `Import text`); audited `PrepareScreen`, `ContractsPanel`, `DungeonPanel`, `RunSummary`, `SpeedControls`, and `Tabs` (left intentionally unchanged). Added sample in `KitGallery`, updated `docs/ARCHITECTURE.md` §8.1, and added tests in `test/ui/kit.test.tsx`, `test/ui/town.test.tsx`, `test/ui/townRanks.test.tsx`, `test/ui/profileStore.test.tsx`, and `test/ui/possession.test.tsx`. Marked `pending-review`; verified with `npm run check` (114 test files / 1398 tests) and `npm run build`.
+- 2026-11-24: Reviewed by Claude: npm run check green merged with main (timeouts seen only under machine load; reruns pass). Merged; status done.
