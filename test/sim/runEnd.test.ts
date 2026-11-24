@@ -111,7 +111,7 @@ describe('run end', () => {
     const renown = depthRenown(3) + turnsRenown(state.turn);
     expect(result).toMatchObject({ outcome: 'retreat', atRisk: { renown }, lost: {}, turns: state.turn, deepestDepth: 3 });
     expect(result.atRisk[TROPHIES]).toBeUndefined();
-    expect(Object.keys(result.extras)).toEqual([...RUN_TRACKERS.map((t) => t.id), 'run.end', 'run.party', 'run.gold']);
+    expect(Object.keys(result.extras)).toEqual([...RUN_TRACKERS.map((t) => t.id), 'run.end', 'run.party', 'run.gold', 'run.items']);
     expect(result.extras['track.depth']).toEqual({ deepest: 3 });
     expect(result.extras['track.deaths']).toEqual({ fallen: [] });
     expect(result.extras['track.codex']).toMatchObject({ 'class.vanguard': ['seen'], 'race.human': ['seen'] });

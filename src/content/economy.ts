@@ -17,3 +17,18 @@ export function goldToTrophies(gold: number, rate = GOLD_PER_TROPHY): number {
   if (!Number.isFinite(gold) || gold <= 0 || !Number.isFinite(rate) || rate <= 0) return 0;
   return Math.floor(gold / rate);
 }
+
+/**
+ * Total item value required per Trophy when the party exits the dungeon carrying gear (ETH-171).
+ * The same rate as gold; ETH-161 tunes it.
+ */
+export const VALUE_PER_TROPHY = 10;
+
+/**
+ * Converts the summed item `value` into Trophies at `rate` value per Trophy (rounded down once,
+ * over the sum). Returns `0` for non-finite or non-positive `value` (or invalid `rate`).
+ */
+export function itemValueToTrophies(value: number, rate = VALUE_PER_TROPHY): number {
+  if (!Number.isFinite(value) || value <= 0 || !Number.isFinite(rate) || rate <= 0) return 0;
+  return Math.floor(value / rate);
+}

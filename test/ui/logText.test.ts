@@ -206,6 +206,18 @@ describe('log text', () => {
     );
   });
 
+  it('words itemsSettled for a sale and a wipe loss (ETH-171)', () => {
+    expect(describeEvent({ type: 'itemsSettled', turn: 10, items: 4, value: 125, trophies: 12, lost: false }, () => '').text).toBe(
+      '4 carried items sell for 12 Trophies (value 125).',
+    );
+    expect(describeEvent({ type: 'itemsSettled', turn: 10, items: 1, value: 10, trophies: 1, lost: false }, () => '').text).toBe(
+      '1 carried item sells for 1 Trophy (value 10).',
+    );
+    expect(describeEvent({ type: 'itemsSettled', turn: 10, items: 3, value: 90, trophies: 0, lost: true }, () => '').text).toBe(
+      '3 carried items (worth 90) are lost in the wipe.',
+    );
+  });
+
   it('logs ruleFired skip explanations even when the fallback rule did not change, and folds repeats (ETH-094)', () => {
     const rule = { set: 'baseline' as const, index: 6 };
     const events: { seq: number; event: SimEvent }[] = [

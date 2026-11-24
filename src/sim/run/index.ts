@@ -77,6 +77,12 @@ export type RunDomainEvent =
    * right before `runEnded` (and after `earningsLost` on a wipe).
    */
   | { type: 'goldSettled'; gold: number; trophies: number; lost: boolean }
+  /**
+   * The party's carried items were settled when the run ended (ETH-171): `items` of them, worth
+   * `value`, sold for `trophies` on victory or retreat, or `lost` (`true`, `trophies: 0`) on a wipe.
+   * Emitted only when `items > 0`, right before `runEnded` (after `goldSettled`).
+   */
+  | { type: 'itemsSettled'; items: number; value: number; trophies: number; lost: boolean }
   /** The run is over. Always the last event of a run. */
   | { type: 'runEnded'; outcome: RunOutcome; cause: string; depth: number };
 

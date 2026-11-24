@@ -28,7 +28,7 @@ describe('encodeSave / decodeSave', () => {
   it('writes the format, version and each slice with its version', () => {
     const raw = JSON.parse(encodeSave(newProfile(), 7)) as Record<string, unknown>;
     expect(raw).toMatchObject({ format: SAVE_FORMAT, version: SAVE_VERSION, savedAt: 7 });
-    expect(raw.slices).toMatchObject({ currencies: { version: 1 }, history: { version: 5 } });
+    expect(raw.slices).toMatchObject({ currencies: { version: 1 }, history: { version: 6 } });
   });
 
   it('migrates a v4 history slice without gold records cleanly to v5 (ETH-083)', () => {

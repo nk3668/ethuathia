@@ -161,6 +161,9 @@ export const METRICS: Metric[] = [
   { name: 'run turns, mean (ended)', value: (rs) => mean(rs.flatMap((r) => (r.runTurns === undefined ? [] : [r.runTurns]))), digits: 1 },
   { name: 'renown at risk, mean', value: (rs) => mean(rs.map((r) => r.atRisk?.renown ?? 0)), digits: 1 },
   { name: 'trophies at risk, mean', value: (rs) => mean(rs.map((r) => r.atRisk?.trophies ?? 0)), digits: 1 },
+  // Trophies converted on exit (ETH-083 gold, ETH-171 sold items). Reports from before ETH-171 read '-'.
+  { name: 'trophies converted on exit, mean', value: (rs) => mean(present(rs.map((r) => r.convertedTrophies))), digits: 1 },
+  { name: 'trophies from sold items, mean', value: (rs) => mean(present(rs.map((r) => r.itemTrophies))), digits: 1 },
   // The wipe loss (ETH-023): what wipes took, and what the runs banked. Reports from before it read '-'.
   { name: 'renown lost to wipes, mean', value: (rs) => mean(present(rs.map((r) => (r.lost === undefined ? undefined : (r.lost.renown ?? 0))))), digits: 1 },
   { name: 'trophies lost to wipes, mean', value: (rs) => mean(present(rs.map((r) => (r.lost === undefined ? undefined : (r.lost.trophies ?? 0))))), digits: 1 },
