@@ -201,8 +201,9 @@ function delta(before: number | null, after: number | null, digits: number): str
 
 /**
  * The before/after table: one row per metric with its delta, then which seeds ended in a
- * different state (by state hash). Warns when the two reports ran with different arguments,
- * and appends any comparison warnings (e.g. a stale base ref).
+ * different state (by state hash). Throws when the two reports ran with different arguments
+ * (comparing a progressed run with a fresh one tells nothing), and appends any comparison
+ * warnings (e.g. a stale base ref).
  */
 export function formatComparison(
   before: SimReport,
@@ -231,7 +232,7 @@ export function formatComparison(
   );
   const a = JSON.stringify(before.args);
   const b = JSON.stringify(after.args);
-  if (a !== b) out.push(`Warning: the reports ran with different arguments (${labels.before} ${a}, ${labels.after} ${b}).`);
+  if (a !== b) throw new Error(`The reports ran with different arguments, so they can't be compared (${labels.before} ${a}, ${labels.after} ${b}).`);
   for (const warning of warnings) if (warning !== '') out.push(warning);
   return out.join('\n');
 }
@@ -304,9 +305,25 @@ export function resolveCompareRef(ref: string, cwd = REPO_ROOT): ResolvedCompare
   return { ref, sha, label: ref, baseRef: null, mergeBase, ahead, warning };
 }
 
-/** The arguments to pass the ref's `tools/sim.ts` for `args`. */
-function simArgv(args: ReportArgs): string[] {
-  return ['--seeds', String(args.seeds), '--from', String(args.from), '--cap', String(args.cap), '--party', String(args.party)];
+/**
+ * The arguments to pass the ref's `tools/sim.ts` for `args`: every report argument, so the ref
+ * runs what this checkout ran. Defaults are left out when an old ref might not know the flag
+ * (`--preset`, `--upgrades` and `--rules` came later than the first four).
+ */
+export function simArgv(args: ReportArgs): string[] {
+  return [
+    '--seeds',
+    String(args.seeds),
+    '--from',
+    String(args.from),
+    '--cap',
+    String(args.cap),
+    '--party',
+    String(args.party),
+    ...(args.preset !== undefined && args.preset !== 'fresh' ? ['--preset', args.preset] : []),
+    ...(args.upgrades !== undefined && args.upgrades.length > 0 ? ['--upgrades', args.upgrades.join(',')] : []),
+    ...(args.rules !== undefined && args.rules !== 'baseline' ? ['--rules', args.rules] : []),
+  ];
 }
 
 /**

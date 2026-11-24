@@ -941,7 +941,8 @@ above the bottom or trigger stuck detection are listed at the end.
   --rules NAME            behavior rule preset: baseline (default) or cautious
   --party-sweep           run party sizes 1 to ${MAX_PARTY} on the same seeds and preset, print win rate and
                           level per size, and warn when win rate does not rise with party size or party
-                          ${MAX_PARTY} wins less than ${PARTY_SWEEP_MIN_RATIO}x as often as solo (--party is ignored)
+                          ${MAX_PARTY} wins less than ${PARTY_SWEEP_MIN_RATIO}x as often as solo (--party is ignored; not with
+                          --compare, --baseline or --json)
   --json FILE             also write the report as JSON, to keep as a baseline
   --compare REF           run the same seeds on git ref REF (e.g. origin/main, or merge-base for the
                           merge base with origin/main) and print a before/after table of the report

@@ -24,6 +24,12 @@ function main(argv: readonly string[]): number {
     return 0;
   }
 
+  if (args.partySweep && (args.compare !== null || args.baseline !== null || args.json !== null)) {
+    console.error(`--party-sweep prints its own table and can't be combined with --compare, --baseline or --json
+
+${USAGE}`);
+    return 2;
+  }
   if (args.partySweep) {
     const rows = [];
     console.log(`Party sweep: seeds ${args.from}-${args.from + args.seeds - 1}, preset ${args.preset}, rules ${args.rules}, cap ${args.cap}\n`);
@@ -95,8 +101,15 @@ function main(argv: readonly string[]): number {
     console.log(`Report written to ${args.json}.`);
   }
   if (before !== null) {
+    let table: string;
+    try {
+      table = formatComparison(before, report, { before: label, after: 'this' }, warnings);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 1;
+    }
     console.log(`\nComparison (${label} -> this checkout):\n`);
-    console.log(formatComparison(before, report, { before: label, after: 'this' }, warnings));
+    console.log(table);
   }
   return 0;
 }
