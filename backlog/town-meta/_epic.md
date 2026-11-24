@@ -38,7 +38,7 @@ More items are added when M2 becomes the current milestone.
 - [x] [ETH-083 Leftover gold converts to Trophies when the party exits](ETH-083-gold-to-trophies.md)
 - [x] [ETH-085 Depth-weighted Renown rewards](ETH-085-depth-weighted-renown.md)
 - [x] [ETH-086 Split upgrade trees into permanent Foundations and free Tactics](ETH-086-foundations-and-tactics-trees.md)
-- [ ] [ETH-093 Unlock town buildings by finishing a quest for each](ETH-093-building-unlock-quests.md)
+- [x] [ETH-093 Unlock town buildings by finishing a quest for each](ETH-093-building-unlock-quests.md)
 - [ ] [ETH-108 Guild trophy room](ETH-108-guild-trophy-room.md)
 - [ ] [ETH-124 Retire veterans to Tavern jobs for permanent passive bonuses](ETH-124-tavern-veterans-retirement.md)
 - [ ] [ETH-127 Achievements tracked with the objective engine](ETH-127-achievements.md)

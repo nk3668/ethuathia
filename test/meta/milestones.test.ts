@@ -8,6 +8,7 @@ import {
   describeMilestoneMet,
   describeProgress,
   milestoneMet,
+  milestoneSchema,
   UPGRADES,
 } from '../../src/content';
 import type { BuildingDef, ContentKind, Milestone } from '../../src/content';
@@ -19,6 +20,7 @@ import {
   isMilestoneOpen,
   latestUnlocks,
   lockingMilestone,
+  milestoneProgress,
   newProfile,
   unlockMilestones,
 } from '../../src/meta';
@@ -30,10 +32,17 @@ function run(overrides: Partial<RunResult> = {}): RunResult {
   return { ...emptyRunResult('retreat'), ...overrides };
 }
 
+/** A run that ended `outcome` with the Smithy's quest complete (or not). */
+function anvilRun(outcome: RunResult['outcome'], complete = true): RunResult {
+  const owner = { kind: 'contract', id: 'contract.cold_anvil' };
+  const objectives = [{ key: 'contract:contract.cold_anvil', owner, status: complete ? 'complete' : 'active' }];
+  return { ...emptyRunResult(outcome), extras: { 'quests.objectives': objectives } };
+}
+
 const SMITHY = BUILDING_SMITHY.id;
 
 describe('milestone content', () => {
-  const progress = { deepestDepth: 2, runs: 3, victories: 0, metInRun: [], objectivesDone: [] };
+  const progress = { deepestDepth: 2, runs: 3, victories: 0, metInRun: [], objectivesDone: [], objectivesExited: [] };
 
   it('checks each kind against lifetime totals', () => {
     expect(milestoneMet({ kind: 'reachDepth', depth: 2 }, progress)).toBe(true);
@@ -76,32 +85,68 @@ describe('milestone unlocks', () => {
     const profile = newProfile();
     expect(isMilestoneOpen(profile, 'building.guild_hall')).toBe(true);
     expect(isMilestoneOpen(profile, SMITHY)).toBe(false);
-    expect(lockingMilestone(profile, SMITHY)).toEqual({ kind: 'reachDepth', depth: 3 });
+    expect(lockingMilestone(profile, SMITHY)).toEqual({ kind: 'objectiveDone', owner: { kind: 'contract', id: 'contract.cold_anvil' }, exited: true });
     expect(profile.milestones).toEqual({ unlocked: [] });
   });
 
   it('unlocks in applyRunResult once a run meets the milestone, recording the run', () => {
-    let profile: Profile = applyRunResult(newProfile(), run({ deepestDepth: 2 }));
+    let profile: Profile = applyRunResult(newProfile(), run({ deepestDepth: 3 }));
     expect(isMilestoneOpen(profile, SMITHY)).toBe(false);
     expect(latestUnlocks(profile)).toEqual([]);
 
-    profile = applyRunResult(profile, run({ deepestDepth: 3 }));
+    profile = applyRunResult(profile, anvilRun('victory'));
     expect(isMilestoneOpen(profile, SMITHY)).toBe(true);
     expect(profile.milestones.unlocked).toEqual([{ id: SMITHY, run: 2 }]);
     expect(latestUnlocks(profile)).toEqual([{ id: SMITHY, run: 2 }]);
     expect(checkProfile(profile)).toEqual([]);
 
     // Stays open, recorded once; a later run opened nothing new.
-    profile = applyRunResult(profile, run({ deepestDepth: 1 }));
+    profile = applyRunResult(profile, anvilRun('retreat', false));
     expect(profile.milestones.unlocked).toEqual([{ id: SMITHY, run: 2 }]);
     expect(latestUnlocks(profile)).toEqual([]);
   });
 
+  it('opens a building quest only on a victory or a retreat with it done, never a wipe', () => {
+    const open = (result: RunResult) => isMilestoneOpen(applyRunResult(newProfile(), result), SMITHY);
+    expect(open(anvilRun('victory'))).toBe(true);
+    expect(open(anvilRun('retreat'))).toBe(true);
+    expect(open(anvilRun('wipe'))).toBe(false);
+    expect(open(anvilRun('victory', false))).toBe(false);
+    expect(open(run({ deepestDepth: 9 }))).toBe(false);
+  });
+
+  it('keeps a building an old profile already opened, whatever its milestone is now', () => {
+    // A save from before ETH-093 opened the Smithy by reaching floor 3: the record is all that counts.
+    const old: Profile = { ...newProfile(), milestones: { unlocked: [{ id: SMITHY, run: 3 }] } };
+    expect(isMilestoneOpen(old, SMITHY)).toBe(true);
+    expect(lockingMilestone(old, SMITHY)).toBeNull();
+    expect(checkProfile(old)).toEqual([]);
+    const after = applyRunResult(old, anvilRun('wipe', false));
+    expect(after.milestones.unlocked).toEqual([{ id: SMITHY, run: 3 }]);
+  });
+
   it('counts lifetime totals, not just the latest run', () => {
     const before = newProfile();
-    const deep: Profile = { ...before, history: { ...before.history, totals: { ...before.history.totals, runs: 4, deepestDepth: 5 } } };
-    expect(unlockMilestones(deep).milestones.unlocked).toEqual([{ id: SMITHY, run: 4 }]);
-    expect(unlockMilestones(before)).toBe(before);
+    const many: Profile = { ...before, history: { ...before.history, totals: { ...before.history.totals, runs: 4, deepestDepth: 5 } } };
+    // A lifetime total no longer opens the Smithy; only its quest does.
+    expect(unlockMilestones(many)).toBe(many);
+    expect(milestoneMet({ kind: 'finishRuns', count: 4 }, milestoneProgress(many))).toBe(true);
+    expect(milestoneMet({ kind: 'reachDepth', depth: 6 }, milestoneProgress(many))).toBe(false);
+  });
+
+  it('can express the background quests with fixture content (Ossuary, Tavern)', () => {
+    // Background quests are milestones, not contracts (ETH-093): they need no contract slot and no walk out.
+    const bury: Milestone = { kind: 'objectiveDone', owner: { kind: 'quest', id: 'quest.first_burial' } };
+    const veteran: Milestone = { kind: 'winRuns', count: 5 };
+    expect(milestoneSchema.safeParse(bury).success).toBe(true);
+    const progress = { deepestDepth: 1, runs: 1, victories: 5, metInRun: [], objectivesDone: ['quest:quest.first_burial'], objectivesExited: [] };
+    expect(milestoneMet(bury, progress)).toBe(true);
+    expect(milestoneMet(veteran, progress)).toBe(true);
+  });
+
+  it('words the exit rule for a building quest', () => {
+    const m = BUILDING_SMITHY.unlock as Milestone;
+    expect(describeMilestone(m)).toBe('Complete the contract contract.cold_anvil and walk out of the dungeon');
   });
 
   it('does not hold back nodes of an open building', () => {
@@ -131,7 +176,7 @@ describe('milestone unlocks', () => {
       ok: false,
       status: 'locked',
       missing: [],
-      reason: 'The Smithy opens when you reach floor 3.',
+      reason: 'The Smithy opens when you complete the contract The Cold Anvil and walk out of the dungeon.',
     });
     const open: Profile = { ...profile, milestones: { unlocked: [{ id: SMITHY, run: 1 }] } };
     expect(canPurchase(open, anvil.id)).toEqual({ ok: true });

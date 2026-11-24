@@ -3,7 +3,7 @@
  * `RunConfig` out. The app's Descend, auto-restart and every later way of starting a run go
  * through it, so what the town bought always reaches the run.
  */
-import { CLASSES, CONTRACTS, RACES, upgradeBundle } from '../../content';
+import { CLASSES, CONTRACTS, isBuildingQuest, RACES, upgradeBundle } from '../../content';
 import { Rng } from '../../core';
 import { configDepth, hasBundle, requirementProblems, runModifierListProblems } from '../../sim';
 import type { RunConfig, RunModifierConfig } from '../../sim';
@@ -130,6 +130,7 @@ export function checkRunConfig(config: RunConfig): string[] {
   const contracts = config.contracts ?? [];
   for (const id of contracts) if (!CONTRACTS.has(id)) problems.push(`unknown contract "${id}"`);
   if (new Set(contracts).size !== contracts.length) problems.push('a contract is taken twice');
+  if (contracts.filter((id) => CONTRACTS.has(id) && isBuildingQuest(CONTRACTS.get(id))).length > 1) problems.push('only one building quest may be taken per run');
   (config.watchRequirements ?? []).forEach((req, i) => {
     for (const problem of requirementProblems(req, 'run')) problems.push(`watchRequirements[${i}].${problem}`);
   });

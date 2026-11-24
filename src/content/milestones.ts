@@ -36,9 +36,11 @@ export type Milestone =
   | { readonly kind: 'metInRun'; readonly requirement: Requirement }
   /**
    * Some run ended with `owner`'s tracked objective complete (ETH-114): read from the run's
-   * `RunResult.extras['quests.objectives']`. The run has to track it (a building quest, ETH-093).
+   * `RunResult.extras['quests.objectives']`. The run has to track it (a building quest, ETH-093). With
+   * `exited: true` it counts only when the run ended in victory or a retreat, the party out of the
+   * dungeon with it, never a wipe.
    */
-  | { readonly kind: 'objectiveDone'; readonly owner: ObjectiveOwner };
+  | { readonly kind: 'objectiveDone'; readonly owner: ObjectiveOwner; readonly exited?: true };
 
 export type MilestoneKind = Milestone['kind'];
 
@@ -47,7 +49,7 @@ export const milestoneSchema: z.ZodType<Milestone> = z.discriminatedUnion('kind'
   z.strictObject({ kind: z.literal('finishRuns'), count: positiveInt }),
   z.strictObject({ kind: z.literal('winRuns'), count: positiveInt }),
   z.strictObject({ kind: z.literal('metInRun'), requirement: requirementSchema }),
-  z.strictObject({ kind: z.literal('objectiveDone'), owner: objectiveOwnerSchema }),
+  z.strictObject({ kind: z.literal('objectiveDone'), owner: objectiveOwnerSchema, exited: z.literal(true).optional() }),
 ]);
 
 /**
@@ -80,6 +82,8 @@ export interface MilestoneProgress {
    * `objectiveDone` milestone met here is recorded as unlocked at once.
    */
   readonly objectivesDone: readonly string[];
+  /** Those of `objectivesDone` whose run ended out of the dungeon, in victory or a retreat (none after a wipe): what `exited` milestones read. */
+  readonly objectivesExited: readonly string[];
 }
 
 /** Whether `progress` meets `milestone`. */
@@ -94,7 +98,7 @@ export function milestoneMet(milestone: Milestone, progress: MilestoneProgress):
     case 'metInRun':
       return progress.metInRun.includes(requirementKey(milestone.requirement));
     case 'objectiveDone':
-      return progress.objectivesDone.includes(objectiveOwnerKey(milestone.owner));
+      return (milestone.exited === true ? progress.objectivesExited : progress.objectivesDone).includes(objectiveOwnerKey(milestone.owner));
   }
 }
 
@@ -109,7 +113,7 @@ export function describeMilestone(milestone: Milestone, words: RequirementWords 
     case 'metInRun':
       return `Achieve in one run: ${words(milestone.requirement)}`;
     case 'objectiveDone':
-      return `Complete ${ownerText(milestone.owner, names)}`;
+      return `Complete ${ownerText(milestone.owner, names)}${milestone.exited === true ? ' and walk out of the dungeon' : ''}`;
     case 'reachDepth':
       return `Reach floor ${milestone.depth}`;
     case 'finishRuns':

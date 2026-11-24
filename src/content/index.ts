@@ -33,6 +33,7 @@ export * from './items';
 export * from './enchantments';
 export * from './objectives';
 export * from './contracts';
+export * from './buildingQuests';
 export * from './bounties';
 export * from './omens';
 export * from './deities';

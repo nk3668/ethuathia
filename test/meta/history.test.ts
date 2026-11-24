@@ -1,5 +1,6 @@
 /** The run history (ETH-048): compact run records, newest first, capped, and the v1 → v2 migration. */
 import { describe, expect, it } from 'vitest';
+import { milestoneMet } from '../../src/content';
 import {
   applyRunResult,
   checkProfile,
@@ -128,11 +129,13 @@ describe('the history slice', () => {
     const decoded = decodeSave(text);
     if (!decoded.ok) throw new Error(decoded.error);
     expect(decoded.profile.history.totals).toEqual(totals);
-    expect(milestoneProgress(decoded.profile)).toEqual({ runs: 4, victories: 1, deepestDepth: 3, metInRun: [], objectivesDone: [] });
-    // The save predates milestones: the next run banked opens what the old totals earned.
+    expect(milestoneProgress(decoded.profile)).toEqual({ runs: 4, victories: 1, deepestDepth: 3, metInRun: [], objectivesDone: [], objectivesExited: [] });
+    // The save predates milestones: the lifetime totals still count toward the milestones that read them.
+    expect(milestoneMet({ kind: 'reachDepth', depth: 3 }, milestoneProgress(decoded.profile))).toBe(true);
+    // The Smithy opens by its quest (ETH-093), not by depth, so old totals don't open it.
     expect(isMilestoneOpen(decoded.profile, 'building.smithy')).toBe(false);
     const after = applyRunResult(decoded.profile, { ...emptyRunResult('retreat'), turns: 10, deepestDepth: 1 });
-    expect(isMilestoneOpen(after, 'building.smithy')).toBe(true);
+    expect(isMilestoneOpen(after, 'building.smithy')).toBe(false);
     expect(after.history.totals).toMatchObject({ runs: 5, deepestDepth: 3 });
   });
 });

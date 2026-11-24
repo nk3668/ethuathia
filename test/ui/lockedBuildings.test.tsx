@@ -17,8 +17,10 @@ afterEach(() => {
   useRunStore.getState().runStarted();
 });
 
+/** A retreat that brought the guild's anvil home: the Smithy's quest done (ETH-093). */
+const ANVIL = [{ key: 'contract:contract.cold_anvil', owner: { kind: 'contract', id: 'contract.cold_anvil' }, status: 'complete' }];
 const DEEP: RunReport = {
-  result: { ...emptyRunResult('retreat'), turns: 400, deepestDepth: 3 },
+  result: { ...emptyRunResult('retreat'), turns: 400, deepestDepth: 3, extras: { 'quests.objectives': ANVIL } },
   end: { outcome: 'retreat', turn: 400, cause: 'The party turned back.', depth: 3 },
 };
 
@@ -33,8 +35,9 @@ describe('locked buildings in the Town tab', () => {
     await user.click(tab);
     const panel = screen.getByRole('tabpanel');
     expect(panel.textContent).toContain('Smithy is locked');
-    expect(panel.textContent).toContain('Unlocks when you: Reach floor 3');
-    expect(panel.textContent).toContain('Deepest so far: floor 2');
+    expect(panel.textContent).toContain('Unlocks when you: Complete the contract The Cold Anvil and walk out of the dungeon');
+    expect(panel.textContent).toContain('Not completed yet');
+    expect(panel.textContent).toContain('Quest: The Cold Anvil. Take it as a contract on the Prepare screen.');
     expect(within(panel).queryByRole('list', { name: 'Upgrades' })).toBeNull();
   });
 
@@ -52,11 +55,12 @@ describe('locked buildings in the Town tab', () => {
     const tab = screen.getByRole('tab', { name: /Smithy/ });
     expect(tab.textContent).not.toContain('(locked)');
     const unlocked = within(screen.getByRole('dialog')).getByRole('region', { name: 'Unlocked' });
-    expect(unlocked.textContent).toContain('Smithy opens in town: you reached floor 3.');
+    expect(unlocked.textContent).toContain('Smithy opens in town: you brought the anvil home.');
+    expect(tab.textContent).toContain('New');
   });
 
   it('lists nothing unlocked when the run opened nothing', () => {
-    useProfileStore.setState({ profile: applyRunResult(newProfile(), { ...DEEP.result, deepestDepth: 1 }) });
+    useProfileStore.setState({ profile: applyRunResult(newProfile(), { ...DEEP.result, extras: {} }) });
     render(<RunSummary />);
     act(() => useRunStore.getState().runEnded(DEEP));
     expect(within(screen.getByRole('dialog')).queryByRole('region', { name: 'Unlocked' })).toBeNull();
