@@ -43,6 +43,26 @@ describe('profileStore', () => {
     unbind();
   });
 
+  it('awaits writing dirty changes when the close hook fires', async () => {
+    const store = new MemorySaveStore();
+    const hook: { fn: (() => void | Promise<void>) | null } = { fn: null };
+    const { loaded, unbind } = bindSaveStore(store, {
+      target: quiet,
+      onCloseRequested: (cb) => {
+        hook.fn = cb;
+        return () => undefined;
+      },
+    });
+    await loaded;
+
+    useProfileStore.getState().applyRunResult(run(42));
+    await hook.fn?.();
+    const saved = decodeSave(store.data ?? '');
+    expect(saved.ok && saved.profile.currencies.renown).toBe(42);
+    expect(useProfileStore.getState().dirty).toBe(false);
+    unbind();
+  });
+
   it('loads an existing save', async () => {
     const profile = { ...newProfile(), currencies: { renown: 9, trophies: 1, favor: {} } };
     const { loaded } = bindSaveStore(new MemorySaveStore(encodeSave(profile, 5)), { target: quiet });

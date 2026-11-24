@@ -188,7 +188,7 @@ export function bindSaveStore(store: SaveStore, autosave: AutosaveOptions = {}):
     },
   );
 
-  const stopAutosave = startAutosave(() => void useProfileStore.getState().save(), autosave);
+  const stopAutosave = startAutosave(() => useProfileStore.getState().save(), autosave);
   return {
     loaded,
     unbind: () => {

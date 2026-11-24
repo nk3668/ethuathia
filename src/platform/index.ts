@@ -7,3 +7,5 @@ export type { AutosaveOptions, AutosaveTarget } from './autosave';
 export { downloadTextFile, readTextFile } from './files';
 export { createSaveStore, IndexedDbSaveStore, MemorySaveStore, TauriSaveStore } from './saveStore';
 export type { SaveStore } from './saveStore';
+export { isTauriRuntime, subscribeTauriClose } from './tauri';
+export type { CloseRequestSubscriber, TauriCloseEvent, TauriCloseWindow, TauriInvoker } from './tauri';
