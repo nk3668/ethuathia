@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-177**
+**Next ID: ETH-180**
 
 **Current milestone: M2 (Meta loop).**
 
@@ -138,16 +138,18 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-085](town-meta/ETH-085-depth-weighted-renown.md) | Depth-weighted Renown rewards | town-meta | M2 | P2 | done | S |
 | [ETH-091](codex-tooltips/ETH-091-codex-hints-kill-tiers.md) | Codex hints for undiscovered entries and kill-count tiers | codex-tooltips | M2 | P2 | done | M |
 | [ETH-092](codex-tooltips/ETH-092-codex-two-pane-modal.md) | Codex as a wide two-pane modal | codex-tooltips | M2 | P2 | done | M |
-| [ETH-093](town-meta/ETH-093-building-unlock-quests.md) | Unlock town buildings by finishing a quest for each | town-meta | M2 | P2 | idea | M |
+| [ETH-093](town-meta/ETH-093-building-unlock-quests.md) | Unlock town buildings by finishing a quest for each | town-meta | M2 | P2 | ready | M |
 | [ETH-129](town-meta/ETH-129-guild-hall-constant-respawn.md) | Guild Hall upgrade: constant floor respawns on revisit | town-meta | M2 | P2 | idea | S |
 | [ETH-131](tools-balance/ETH-131-contract-and-property-guards.md) | Cross-domain contract and property-based test guards (honesty, secrecy, potency, discoverability) | tools-balance | M2 | P2 | done | S |
 | [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs | town-meta | M2 | P2 | idea | M |
 | [ETH-157](dungeon-gen/ETH-157-split-encounters-module.md) | Split src/sim/combat/encounters.ts into focused modules | dungeon-gen | M2 | P2 | done | M |
 | [ETH-158](tools-balance/ETH-158-split-headless-tool.md) | Split tools/headless.ts into focused modules | tools-balance | M2 | P2 | done | M |
-| [ETH-170](town-meta/ETH-170-building-tier-quests.md) | Building-tier quests open each building's next tier | town-meta | M2 | P2 | idea | M |
+| [ETH-170](town-meta/ETH-170-building-tier-quests.md) | Building-tier quests open each building's next tier | town-meta | M2 | P2 | ready | M |
 | [ETH-171](town-meta/ETH-171-sell-carried-items.md) | Items carried out of the dungeon sell for Trophies | town-meta | M2 | P2 | idea | S |
 | [ETH-175](ui-shell/ETH-175-disabled-button-tooltips.md) | Kit button that explains why it is disabled, with a tooltip | ui-shell | M2 | P2 | ready | S |
 | [ETH-176](characters/ETH-176-class-starting-kits.md) | Classes start each run with a kit of gear | characters | M2 | P1 | done | S |
+| [ETH-177](characters/ETH-177-reprice-finesse.md) | Reprice Finesse so classes can share one point budget | characters | M2 | P1 | ready | M |
+| [ETH-178](tools-balance/ETH-178-sim-mixed-party.md) | Sim harness option for a random mixed party, as players get it | tools-balance | M2 | P2 | ready | S |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |
 | [ETH-077](ui-shell/ETH-077-prepare-attribute-previews.md) | Show attribute previews in the Prepare screen's class and race selects | ui-shell | M2 | P3 | done | S |
@@ -164,6 +166,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-088](characters/ETH-088-class-mastery-trees.md) | Talent tree engine: three trees per class and a build per adventurer | characters | M4 | P2 | idea | M |
 | [ETH-146](tools-balance/ETH-146-composition-balance-pass.md) | Composition and rules balance pass (M4 capstone) | tools-balance | M4 | P2 | idea | M |
 | [ETH-173](characters/ETH-173-resurrection-class.md) | A class that can resurrect a fallen party member during a run | characters | M4 | P3 | idea | M |
+| [ETH-179](characters/ETH-179-corpse-eating-race.md) | A woodland race that heals by consuming the fallen but can't drink healing potions | characters | M4 | P3 | idea | M |
 | [ETH-041](bestiary/ETH-041-named-uniques.md) | Named uniques and bosses | bestiary | M5 | P2 | idea | M |
 | [ETH-042](bestiary/ETH-042-monster-families-floor-themes.md) | Monster families and floor themes | bestiary | M5 | P2 | idea | M |
 | [ETH-045](combat-items/ETH-045-affixes-artifacts.md) | Light affixes and named artifacts | combat-items | M5 | P2 | idea | M |

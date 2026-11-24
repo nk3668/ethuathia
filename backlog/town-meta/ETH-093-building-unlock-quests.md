@@ -2,7 +2,7 @@
 id: ETH-093
 title: Unlock town buildings by finishing a quest for each
 type: feature
-status: idea
+status: ready
 priority: P2
 milestone: M2
 epic: town-meta
@@ -25,9 +25,10 @@ Unlocks become story beats. Decided in Nate's interview answers (2026-11-18). Re
 - The dungeon is 6–10 floors deep, so any quest up to floor 6 can always be done.
 
 ## Acceptance criteria
-- [ ] Spec reviewed by Nate before building (spec gate)
+- [x] Spec reviewed by Nate before building (spec gate)
 - [ ] **A recover objective at a set depth.** `RecoverObjective.depth?: number` (default: the bottom floor, as today). The quest item is placed on that floor, so a quest can ask for an item from floor 3.
 - [ ] **Building quests are contracts.** `ContractDef.opens?: string` names the building it opens. A building with a quest has `unlock: { kind: 'objectiveDone', owner: { kind: 'contract', id }, exited: true }`: the milestone counts only when the run ends with the party out of the dungeon (victory or retreat) and the objective complete. `exited` is a new optional flag on the `objectiveDone` milestone.
+- [ ] **Quests stay doable as dungeons change.** Dungeon depth will vary (new dungeon variants, and options that make a dungeon deeper or shallower), so a content check fails if a building quest's floor is deeper than the shallowest dungeon the player could take it into (`depth.min` of every dungeon def). A quest may later name the dungeon it belongs to; that's out of scope here.
 - [ ] **The Smithy's quest** replaces its `reachDepth 3` milestone: *The Cold Anvil*: bring the guild's lost anvil back from floor 3 (a new heavy relic item, `item.guild_anvil`). It pays a Trophies reward.
 - [ ] **When a quest is offered** (Prepare screen contract list): its building is still locked, and the share of bought nodes across open buildings is at least the quest's `offerAt` (0 to 1; the Smithy's is 0). `BUILDING_QUEST_SHARE` (default 0.3) is the shared default for later buildings. A locked quest shows in the list, greyed, with what it needs ("Buy 30% of the open buildings' upgrades: 4 of 13").
 - [ ] **One building quest per run**: the Prepare screen refuses a second one with a reason. It still uses a contract slot, and the run still needs every chosen contract done for a victory.
@@ -41,14 +42,15 @@ Unlocks become story beats. Decided in Nate's interview answers (2026-11-18). Re
 - The anvil is heavy on purpose: carrying it out is the quest's risk, like the relic.
 - **T1 balance check** (20 seeds): only a new contract is added; check the Smithy quest is completed in a plausible share of runs that take it (`npm run sim` may need a `--contract` flag; add it if it doesn't exist).
 
-Open decisions:
-- (default) A retreat with the quest item carried out counts, like a victory. Alternative: only a victory counts.
-- (default) The Smithy quest is offered from the first run. Alternative: after the first run, so the first run is always the relic.
-- (default) `BUILDING_QUEST_SHARE` = 30% of the open buildings' nodes. ETH-161 tunes it.
-- (default) Quest rewards: about the relic contract's reward, paid in the building's own currency where it has one (Smithy: Trophies).
+Decisions (Nate, 2026-11-24, defaults accepted):
+- A retreat with the quest item carried out counts, like a victory.
+- The Smithy quest is offered from the first run.
+- `BUILDING_QUEST_SHARE` = 30% of the open buildings' nodes. ETH-161 tunes it.
+- Quest rewards: about the relic contract's reward, paid in the building's own currency where it has one (Smithy: Trophies).
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-19: Added ETH-114 (objective engine), ETH-121 (shared conditions) to `depends_on`: build on the shared system instead of a parallel version.
 - 2026-11-24: Progression discussion with Nate: building quests are contracts (one per run, uses a slot, pays currency), chained from the Smithy, gated by the share of nodes bought. Tier quests split out to ETH-170.
 - 2026-11-24: (spec gate) Detailed spec written against the code (contracts, objectives, milestones, the 6–10 floor dungeon); awaiting Nate's review.
+- 2026-11-24: Nate asked Claude to review and settle #101 with the defaults. Added a content check that quest floors stay within the shallowest dungeon (dungeon depth will vary). Status ready.
