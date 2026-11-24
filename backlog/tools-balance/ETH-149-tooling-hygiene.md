@@ -2,7 +2,7 @@
 id: ETH-149
 title: Tooling hygiene: formatter policy, line endings and worktree-safe tests
 type: chore
-status: idea
+status: in-progress
 priority: P3
 milestone: M1.6
 epic: tools-balance
@@ -35,3 +35,4 @@ Found by the agents implementing ETH-142, ETH-143 and ETH-144 in isolated worktr
 
 ## Log
 - 2026-11-24: Created from agent reports during the M1.5/M1.6 fan-out (Nate approved filing).
+- 2026-11-25: Started. Formatter: documented 'prettier is not used' in CLAUDE.md section 9 (default prettier would reformat 403 of src/test/tools). .gitattributes added (* text=auto eol=lf); renormalization deferred to the orchestrator. fonts test and runRef now resolve packages via createRequire; ARCHITECTURE 11.4 notes it.
