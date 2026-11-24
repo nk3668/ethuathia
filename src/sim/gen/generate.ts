@@ -4,7 +4,7 @@
  */
 import { Grid } from '../../core';
 import type { Rng } from '../../core';
-import type { FloorTypeDef } from '../../content';
+import type { DungeonDef, FloorTypeDef } from '../../content';
 import type { FloorPlan } from '../floorText';
 import { GEN_STEPS } from '../registries';
 import { Terrain } from '../state';
@@ -45,8 +45,16 @@ export function checkFloorType(type: FloorTypeDef): void {
 export interface GenerateOptions {
   /** The floor's depth. Default 1. */
   depth?: number;
+  /** The floor's effective Danger rating. Default: `depth ?? 1`. */
+  danger?: number;
+  /** The dungeon variant being generated, for ecology and encounter curves. */
+  dungeon?: DungeonDef;
   /** The floor's loot RNG (`lootRngState`). Default: `rng` itself, after the layout steps. */
   loot?: Rng;
+  /** Adventurers the run sets out with, for the party-size encounter surcharge (ETH-145). Default 1. */
+  partySize?: number;
+  /** Overrides `PARTY_SIZE_BUDGET_STEP` for this floor (tests and tuning runs). */
+  partyBudgetStep?: number;
 }
 
 /**
@@ -55,12 +63,17 @@ export interface GenerateOptions {
  */
 export function generateFloor(type: FloorTypeDef, rng: Rng, options: GenerateOptions = {}): FloorPlan {
   const steps = bindSteps(type);
+  const depth = options.depth ?? 1;
   const draft: FloorDraft = {
     terrain: new Grid(type.size.w, type.size.h, 'u8', Terrain.Wall),
     rooms: [],
     features: [],
     starts: [],
-    depth: options.depth ?? 1,
+    depth,
+    danger: options.danger ?? depth,
+    partySize: options.partySize ?? 1,
+    ...(options.partyBudgetStep === undefined ? {} : { partyBudgetStep: options.partyBudgetStep }),
+    ...(options.dungeon === undefined ? {} : { dungeon: options.dungeon }),
     loot: options.loot ?? rng,
     items: [],
     spawns: [],

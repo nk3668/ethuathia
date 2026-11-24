@@ -29,19 +29,19 @@ import type { Entity, EntityId, RunState } from '../state';
 import { statValue } from './getStat';
 
 /** XP a kill is worth per point of the victim's threat (a gloam rat is threat 1). */
-export const XP_PER_THREAT = 4;
+export const XP_PER_THREAT = 1;
 
 /** XP each living member earns per depth when the party first reaches a new deepest floor. */
-export const XP_PER_DEPTH = 5;
+export const XP_PER_DEPTH = 14;
 
 /** XP to go from level L to L + 1 is `XP_STEP × L`. */
-export const XP_STEP = 8;
+export const XP_STEP = 26;
 
 /** Party members within this many tiles (Chebyshev) of the killer or the victim share a kill. */
 export const KILL_SHARE_RADIUS = 6;
 
 /** A shared kill is worth this much more per extra sharer, before it is split. */
-export const KILL_GROUP_BONUS = 0.25;
+export const KILL_GROUP_BONUS = 0.55;
 
 /** Attribute points an actor's level-ups have added, per attribute. */
 export type GrowthGains = Partial<Record<AttributeId, number>>;

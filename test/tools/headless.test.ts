@@ -1,15 +1,27 @@
 import { describe, expect, it } from 'vitest';
+import { CONDITIONS as SIM_CONDITIONS, createRun, getStat, RULE_ACTIONS as SIM_RULE_ACTIONS } from '../../src/sim';
+import type { Entity, Rule } from '../../src/sim';
 import {
   bankedRenown,
+  buildHeadlessConfig,
+  buildHeadlessProfile,
+  CAUTIOUS_RULES,
   DEFAULT_TURN_CAP,
+  defaultJobs,
   flagReason,
   formatReport,
   headlessParty,
+  median,
+  formatPartySweep,
   parseSimArgs,
+  partySweepWarnings,
+  PROGRESSED_UPGRADES,
   renownPerHour,
+  resolveHeadlessRules,
   runSeed,
   runSeeds,
   STEPS_PER_HOUR_AT_1X,
+  summarizeReport,
 } from '../../tools/headless';
 import type { SeedResult } from '../../tools/headless';
 
@@ -32,8 +44,8 @@ const result = (seed: number, over: Partial<SeedResult> = {}): SeedResult => ({
 
 describe('tools/headless', () => {
   it('runs seeded dungeons to the bottom and reports depth, turns per floor and explored share', () => {
-    // Two floors keep the test quick; the command line runs the default ten.
-    const results = runSeeds(1, 3, { depth: 2 });
+    // Two floors with a full party keep the test quick and reliably victorious; CLI defaults apply elsewhere.
+    const results = runSeeds(1, 3, { depth: 2, party: headlessParty(4) });
     expect(results.map((r) => r.seed)).toEqual([1, 2, 3]);
     for (const r of results) {
       expect(r.outcome, `seed ${r.seed}`).toBe('done');
@@ -60,7 +72,7 @@ describe('tools/headless', () => {
       expect(r.steps).toBeLessThan(DEFAULT_TURN_CAP);
     }
     // The same seed gives the same run.
-    expect(runSeed(2, { depth: 2 })).toEqual(results[1]);
+    expect(runSeed(2, { depth: 2, party: headlessParty(4) })).toEqual(results[1]);
   });
 
   it('stops at the turn cap with the floor part-explored', () => {
@@ -69,7 +81,9 @@ describe('tools/headless', () => {
     expect(r.explored.fraction).toBeGreaterThan(0);
     expect(r.explored.fraction).toBeLessThan(1);
     expect(r.depth).toBe(1);
-    expect(flagReason(r, 30)).toMatch(/^hit the turn cap \(30 party turns\) on floor 1 of 10 at \d+\.\d% explored$/);
+    expect(r.bottom).toBeGreaterThanOrEqual(6);
+    expect(r.bottom).toBeLessThanOrEqual(10);
+    expect(flagReason(r, 30)).toMatch(new RegExp(`^hit the turn cap \\(30 party turns\\) on floor 1 of ${r.bottom} at \\d+\\.\\d% explored$`));
   });
 
   it('runs a bigger party', () => {
@@ -112,6 +126,19 @@ describe('tools/headless', () => {
     expect(report.split('\n')[1]).toMatch(/done \(retreat\)/);
   });
 
+  it('names every death cause and reports mean member level beside the highest (ETH-145)', () => {
+    // A party of 4 on progressed upgrades dies often; status deaths (poison) must name the status.
+    const results = runSeeds(1, 3, { preset: 'progressed', party: headlessParty(4) });
+    const causes = new Set(results.flatMap((r) => Object.keys(r.deathCauses ?? {})));
+    expect(causes.has('other')).toBe(false);
+    expect(causes.has('unknown')).toBe(false);
+    expect([...causes].every((c) => c.startsWith('monster.') || c.startsWith('status.') || c.startsWith('trap.'))).toBe(true);
+    for (const r of results) expect(r.meanLevel).toBeLessThanOrEqual(r.level ?? 0);
+    const summary = summarizeReport([result(1, { level: 6, meanLevel: 4 }), result(2, { level: 4, meanLevel: 3 })]);
+    expect(summary.memberLevelMean).toBeCloseTo(3.5, 6);
+    expect(formatReport([result(1, { level: 6, meanLevel: 4 })])).toContain('Member level (mean of members): mean 4.00.');
+  }, 60_000);
+
   it('reports kills and what killed the party', () => {
     const results = [
       result(1, { kills: 10, deaths: 0, deathCauses: {} }),
@@ -149,6 +176,11 @@ describe('tools/headless', () => {
       from: 1,
       cap: DEFAULT_TURN_CAP,
       party: 1,
+      preset: 'fresh',
+      upgrades: [],
+      rules: 'baseline',
+      partySweep: false,
+      jobs: defaultJobs(),
       json: null,
       compare: null,
       baseline: null,
@@ -159,10 +191,35 @@ describe('tools/headless', () => {
       from: 100,
       cap: 400,
       party: 3,
+      preset: 'fresh',
+      upgrades: [],
+      rules: 'baseline',
+      partySweep: false,
+      jobs: defaultJobs(),
       json: null,
       compare: null,
       baseline: null,
       help: false,
+    });
+    expect(parseSimArgs(['--preset', 'progressed', '--rules', 'cautious'])).toMatchObject({
+      preset: 'progressed',
+      party: 4,
+      rules: 'cautious',
+      upgrades: [],
+    });
+    expect(parseSimArgs(['--preset', 'progressed', '--party', '2'])).toMatchObject({
+      preset: 'progressed',
+      party: 2,
+    });
+    expect(parseSimArgs(['--upgrades', 'upgrade.second_berth, upgrade.hardy_recruits'])).toMatchObject({
+      preset: 'fresh',
+      party: 2,
+      upgrades: ['upgrade.second_berth', 'upgrade.hardy_recruits'],
+    });
+    expect(parseSimArgs(['--upgrades', 'upgrade.hardy_recruits,upgrade.drill_yard'])).toMatchObject({
+      preset: 'fresh',
+      party: 1,
+      upgrades: ['upgrade.hardy_recruits', 'upgrade.drill_yard'],
     });
     expect(parseSimArgs(['--json', 'out.json', '--compare', 'origin/main'])).toMatchObject({ json: 'out.json', compare: 'origin/main' });
     expect(() => parseSimArgs(['--compare', 'main', '--baseline', 'b.json'])).toThrow('not both');
@@ -170,6 +227,209 @@ describe('tools/headless', () => {
     expect(() => parseSimArgs(['--seeds', '0'])).toThrow('--seeds must be a whole number from 1 up, got "0"');
     expect(() => parseSimArgs(['--party', '5'])).toThrow('--party must be a whole number from 1 to 4, got "5"');
     expect(() => parseSimArgs(['--seeds', '2.5'])).toThrow('--seeds');
+    expect(() => parseSimArgs(['--preset', 'mythic'])).toThrow('--preset');
+    expect(() => parseSimArgs(['--rules', 'reckless'])).toThrow('--rules');
+    expect(() => parseSimArgs(['--upgrades', ''])).toThrow('--upgrades');
+    expect(() => parseSimArgs(['--upgrades', 'upgrade.nope'])).toThrow('Unknown upgrade "upgrade.nope"');
+    expect(() => parseSimArgs(['--upgrades', 'upgrade.hardy_recruits,upgrade.contract_board'])).toThrow('exclusive group');
     expect(() => parseSimArgs(['--bogus'])).toThrow();
+  });
+
+  it('applies Guild Hall upgrades and presets accurately through meta helpers', () => {
+    const freshConfig = buildHeadlessConfig();
+    expect(freshConfig).toEqual({
+      party: headlessParty(1),
+      contracts: ['contract.recover_relic'],
+    });
+
+    const progressedProfile = buildHeadlessProfile('progressed');
+    expect(progressedProfile.upgrades.owned).toEqual(PROGRESSED_UPGRADES);
+    const progressedConfig = buildHeadlessConfig({ preset: 'progressed' });
+    expect(progressedConfig.party).toHaveLength(4);
+    expect(progressedConfig.partyBundles).toEqual(['upgrade.hardy_recruits', 'upgrade.drill_yard']);
+
+    const upgradedConfig = buildHeadlessConfig({ upgrades: ['upgrade.hardy_recruits', 'upgrade.drill_yard'] });
+    const plainState = createRun(freshConfig, 1);
+    const upgradedState = createRun(upgradedConfig, 1);
+    const plainHero = plainState.entities[plainState.party[0] as number] as Entity;
+    const upgradedHero = upgradedState.entities[upgradedState.party[0] as number] as Entity;
+    expect(getStat(upgradedState, upgradedHero, 'hp').value).toBe(getStat(plainState, plainHero, 'hp').value + 2);
+    expect(getStat(upgradedState, upgradedHero, 'hp').parts).toContainEqual({
+      op: 'add',
+      value: 2,
+      source: { id: 'upgrade.hardy_recruits', label: 'Hardy Recruits' },
+    });
+    expect(getStat(upgradedState, upgradedHero, 'accuracy').value).toBe(getStat(plainState, plainHero, 'accuracy').value + 1);
+    expect(getStat(upgradedState, upgradedHero, 'accuracy').parts).toContainEqual({
+      op: 'add',
+      value: 1,
+      source: { id: 'upgrade.drill_yard', label: 'Drill Yard' },
+    });
+
+    expect(() => buildHeadlessProfile('progressed', ['upgrade.contract_board'])).toThrow(/exclusive group/);
+  });
+
+  it('validates and runs baseline and cautious behavior rules deterministically', () => {
+    for (const rule of CAUTIOUS_RULES) {
+      expect(SIM_CONDITIONS.get(rule.condition.id).check(rule.condition.params)).toBeNull();
+      expect(SIM_RULE_ACTIONS.get(rule.action.id).check(rule.action.params)).toBeNull();
+    }
+    expect(resolveHeadlessRules('baseline')).toEqual([]);
+    expect(resolveHeadlessRules('cautious')).toEqual(CAUTIOUS_RULES);
+    expect(() => resolveHeadlessRules([{ condition: { id: 'cond.bogus' }, action: { id: 'act.wait' }, enabled: true }])).toThrow(
+      'unknown condition',
+    );
+    expect(() => resolveHeadlessRules([{ condition: { id: 'cond.always' }, action: { id: 'act.bogus' }, enabled: true }])).toThrow(
+      'unknown rule action',
+    );
+    const badParamRule: Rule = { condition: { id: 'cond.hp_below', params: { percent: 200 } }, action: { id: 'act.flee' }, enabled: true };
+    expect(() => resolveHeadlessRules([badParamRule])).toThrow('percent');
+
+    // Baseline matches default unchanged; cautious runs deterministically and still computes banked renown/hr.
+    expect(runSeed(1, { depth: 2, party: headlessParty(4), rules: 'baseline' })).toEqual(
+      runSeed(1, { depth: 2, party: headlessParty(4) }),
+    );
+    const cautiousA = runSeed(1, { depth: 2, party: headlessParty(4), rules: 'cautious' });
+    const cautiousB = runSeed(1, { depth: 2, party: headlessParty(4), rules: 'cautious' });
+    expect(cautiousA).toEqual(cautiousB);
+    expect(cautiousA.outcome).not.toBe('stalled');
+    expect(renownPerHour([cautiousA])).not.toBeNull();
+
+    const progressedReport = formatReport(runSeeds(1, 2, { depth: 2, preset: 'progressed', rules: 'cautious' }));
+    expect(progressedReport).toContain('Renown banked per run:');
+    expect(progressedReport).toContain('/hr at 1x');
+  });
+
+  it('computes and formats §2 / §9 summary metrics (rates, medians, party level, deaths/run)', () => {
+    expect(median([])).toBeNull();
+    expect(median([5])).toBe(5);
+    expect(median([10, 2, 6])).toBe(6);
+    expect(median([10, 2, 6, 4])).toBe(5);
+
+    const results: SeedResult[] = [
+      result(1, {
+        outcome: 'done',
+        end: 'victory',
+        turns: 200,
+        runTurns: 310,
+        steps: 300,
+        depth: 6,
+        bottom: 6,
+        level: 5,
+        deaths: 0,
+        turnedBack: true,
+        relicTaken: true,
+        atRisk: { renown: 300 },
+        lost: {},
+      }),
+      result(2, {
+        outcome: 'done',
+        end: 'wipe',
+        turns: 180,
+        runTurns: 250,
+        steps: 240,
+        depth: 6,
+        bottom: 6,
+        level: 4,
+        deaths: 1,
+        deathCauses: { 'monster.cavern_brute': 1 },
+        turnedBack: true,
+        relicTaken: true,
+        atRisk: { renown: 200 },
+        lost: { renown: 50 },
+      }),
+      result(3, {
+        outcome: 'early',
+        end: 'retreat',
+        turns: 120,
+        runTurns: 190,
+        steps: 180,
+        depth: 3,
+        bottom: 8,
+        level: 3,
+        deaths: 0,
+        turnedBack: true,
+        relicTaken: false,
+        atRisk: { renown: 90 },
+        lost: {},
+      }),
+      result(4, {
+        outcome: 'early',
+        end: 'wipe',
+        turns: 80,
+        runTurns: 80,
+        steps: 80,
+        depth: 2,
+        bottom: 7,
+        level: 2,
+        deaths: 1,
+        deathCauses: { 'monster.gloam_rat': 1 },
+        turnedBack: false,
+        relicTaken: false,
+        atRisk: { renown: 20 },
+        lost: { renown: 5 },
+      }),
+    ];
+
+    const summary = summarizeReport(results);
+    expect(summary.winRatePct).toBeCloseTo(25, 6);
+    expect(summary.retreatRatePct).toBeCloseTo(25, 6);
+    expect(summary.wipeRatePct).toBeCloseTo(50, 6);
+    expect(summary.depthMedian).toBe(4.5);
+    expect(summary.floor3PlusCount).toBe(3);
+    expect(summary.floor3PlusRatePct).toBeCloseTo(75, 6);
+    expect(summary.levelMean).toBeCloseTo(3.5, 6);
+    expect(summary.levelMedian).toBe(3.5);
+    expect(summary.deathsPerRun).toBeCloseTo(0.5, 6);
+    expect(summary.turnsDoneMedian).toBe(190);
+    expect(summary.turnsAllMedian).toBe(220);
+    expect(summary.relicRuns).toBe(2);
+    expect(summary.relicReturnTripWipes).toBe(1);
+    expect(summary.returnTripLethalityPct).toBeCloseTo(50, 6);
+
+    const report = formatReport(results);
+    expect(report).toContain(
+      'Outcome rates: win 25.0%, retreat 25.0%, wipe 50.0%. Return-trip lethality (relic runs): 50.0% (1/2).',
+    );
+    expect(report).toContain('Turns to the bottom (done runs): mean 190, min 180, max 200. Median: 190.');
+    expect(report).toContain('Turns (all runs): mean 208, median 220, min 80, max 310.');
+    expect(report).toContain('Median depth: 4.5, floor 3+: 75.0% (3/4).');
+    expect(report).toContain('Party level (highest member): mean 3.50, median 3.5 (min 2, max 5).');
+    expect(report).toContain('Deaths per run: 0.50.');
+    expect(report).toContain('/hr at 1x (5 steps/s).');
+  });
+});
+
+describe('party-size sweep (ETH-145)', () => {
+  const row = (size: number, winRatePct: number) => ({
+    size,
+    runs: 100,
+    winRatePct,
+    retreatRatePct: 0,
+    wipeRatePct: 100 - winRatePct,
+    levelHighest: 6,
+    levelMember: 5.5,
+    deathsPerRun: 1,
+  });
+
+  it('parses --party-sweep', () => {
+    expect(parseSimArgs([]).partySweep).toBe(false);
+    expect(parseSimArgs(['--party-sweep']).partySweep).toBe(true);
+  });
+
+  it('is quiet when win rate rises with party size and party 4 wins twice as often as solo', () => {
+    const rows = [row(1, 20), row(2, 30), row(3, 40), row(4, 50)];
+    expect(partySweepWarnings(rows)).toEqual([]);
+    expect(formatPartySweep(rows)).toContain('Party-size ordering holds');
+  });
+
+  it('warns when a larger party does no better, or the 2x rule fails', () => {
+    const flat = partySweepWarnings([row(1, 30), row(2, 30), row(3, 40), row(4, 70)]);
+    expect(flat).toEqual(['ordering broken: party 2 wins 30.0%, not more than party 1 at 30.0%']);
+    const weak = partySweepWarnings([row(1, 40), row(2, 50), row(3, 60), row(4, 70)]);
+    expect(weak).toHaveLength(1);
+    expect(weak[0]).toContain('ratio not met');
+    expect(weak[0]).toContain('ETH-080');
+    expect(formatPartySweep([row(1, 40), row(2, 30), row(3, 60), row(4, 70)])).toContain('WARNING: ordering broken');
   });
 });

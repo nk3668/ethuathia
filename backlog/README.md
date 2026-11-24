@@ -38,7 +38,7 @@ backlog/
 | `type` | `feature` · `bug` · `chore` (tooling or refactoring) · `spike` (research or prototype) · `content` (data such as monsters and items) |
 | `status` | `idea` · `ready` · `in-progress` · `blocked` · `pending-review` · `done` · `dropped` |
 | `priority` | `P0` now · `P1` this milestone · `P2` soon · `P3` someday |
-| `milestone` | `M0`–`M6` (see the roadmap in `CLAUDE.md` §10) · `later` |
+| `milestone` | `M0`, `M1`, `M1.5`, `M1.6`, `M2`–`M6` (see the roadmap in `CLAUDE.md` §10) · `later` |
 | `epic` | name of the epic's folder, or `none` |
 | `size` | `S` under half a day · `M` 1–2 days · `L` too big: split it |
 | `depends_on` | list of IDs, e.g. `[ETH-003, ETH-004]` |
@@ -85,9 +85,13 @@ Every PR must pass these before it is opened. They catch a broken game, not just
      commands;
    - **app boot** (`test/ui/appBoot.test.tsx`): the whole app plays 300 turns with no
      `console.error`.
-2. **Sim compare:** run `npm run sim -- --seeds 50 --compare origin/main` and paste the table in
-   the PR body with a line on which changes were intended. A pure refactor should show
-   "no behavior change".
+2. **Sim compare, only when the change warrants it:** follow the table in
+   [`../docs/DIFFICULTY_PHILOSOPHY.md` §9](../docs/DIFFICULTY_PHILOSOPHY.md#9-measuring-balance)
+   ("When a change needs the harness" and "Seed tiers"). Balance-affecting changes run the T2 gate
+   (`npm run sim -- --seeds 100 --compare <base>`, paired) and paste the table in the PR body with a
+   line on which changes were intended. Behavior-neutral sim changes run the T0 identity check
+   (20 seeds, 0 hash diffs). UI-only, docs, backlog and test-only changes skip it. A piece of a
+   larger initiative with its own capstone balance check doesn't run T3 acceptance sweeps.
 3. **Bigger soak** after changes to the step loop, AI or state shape:
    `npm run soak -- --seeds 200 --cap 2000` (about 5 minutes).
 4. **UI changes:** run `npm run dev`, look at the change in the browser and check the console has

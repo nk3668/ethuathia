@@ -23,7 +23,18 @@ import { registerInvariant } from '../invariants';
 import { runEffects } from '../stats/effects';
 import { grantDepthXp } from '../stats/leveling';
 import type { EntityId, FloorId } from '../state';
-import { arrivalStairs, arrivalTile, dungeonDepth, floorIdAt, floorNode, floorTypeOf, stairsOn, stairsTarget } from './dungeon';
+import {
+  arrivalStairs,
+  arrivalTile,
+  configDepthRange,
+  depthRevealed,
+  dungeonDepth,
+  floorIdAt,
+  floorNode,
+  floorTypeOf,
+  stairsOn,
+  stairsTarget,
+} from './dungeon';
 import type { StairsDir } from './dungeon';
 import { fountainAt, FOUNTAIN_CONDITIONS, FOUNTAIN_GEN_STEPS, FOUNTAIN_RULE_ACTIONS } from './fountains';
 import { maybeRespawnFloor } from './respawn';
@@ -64,14 +75,16 @@ export type FloorsEvent =
   | { type: 'fountainRanDry'; fountain: EntityId; floor: FloorId; pos: Pos }
   /**
    * Emitted once per run the first time the dungeon repopulates a visited floor on the return trip
-   * (ETH-025), logging `"The dungeon stirs."` without repeating on every floor.
+   * or under constant-respawn rules (ETH-025, ETH-136), logging `"The dungeon stirs."` without
+   * repeating on every floor. `surged` is set for post-contract return-trip deep surges.
    */
-  | { type: 'dungeonStirred'; floor: FloorId; depth: number }
+  | { type: 'dungeonStirred'; floor: FloorId; depth: number; surged?: true }
   /**
-   * `count` monsters repopulated `floor` (at `depth`, wave `wave`) upon re-entry (ETH-025). Quiet
-   * in the log (`dungeonStirred` announces it once); observable by tests and trackers.
+   * `count` monsters repopulated `floor` (at `depth`, wave `wave`) upon re-entry (ETH-025,
+   * ETH-136). `surged` is set for post-contract return-trip deep surges. Quiet in the log
+   * (`dungeonStirred` announces it once); observable by tests and trackers.
    */
-  | { type: 'floorRespawned'; floor: FloorId; depth: number; count: number; wave: number };
+  | { type: 'floorRespawned'; floor: FloorId; depth: number; count: number; wave: number; surged?: true };
 
 /** Take the stairs you are standing on, going `dir`. */
 export interface StairsRequest {
@@ -116,10 +129,12 @@ export interface FloorsState {
 
 /** This domain's slice of the snapshot, at `snapshot.domains.floors`. Plain data. */
 export interface FloorsSnapshot {
-  /** How many floors the dungeon has: the N of "Floor x/N". */
-  depth: number;
+  /** How many floors the dungeon has once revealed (bottom reached or Cartographer flag), else `null`. */
+  depth: number | null;
   /** The deepest floor the party has reached. */
   deepest: number;
+  /** The config's possible depth range (`{ min, max }`), without leaking the rolled depth. */
+  depthRange: { min: number; max: number };
 }
 
 /** Optional parts this domain adds to `Entity`. None: stairs are core `feature` parts. */
@@ -127,8 +142,10 @@ export interface FloorsParts {}
 
 /** Fields this domain adds to `RunConfig`. */
 export interface FloorsConfig {
-  /** How many floors the dungeon has, 1 to `MAX_DEPTH`. Default `DEFAULT_DEPTH` (10). */
-  depth?: number;
+  /** Dungeon variant id (`dungeon.old_delve`). Defaults to `DEFAULT_DUNGEON_ID`. */
+  dungeonId?: string;
+  /** How many floors the dungeon has: exact depth or `{ min?, max? }` bounds clamped against the dungeon's depth. */
+  depth?: number | { readonly min?: number; readonly max?: number };
   /**
    * Hand-built floors by depth (index 0 is floor 1), as text for `parseFloorText`. Floors with no
    * entry are generated. `floorText`, if set, takes the place of the first entry.
@@ -202,8 +219,8 @@ export const FLOORS_ACTIONS: ActionRecord<FloorsRequest> = {
       slice.deepest = Math.max(slice.deepest, depth);
       emit({ type: 'tookStairs', actor: actor.id, dir, from, to, depth, pos: { x: pos.x, y: pos.y } });
       emit({ type: 'floorEntered', actor: actor.id, floor: to, depth, firstVisit, floorType: floorTypeOf(state, to) });
-      // Repopulate visited floors on the return trip (or continuously with the Guild Hall flag, ETH-025).
-      maybeRespawnFloor(state, to, pos, wasEmpty, firstVisit, emit);
+      // Repopulate visited floors on the return trip (or continuously with the Guild Hall flag, ETH-025 / ETH-136).
+      maybeRespawnFloor(state, to, pos, wasEmpty, firstVisit, emit, dir);
       // A new deepest floor is worth XP to every living member (ETH-034).
       if (deeper) grantDepthXp(state, to, depth, emit);
     },
@@ -250,15 +267,24 @@ export function initFloors(): FloorsState {
 
 /** The snapshot slice. Shares nothing with the state. */
 export function floorsSnapshot({ state }: SnapshotCtx): FloorsSnapshot {
-  return { depth: dungeonDepth(state), deepest: state.domains.floors.deepest };
+  return {
+    depth: depthRevealed(state) ? dungeonDepth(state) : null,
+    deepest: state.domains.floors.deepest,
+    depthRange: configDepthRange(state.config),
+  };
 }
 
-/** The dungeon is a straight line `d1` … `dN` with matching links, `N` the config's depth. */
+/** The dungeon is a straight line `d1` … `dN` with matching links, `N` within `configDepthRange`. */
 registerInvariant('floors.graph', (state) => {
   const problems: string[] = [];
   const depth = dungeonDepth(state);
-  if (state.config.depth !== undefined && depth !== state.config.depth) {
-    problems.push(`the dungeon has ${depth} floors, the config asks for ${state.config.depth}`);
+  try {
+    const range = configDepthRange(state.config);
+    if (depth < range.min || depth > range.max) {
+      problems.push(`the dungeon has ${depth} floors, outside the config range ${range.min}–${range.max}`);
+    }
+  } catch (error) {
+    problems.push(error instanceof Error ? error.message : String(error));
   }
   if (state.dungeon.entry !== floorIdAt(1)) problems.push(`the entry is "${state.dungeon.entry}", not "${floorIdAt(1)}"`);
   for (let d = 1; d <= depth; d++) {

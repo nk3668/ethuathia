@@ -167,10 +167,20 @@ describe('AppShell at desktop width', () => {
     const bar = screen.getByRole('banner', { name: 'Top bar' });
     const list = within(bar).getByRole('list', { name: 'Currencies' });
     expect(list.textContent).toBe('♛Renown0☠Trophies0♨Favor0');
-    expect(bar.textContent).toContain('Floor 3/10 · Turn 4,812');
+    expect(bar.textContent).toContain('Floor 3 · Turn 4,812');
     const renownPill = within(list).getByText('Renown').closest('[tabindex="0"]') as HTMLElement;
     act(() => renownPill.focus());
     expect((await screen.findByRole('tooltip')).textContent).toContain(RENOWN_FORMULA_TEXT);
+
+    // Once rolled depth is revealed (snapshot.domains.floors.depth !== null), TopBar shows Floor N/M.
+    const domains = SNAPSHOT.domains;
+    act(() =>
+      useSimStore.getState().receiveSnapshot({
+        ...SNAPSHOT,
+        domains: { ...domains, floors: { ...domains.floors, depth: 10 } },
+      }),
+    );
+    expect(bar.textContent).toContain('Floor 3/10 · Turn 4,812');
   });
 
   it('shows this run’s at-risk earnings beside the banked totals, until the run ends (ETH-023)', () => {
@@ -393,7 +403,7 @@ describe('App', () => {
     act(() => {
       started.run(10);
     });
-    expect(screen.getByRole('banner', { name: 'Top bar' }).textContent).toMatch(/Floor 1\/10 · Turn [1-9]/);
+    expect(screen.getByRole('banner', { name: 'Top bar' }).textContent).toMatch(/Floor 1 · Turn [1-9]/);
     expect(within(screen.getByRole('region', { name: 'Log' })).getAllByRole('listitem').length).toBeGreaterThan(0);
   });
 });

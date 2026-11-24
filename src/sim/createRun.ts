@@ -7,7 +7,7 @@ import { CLASSES, RACES } from '../content';
 import { newAiPart } from './ai/types';
 import { initDomains } from './domains';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
-import { buildDungeon, configDepth, DEFAULT_FLOOR_TYPE, planFloor } from './floors';
+import { buildDungeon, DEFAULT_FLOOR_TYPE, planFloor, resolveRunDepth } from './floors';
 import type { FloorPlan } from './floorText';
 import { perceiveParty } from './perception';
 import { DEFS, RNG_STREAMS, STATE_VERSION, Terrain } from './state';
@@ -30,21 +30,20 @@ export function adventurerActor(member: AdventurerConfig): ActorPart {
 }
 
 /**
- * A new run: RNG streams seeded from `seed`, a dungeon graph `config.depth` floors deep (default
- * `DEFAULT_DEPTH`), its first floor built from `config.floorText` or else generated (`planFloor`;
- * the other floors are built when first reached, `ensureFloor`), and the party placed at
- * the floor's `@` marks, or on its up stairs if it has none. Extra party members go on the
- * nearest free floor tiles, and the party's memory starts with what they can see. Each
- * adventurer's HP, MP and speed come from its class and race (the `stats.class_race` and
- * `stats.attributes` providers),
- * plus the config's `partyBundles` and `partyStatuses`, so an unknown class, race, bundle or
- * status id throws. Each domain's state slice comes from `initDomains(config)`.
- * `config` is copied, not kept.
+ * A new run: RNG streams seeded from `seed`, a dungeon graph resolved deterministically from
+ * `config.dungeonId` / `config.depth` (`resolveRunDepth`), its first floor built from
+ * `config.floorText` or else generated (`planFloor`; the other floors are built when first
+ * reached, `ensureFloor`), and the party placed at the floor's `@` marks, or on its up stairs
+ * if it has none. Extra party members go on the nearest free floor tiles, and the party's memory
+ * starts with what they can see. Each adventurer's HP, MP and speed come from its class and race
+ * (the `stats.class_race` and `stats.attributes` providers), plus the config's `partyBundles`
+ * and `partyStatuses`, so an unknown class, race, bundle or status id throws. Each domain's
+ * state slice comes from `initDomains(config)`. `config` is copied, not kept.
  */
 export function createRun(config: RunConfig, seed: number): RunState {
   if (config.party.length === 0) throw new Error('A run needs at least one adventurer');
   const actors = config.party.map(adventurerActor);
-  const dungeon = buildDungeon(configDepth(config));
+  const dungeon = buildDungeon(resolveRunDepth(config, seed));
   const entry = dungeon.entry;
   const state: RunState = {
     version: STATE_VERSION,

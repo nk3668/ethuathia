@@ -65,7 +65,7 @@ describe('run end', () => {
     expect(events[0]).toEqual({
       type: 'runStarted',
       party: [{ actor: hero.id, name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' }],
-      depth: 3,
+      depth: null,
       floorType: null,
       turn: 0,
     });
@@ -73,7 +73,7 @@ describe('run end', () => {
 
     const gen = createRun({ party: [HERO], depth: 2 }, 1);
     const genEvents = step(gen, []);
-    expect(genEvents[0]).toMatchObject({ type: 'runStarted', depth: 2, floorType: 'floor.halls', turn: 0 });
+    expect(genEvents[0]).toMatchObject({ type: 'runStarted', depth: null, floorType: 'floor.halls', turn: 0 });
     expect(gen.domains.run.trackers['track.codex']).toMatchObject({ 'floor.halls': ['seen'] });
   });
 
@@ -167,7 +167,7 @@ describe('run end', () => {
     expect(ordered).toBeGreaterThan(0);
     expect(events.find((e) => e.type === 'turnedBack')).toMatchObject({ actor: null, reason: 'ordered' });
     expect(state.domains.run.end).toMatchObject({ outcome: 'retreat', depth: 2 });
-    expect(state.domains.run.end?.cause).toBe('The party reached floor 2 of 3, was ordered to retreat and walked out of the dungeon.');
+    expect(state.domains.run.end?.cause).toBe('The party reached floor 2, was ordered to retreat and walked out of the dungeon.');
     // Nobody went further down after the order.
     expect(events.filter((e) => e.type === 'floorEntered' && e.depth === 3)).toEqual([]);
     expect(events.find((e) => e.type === 'leftDungeon')).toMatchObject({ party: state.party });

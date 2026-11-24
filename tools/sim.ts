@@ -8,10 +8,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { formatComparison, makeReport, parseReport, resolveCompareRef, runRef } from './compare';
 import type { SimReport } from './compare';
-import { formatReport, headlessParty, parseSimArgs, runSeeds, USAGE } from './headless';
+import { formatReport, headlessParty, parseSimArgs, USAGE } from './headless';
 import type { SimArgs } from './headless';
+import { runPartySweep, runSeedsParallel } from './parallel';
 
-function main(argv: readonly string[]): number {
+async function main(argv: readonly string[]): Promise<number> {
   let args: SimArgs;
   try {
     args = parseSimArgs(argv);
@@ -21,6 +22,20 @@ function main(argv: readonly string[]): number {
   }
   if (args.help) {
     console.log(USAGE);
+    return 0;
+  }
+
+  if (args.partySweep && (args.compare !== null || args.baseline !== null || args.json !== null)) {
+    console.error(`--party-sweep prints its own table and can't be combined with --compare, --baseline or --json
+
+${USAGE}`);
+    return 2;
+  }
+  if (args.partySweep) {
+    console.log(`Party sweep: seeds ${args.from}-${args.from + args.seeds - 1}, preset ${args.preset}, rules ${args.rules}, cap ${args.cap}\n`);
+    const started = performance.now();
+    console.log(await runPartySweep(args));
+    console.log(`\nRan in ${((performance.now() - started) / 1000).toFixed(2)} s on ${args.jobs} job${args.jobs === 1 ? '' : 's'}.`);
     return 0;
   }
 
@@ -51,14 +66,31 @@ function main(argv: readonly string[]): number {
   }
 
   const last = args.from + args.seeds - 1;
-  console.log(
-    `Headless run: seeds ${args.from}-${last}, party of ${args.party}, cap ${args.cap} party turns per run\n`,
-  );
+  const details = [
+    `seeds ${args.from}-${last}`,
+    `party of ${args.party}`,
+    `cap ${args.cap} party turns per run`,
+    `preset ${args.preset}`,
+    `rules ${args.rules}`,
+    ...(args.upgrades.length === 0 ? [] : [`upgrades ${args.upgrades.join(',')}`]),
+  ].join(', ');
+  console.log(`Headless run: ${details}\n`);
   const started = performance.now();
-  const results = runSeeds(args.from, args.seeds, { cap: args.cap, party: headlessParty(args.party) });
+  const results = await runSeedsParallel(
+    args.from,
+    args.seeds,
+    {
+      cap: args.cap,
+      party: headlessParty(args.party),
+      preset: args.preset,
+      upgrades: args.upgrades,
+      rules: args.rules,
+    },
+    args.jobs,
+  );
   const seconds = (performance.now() - started) / 1000;
   console.log(formatReport(results, args.cap));
-  console.log(`\nRan in ${seconds.toFixed(2)} s.`);
+  console.log(`\nRan in ${seconds.toFixed(2)} s on ${args.jobs} job${args.jobs === 1 ? '' : 's'}.`);
 
   const report = makeReport(args, results);
   if (args.json !== null) {
@@ -66,10 +98,17 @@ function main(argv: readonly string[]): number {
     console.log(`Report written to ${args.json}.`);
   }
   if (before !== null) {
+    let table: string;
+    try {
+      table = formatComparison(before, report, { before: label, after: 'this' }, warnings);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 1;
+    }
     console.log(`\nComparison (${label} -> this checkout):\n`);
-    console.log(formatComparison(before, report, { before: label, after: 'this' }, warnings));
+    console.log(table);
   }
   return 0;
 }
 
-process.exitCode = main(process.argv.slice(2));
+process.exitCode = await main(process.argv.slice(2));

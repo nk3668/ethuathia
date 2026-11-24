@@ -1,0 +1,56 @@
+---
+id: ETH-154
+title: Smarter escape direction: flee toward allies, stairs or home instead of just away
+type: feature
+status: idea
+priority: P2
+milestone: M2
+epic: adventurer-ai
+size: M
+depends_on: [ETH-148]
+created: 2026-11-24
+updated: 2026-11-24
+---
+
+## Summary
+ETH-148 made fleeing decide *when* to flee and *from what*. This item improves *where to*:
+- A fleeing adventurer prefers escape routes toward a living ally or the stairs up, instead of just
+  "away".
+- A wounded adventurer with no healing, whose every way forward passes a remembered threat, heads
+  home (`act.retreat_run`) instead of exploring or descending.
+
+## Why
+The ETH-148 and ETH-080 agents found three problems:
+- **Breaking away mid-fight:** an adventurer that flees while the party is still fighting leaves the
+  others behind.
+- **Pressing on while wounded:** an adventurer with low HP, no healing and no safe ground still
+  explores or goes down the stairs.
+- **Aimless direction:** flee takes the steepest way out and ignores whether it leads anywhere
+  useful.
+
+`CLAUDE.md` §5.3 says to flee when an escape route exists. An escape into a dead end, or away from
+help, wastes it.
+
+## Acceptance criteria
+- [ ] The flee map breaks ties toward a living ally on the same floor, then toward the stairs up.
+      This builds on the existing flee map, not a new pathing system.
+- [ ] A wounded adventurer heads home via `act.retreat_run` when every unexplored tile and every way
+      down is near a remembered threat. Wounded means below `FLEE_RELEASE_PERCENT` with no healing
+      potion. Any new threshold is a named constant in `src/sim/combat/fleeConfig.ts`.
+- [ ] The trace says why: "fleeing toward Mira", "fleeing toward the stairs up", "heading home:
+      wounded, no healing, threats on every way forward".
+- [ ] The Codex and tooltip text for flee and retreat mention the new preferences.
+- [ ] Sim tests on a fixed seed with a hand-built map:
+  - an adventurer flees toward an ally when two escapes are otherwise equal;
+  - a boxed-in, wounded adventurer retreats home;
+  - a healthy one in the same spot doesn't.
+- [ ] Sim gate per `docs/DIFFICULTY_PHILOSOPHY.md` §9 (a balance-affecting AI change): a T2 paired
+      compare for party 1 and party 4, and the party-size ordering still holds. `npm run check`
+      passes.
+
+## Notes
+- Reuse `isThreat`, `freshThreats` and `isWounded` from `src/sim/combat/threat.ts` (ETH-148).
+- Filed from the out-of-scope ideas of ETH-148 and ETH-080 (Nate approved, 2026-11-24).
+
+## Log
+- 2026-11-24: Created (Nate approved filing).

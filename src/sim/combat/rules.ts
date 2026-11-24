@@ -7,7 +7,7 @@
 import type { Pos } from '../../core';
 import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
-import type { AiCtx, ConditionDef, ParamParser, Resolved, RuleActionDef } from '../ai/types';
+import type { AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, RuleActionDef } from '../ai/types';
 import { stepBlocker } from '../coreActions';
 import { blockerAt, featureAt, getEntity, getFloor, mayShareTile } from '../entities';
 import { buildFleeMap, buildGoalMap, floorPathGrid, OPEN_DOOR_COST, pathAlong, stepToward, UNREACHABLE } from '../goalMap';
@@ -15,6 +15,8 @@ import type { PathGrid } from '../goalMap';
 import { fieldOfView, sightRadius } from '../perception';
 import type { ActorEntity, Entity, RunState } from '../state';
 import { statValue } from '../stats/getStat';
+import { BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_RELEASE_PERCENT } from './fleeConfig';
+import { freshThreats, visibleThreats } from './threat';
 import { DIRS_8 } from '../../core';
 
 /** True if `a` and `b` are actors on opposing sides: the party against monsters. Neutrals fight nobody. */
@@ -149,6 +151,28 @@ export const COND_HP_BELOW = defineCondition({
   describe: ({ percent }) => `HP below ${percent}%`,
 });
 
+/**
+ * True when the baseline's flee applies (ETH-148): HP is below `BASELINE_FLEE_PERCENT`, or the
+ * adventurer started fleeing earlier and has neither recovered to `FLEE_RELEASE_PERCENT` nor gone
+ * `FLEE_CALM_TURNS` without seeing a threat. Starting needs a threat in sight (`updateThreatMemory`).
+ */
+export const COND_FLEEING = defineCondition({
+  id: 'cond.fleeing',
+  name: 'Fleeing',
+  description:
+    `True while HP is below ${BASELINE_FLEE_PERCENT}%, and then for as long as the adventurer keeps running: until HP is back to ` +
+    `${FLEE_RELEASE_PERCENT}% or no threat has been seen for ${FLEE_CALM_TURNS} turns, so it doesn't turn round and walk back ` +
+    'into the fight the moment it gains a point. Only enemies that will come and hurt the party count as threats.',
+  parse: noParams,
+  evaluate({ state, actor }) {
+    const now = hpPercent(state, actor);
+    if (now < BASELINE_FLEE_PERCENT) return { ok: true, detail: `HP ${Math.round(now)}% < ${BASELINE_FLEE_PERCENT}%` };
+    if (actor.ai.memory.fleeing === null) return { ok: false, detail: '' };
+    return { ok: true, detail: `still fleeing, HP ${Math.round(now)}% (until ${FLEE_RELEASE_PERCENT}% or ${FLEE_CALM_TURNS} calm turns)` };
+  },
+  describe: () => 'fleeing (HP low, and until recovered)',
+});
+
 // ---------------------------------------------------------------------------------------------
 // Rule actions
 
@@ -198,38 +222,82 @@ export const ACT_FLEE = defineRuleAction({
   id: 'act.flee',
   name: 'Flee',
   description:
-    'Run from the enemies in sight, toward open ground rather than into a corner. Only possible when there is an ' +
-    'escape route: a free step that leaves no enemy next to you. Cornered, the creature does something else. ' +
-    'Breaking away from an enemy next to you takes a Flee check (Finesse); failing it loses the turn.',
+    'Run from the enemies in sight that will come and hurt you (harmless ones, like a moss tender that only mends its ' +
+    'kin, are ignored), toward open ground rather than into a corner. An adventurer that is already fleeing keeps ' +
+    'running from where it last saw them until it has recovered or the coast has been clear for a while. Only possible ' +
+    'when there is an escape route: a free step that leaves no enemy next to you. Cornered, the creature does something ' +
+    'else. Breaking away from an enemy next to you takes a Flee check (Finesse); failing it loses the turn.',
   parse: noParams,
-  resolve(ctx): Resolved | null {
+  resolve(ctx): ResolveResult {
     const { state, actor } = ctx;
-    const enemies = visibleEnemies(state, actor);
-    if (enemies.length === 0) return null;
+    const enemies = visibleThreats(state, actor);
+    // Out of sight but not out of mind: a fleeing adventurer keeps running from where it last saw them.
+    const marks = enemies.length === 0 && actor.actor.faction === 'party' && actor.ai.memory.fleeing !== null ? freshThreats(state, actor) : [];
+    if (enemies.length === 0 && marks.length === 0) {
+      const harmless = visibleEnemies(state, actor);
+      if (harmless.length === 0) return null;
+      return { skipped: `ignoring ${listNames(harmless)}: ${harmless.length === 1 ? "it can't" : "they can't"} hurt anyone` };
+    }
+    // Still running after recovering above the start threshold, but cornered by a threat next to
+    // it: turning to fight beats failing Flee checks and taking free hits (ETH-148).
+    if (actor.actor.faction === 'party' && hpPercent(state, actor) >= BASELINE_FLEE_PERCENT) {
+      const close = enemies.filter((e) => distance(e.pos, actor.pos) <= 1);
+      if (close.length > 0) return { skipped: `not breaking away from ${listNames(close)} next to me: HP is above ${BASELINE_FLEE_PERCENT}%` };
+    }
     // Enemy tiles stay enterable here, so the distance map spreads from them; the step taken
     // never leads onto one, since it is the highest ground on the flee map.
     const paths = pathGridFor(ctx);
-    const flee = buildFleeMap(paths, buildGoalMap(paths, enemies.map((e) => e.pos)));
+    const dangers = enemies.length > 0 ? enemies.map((e) => e.pos) : marks.map((m) => m.pos);
+    const flee = buildFleeMap(paths, buildGoalMap(paths, dangers));
     const dir = stepToward(paths, flee, actor.pos);
     if (dir === null) return null;
     const to = { x: actor.pos.x + dir.x, y: actor.pos.y + dir.y };
-    const near = Math.min(...enemies.map((e) => distance(e.pos, to)));
+    const near = Math.min(...dangers.map((p) => distance(p, to)));
     if (near <= 1 || blockerAt(state, actor, actor.floor, to) !== undefined) return null;
     const goal = pathAlong(paths, flee, actor.pos).at(-1);
     const withGoal = goal === undefined ? {} : { goal };
+    const who = enemies.length > 0 ? listNames(enemies) : marks.map((m) => m.name).join(', ');
+    const pursuit = enemies.length > 0 ? 'in pursuit' : 'last seen nearby';
+    const still =
+      actor.actor.faction === 'party' && actor.ai.memory.fleeing !== null && hpPercent(state, actor) >= BASELINE_FLEE_PERCENT
+        ? `still fleeing: ${who} ${pursuit}, HP ${Math.round(hpPercent(state, actor))}%`
+        : null;
     const door = featureAt(state, actor.floor, to)?.feature;
     if (door?.kind === 'door' && !door.open) {
-      return { request: { id: 'openDoor', dir }, detail: `escaping ${listNames(enemies)}; opening a door`, ...withGoal };
+      return { request: { id: 'openDoor', dir }, detail: `${still ?? `escaping ${who}`}; opening a door`, ...withGoal };
     }
     // `flee`, not `move`: with an enemy adjacent it takes a Flee check (ETH-081, `flee.ts`).
     const adjacent = enemies.some((e) => distance(e.pos, actor.pos) <= 1);
     return {
       request: { id: 'flee', dir },
-      detail: `${adjacent ? 'breaking away from' : 'running from'} ${listNames(enemies)}`,
+      detail: still ?? `${adjacent ? 'breaking away from' : 'running from'} ${who}`,
       ...withGoal,
     };
   },
-  describe: () => 'flee from the enemies in sight',
+  describe: () => 'flee from the threats in sight',
+});
+
+/**
+ * Stay put when there is nowhere left to run (ETH-148). Once an adventurer is fleeing and the flee
+ * map has no free step, walking on would only take it back toward the threat (exploring leads past
+ * it), so it holds still until the threat comes (and `act.attack_adjacent` fights it), HP recovers,
+ * or the coast has been clear for `FLEE_CALM_TURNS`.
+ */
+export const ACT_HOLD_POSITION = defineRuleAction({
+  id: 'act.hold_position',
+  name: 'Hold position',
+  description:
+    'Stand still while fleeing with no escape route left, rather than walk back toward the enemy that was ' +
+    'being fled. Ends when HP has recovered, when no threat has been seen for a while, or when an enemy ' +
+    'reaches the adventurer and there is a fight to be had.',
+  idle: true,
+  parse: noParams,
+  resolve({ state, actor }): Resolved | null {
+    if (actor.actor.faction !== 'party' || actor.ai.memory.fleeing === null) return null;
+    if (adjacentEnemies(state, actor).length > 0) return null;
+    return { request: { id: 'wait' }, detail: `nowhere left to run; holding still until the coast is clear, HP ${Math.round(hpPercent(state, actor))}%` };
+  },
+  describe: () => 'hold still while fleeing with nowhere to run',
 });
 
 /** How many turns a wandering creature keeps to one heading before it picks another. */
@@ -269,7 +337,7 @@ export const ACT_WANDER = defineRuleAction({
 });
 
 /** The combat domain's conditions, in registration order. */
-export const COMBAT_CONDITIONS: readonly ConditionDef[] = [COND_ENEMY_ADJACENT, COND_ENEMY_VISIBLE, COND_HP_BELOW];
+export const COMBAT_CONDITIONS: readonly ConditionDef[] = [COND_ENEMY_ADJACENT, COND_ENEMY_VISIBLE, COND_HP_BELOW, COND_FLEEING];
 
 /** The combat domain's rule actions, in registration order. */
-export const COMBAT_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_ATTACK_ADJACENT, ACT_APPROACH_ENEMY, ACT_FLEE, ACT_WANDER];
+export const COMBAT_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_ATTACK_ADJACENT, ACT_APPROACH_ENEMY, ACT_FLEE, ACT_HOLD_POSITION, ACT_WANDER];

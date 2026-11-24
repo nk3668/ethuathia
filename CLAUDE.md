@@ -253,7 +253,7 @@ A desktop app (§9) with a dark theme. The dungeon uses colored monospace ASCII 
   - The UI reads snapshots and events from the sim and sends commands back. It never mutates sim state directly.
 - **Content is data:** classes, races, monsters, items, Omens, deities and upgrade nodes are typed definitions in `src/content/`, validated at load time.
 - **Saves:** local only, written to a save file in the app data folder through Tauri (IndexedDB when running in a dev browser tab). Saves are versioned with migrations, with export/import to a file or string and a hard reset. Autosave regularly and on close.
-- **Balance harness:** a script that runs N seeded headless runs and reports depth, death causes and currency per hour. Use it to check any balance change. It starts as `npm run sim` (M0: turns and explored share per floor).
+- **Balance harness:** a script that runs N seeded headless runs and reports depth, death causes and currency per hour. Use it to check any balance change. It starts as `npm run sim` (M0: turns and explored share per floor). Which changes need it, and how many seeds (T0 identity 20, T1 direction 50, T2 gate 100, T3 acceptance 200), is set in `docs/DIFFICULTY_PHILOSOPHY.md` §9. UI-only, docs and test-only changes don't run it, and a piece of a larger initiative leaves T3 to that initiative's capstone.
 
 ### Proposed layout
 ```
@@ -271,6 +271,8 @@ Imports only point downward in this list: `core` imports nothing, `ui` may impor
 `core`, `content`, `sim` and `meta` compile without DOM types.
 
 ### Conventions
+- **Formatting:** prettier is not used; there is no config and no `format` script, so never run `npx prettier --write` (it reformats whole files). Follow the existing style of the file you edit; ESLint (`npm run lint`) is the gate. Line endings are pinned to LF by `.gitattributes`.
+- **File size and refactoring:** keep files small and single-purpose; look hard at ~400 lines, split at ~600 unless there's a stated reason not to. Refactor only on green, after tests pass, in its own commit. See `docs/ARCHITECTURE.md` §10.1.
 - **Clean-room.** Roguathia is LGPL-3.0. Do not copy its code, names, lore or text (e.g. no "Selyk"). Using it as a source of ideas is fine.
 - Gameplay randomness must use the sim's seeded RNG, never `Math.random()`.
 - Every new mechanic needs Codex and tooltip text and a log message.
@@ -281,16 +283,18 @@ Imports only point downward in this list: `core` imports nothing, `ui` may impor
 
 ## 10. Roadmap
 
-The milestones are broken down into work items in the backlog (§11).
+The milestones are broken down into work items in the backlog (§11). Every milestone, and every major content addition, ends with a balance check item (`docs/DIFFICULTY_PHILOSOPHY.md` §9.1).
 
 1. **M0 – Skeleton:** scaffold the project; sim core with one floor, one adventurer, baseline exploration and canvas map; pause and speed controls.
 2. **M1 – A full run:** multiple floors, stairs, combat, items, death, run summary, auto-restart; the Recover-relic contract and the return trip; attributes, leveling, monster roles, equipment slots, enchantment and identification.
-3. **M2 – Meta layer:** currencies, Town with Guild Hall and Smithy, saves, Codex; more contract types, contract slots, the bounty board; proficiencies and aptitudes, class unlocks, uniques, monster families, elites and mini-bosses, affixes and artifacts, food buffs; highlights feed, run history.
-4. **M3 – Behavior rules:** rules editor, Library, presets, AI trace in the log; quest rule conditions, class abilities and class-aware AI roles.
-5. **M4 – Risk:** Omens, conducts, reward multiplier; bounty encounters, traps and searching.
-6. **M5 – Lineage:** roster, gravestones and grave interactions, heirlooms, retirement, Ossuary and Tavern; the Rescue contract.
-7. **M6 – Depth:** deities, altars, floor types, route forks, offline progress, dungeon merchants.
-8. **Later:** tileset, more content, achievements, cosmetics, balance passes.
+3. **M1.5 – Living Dungeon & Balance:** extensible Danger scale and hidden variable dungeon depth, expanded starter bestiary and templates across Danger bands, threat-budget room encounters with group engagement and corridor patrols, return-trip deep surge, and the systemic balance pass (`ETH-080`, see `docs/DIFFICULTY_PHILOSOPHY.md`).
+4. **M1.6 – Review follow-ups:** fixes found while reviewing merged items. Identification secrecy and curse safety for the idle player (`ETH-142`), a content check that every discoverable def can appear in a run (`ETH-143`), and per-monster Codex kill tiers (`ETH-144`).
+5. **M2 – Meta layer:** currencies, Town with Guild Hall and Smithy, saves, Codex; more contract types, contract slots, the bounty board; proficiencies and aptitudes, class unlocks, uniques, monster families, elites and mini-bosses, affixes and artifacts, food buffs; highlights feed, run history.
+6. **M3 – Behavior rules:** rules editor, Library, presets, AI trace in the log; quest rule conditions, class abilities and class-aware AI roles.
+7. **M4 – Risk:** Omens, conducts, reward multiplier; bounty encounters, traps and searching.
+8. **M5 – Lineage:** roster, gravestones and grave interactions, heirlooms, retirement, Ossuary and Tavern; the Rescue contract.
+9. **M6 – Depth:** deities, altars, floor types, route forks, offline progress, dungeon merchants.
+10. **Later:** tileset, more content, achievements, cosmetics, balance passes.
 
 ---
 

@@ -2,7 +2,7 @@
 epic: combat-items
 title: Combat, items and statuses
 status: active
-milestones: [M1, M2, M5, later]
+milestones: [M1, M1.6, M2, M5, later]
 ---
 
 ## Goal
@@ -26,7 +26,7 @@ Fights, gear and consumables that are all built from the same modifiers, effects
 
 ## Items
 - [x] [ETH-043 Equipment slots and base item types](ETH-043-equipment-slots-base-items.md)
-- [ ] [ETH-044 Enchantment, blessed and cursed items, and identification](ETH-044-enchant-curse-identify.md)
+- [x] [ETH-044 Enchantment, blessed and cursed items, and identification](ETH-044-enchant-curse-identify.md)
 - [ ] [ETH-045 Light affixes and named artifacts](ETH-045-affixes-artifacts.md)
 - [ ] [ETH-050 Summons and pets](ETH-050-summons-pets.md)
 - [ ] [ETH-054 Food as consumables that grant short-term buffs](ETH-054-food-buffs.md)
@@ -44,3 +44,6 @@ More items are added when M1 becomes the current milestone.
 - [x] [ETH-118 Item properties: per-instance layers that feed gearBundles, value, names and stacking](ETH-118-item-properties.md)
 - [ ] [ETH-123 Allied non-party creatures: actors that fight with the party without being members](ETH-123-allied-creatures.md)
 - [ ] [ETH-130 Expand the enchantment pool with additional effects and triggers](ETH-130-more-enchantments.md)
+- [x] [ETH-142 Identification secrecy and curse safety for the idle player](ETH-142-identify-secrecy-and-curse-safety.md)
+- [x] [ETH-147 Known-type potions and scrolls stop giving away a hidden blessing or curse](ETH-147-consumable-hidden-property-leak.md)
+- [ ] [ETH-155 Smarter Scroll of Identify use: better targets, optionally skip consumables](ETH-155-smarter-identify-scrolls.md)

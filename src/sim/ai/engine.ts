@@ -20,6 +20,7 @@ import type { ActionRequest } from '../actions';
 import type { Emit } from '../events';
 import { ITEMS_BASELINE_LOOT, ITEMS_BASELINE_URGENT } from '../items/rules';
 import { registerInvariant } from '../invariants';
+import { updateThreatMemory } from '../combat/threat';
 import { explored } from '../perception';
 import { QUESTS_BASELINE } from '../quests/rules';
 import { CONDITIONS, RULE_ACTIONS } from '../registries';
@@ -29,6 +30,9 @@ import type { AiActor, AiCtx, AiMemory, Rule, RuleRef } from './types';
 
 /** Decisions in a row without progress after which the current goal is dropped. */
 export const STUCK_TURNS = 10;
+
+/** How far (in tiles, either axis) an actor may stray from where it started counting and still count as not moving. */
+export const LOITER_RADIUS = 1;
 
 /**
  * Decisions in a row spent waiting (by an idle rule other than the plain `act.wait`) with nobody
@@ -43,17 +47,16 @@ const PLAIN_WAIT = 'act.wait';
 /** How many turns a dropped goal's rule is skipped for. */
 export const DROP_TURNS = 20;
 
-/** The HP fraction, in percent, below which the baseline flees (baseline #2). */
-export const BASELINE_FLEE_PERCENT = 35;
-
 /**
  * The built-in rules every adventurer falls back on after its own (CLAUDE.md §5.3), in order:
  * quaff healing below 35% HP and drop the least valuable thing when overloaded (items, ETH-061);
- * back off after getting stuck; below `BASELINE_FLEE_PERCENT`% HP with an enemy in sight, flee
- * if there is an escape route (`act.flee` can't be done otherwise, so a cornered adventurer
+ * back off after getting stuck; below `BASELINE_FLEE_PERCENT`% HP with a threat in sight, flee (and keep
+ * fleeing until HP is back to `FLEE_RELEASE_PERCENT`% or no threat has been seen for `FLEE_CALM_TURNS`,
+ * ETH-148) if there is an escape route (`act.flee` can't be done otherwise, so a cornered adventurer
  * fights on); attack an adjacent enemy (combat, ETH-060); rush a caster in sight that has you in
  * bolt range (ETH-040); once the party has turned back, climb
- * out with it (waiting at the stairs up for the others); once every contract is complete, turn
+ * out with it (waiting at the stairs up for the others); walk back to the party's lead when more
+ * than `PARTY_LEASH` tiles from it (ETH-145); once every contract is complete, turn
  * back and leave, and fetch a contract's item (the relic) once the party has seen it, however far
  * (quests, ETH-024, `src/sim/quests/rules.ts`); head down without waiting once the
  * floor's turn cap is spent; below half HP with no healing potion, drink from a known fountain
@@ -70,10 +73,12 @@ export const BASELINE_RULES: readonly Rule[] = [
   // Items (ETH-061): quaff healing when hurt, drop the least valuable thing when overloaded.
   ...ITEMS_BASELINE_URGENT,
   { condition: { id: 'cond.stuck' }, action: { id: 'act.back_off' }, enabled: true },
-  { condition: { id: 'cond.hp_below', params: { percent: BASELINE_FLEE_PERCENT } }, action: { id: 'act.flee' }, enabled: true },
+  { condition: { id: 'cond.fleeing' }, action: { id: 'act.flee' }, enabled: true },
   { condition: { id: 'cond.enemy_adjacent' }, action: { id: 'act.attack_adjacent' }, enabled: true },
   // Combat roles (ETH-040): rush a caster that can bolt you rather than stand under fire.
   { condition: { id: 'cond.in_bolt_range' }, action: { id: 'act.rush_caster' }, enabled: true },
+  // Fleeing with nowhere left to run: hold still rather than walk back toward the threat (ETH-148).
+  { condition: { id: 'cond.fleeing' }, action: { id: 'act.hold_position' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   // Quests (ETH-024): once every contract is complete, head out; fetch a contract item once seen.
@@ -82,9 +87,15 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.hurt_no_healing', params: { below: 50 } }, action: { id: 'act.drink_fountain' }, enabled: true },
   // Items (ETH-061): pick up wanted items a short detour away.
   ...ITEMS_BASELINE_LOOT,
+  // Cohesion (ETH-145): while there is still ground to explore, stay near the party's lead rather
+  // than fight alone. Below every errand and above exploring, so it never fights the descent.
+  { condition: { id: 'cond.party_scattered' }, action: { id: 'act.regroup' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.explore' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.descend' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.gather' }, enabled: true },
+  // Don't treat a temporarily dropped Explore as "bottom floor complete, abort the run": wait out
+  // the drop instead (ETH-145).
+  { condition: { id: 'cond.stuck' }, action: { id: 'act.wait' }, enabled: true },
   { condition: { id: 'cond.bottom_floor' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true },
 ];
@@ -120,6 +131,7 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
   const memory = ctx.actor.ai.memory;
   const traced = actor.actor.faction === 'party';
   const partyStill = traced && checkProgress(ctx, emit);
+  if (traced) updateThreatMemory(state, ctx.actor);
 
   let choice = chooseRule(ctx);
   // Waiting too long with nobody moving drops the waiting rule; choose again without it.
@@ -218,9 +230,17 @@ function checkProgress(ctx: AiCtx, emit: Emit): boolean {
   const party = partyKey(state);
   const last = memory.last;
   const partyStill = last !== null && last.party === party;
+  // Staying within one tile of where the count began is "not moving": two rules that undo each
+  // other (flee from an enemy, then walk back toward the item behind it) swap the actor between
+  // neighbouring tiles forever, which an exact-position check never sees. The mark keeps its
+  // position (the anchor) while the actor stays near it, and moves on once it goes further.
   const same =
-    last !== null && last.floor === actor.floor && last.pos.x === actor.pos.x && last.pos.y === actor.pos.y && last.seen === seen;
-  memory.last = { floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y }, seen, party };
+    last !== null &&
+    last.floor === actor.floor &&
+    Math.abs(last.pos.x - actor.pos.x) <= LOITER_RADIUS &&
+    Math.abs(last.pos.y - actor.pos.y) <= LOITER_RADIUS &&
+    last.seen === seen;
+  memory.last = same ? { ...last, party } : { floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y }, seen, party };
 
   const intent = memory.intent;
   const idle = intent === null || !RULE_ACTIONS.has(intent.action) || RULE_ACTIONS.get(intent.action).idle;
@@ -233,7 +253,11 @@ function checkProgress(ctx: AiCtx, emit: Emit): boolean {
 
   memory.still = 0;
   const goal = RULE_ACTIONS.get(intent.action).name;
-  const detail = `No progress in ${STUCK_TURNS} turns (${intent.detail}). Giving up on ${goal} for ${DROP_TURNS} turns.`;
+  const remaining =
+    intent.action === 'act.back_off' && memory.dropped !== null && state.turn < memory.dropped.until
+      ? memory.dropped.until - state.turn
+      : DROP_TURNS;
+  const detail = `No progress in ${STUCK_TURNS} turns (${intent.detail}). Giving up on ${goal} for ${remaining} ${remaining === 1 ? 'turn' : 'turns'}.`;
   dropGoal(ctx, intent.rule, intent.action, STUCK_TURNS, detail, emit);
   return partyStill;
 }
@@ -262,7 +286,13 @@ function countWaiting(ctx: AiCtx, choice: Choice, partyStill: boolean, emit: Emi
 /** Drops `rule` for `DROP_TURNS` turns at the actor's spot and emits the `stuck` event. */
 function dropGoal({ state, actor }: AiCtx, rule: RuleRef, action: string, turns: number, detail: string, emit: Emit): void {
   const pos = { x: actor.pos.x, y: actor.pos.y };
-  actor.ai.memory.dropped = { rule: { ...rule }, action, floor: actor.floor, pos, since: state.turn, until: state.turn + DROP_TURNS };
+  const existing = actor.ai.memory.dropped;
+  // Backing off runs only because a goal is already dropped; mark it stopped without overwriting `existing.rule`.
+  if (action === 'act.back_off' && existing !== null && state.turn < existing.until) {
+    existing.backedOff = true;
+  } else {
+    actor.ai.memory.dropped = { rule: { ...rule }, action, floor: actor.floor, pos, since: state.turn, until: state.turn + DROP_TURNS };
+  }
   emit({ type: 'stuck', actor: actor.id, rule: { ...rule }, action, turns, detail, floor: actor.floor, pos: { ...pos } });
 }
 
@@ -278,7 +308,7 @@ function partyKey(state: RunState): string {
 
 /**
  * AI memory holds sane values: `intent.goal` (when set) has non-negative safe integers, `still` is a count, `waited` a count below
- * `WAIT_STUCK_TURNS`, and `waitingFor` is `null` or another entity's id that was handed out (the entity itself may have left the run since).
+ * `WAIT_STUCK_TURNS`, and `fleeing` and `threats` are well-formed (ETH-148), and `waitingFor` is `null` or another entity's id that was handed out (the entity itself may have left the run since).
  */
 registerInvariant('core.aiMemory', (state) => {
   const problems: string[] = [];
@@ -301,6 +331,23 @@ registerInvariant('core.aiMemory', (state) => {
     if (!Number.isSafeInteger(memory.still) || memory.still < 0) problems.push(`actor ${entity.id} has still ${memory.still}`);
     if (!Number.isSafeInteger(memory.waited) || memory.waited < 0 || memory.waited >= WAIT_STUCK_TURNS) {
       problems.push(`actor ${entity.id} has waited ${memory.waited}`);
+    }
+    if (memory.dropped !== null && memory.dropped.backedOff !== undefined && memory.dropped.backedOff !== true) {
+      problems.push(`actor ${entity.id} has invalid dropped.backedOff`);
+    }
+    const fleeing = memory.fleeing;
+    if (fleeing !== null) {
+      if (!Number.isSafeInteger(fleeing.since) || !Number.isSafeInteger(fleeing.lastSeen) || fleeing.lastSeen < fleeing.since || !Number.isSafeInteger(fleeing.held) || fleeing.held < 0) {
+        problems.push(`actor ${entity.id} has invalid fleeing`);
+      }
+    }
+    if (!Array.isArray(memory.threats)) problems.push(`actor ${entity.id} has no threat list`);
+    else {
+      for (const m of memory.threats) {
+        if (!Number.isSafeInteger(m.seen) || m.seen > state.turn || !Number.isSafeInteger(m.pos.x) || !Number.isSafeInteger(m.pos.y)) {
+          problems.push(`actor ${entity.id} has an invalid threat mark for ${m.id}`);
+        }
+      }
     }
     const waitingFor = memory.waitingFor;
     if (waitingFor === null) continue;

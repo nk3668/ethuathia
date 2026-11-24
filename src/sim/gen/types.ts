@@ -2,6 +2,7 @@
  * The shapes shared by the floor generator and its steps (docs/ARCHITECTURE.md §3.6).
  */
 import type { Def, Grid, Pos, Rng } from '../../core';
+import type { DungeonDef } from '../../content';
 import type { FloorPlan, PlannedItem } from '../floorText';
 
 /** A rectangle of tiles: `x` and `y` are its top-left tile. */
@@ -23,6 +24,14 @@ export interface FloorDraft extends FloorPlan {
   rooms: Rect[];
   /** The depth of the floor being built (1 when not known, e.g. in tests). */
   depth: number;
+  /** The effective Danger rating of the floor being built (defaults to `depth`). */
+  danger: number;
+  /** Adventurers the run sets out with (1 when not known): bigger parties meet more monsters (ETH-145). */
+  partySize: number;
+  /** Overrides `PARTY_SIZE_BUDGET_STEP` while generating this floor (tests and tuning runs). */
+  partyBudgetStep?: number;
+  /** The dungeon variant being built, if known (carries ecology & encounter curves). */
+  dungeon?: DungeonDef;
   /**
    * The floor's loot RNG (`lootRngState`), separate from the layout RNG every step gets, so
    * placing items never shifts the layout. Steps that place items draw only from this one.

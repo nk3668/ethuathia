@@ -28,6 +28,7 @@ import type { AppearanceCategory, ItemBlessing } from '../../content';
 import type { Entity, RunState } from '../state';
 import { isItemIdentified, isInstanceTypeKnown } from './identify';
 import type { ItemEnchantment, ItemInstance } from './instance';
+import type { ItemMix } from './mix';
 import type { ItemBundle, ItemPropertyKind } from './properties';
 
 const signed = (n: number) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
@@ -163,6 +164,36 @@ export const PROP_IDENTIFIED: ItemPropertyKind<false> = {
   stacks: 'equal',
 };
 
+/**
+ * "The Wits roll on pickup was already made for this instance" (`prop.identify_tried`, ETH-142).
+ * It changes nothing about the item: not its stats, name, value or stacking.
+ */
+export const PROP_IDENTIFY_TRIED: ItemPropertyKind<true> = {
+  id: 'prop.identify_tried',
+  field: 'identifyTried',
+  schema: z.literal(true),
+  stacks: 'ignore',
+};
+
+/**
+ * Hidden blessing counts of an unidentified potion or scroll stack whose copies differ
+ * (`prop.mix`, ETH-147). Changes nothing visible: not its name, value or note. `canStack` skips
+ * it (and `blessing`) for unidentified consumables, so they share stacks whatever they hold.
+ */
+export const PROP_MIX: ItemPropertyKind<ItemMix> = {
+  id: 'prop.mix',
+  field: 'mix',
+  schema: z
+    .object({
+      plain: z.number().int().min(1).optional(),
+      blessed: z.number().int().min(1).optional(),
+      cursed: z.number().int().min(1).optional(),
+    })
+    .strict()
+    .refine((m) => Object.keys(m).length >= 2, 'a mix needs at least two groups'),
+  stacks: 'equal',
+};
+
 /** Content ids of every enchantment on `item` (its base `+N`/`-N` enchantment, if any, plus specials). */
 export function itemEnchantmentIds(item: ItemInstance): string[] {
   const ids: string[] = [];
@@ -229,7 +260,8 @@ export function itemStateNote(state: RunState, item: ItemInstance, viewer?: Enti
   const typeKnown = viewer === undefined || isInstanceTypeKnown(state, item);
   if (!typeKnown) return ITEM_STATE_INFO.unidentified;
   const known = viewer === undefined || isItemIdentified(state, item);
-  if (!known) return 'Unidentified: hidden enchantments or curses are not yet known. High Wits on pickup, wearing it, or a Scroll of Identify reveals them.';
+  if (!known && ITEMS.get(item.def).gear === undefined) return ITEM_STATE_INFO.blessingUnknown;
+  if (!known) return 'Unidentified: any piece of gear starts this way, plain or not, so this says nothing about it. It may carry hidden enchantments, blessings or curses. High Wits on pickup (one roll per item), wearing it, or a Scroll of Identify reveals them.';
 
   const parts: string[] = [];
   if (item.enchant !== undefined) {

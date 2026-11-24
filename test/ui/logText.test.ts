@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ITEMS } from '../../src/content';
 import { CHRONICLE_TRACKER, discoveriesOf } from '../../src/sim';
 import type { SimEvent, SimEventType } from '../../src/sim';
-import { COMBAT_LOG_TEXT } from '../../src/ui/shell/logText/combat';
+import { COMBAT_LOG_TEXT, COMBAT_MOMENT_TEXT, HIGHLIGHT_OOD_SIGHTED } from '../../src/ui/shell/logText/combat';
 import { CORE_LOG_TEXT } from '../../src/ui/shell/logText/core';
 import { FLOORS_LOG_TEXT } from '../../src/ui/shell/logText/floors';
 import { ITEMS_LOG_TEXT } from '../../src/ui/shell/logText/items';
@@ -130,6 +130,43 @@ describe('log text', () => {
     ]);
   });
 
+  it('highlights and warns on out-of-depth monster sightings and formats oodSighted moments (ETH-134)', () => {
+    const base = { type: 'monsterSighted' as const, turn: 4, actor: 1, monster: 9, def: 'monster.basalt_giant', floor: 'd4', pos: { x: 2, y: 3 } };
+    const normal = describeEvent(base, () => 'Mira');
+    expect(normal.text).toBe('Mira spots the basalt giant.');
+    expect(highlightOf(base)).toBeUndefined();
+
+    const oodEvent = { ...base, ood: true as const };
+    const oodLine = describeEvent(oodEvent, () => 'Mira');
+    expect(oodLine.text).toBe('Mira spots the basalt giant — far above its usual depth!');
+    expect(highlightOf(oodEvent)).toEqual({ kind: HIGHLIGHT_OOD_SIGHTED, place: { floor: 'd4', pos: { x: 2, y: 3 } } });
+
+    const moment = CHRONICLE_TRACKER.reduce(CHRONICLE_TRACKER.init(), oodEvent).entries[0];
+    expect(moment).toBeDefined();
+    if (moment !== undefined) {
+      const worded = COMBAT_MOMENT_TEXT.oodSighted?.text(moment, () => 'Mira');
+      expect(worded).toEqual(['Mira spotted ', 'the ', { ref: 'monster.basalt_giant', label: 'basalt giant' }, ' far above its usual depth on floor 4.']);
+    }
+  });
+
+  it('words surged return-trip floorRespawned events distinctly while preserving dungeonStirred and quiet status (ETH-136)', () => {
+    const stirredPlain = { type: 'dungeonStirred' as const, turn: 10, floor: 'd2', depth: 2 };
+    const stirredSurged = { ...stirredPlain, surged: true as const };
+    expect(describeEvent(stirredPlain, () => '').text).toBe('The dungeon stirs.');
+    expect(describeEvent(stirredSurged, () => '').text).toBe('The dungeon stirs.');
+
+    const plainOne = { type: 'floorRespawned' as const, turn: 10, floor: 'd2', depth: 2, count: 1, wave: 1 };
+    const plainMany = { ...plainOne, count: 3 };
+    const surgedOne = { ...plainOne, surged: true as const };
+    const surgedMany = { ...plainMany, surged: true as const };
+
+    expect(FLOORS_LOG_TEXT.floorRespawned.quiet).toBe(true);
+    expect(describeEvent(plainOne, () => '').text).toBe('1 new creature stirs on floor 2.');
+    expect(describeEvent(plainMany, () => '').text).toBe('3 new creatures stir on floor 2.');
+    expect(describeEvent(surgedOne, () => '').text).toBe('1 deep creature surges onto floor 2.');
+    expect(describeEvent(surgedMany, () => '').text).toBe('3 deep creatures surge onto floor 2.');
+  });
+
   it('mentions the first floor type in runStarted when present and omits it for hand-built floors (ETH-079)', () => {
     type RunStartedEvent = Extract<SimEvent, { type: 'runStarted' }>;
     const party = [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }];
@@ -146,6 +183,12 @@ describe('log text', () => {
 
     const singleFloor: RunStartedEvent = { type: 'runStarted', turn: 0, party, depth: 1, floorType: null };
     expect(RUN_DOMAIN_LOG_TEXT.runStarted.text(singleFloor, () => 'Mira')).toBe('Mira enters the dungeon, 1 floor deep.');
+
+    const hiddenGenerated: RunStartedEvent = { type: 'runStarted', turn: 0, party, depth: null, floorType: 'floor.halls' };
+    expect(describeEvent(hiddenGenerated, () => 'Mira').text).toBe('Mira enters the dungeon (Hewn Halls).');
+
+    const hiddenHandBuilt: RunStartedEvent = { type: 'runStarted', turn: 0, party, depth: null, floorType: null };
+    expect(RUN_DOMAIN_LOG_TEXT.runStarted.text(hiddenHandBuilt, () => 'Mira')).toBe('Mira enters the dungeon.');
   });
 
   it('logs ruleFired skip explanations even when the fallback rule did not change, and folds repeats (ETH-094)', () => {

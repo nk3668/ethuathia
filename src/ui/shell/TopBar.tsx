@@ -6,7 +6,7 @@ import { CURRENCY_INFO } from '../../meta';
 import type { CurrencyId } from '../../meta';
 import { keyHint } from '../input/keymap';
 import { Button, Tooltip } from '../kit';
-import { favorDeity, RENOWN, TROPHIES } from '../../sim';
+import { favorDeity, PARTY_SIZE_BUDGET_STEP, RENOWN, TROPHIES } from '../../sim';
 import type { RewardAmounts } from '../../sim';
 import { totalFavor, useProfileStore } from '../stores/profileStore';
 import { useSimStore } from '../stores/simStore';
@@ -223,34 +223,47 @@ function Possession() {
 }
 
 /**
- * "Floor 3/10 · Turn 4,812" from the latest snapshot: the floor the map shows out of the
- * dungeon's depth. "No run" before the first snapshot.
+ * "Floor 3 · Turn 4,812" (or "Floor 3/10 · Turn 4,812" once revealed) from the latest snapshot.
+ * "No run" before the first snapshot.
  */
 function RunPosition() {
   const depth = useSimStore((s) => s.snapshot?.floor.depth);
   const total = useSimStore((s) => s.snapshot?.domains.floors.depth);
   const deepest = useSimStore((s) => s.snapshot?.domains.floors.deepest);
   const turn = useSimStore((s) => s.snapshot?.turn);
+  const partySize = useSimStore((s) => s.snapshot?.party.length ?? 1);
   if (depth === undefined || total === undefined || deepest === undefined || turn === undefined) {
     return <p className={styles.position}>No run</p>;
   }
+  const floorLabel = total === null ? `Floor ${depth}` : `Floor ${depth}/${total}`;
+  const floorHeading = total === null ? `Floor ${depth}` : `Floor ${depth} of ${total}`;
+  const floorAbout =
+    total === null
+      ? `The floor the map shows. Deepest reached: floor ${deepest}.`
+      : `The floor the map shows, out of the dungeon\u2019s ${total} floors. Deepest reached: floor ${deepest}.`;
   return (
     <Tooltip
       placement="bottom"
       content={
         <>
-          <strong>
-            Floor {depth} of {total}
-          </strong>
+          <strong>{floorHeading}</strong>
           <br />
-          The floor the map shows, out of the dungeon&rsquo;s {total} floors. Deepest reached: floor {deepest}.
+          {floorAbout}
           <br />
+          {partySize > 1 && PARTY_SIZE_BUDGET_STEP > 0 && (
+            <>
+              Bigger parties meet more monsters: +{Math.round(PARTY_SIZE_BUDGET_STEP * 100)}% for each adventurer after the first (+
+              {Math.round(PARTY_SIZE_BUDGET_STEP * 100 * (partySize - 1))}% for your party of {partySize}). Only the numbers and packs
+              grow; no monster gets stronger.
+              <br />
+            </>
+          )}
           Turn {TURN_FORMAT.format(turn)}: game time since the run began.
         </>
       }
     >
       <p tabIndex={0} className={styles.position}>
-        Floor {depth}/{total} · Turn {TURN_FORMAT.format(turn)}
+        {floorLabel} · Turn {TURN_FORMAT.format(turn)}
       </p>
     </Tooltip>
   );

@@ -2,7 +2,7 @@
 id: ETH-025
 title: Return trip: walk back up through explored floors, with light respawns
 type: feature
-status: pending-review
+status: done
 priority: P1
 milestone: M1
 epic: quests
@@ -35,3 +35,4 @@ Victory means getting out, which keeps retreat thresholds and rules meaningful a
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-22: Started and done. Added `respawnFloor` (`src/sim/combat/monsters.ts`) with tunable `depthShift` (default +1), count and `stairsDistance`; `src/sim/floors/respawn.ts` (`maybeRespawnFloor`, `FLAG_CONSTANT_RESPAWN`, `CONSTANT_RESPAWN_COOLDOWN`); `dungeonStirred` ("The dungeon stirs.", announced once per run) and quiet `floorRespawned` events; `FloorsState` (`respawns`, `stirAnnounced`, `lastVacated`, `STATE_VERSION` 27) and invariants; `test/sim/returnTrip.test.ts` including a generated 3-floor fixed-seed Victory + save/load determinism test. Filed `ETH-129` for the Guild Hall constant-respawn upgrade and noted `depthShift`/density tuning in `ETH-080`.
 - 2026-11-23: Merged to main (PR #83); PENDING REVIEW.
+- 2026-11-23: Reviewed; done. No major issues beyond ETH-136 (return-trip surge).

@@ -9,12 +9,13 @@ import {
   parseReport,
   parseReportText,
   resolveCompareRef,
+  simArgv,
   staleBaseWarning,
 } from '../../tools/compare';
-import { formatReport, runSeeds } from '../../tools/headless';
+import { formatReport, headlessParty, runSeeds } from '../../tools/headless';
 import type { SeedResult } from '../../tools/headless';
 
-const ARGS = { from: 1, seeds: 3, cap: 1000, party: 1 };
+const ARGS = { from: 1, seeds: 3, cap: 1000, party: 4 };
 
 function gitIn(cwd: string, args: string[]): string {
   const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -32,7 +33,7 @@ function commitFile(cwd: string, name: string, content: string): string {
 
 describe('tools/compare', () => {
   it('reads the printed report table back, for refs from before --json', () => {
-    const results = runSeeds(1, 3, { depth: 2 });
+    const results = runSeeds(1, 3, { depth: 2, party: headlessParty(4) });
     const parsed = parseReportText(formatReport(results));
     expect(parsed.map((r) => [r.seed, r.turns, r.depth, r.bottom, r.outcome, r.stuck.count, r.hash])).toEqual(
       results.map((r) => [r.seed, r.turns, r.depth, r.bottom, r.outcome, r.stuck.count, r.hash]),
@@ -46,14 +47,14 @@ describe('tools/compare', () => {
   });
 
   it('round-trips a JSON report and rejects anything else', () => {
-    const report = makeReport(ARGS, runSeeds(1, 2, { depth: 2 }));
+    const report = makeReport(ARGS, runSeeds(1, 2, { depth: 2, party: headlessParty(4) }));
     expect(parseReport(JSON.stringify(report), 'r.json')).toEqual(report);
     expect(() => parseReport('{"version":99}', 'old.json')).toThrow('old.json is not a sim report');
     expect(() => parseReport('nope', 'bad.json')).toThrow('bad.json is not JSON');
   });
 
   it('prints before, after and delta per metric, and which seeds changed', () => {
-    const before = makeReport(ARGS, runSeeds(1, 3, { depth: 2 }));
+    const before = makeReport(ARGS, runSeeds(1, 3, { depth: 2, party: headlessParty(4) }));
     const same = formatComparison(before, before);
     expect(same).toMatch(/^metric\s+before\s+after\s+delta/);
     expect(same).toMatch(/runs\s+3\s+3\s+0/);
@@ -65,13 +66,24 @@ describe('tools/compare', () => {
     expect(text).toMatch(/turns, mean \(done\)\s+[\d.]+\s+[\d.]+\s+\+16\.7 \(\+\d+\.\d%\)/);
     expect(text).toContain('1 of 3 shared seeds end differently: 2.');
 
-    const other = formatComparison(before, makeReport({ ...ARGS, cap: 500 }, before.results), undefined, ['Warning: stale base']);
-    expect(other).toContain('Warning: the reports ran with different arguments');
-    expect(other).toContain('Warning: stale base');
+    // Reports from different arguments are not comparable: an error, not a note.
+    expect(() => formatComparison(before, makeReport({ ...ARGS, cap: 500 }, before.results))).toThrow(/different arguments/);
+    expect(() => formatComparison(before, makeReport({ ...ARGS, preset: 'progressed' }, before.results))).toThrow(/different arguments/);
+    const withWarning = formatComparison(before, before, undefined, ['Warning: stale base']);
+    expect(withWarning).toContain('Warning: stale base');
+  });
+
+  it('forwards every report argument to the ref, leaving out defaults', () => {
+    expect(simArgv(ARGS)).toEqual(['--seeds', '3', '--from', '1', '--cap', '1000', '--party', '4']);
+    expect(simArgv({ ...ARGS, preset: 'progressed', upgrades: ['upgrade.a', 'upgrade.b'], rules: 'cautious' })).toEqual([
+      '--seeds', '3', '--from', '1', '--cap', '1000', '--party', '4',
+      '--preset', 'progressed', '--upgrades', 'upgrade.a,upgrade.b', '--rules', 'cautious',
+    ]);
+    expect(simArgv({ ...ARGS, preset: 'fresh', upgrades: [], rules: 'baseline' })).toEqual(simArgv(ARGS));
   });
 
   it('compares banked Renown per hour before and after, and prints - for older reports without it (ETH-085)', () => {
-    const before = makeReport(ARGS, runSeeds(1, 3, { depth: 2 }));
+    const before = makeReport(ARGS, runSeeds(1, 3, { depth: 2, party: headlessParty(4) }));
     const doubled: SeedResult[] = before.results.map((r) => ({
       ...r,
       atRisk: { ...r.atRisk, renown: (r.atRisk?.renown ?? 0) * 2 },
@@ -83,6 +95,14 @@ describe('tools/compare', () => {
     const legacy = makeReport(ARGS, parseReportText(formatReport(before.results)));
     const fromLegacy = formatComparison(legacy, before);
     expect(fromLegacy).toMatch(/renown\/hr \(1x\), banked\s+-\s+[\d.]+\s+-/);
+    expect(fromLegacy).toMatch(/party level, median\s+-\s+[\d.]+\s+-/);
+    expect(fromLegacy).toMatch(/win rate %\s+[\d.]+\s+[\d.]+\s+/);
+
+    // Pre-summary JSON reports (e.g. origin/main) parse cleanly and leave default args unmodified.
+    const originJson = JSON.stringify({ version: 1, args: ARGS, results: before.results });
+    const parsedOrigin = parseReport(originJson, 'origin.json');
+    expect(parsedOrigin.args).toEqual(ARGS);
+    expect(formatComparison(parsedOrigin, before)).toContain('all 3 shared seeds end the same');
   });
 
   it('formats stale-base warnings only when ahead of the merge base', () => {

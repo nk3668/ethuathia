@@ -34,19 +34,33 @@ import { actorName, killActor, reapDead } from './death';
 import type { DroppedLoot } from './death';
 import { FLEE_ACTION } from './flee';
 import type { FleeRequest } from './flee';
+import {
+  alertMonsterOnDamage,
+  GROUP_CONDITIONS,
+  GROUP_RULE_ACTIONS,
+  groupInvariantProblems,
+  patrolInvariantProblems,
+  updateMonsterTurnState,
+} from './groupAi';
 import { GEN_MONSTERS } from './monsters';
 import type { MonsterPart } from './monsters';
-import { namesOf, overlayProblems, PROVIDER_OVERLAY, SOURCE_TEMPLATES, templateMetKey, templatesField } from './overlay';
+import { CHRONICLE_OOD_SIGHTED } from './ood';
+import { namesOf, overlayProblems, PROVIDER_OVERLAY, SOURCE_MONSTER_INNATE, SOURCE_TEMPLATES, templateMetKey, templatesField } from './overlay';
 import type { ShownName } from './overlay';
 import { boltable, canSee, isAlly, rolePowers, ROLE_CONDITIONS, ROLE_RULE_ACTIONS } from './roles';
 import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, hpPercent, isHostile } from './rules';
 
 export * from './death';
+export * from './encounters';
 export * from './flee';
+export * from './fleeConfig';
+export * from './groupAi';
 export * from './monsters';
+export * from './ood';
 export * from './overlay';
 export * from './roles';
 export * from './rules';
+export * from './threat';
 
 /**
  * How an event names the monsters in it whose overlay changes their name (ETH-117), keyed by
@@ -132,9 +146,10 @@ export type CombatEvent =
     }
   /**
    * A party member (`actor`) saw `monster` (def `def`) for the first time, at `pos`. `templates`
-   * (ETH-117) are the monster's template ids, which the Codex marks seen too.
+   * (ETH-117) are the monster's template ids, which the Codex marks seen too. `ood` is set when
+   * the monster spawned out-of-depth (ETH-134).
    */
-  | { type: 'monsterSighted'; actor: EntityId; monster: EntityId; def: string; floor: FloorId; pos: Pos; templates?: string[]; names?: EventNames }
+  | { type: 'monsterSighted'; actor: EntityId; monster: EntityId; def: string; floor: FloorId; pos: Pos; templates?: string[]; names?: EventNames; ood?: true }
   /** An adventurer caught their breath and got back `amount` HP (natural recovery). */
   | { type: 'recovered'; actor: EntityId; amount: number }
   /**
@@ -358,6 +373,7 @@ function strike(state: RunState, actor: ActorEntity, target: ActorEntity, emit: 
     ...how,
     ...namesOf(actor, target),
   });
+  alertMonsterOnDamage(state, target, actor);
   if (target.actor.hp > 0) fireTrigger(state, target, TRIGGER_STRUCK.id, emit, actor.id);
   if (actor.actor.hp > 0) fireTrigger(state, actor, TRIGGER_HIT.id, emit, target.id);
   const floor = actor.floor;
@@ -397,11 +413,14 @@ export const TRIGGER_STRUCK: TriggerKindDef = {
 };
 
 /** An adventurer with no enemy next to them gets back 1 HP every this many game turns. */
-export const RECOVERY_INTERVAL = 2;
+export const RECOVERY_INTERVAL = 12;
 
-/** Turn start: anyone left at 0 HP by the stats domain's turn-start triggers dies. */
+/** Turn start: reap any 0 HP actors, then refresh group alerts and patrol progress for living monsters. */
 function combatTurnStart({ state, actor, emit }: TurnCtx): void {
   reapDead(state, actor.floor, emit);
+  if (state.entities[actor.id] !== undefined && actor.actor.hp > 0 && actor.monster !== undefined) {
+    updateMonsterTurnState(state, actor);
+  }
 }
 
 /**
@@ -439,6 +458,7 @@ function noticeMonsters(state: RunState, viewer: ActorEntity, emit: TurnCtx['emi
       pos: { x: m.pos.x, y: m.pos.y },
       ...templatesField(m),
       ...namesOf(m),
+      ...(m.monster.ood === true ? { ood: true as const } : {}),
     });
   }
 }
@@ -488,6 +508,9 @@ registerInvariant('combat.overlay', (state) => {
   return problems;
 });
 
+registerInvariant('combat.groups', groupInvariantProblems);
+registerInvariant('combat.patrols', patrolInvariantProblems);
+
 /** The share of max HP under which a blow on an adventurer leaves them near death (a highlight, ETH-047). */
 export const NEAR_DEATH_FRACTION = 0.25;
 
@@ -505,6 +528,7 @@ export const CHRONICLE_NEAR_DEATH = defineChronicleKind({ id: 'nearDeath', prior
 /** Which of this domain's events are run chronicle moments. */
 export const COMBAT_CHRONICLE: ChronicleRules = {
   attacked: (e) => (isNearDeathBlow(e) ? momentAt(CHRONICLE_NEAR_DEATH, e, [e.target, e.actor], [e.actorDef], { amount: e.hp }) : null),
+  monsterSighted: (e) => (e.ood === true ? momentAt(CHRONICLE_OOD_SIGHTED, e, [e.actor, e.monster], [e.def]) : null),
 };
 
 /** What this domain registers with the shared code, in this order. */
@@ -513,12 +537,12 @@ export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
   commands: COMBAT_COMMANDS,
   init: initCombat,
   snapshot: combatSnapshot,
-  conditions: [...COMBAT_CONDITIONS, ...ROLE_CONDITIONS],
-  ruleActions: [...COMBAT_RULE_ACTIONS, ...ROLE_RULE_ACTIONS],
+  conditions: [...COMBAT_CONDITIONS, ...ROLE_CONDITIONS, ...GROUP_CONDITIONS],
+  ruleActions: [...COMBAT_RULE_ACTIONS, ...ROLE_RULE_ACTIONS, ...GROUP_RULE_ACTIONS],
   genSteps: [GEN_MONSTERS],
   triggers: [TRIGGER_HIT, TRIGGER_STRUCK],
   statProviders: [PROVIDER_OVERLAY],
-  bundleSources: [SOURCE_TEMPLATES],
+  bundleSources: [SOURCE_MONSTER_INNATE, SOURCE_TEMPLATES],
   turnStart: combatTurnStart,
   turnEnd: combatTurnEnd,
   discoveries: {
@@ -536,6 +560,6 @@ export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
     killed: (e) => (MONSTERS.has(e.victimDef) ? [{ id: e.victimDef, mark: 'killed' }] : []),
   },
   chronicle: COMBAT_CHRONICLE,
-  chronicleKinds: [CHRONICLE_NEAR_DEATH],
+  chronicleKinds: [CHRONICLE_NEAR_DEATH, CHRONICLE_OOD_SIGHTED],
 };
 

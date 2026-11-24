@@ -13,7 +13,10 @@ import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } 
 import { getFloor } from '../entities';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { statValue } from '../stats/getStat';
+import type { Entity, RunState } from '../state';
 import { isCursed } from './enchant';
+import { avoidThreats, visibleThreats } from '../combat/threat';
+import { knownStairs } from '../floors/rules';
 import { bestUpgrade, gearStatsText, wornItems } from './equipment';
 import { appearanceName, isInstanceTypeKnown, isItemIdentified, isTypeIdentified } from './identify';
 import { itemDef } from './instance';
@@ -73,6 +76,43 @@ export const COND_OVERLOADED = defineCondition({
     return { ok: true, detail: `carrying ${carryWeight(state, actor)} of ${carryLimit(state, actor)}` };
   },
   describe: () => 'overloaded',
+});
+
+/** The pack index of the first scroll whose type is still unknown, or `null`. */
+function unknownScrollIndex(state: RunState, actor: Entity): number | null {
+  const index = inventoryOf(actor).findIndex((item) => itemDef(item).category === 'scroll' && !isInstanceTypeKnown(state, item));
+  return index < 0 ? null : index;
+}
+
+/**
+ * True while the actor carries a scroll it can't identify yet and can test it without risk: no
+ * enemy in sight, healthy, a known way out. The engine checks a rule's condition before its action
+ * resolves, so the cheap test (is there anything to test?) comes first and the goal maps behind
+ * "a known way out" are built only for an adventurer that holds an unknown scroll.
+ */
+export const COND_SAFE_TO_TEST = defineCondition({
+  id: 'cond.safe_to_test',
+  name: 'Safe to test a scroll',
+  description:
+    'True while the adventurer carries a scroll of unknown type, no threat is in sight, HP is above the healing threshold and stairs it remembers can be reached: a calm moment to try something unknown.',
+  parse: noParams,
+  evaluate(ctx) {
+    const { state, actor } = ctx;
+    if (unknownScrollIndex(state, actor) === null) return { ok: false, detail: '' };
+    if (visibleThreats(state, actor).length > 0) return { ok: false, detail: '' };
+    const max = statValue(state, actor, 'hp');
+    if (actor.actor.hp * 100 < max * HEAL_BELOW_PERCENT) return { ok: false, detail: '' };
+    const paths = aiPathGrid(ctx);
+    for (const dir of ['down', 'up'] as const) {
+      const stairs = knownStairs(state, actor.floor, dir);
+      if (stairs === null) continue;
+      if (buildGoalMap(paths, [stairs]).get(actor.pos.x, actor.pos.y) !== UNREACHABLE) {
+        return { ok: true, detail: `no enemy in sight, healthy, stairs ${dir} in reach` };
+      }
+    }
+    return { ok: false, detail: '' };
+  },
+  describe: () => 'safe to test an unknown scroll',
 });
 
 /** True while the actor is wearing at least one cursed item (ETH-044). */
@@ -210,6 +250,8 @@ export const ACT_PICK_UP = defineRuleAction({
     }
     if (goals.length === 0) return null;
     const paths = aiPathGrid(ctx);
+    // Wounded with no healing: steer clear of where the last threat was seen (ETH-148).
+    const avoiding = avoidThreats(ctx, paths);
     // The nearest goal, measured from the actor; then the route to just that one.
     const fromActor = buildGoalMap(paths, [actor.pos]);
     let target: { pos: Pos; name: string; cost: number } | null = null;
@@ -221,7 +263,8 @@ export const ACT_PICK_UP = defineRuleAction({
     const map = buildGoalMap(paths, [target.pos]);
     const cost = map.get(actor.pos.x, actor.pos.y);
     if (cost === UNREACHABLE) return null;
-    return followMap(ctx, paths, map, `going for a ${target.name}, ${turns(cost)} away`);
+    const step = followMap(ctx, paths, map, `going for a ${target.name}, ${turns(cost)} away`);
+    return step === null || avoiding === null ? step : { ...step, skipped: avoiding };
   },
   describe: ({ maxDetour }) => `pick up items within ${maxDetour} steps`,
 });
@@ -243,9 +286,10 @@ export const ACT_EQUIP_UPGRADE = defineRuleAction({
     const name = itemName(state, up.item, actor);
     const stats = gearStatsText(state, actor, up.item, true);
     const what = stats === null ? `the ${name}` : `the ${name} (${stats})`;
+    const risk = up.gate === undefined ? '' : `; ${up.gate}`;
     const instead = up.replaces === null ? `, nothing worn there yet` : ` in place of the ${itemName(state, up.replaces, actor)}`;
     const where = gearSlotsCount(up.item) > 1 ? ` (${EQUIP_SLOT_INFO[up.slot].label.toLowerCase()})` : '';
-    return { request: { id: 'equip', index: up.index, slot: up.slot }, detail: `equipping ${what}${where}${instead}` };
+    return { request: { id: 'equip', index: up.index, slot: up.slot }, detail: `equipping ${what}${where}${instead}${risk}` };
   },
   describe: () => 'equip clear upgrades',
 });
@@ -286,12 +330,34 @@ export const ACT_USE_IDENTIFY = defineRuleAction({
   describe: () => 'read a scroll of identify',
 });
 
+/**
+ * Read a scroll whose type is still unknown, at a safe moment (ETH-142). Every scroll is harmless
+ * to read today, so this is how Identify and Uncursing get learned; the effect is as seeded and
+ * logged as any other reading. Nothing here weighs risk: `test/sim/identifySecrecy.test.ts`
+ * ("every scroll is harmless to read") fails when a harmful scroll is added, and this action must
+ * then learn to weigh it.
+ */
+export const ACT_READ_UNKNOWN_SCROLL = defineRuleAction({
+  id: 'act.read_unknown_scroll',
+  name: 'Test an unknown scroll',
+  description:
+    'Read a scroll whose type is still unknown while it is safe (no enemy in sight, healthy, stairs within reach), so Identify and Uncursing scrolls are learned instead of carried unread.',
+  parse: noParams,
+  resolve({ state, actor }): Resolved | null {
+    const pack = inventoryOf(actor);
+    const index = unknownScrollIndex(state, actor);
+    if (index === null) return null;
+    return { request: { id: 'use', index }, detail: `reading the unknown ${itemName(state, pack[index] as ItemInstance, actor)} to learn what it does` };
+  },
+  describe: () => 'read an unknown scroll when safe',
+});
+
 function gearSlotsCount(item: ItemInstance): number {
   return gearSlots(itemDef(item)).length;
 }
 
 /** The items domain's conditions, in registration order. */
-export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED, COND_WEARING_CURSED];
+export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED, COND_WEARING_CURSED, COND_SAFE_TO_TEST];
 
 /** The items domain's rule actions, in registration order. */
 export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [
@@ -301,6 +367,7 @@ export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [
   ACT_EQUIP_UPGRADE,
   ACT_USE_UNCURSE,
   ACT_USE_IDENTIFY,
+  ACT_READ_UNKNOWN_SCROLL,
 ];
 
 /**
@@ -323,6 +390,7 @@ export const ITEMS_BASELINE_URGENT: readonly Rule[] = [
  */
 export const ITEMS_BASELINE_LOOT: readonly Rule[] = [
   { condition: { id: 'cond.always' }, action: { id: 'act.use_identify' }, enabled: true },
+  { condition: { id: 'cond.safe_to_test' }, action: { id: 'act.read_unknown_scroll' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.equip_upgrade' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.pick_up', params: { maxDetour: PICKUP_DETOUR } }, enabled: true },
 ];

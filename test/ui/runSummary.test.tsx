@@ -421,7 +421,7 @@ describe('App', () => {
   it('banks a finished run in the profile, shows the summary, and starts the next run on request', async () => {
     const user = userEvent.setup();
     let host: InlineHost | undefined;
-    render(<App createHost={() => (host = new InlineHost())} seed={5} />);
+    render(<App createHost={() => (host = new InlineHost())} seed={1} />);
     if (host === undefined) throw new Error('App did not create a host');
     const started = host;
     await user.click(screen.getByRole('button', { name: 'Descend' }));
@@ -490,15 +490,15 @@ describe('App', () => {
     };
 
     let host: RecordingHost | undefined;
-    render(<App createHost={() => (host = new RecordingHost())} seed={5} />);
+    render(<App createHost={() => (host = new RecordingHost())} seed={1} />);
     if (host === undefined) throw new Error('App did not create a host');
     const started = host;
 
-    // First run starts with seed 5 and one adventurer.
+    // First run starts with seed 1 and one adventurer.
     await user.click(screen.getByRole('button', { name: 'Descend' }));
     expect(starts).toHaveLength(1);
     const first = startAt(0);
-    expect(first.seed).toBe(5);
+    expect(first.seed).toBe(1);
     expect(first.config.party).toHaveLength(1);
     const firstHp = useSimStore.getState().snapshot?.party[0]?.maxHp ?? 0;
     const firstLayout = layoutOf(first.config, first.seed);
@@ -516,18 +516,18 @@ describe('App', () => {
       expect(useProfileStore.getState().purchase('upgrade.hardy_recruits')).toBe(true);
     });
 
-    // Rematch replays seed 5 with the exact same dungeon layout, while applying the new upgrades.
+    // Rematch replays seed 1 with the exact same dungeon layout, while applying the new upgrades.
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Rematch' }));
     expect(starts).toHaveLength(2);
     const second = startAt(1);
-    expect(second.seed).toBe(5);
-    expect(useSimStore.getState().snapshot?.seed).toBe(5);
+    expect(second.seed).toBe(1);
+    expect(useSimStore.getState().snapshot?.seed).toBe(1);
     expect(layoutOf(second.config, second.seed)).toEqual(firstLayout);
     expect(second.config.party).toHaveLength(2);
     expect(second.config.partyBundles).toContain('upgrade.hardy_recruits');
     expect(useSimStore.getState().snapshot?.party[0]?.maxHp).toBe(firstHp + 2);
 
-    // Rematch from the closed-summary banner keeps replaying seed 5.
+    // Rematch from the closed-summary banner keeps replaying seed 1.
     act(() => {
       started.run(6000);
     });
@@ -535,17 +535,17 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Rematch' }));
     expect(starts).toHaveLength(3);
     const third = startAt(2);
-    expect(third.seed).toBe(5);
+    expect(third.seed).toBe(1);
     expect(layoutOf(third.config, third.seed)).toEqual(firstLayout);
 
-    // Start next run rolls a fresh seed (6) and builds a different dungeon layout.
+    // Start next run rolls a fresh seed (2) and builds a different dungeon layout.
     act(() => {
       started.run(6000);
     });
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Start next run' }));
     expect(starts).toHaveLength(4);
     const fourth = startAt(3);
-    expect(fourth.seed).toBe(6);
+    expect(fourth.seed).toBe(2);
     expect(layoutOf(fourth.config, fourth.seed).terrain).not.toEqual(firstLayout.terrain);
   });
 });

@@ -133,12 +133,12 @@ function useEncounterRecord(
       }
     }
 
-    const tiers = entry.renderer.killTiers;
+    const tiers = entry.renderer.killTiers?.(entry.def);
     const showKills = tiers !== undefined || kills > 0;
     if (!showKills && deaths === 0) return null;
     const tierNote = tiers === undefined ? undefined : tierSummary(tiers, kills);
     return { kills, deaths, showKills, ...(tierNote === undefined ? {} : { tierNote }) };
-  }, [id, nameLower, profile, chronicle, runBanked, discovered, killsMap, entry.renderer.killTiers]);
+  }, [id, nameLower, profile, chronicle, runBanked, discovered, killsMap, entry.renderer, entry.def]);
 }
 
 export function CodexPanel() {
@@ -403,7 +403,7 @@ function CodexEntryPage({ row }: { row: Row }) {
   }
 
   const killCount = record?.kills ?? 0;
-  const loreReady = renderer.loreKills === undefined || killCount >= renderer.loreKills;
+  const loreReady = renderer.loreKills === undefined || killCount >= renderer.loreKills(def);
   const bodyText = loreReady ? def.description : hintText;
   const fields = (renderer.fields?.(def) ?? []).filter((f) => (f.minKills ?? 0) <= killCount);
 

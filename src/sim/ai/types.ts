@@ -76,6 +76,21 @@ export interface DroppedGoal {
   since: number;
   /** The first turn (`RunState.turn`) on which the rule is checked again. */
   until: number;
+  /** Set when `act.back_off` itself gets stuck during this drop, stopping further backing off without overwriting `rule` (ETH-145). */
+  backedOff?: true;
+}
+
+/** Where a threat was last seen (ETH-148): what a wounded adventurer steers clear of. */
+export interface ThreatMark {
+  /** The monster's entity id. */
+  id: EntityId;
+  /** Its name for the trace ("the fetid stalker"). */
+  name: string;
+  floor: FloorId;
+  /** The tile it stood on when last seen. */
+  pos: Pos;
+  /** The turn (`RunState.turn`) it was last seen. */
+  seen: number;
 }
 
 /** What the decision engine remembers about one actor between decisions. */
@@ -99,6 +114,15 @@ export interface AiMemory {
    * actions; see `followMap`).
    */
   waitingFor: EntityId | null;
+  /**
+   * Set while the actor is fleeing (ETH-148): the turn it started, the turn it last saw a threat,
+   * and how many decisions in a row it has held still with nowhere to run (`FLEE_HOLD_TURNS`).
+   * Fleeing goes on until HP recovers or no threat has been seen for a while. Only adventurers
+   * (party) update it.
+   */
+  fleeing: { since: number; lastSeen: number; held: number } | null;
+  /** The threats seen recently and where, newest sighting per monster (ETH-148). */
+  threats: ThreatMark[];
 }
 
 /**
@@ -117,7 +141,7 @@ export interface AiPart {
 
 /** A fresh AI part with no rules and an empty memory. */
 export function newAiPart(rules: Rule[] = []): AiPart {
-  return { rules, memory: { intent: null, last: null, still: 0, waited: 0, dropped: null, waitingFor: null } };
+  return { rules, memory: { intent: null, last: null, still: 0, waited: 0, dropped: null, waitingFor: null, fleeing: null, threats: [] } };
 }
 
 // ---------------------------------------------------------------------------------------------

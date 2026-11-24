@@ -323,8 +323,8 @@ function act(action: ActionRequest): void {
 }
 
 /** Joins an item's state note (ETH-044) and weapon scaling note (ETH-082) for `Explain`. */
-function itemNote(stateNote?: string, scaling?: string): string | undefined {
-  const parts = [stateNote, scaling].filter((s): s is string => s !== undefined && s !== '');
+function itemNote(stateNote?: string, scaling?: string, locked?: string): string | undefined {
+  const parts = [stateNote, scaling, locked].filter((s): s is string => s !== undefined && s !== '');
   return parts.length === 0 ? undefined : parts.join(' ');
 }
 
@@ -376,7 +376,8 @@ function Pack({ id, possessed }: { id: EntityId; possessed: boolean }) {
             <li key={worn.slot} className={styles.packRow}>
               <span>
                 <span className={styles.packSlot}>{EQUIP_SLOT_INFO[worn.slot].label}: </span>
-                <Explain id={worn.def} name={worn.name} note={itemNote(worn.stateNote, worn.scaling)} />
+                <Explain id={worn.def} name={worn.name} note={itemNote(worn.stateNote, worn.scaling, worn.locked)} />
+                {worn.locked !== undefined && <span className={styles.packSlot}> (slot locked: cursed)</span>}
               </span>
               {possessed && (
                 <PackAction
@@ -384,7 +385,7 @@ function Pack({ id, possessed }: { id: EntityId; possessed: boolean }) {
                   disabled={worn.cursed === true}
                   hint={
                     worn.cursed === true
-                      ? `${worn.name} is cursed and cannot be removed until uncursed.`
+                      ? (worn.locked ?? `${worn.name} is cursed and cannot be removed until uncursed.`)
                       : `Take off ${worn.name} and put it in the pack. Spends the turn.`
                   }
                   onClick={() => act({ id: 'unequip', slot: worn.slot })}

@@ -95,7 +95,7 @@ function EntryCard({
   }
 
   const killCount = monsterKillCount(def.id, discovered, kills);
-  const loreReady = renderer.loreKills === undefined || killCount >= renderer.loreKills;
+  const loreReady = renderer.loreKills === undefined || killCount >= renderer.loreKills(def);
   const bodyText = loreReady ? def.description : hintText;
   const rows = (renderer.fields?.(def) ?? []).filter(
     (f) => (fields === 'all' || f.key === true) && (f.minKills ?? 0) <= killCount,

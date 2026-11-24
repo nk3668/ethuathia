@@ -15,7 +15,7 @@ export {
   tracePlayerAction,
 } from './possession';
 export type { PossessCommand, PossessionCommand, ReleaseCommand } from './possession';
-export { aiPathGrid, followMap, frontier, OCCUPIED_COST, willingToSwap } from './navigate';
+export { aiPathGrid, ALLY_OCCUPIED_COST, followMap, frontier, OCCUPIED_COST, willingToSwap } from './navigate';
 export { ACT_BACK_OFF, ACT_EXPLORE, ACT_WAIT, CORE_RULE_ACTIONS } from './ruleActions';
 export {
   checkRequirement,
@@ -30,6 +30,7 @@ export type {
   AiActor,
   AiCtx,
   AiMemory,
+  ThreatMark,
   AiPart,
   ConditionDef,
   ConditionResult,

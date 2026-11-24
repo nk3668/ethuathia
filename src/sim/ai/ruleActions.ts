@@ -8,10 +8,30 @@
  * The baseline behaviors are ordinary entries here, so the Library can hand any of them to the
  * player's own rules.
  */
+import type { Pos } from '../../core';
 import { buildFleeMap, buildGoalMap, UNREACHABLE } from '../goalMap';
+import { avoidThreats } from '../combat/threat';
 import { aiPathGrid, followMap, frontier } from './navigate';
 import { defineRuleAction, noParams } from './types';
-import type { RuleActionDef } from './types';
+import type { AiCtx, RuleActionDef } from './types';
+
+/**
+ * If `ctx.actor` is in the party and the floor's lead is currently exploring a frontier tile that
+ * is still in `goals`, both the lead and its followers stay committed to that goal so adjacent
+ * ally costs can't flip the lead between opposite branches and followers explore one corridor
+ * together (ETH-145).
+ */
+function sharedExploreGoal(ctx: AiCtx, goals: readonly Pos[]): Pos[] | null {
+  if (ctx.actor.actor.faction !== 'party') return null;
+  const lead = ctx.state.party
+    .map((id) => ctx.state.entities[id])
+    .find((e) => e?.actor !== undefined && e.actor.hp > 0 && e.floor === ctx.actor.floor);
+  if (lead === undefined) return null;
+  const intent = lead.ai?.memory.intent;
+  const goal = intent?.action === 'act.explore' ? intent.goal : undefined;
+  if (goal === undefined) return null;
+  return goals.some((g) => g.x === goal.x && g.y === goal.y) ? [goal] : null;
+}
 
 /**
  * Walk toward the nearest ground the party hasn't seen, opening doors on the way. Frontier-based
@@ -28,12 +48,20 @@ export const ACT_EXPLORE = defineRuleAction({
   parse: noParams,
   resolve(ctx) {
     const paths = aiPathGrid(ctx);
+    // Wounded with no healing: steer clear of where the last threat was seen (ETH-148).
+    const avoiding = avoidThreats(ctx, paths);
     const goals = frontier(ctx, paths);
     if (goals.length === 0) return null;
-    const map = buildGoalMap(paths, goals);
-    const cost = map.get(ctx.actor.pos.x, ctx.actor.pos.y);
+    const shared = sharedExploreGoal(ctx, goals);
+    let map = buildGoalMap(paths, shared ?? goals);
+    let cost = map.get(ctx.actor.pos.x, ctx.actor.pos.y);
+    if (cost === UNREACHABLE && shared !== null) {
+      map = buildGoalMap(paths, goals);
+      cost = map.get(ctx.actor.pos.x, ctx.actor.pos.y);
+    }
     if (cost === UNREACHABLE) return null;
-    return followMap(ctx, paths, map, `heading for unexplored ground ${cost} ${cost === 1 ? 'turn' : 'turns'} away`);
+    const step = followMap(ctx, paths, map, `heading for unexplored ground ${cost} ${cost === 1 ? 'turn' : 'turns'} away`);
+    return step === null || avoiding === null ? step : { ...step, skipped: avoiding };
   },
   describe: () => 'explore the nearest unexplored ground',
 });
@@ -52,7 +80,7 @@ export const ACT_BACK_OFF = defineRuleAction({
   parse: noParams,
   resolve(ctx) {
     const dropped = ctx.actor.ai.memory.dropped;
-    if (dropped?.floor !== ctx.actor.floor) return null;
+    if (dropped === null || dropped.backedOff === true || dropped.floor !== ctx.actor.floor) return null;
     // Whoever was in the way may still be: route around them, never through.
     const paths = aiPathGrid(ctx, 'blocked');
     const flee = buildFleeMap(paths, buildGoalMap(paths, [dropped.pos]));

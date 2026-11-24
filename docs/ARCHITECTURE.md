@@ -234,7 +234,7 @@ All in `src/sim/run/`:
   (party ids in the order they fell) and `end` (`null` while running, then
   `RunEnd { outcome, turn, cause, depth }`). Once `end` is set, `step` returns `[]` and changes
   nothing.
-- **Events:** `runStarted { party: { actor, name, classId, raceId }[], depth, floorType }` is the
+- **Events:** `runStarted { party: { actor, name, classId, raceId }[], depth, floorType }` (`depth` is `number | null`, hidden as `null` until bottom floor or `FLAG_REVEAL_DEPTH`, ETH-133) is the
   first event of the first step (the Codex discovers the party's classes, races and first floor
   type from it, ETH-079);
   `turnedBack { actor | null, reason }`; `fell { actor, name, floor, pos, depth, killer }` when a
@@ -313,6 +313,8 @@ All in `src/sim/run/`:
   (emits `aided`, then the `healed` or `statusApplied` it causes). The adventurer baseline rushes
   a caster that has it in bolt range (`cond.in_bolt_range` → `act.rush_caster`, after
   `act.attack_adjacent`). No new state: roles add no parts or slices.
+- **Encounters, Squads & Group AI (ETH-135, `src/content/squads.ts`, `combat/encounters.ts`, `combat/groupAi.ts`):**
+  `gen.monsters` delegates to `populateEncounters`, allocating a Danger-scaled floor threat budget (`floorThreatBudget`, scaled by `DungeonDef.encounters?.budgetMul`) across non-arrival rooms while keeping `stairsDistance` clear and preserving OOD + depth-ramped templates (`rollOodDanger`, `templateChanceFor`). For party-size scaling (ETH-145), `populateEncounters` multiplies `floorThreatBudget` by `partySizeBudgetMul(draft.partySize, draft.partyBudgetStep)` using `PARTY_SIZE_BUDGET_STEP` (currently `0`; `ETH-080` tunes it upward toward `~0.1`) from the starting party size (`state.config.party.length`), adding headcount and packs only (never changing monster stats or templates) and surfaced in `TopBar` and the dungeon Codex renderer. `SQUAD_BLUEPRINTS` define role/tag archetypes (`minDanger`, `weight`, `slots`, `preferSameTag`, `patrolEligible`) with zero hardcoded monster ids. Placed squads and deterministic multi-room corridor patrols carry optional `MonsterPart` state (`groupId`, `homeRoom`, `alert { pos, untilTurn }`, `patrol { waypoints, next }`), with pure rule conditions/actions (`cond.has_alert`, `act.pursue_alert`, `act.tether_wander`, `act.patrol`) spliced by `withGroupAiRules` and hook-driven alert/patrol updates (`PURSUIT_MEMORY_TURNS = 8`) in `combatTurnStart` and `strike`. Invariants `combat.groups` and `combat.patrols` verify group/room/alert/waypoint validity.
 
 ### Codex discoveries
 
@@ -622,7 +624,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`) and ETH-091 30 (`track.kills.byMonster`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`), and ETH-147 36 (the `mix` item field: hidden blessing counts in a stack of unidentified potions or scrolls), then ETH-148 37 (`AiMemory.fleeing`, `AiMemory.threats`).
 
 ### Contracts in the run (ETH-024)
 
@@ -702,17 +704,23 @@ What later items build on, all exported from `src/sim/floors/`:
   reached each floor), `respawns` (wave count per floor), `stirAnnounced`, `lastVacated` (ETH-025)
   and `observedFountains` (ETH-094: the last draught id the party observed by drinking from each
   fountain, keyed by fountain entity id).
-- **Return-trip repopulation (ETH-025, `floors/respawn.ts`, `combat/monsters.ts`):** when a party
+- **Return-trip repopulation & deep surge (ETH-025, ETH-136, `floors/respawn.ts`, `combat/encounters.ts`, `combat/monsters.ts`):** when a party
   member re-enters an already-built floor that currently has no living party members on it
   (`!firstVisit && wasEmpty`, unless `monsters: false` or `respawn.enabled: false`), `maybeRespawnFloor`
-  spawns a deterministic wave (`respawnFloor`, seeded from `respawn/<floor>/<wave>`) of higher-level
-  monsters (`depth + depthShift`, default `+1`, tunable via `RunConfig.respawn` and balanced in ETH-080)
-  at least `stairsDistance` (7) tiles from the arrival stairs and living party members. Under default
-  rules, each visited floor repopulates once once `contractsComplete(state)` holds. `dungeonStirred`
-  (`"The dungeon stirs."`) is emitted once per run on the first repopulated floor, while quiet
-  `floorRespawned` is emitted for every repopulated floor. The run-modifier flag
-  `FLAG_CONSTANT_RESPAWN` (`'floors.constant_respawn'`, for the planned Guild Hall upgrade ETH-129)
-  or `respawn.continuous` enables repeated repopulation on revisit after `CONSTANT_RESPAWN_COOLDOWN` (50) turns.
+  spawns a deterministic wave (seeded from `respawn/<floor>/<wave>`). Under default rules, once
+  `contractsComplete(state)` holds and the party ascends (`dir === 'up'`, `!continuous`, `prior === 0`),
+  `surgeFloor` launches a post-contract **deep surge** driven by `runDungeon(state).encounters?.surge`
+  (defaulting to `{ dangerWindow: 2, templateBonus: 0.15, countMul: 1 }`): it selects monsters from
+  `[max(1, bottomDanger - surge.dangerWindow), bottomDanger]` (where `bottomDanger = floorDanger(state, dungeonDepth(state))`,
+  unless `respawn.depthShift` is explicitly set), raises template probability by `+surge.templateBonus`
+  over `templateChanceFor(dungeon, spawnDanger)` (clamped `[0, 1]`), scales wave size by `surge.countMul`
+  (honoring `respawn.min` / `respawn.max`), and deploys cohesive route-biased room squads and hunter
+  patrols (`groupId`, `homeRoom`, `patrol`) while strictly honoring `stairsDistance` (7) from arrival
+  and exit stairs and excluding stairs rooms. Voluntary Retreat before contract completion remains
+  un-surged, and `FLAG_CONSTANT_RESPAWN` (`'floors.constant_respawn'`, ETH-129) or `respawn.continuous`
+  stays anchored to local `floorDanger + depthShift` via `respawnFloor` after `CONSTANT_RESPAWN_COOLDOWN` (50)
+  turns. `dungeonStirred` (`"The dungeon stirs."`) is emitted once per run on the first repopulated
+  floor, while quiet `floorRespawned` (`surged?: true` on surges) is emitted for every repopulated floor.
 - **Party:** `gatheringAt(state, floor, pos)` says who is gathered at a place (chained within
   `GATHER_RADIUS`) and who is missing; `partyOnFloor` lists the living members on a floor.
 - **Fountains (ETH-072, `floors/fountains.ts`):** a core feature part
@@ -814,8 +822,21 @@ Content in `src/content/items.ts`, sim in `src/sim/items/equipment.ts` and `acti
   its trace names it for rings ("… (left ring), nothing worn there yet"). A clear upgrade is
   always wanted (`wantsItem`), and while overloaded the baseline puts one on before dropping
   anything (`ITEMS_BASELINE_URGENT`), since worn gear frees the pack.
-  `act.equip_upgrade` (baseline, first of `ITEMS_BASELINE_LOOT`, so not next to an enemy) puts it
+  `act.equip_upgrade` (baseline, after `act.use_identify` and `act.read_unknown_scroll` in `ITEMS_BASELINE_LOOT`, so not next to an enemy) puts it
   on with a trace line ("equipping the Arming sword (Damage +2, Accuracy +1) in place of …").
+  **Unidentified gear (ETH-142):** all gear starts `identified: false`, so the baseline weighs it
+  through `evaluateUpgrade`, which reads known stats, the def and the floor's depth number, never the
+  hidden properties. It waits while the pack holds a known Scroll of Identify. Otherwise the gain in
+  base stats (in enhancement points of the def's base enchantment) must beat `hiddenGearMargin(def,
+  depth)` from `hiddenValue.ts`: the expected value of what `rollItemProperties` may have rolled (computed from
+  its chances, specials converted by `valuePerLevel`) plus `CURSE_LOCK_PREMIUM × P(cursed) × expected
+  curse penalty`, the price of the rest-of-run slot lock. The trace shows the numbers ("gain +2 vs margin
+  1.04 (expected hidden +0.14, curse lock risk +0.9)"). Items held back, and gear that would beat a cursed
+  worn piece (a locked slot), are said once in a `gearHeld` event (AI log) when the set of reasons for a party
+  member changes (`ItemsState.heldNotes`), not as a note on whichever rule fires next. `WornView.locked` explains a locked slot on the party card, and
+  `track.cursedGear` counts the turns a living party member wore cursed gear for the run summary.
+  The Wits roll on pickup happens once per item instance (`prop.identify_tried`, `stacks: 'ignore'`,
+  cleared when the item is identified).
   Tradeoffs are left to player rules or possession. `modifierText`, `gearStatsText(state,
   wearer, item)` and `bundleStatsText(bundles)` (the Codex, on a def's bundle) word stats.
 - **Snapshot / UI:** `InventoryView.equipped: WornView[]` (`{ slot, def, name, weight, value }`); the
@@ -902,7 +923,8 @@ per-instance item data adds an `ItemPropertyKind`, not its own edits to `gearBun
     `enchant.keen`, `enchant.venomous`, `enchant.vampiric`, `enchant.nimble`, `enchant.warding`).
   - Built-in `ITEM_PROPERTY_LIST` order: `prop.enchant` (`enchant?: number`), `prop.blessing`
     (`blessing?: 'blessed' | 'cursed'`), `prop.enchantments` (`enchantments?: { id, level }[]`),
-    `prop.identified` (`identified?: boolean`, absent = known), `prop.origin`.
+    `prop.identified` (`identified?: boolean`, absent = known), `prop.identify_tried` (`identifyTried?: true`,
+    ETH-142), `prop.mix` (`mix?: { plain?, blessed?, cursed? }`, ETH-147), `prop.origin`.
   - Cursed gear refuses `unequip` and `equip` replacement in `validate`; `upgradeSlot` skips cursed
     slots and known-cursed items; blessed/cursed consumables scale `runEffects` potency (`1.5×`/`0.5×`)
     and gear shifts enhancement (`+1`/`-1`). `Scroll of uncursing` (`{ kind: 'uncurse' }`) and
@@ -912,6 +934,30 @@ per-instance item data adds an `ItemPropertyKind`, not its own edits to `gearBun
     and armor hide `+N`, beatitude and special enchantments until instance-identified via Wits
     `identify` on pickup (`tryIdentifyOnPickup`), wearing, using, or Scroll of Identify. AI gear
     comparisons pass `knownOnly: true` so the AI never peeks at hidden properties.
+  - **Unidentified potions and scrolls (ETH-147, `src/sim/items/mix.ts`):** the older ETH-044 rule, where
+    learning a type cleared the flag on plain copies, is gone because the flag then told plain copies from
+    special ones. Now `identified: false` means "this copy is not identified" whatever it holds, and
+    `isItemIdentified` ignores what the copy rolled and whether its type is known. Learning a type shows
+    its real name (still no blessing prefix) and a shared "Blessing unknown" note; nothing else changes.
+    Unidentified potions and scrolls of one def stack together whatever their blessing (`canStack` skips
+    `blessing` and `mix` when both are unidentified consumables, so separate stacks give nothing away
+    either). A stack is **plain** (no `blessing`, no `mix`), **uniform** (`blessing` set for every copy)
+    or **mixed** (`mix` counts per group, at least two non-zero, summing to `qty`, no `blessing`):
+    `setHiddenCounts` always writes that canonical form. Merging
+    (`addToStacks`, `placeItem`) sums the counts, and a stack-size overflow splits them off the front of
+    the groups (`takePart`).
+  - **Which copy comes off a mixed stack:** `takeFromInventory(entity, index, qty, state)` draws the
+    copies without replacement on `state.rng.loot` (`drawHidden`), so a use or a partial drop is seeded and
+    nobody can choose a blessed copy. `use` takes one copy, identifies that copy (potency follows its
+    blessing) and leaves the rest hidden; a partial drop puts the drawn copies on the floor with their
+    own counts, and picking them up merges the counts back. A full-stack take needs no draw.
+  - **Identifying a mixed stack** (a Scroll of Identify, the pickup Wits roll, `identifyItemFor`) reveals
+    the whole stack and splits it into one identified stack per group (`identifyInstance` returns the
+    extras, which go into the pack), with one `itemIdentified` event each; a plain group logs "no blessing
+    or curse". `identifyTried` still means one roll per stack (`stacks: 'ignore'`), so split-and-merge
+    cycles gain no extra rolls. Reading an uncursing scroll over a mixed stack turns its cursed copies
+    plain and leaves it unidentified. Known gap: the roll is tracked per stack, not per copy, so merging
+    an untried copy into a tried stack drops the flag and a later drop and pickup can roll the stack again.
 - **Planned kinds:** ETH-045 `affixes` (a bundle and a prefix or suffix each; artifacts are fixed affixes);
   ETH-096 `charges { n, max }`.
 
@@ -1133,7 +1179,7 @@ in `src/sim/quests/objectives.ts`.
   `names?: EventNames` (entity id → `ShownName`, from `namesOf(...entities)`) only when an overlay
   changes a name, so plain events are unchanged; `died` adds `proper?`, `templates?` and `drops?`
   (`DroppedLoot`: the `carries`, placed on its tile with `placeItem` after it leaves);
-  `monsterSighted` adds `templates?`. `Killer.proper` / `source.proper` keep a proper name's
+  `monsterSighted` adds `templates?` and `ood?: true` (and triggers the `oodSighted` chronicle moment when out of depth). `Killer.proper` / `source.proper` keep a proper name's
   capitals and drop the article ("was slain by Vell the Unbowed").
 - **Codex:** `monsterSighted` discovers each template (`seen`) and `templateMetKey(def, template)`
   (`met.<def>.<template>`, not a content id); the monster entry's "Variants met" reads
@@ -1779,7 +1825,7 @@ As built in `src/sim/ai/` (ETH-009):
   the target tile for adjacent/ranged rules; omitted when untargeted).
 - **Baseline rules**, in order (0-based indices, as of ETH-061):
   0 `cond.wounded { percent: 35 } → act.quaff_healing`, 1 `cond.overloaded → act.drop_lowest`,
-  2 `cond.stuck → act.back_off`, 3 `cond.heading_out → act.retreat_run`,
+  2 `cond.stuck → act.back_off` (and `cond.fleeing → act.flee` right after it, ETH-148), 3 `cond.heading_out → act.retreat_run`,
   4 `cond.heading_out → act.gather { dir: 'up' }`, 5 `cond.floor_overstayed → act.descend { regroup: false }`,
   6 `cond.hurt_no_healing { below: 50 } → act.drink_fountain`, 7 `cond.always → act.pick_up { maxDetour: 8 }`,
   8 `cond.always → act.explore`, 9 `cond.always → act.descend`, 10 `cond.always → act.gather`,
@@ -1794,9 +1840,15 @@ As built in `src/sim/ai/` (ETH-009):
   `act.drink_fountain` (ETH-072, ETH-094, `src/sim/floors/fountains.ts`) walks to the nearest
   remembered fountain that isn't dry and whose last observed draught in `floors.observedFountains`
   is not harmful (`outcome === 'bane'`), without peeking at untouched fountains' hidden draughts,
-  explaining any skipped harmful fountain in the trace, and drinks. The heading-out ones (ETH-062)
+  explaining any skipped harmful fountain in the trace, and drinks. Between `ITEMS_BASELINE_LOOT`
+  and `act.explore`, `cond.party_scattered → act.regroup` (ETH-145) keeps followers grouped with
+  the party lead while ground remains to explore. The heading-out ones (ETH-062)
   are in
   `src/sim/run/rules.ts`; the floors ones (ETH-058) in `src/sim/floors/rules.ts`:
+  - `cond.party_scattered → act.regroup` (ETH-145): walks a straggler back to `partyLead` (the
+    first living party member on the floor, who regroups on no one) when more than `PARTY_LEASH`
+    (8) tiles away, continuing until within `PARTY_CLOSE` (3) tiles, and only while `act.explore`
+    still resolves so it never fights the descent.
   - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
     default) a member on the stairs takes them only when every living member on that floor is
     gathered (`gatheringAt`: within `GATHER_RADIUS`, 2, of the stairs or of a gathered member,
@@ -1812,19 +1864,25 @@ As built in `src/sim/ai/` (ETH-009):
   - `cond.bottom_floor` holds while a living party member is on the bottom floor (run-scope since
     ETH-121; see "Shared conditions"), where the baseline, with nothing left to
     explore, fires `act.retreat_run`: the party turns back, climbs out and the run ends as a
-    retreat (ETH-062; a victory once contracts add victory checks).
+    retreat (ETH-062; a victory once contracts add victory checks). Right before it,
+    `cond.stuck → act.wait` (ETH-145) holds while `act.explore` is temporarily dropped so a stuck
+    member waits out `DROP_TURNS` instead of aborting the whole run.
   - `act.explore` is frontier-based: the goals are tiles the actor could enter (on the party
     memory's path grid, closed doors at `OPEN_DOOR_COST`) with an unseen neighbor. Standing on one
     always reveals its neighbors, so each goal reached shrinks the frontier, and explored dead
-    ends are never goals nor on a shortest route to one. A closed door next on the route becomes
+    ends are never goals nor on a shortest route to one. Both the floor lead and party followers
+    stay committed to the lead's current `act.explore` `goal` until it leaves the frontier or
+    becomes unreachable (ETH-145), preventing adjacent ally costs from flipping branches and
+    keeping the party pushing one corridor together. A closed door next on the route becomes
     `openDoor`; another actor on the next tile becomes a wait ("waiting for X to get out of the
     way"), recorded as `memory.waitingFor`, unless it is a party member willing to swap
     (`willingToSwap`, ETH-017): one whose own last decision waited on this actor, or one with no
     decision yet or an `idle` one. Then it becomes a `swap` ("squeezing past X"). A member busy
     heading elsewhere is waited behind, never pushed back the way it came. This lives in
     `followMap`, so every map-following rule action gets it. It returns `null` once no frontier tile is reachable, and the actor settles on
-    `act.wait`. Tiles where the actor knows another actor stands (party members, anyone adjacent)
-    cost `OCCUPIED_COST` (8) more, so it routes round them when it reasonably can.
+    `act.wait`. Tiles where an adjacent actor stands cost extra in `aiPathGrid` (`ALLY_OCCUPIED_COST`
+    (2) for party members, `OCCUPIED_COST` (8) for others), while distant party members are not
+    penalized so allies in another corridor don't flip route choices.
   - `act.back_off` follows a flee map away from where the actor got stuck, with occupied tiles
     blocked.
   - `act.wait` is marked `idle`.
@@ -1839,11 +1897,36 @@ As built in `src/sim/ai/` (ETH-009):
   the core `bump { dir }` action, which comes to the first of attack, open door, swap or move
   that validates (`bumpTarget`); when none does, it fails with the move's reason. Snapshots carry
   `possessed` and `awaitingInput` on each `PartyMemberView`.
+- **Fleeing (ETH-148, `src/sim/combat/threat.ts`):** baseline rule 2 is `cond.fleeing → act.flee`.
+  `isThreat` decides who counts: an enemy that will come and hurt the party (damage stat above 0, a
+  bolt, a rule that approaches, surrounds or bolts, or a bundle or template that deals damage or
+  applies a harmful status; adventurers always). "Threat" means "will come after you", not "can
+  deal damage": a blow does at least 1 (`rollDamage`), so a moss tender still hits if cornered, but
+  it never pursues and flight ignores it (trace: "ignoring the moss tender: it can't hurt anyone").
+  `visibleThreats` is `visibleEnemies` through it; `cond.safe_to_test` uses it too. Before each party
+  decision `updateThreatMemory` records where threats were seen (`memory.threats`, dropped after
+  `THREAT_MEMORY_TURNS`) and runs the hysteresis (`memory.fleeing`): fleeing starts below
+  `BASELINE_FLEE_PERCENT` (35) with a threat in sight, and ends at `FLEE_RELEASE_PERCENT` (60) HP or
+  after `FLEE_CALM_TURNS` (12) without seeing one. While it lasts `act.flee` runs from visible
+  threats, or from remembered positions when none is in sight ("still fleeing: ... in pursuit").
+  Once back above the start threshold (still running on hysteresis alone) it fights a threat that
+  is next to it rather than fail Flee checks. With no free step left, `act.hold_position` (baseline
+  rule after `act.rush_caster`, idle) stands still instead of letting exploring walk back toward the
+  threat, for at most `FLEE_HOLD_TURNS` (12) decisions, after which fleeing is dropped.
+  Wounded (below the release HP) with no healing potion, `act.explore` and `act.pick_up` plan on a
+  grid where `avoidThreats` has added cost around each remembered position (`AVOID_PENALTY` at the
+  tile, fading to nothing at `AVOID_RADIUS` and over `THREAT_MEMORY_TURNS`), a soft weighting, so
+  the route goes round when another exists (trace note: "avoiding X's last position while wounded").
 - **Stuck detection** runs before the walk. Each decision records the actor's floor, position and
-  the party's seen-tile count (`memory.last`). After `STUCK_TURNS` (10) decisions in a row with
+  the party's seen-tile count (`memory.last`). Staying within `LOITER_RADIUS` (1) tile of where the count
+  began counts as not moving, so two rules that undo each other (flee, then walk back toward the
+  item behind the enemy) are caught too (ETH-142 turn-cap fix). After `STUCK_TURNS` (10) decisions in a row with
   none of them changing while the last rule fired was not `idle`, that rule becomes
   `memory.dropped` and is skipped for `DROP_TURNS` (20) turns, a `stuck` event says why, and
   `cond.stuck` holds meanwhile, so the actor backs off and then waits until the goal comes back.
+  If `act.back_off` itself gets stuck while a goal is dropped, it sets `dropped.backedOff = true`
+  and stops backing off for the rest of `DROP_TURNS` without overwriting (and un-dropping) the
+  original dropped rule (ETH-145).
   Waiting counts too (ETH-113): `memory.last.party` keys where every living party member stands,
   and `memory.waited` counts decisions in a row that wait by an `idle` rule other than the plain
   `act.wait` (gathering at the stairs, say) while that key is unchanged. At `WAIT_STUCK_TURNS`
@@ -1898,6 +1981,24 @@ As built (ETH-015):
   rendering. `tools/validate-content.ts` reports the same problems plus a count per kind. It runs
   with `tsx` as `npm run validate:content` (exit code 1 on problems), and its test runs the
   same `checkGame` in `npm test`.
+- **Reachability (ETH-143):** `tools/content-reachability.ts` (`reachabilityProblems`, run by
+  `validateContent`, so by `npm run validate:content` and `npm test`) checks that every def can
+  come up in a run: each monster spawns on some dungeon floor (`monsterWeightAt`, ecology included;
+  `MonsterDef.handPlaced` opts out defs only placed by hand), each template fits a spawnable monster
+  and some dungeon rolls templates, each item has a `loot` entry on a reachable floor or is a
+  contract's recover item, each base enchantment is used by a gear def and each special fits gear
+  that loots within its depth range. It counts only a dungeon's own floors (`1..depth.max`), not
+  return-trip shifts or OOD boosts. It lives in `tools/` because `src/content` can't import
+  `src/sim`. Every problem names the def and why.
+- **Codex kill tiers (ETH-144):** a monster's Codex reveals its basics, full stats and lore at
+  kill counts `MONSTER_KILL_TIERS` (1 / 10 / 50 by default). `MonsterDef.codexTiers` (`{ basics,
+  stats, lore }`, strictly increasing, checked at load) overrides them, and `killTiersFor(def)`
+  is the one reader (the monster renderer's fields, `killTiers` and `loreKills`, so the Codex
+  page, its tier note and the `Explain` tooltip all follow it). Content guidance: set it on
+  anything that can't realistically reach 50 kills. A unique or boss (killed at most once a
+  run) uses about `1 / 2 / 3`; a very rare spawn or an out-of-depth monster keeps its basics and
+  stats tiers and lowers its lore tier (say `1 / 5 / 15`). Anything that spawns freely keeps the
+  default.
 - **Lookups:** `findDef(id)` finds a def of any kind (the UI's `contentName` uses it, falling back
   to the id for things without defs yet); `findGlyph(glyphId)` gives the map look for a terrain or
   feature id, or a feature id plus a state (`feature.door.open`) from the feature's `states`,
@@ -2236,7 +2337,9 @@ it.
   returns the stat table (`{ label, value, hint?, key? }`); `key` fields also show in `Explain`.
   `group` is the subheading (a monster's family). `registry.ts` collects the files with
   `import.meta.glob`, so a new or richer kind is one file and no edit to the tab; a kind with no
-  file gets a plain section. Two renderers for one kind throw at load.
+  file gets a plain section. Two renderers for one kind throw at load. Kinds with kill tiers
+  (monsters) give the renderer `killTiers(def)` and `loreKills(def)`, both per def, so a def's own
+  tiers (`killTiersFor`, ETH-144) apply.
 - **Discovered** = the profile's `codex` entries plus `simStore.discoveries` (`useDiscovered`).
   Undiscovered entries show `???` and the renderer's `hint`; search only matches discovered
   entries, so names never leak.
@@ -2415,6 +2518,41 @@ tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
   a recording fake context (`test/ui/map.test.ts`); how the map looks is checked by eye in the
   dev tab.
 
+### 10.1 File size and refactoring
+
+Keep files small and focused. A file should have one job that its name describes, so a
+reader (or an agent working on one item) can hold it in their head and change it without
+touching unrelated code.
+
+- **When to split.** Treat roughly **400 lines** of source as the point to look hard at a
+  file, and **600** as the point to split it, unless it is a flat list of data (content defs,
+  tables) that reads fine top to bottom. Size is only a signal; split sooner when a file has
+  more than one reason to change, mixes layers or concerns (logic and formatting, state and
+  rendering), has functions longer than a screen, or needs a long comment to say what lives
+  where. React components follow the same rule: pull out subcomponents and hooks once one
+  component does several things.
+- **Going over 600 is allowed with a reason.** Keep a file whole when splitting it would
+  make it worse, for example one tightly coupled algorithm whose pieces only make sense
+  together, or a split that would just scatter one concept across files. Say why in a comment
+  at the top of the file, and add `/* eslint-disable max-lines -- <reason> */` so the reason
+  is in the code and the warning goes away. ESLint warns (`max-lines`, 600 lines not counting
+  blanks and comments, `src/content/` exempt); a warning doesn't fail `npm run lint`, but
+  don't leave one unexplained.
+- **How to split.** Split along the domain-module and contract lines above (§Contracts,
+  "Where new things go"), not by size alone. Keep the public API stable by re-exporting from
+  the original module path, so callers and tests don't churn. Test files mirror the source
+  files they cover and split with them.
+- **Order: tests first, then refactor.** Refactoring happens on green, never alongside a
+  behavior change. Write or extend the tests that pin the current behavior, get them passing,
+  and only then restructure. Run `npm run check` before and after; a behavior-neutral refactor
+  must not change a test or a fixed-seed state hash (the headless hash column, §10, and the
+  T0 identity check in `docs/DIFFICULTY_PHILOSOPHY.md` §9). Put the refactor in its own
+  commit, separate from the feature or fix, so reviewers can check it changes nothing.
+- **Scope.** A small refactor that the current item needs (splitting a file it is growing
+  past the limit) belongs in that item, done after its tests pass. A larger refactor found
+  along the way becomes its own `chore` item in the backlog rather than an unplanned change
+  (CLAUDE.md §11).
+
 ---
 
 ## 11. Invariants and gates
@@ -2469,15 +2607,23 @@ cards show every member, and the top bar and log show the run.
 
 ### 11.4 Sim compare (`tools/compare.ts`)
 
+- `npm run sim -- --jobs N` (1 to 64, default CPU cores - 1; 1 is today's serial run) runs seeds on
+  worker threads (`tools/parallel.ts`, `tools/parallel-worker.mjs`, which loads the harness through
+  `tsx/esm/api`). Seeds are handed out one at a time and results are stored by seed, so the report is
+  identical for any N; lower it to leave CPU free. `--compare` passes the same `--jobs` to a ref
+  whose `tools/headless.ts` mentions it and runs older refs serially.
 - `npm run sim -- --json FILE` also saves the report: `{ version, args, results }`, every
   seed's `SeedResult`.
 - `npm run sim -- --seeds N --compare REF` checks git ref `REF` out into a temporary detached
   worktree under `.sim-compare/` in this checkout (git-ignored; inside the checkout so the ref's
-  code finds this checkout's `node_modules`), runs **that ref's** `tools/sim.ts` there with the
+  code finds this checkout's `node_modules`, or a parent checkout's when this is itself a git
+  worktree), runs **that ref's** `tools/sim.ts` there with the
   same arguments and `--json`, then removes the worktree. When `REF` is ahead of its merge base
   with `HEAD`, it warns with the commit count and suggests rebasing or running `--compare merge-base`
   (which resolves the merge base against `origin/main`, falling back to `main`). Refs from before
-  `--json` are read from their printed table. `--baseline FILE` compares with a saved report instead.
+  `--json` are read from their printed table. `--baseline FILE` compares with a saved report instead. `tsx` is resolved the way Node
+  does (walking up from the repo root), so `--compare` works from a worktree without its own
+  `node_modules`.
 - It prints a table of `METRICS` (runs, done, settled above bottom, hit cap, stalled, stuck,
   turns mean/min/max, explored, depth mean/max, turns per floor) with before, after and delta,
   then how many seeds end in a different state hash. Reports from before ETH-058 count as depth
@@ -2486,12 +2632,18 @@ cards show every member, and the top bar and log show the run.
   ended, `early` that it ended above the bottom. `SeedResult` adds `end` (the outcome), `runTurns`
   (return trip included; `turns` stays the turn the party turned back) and `atRisk`. `METRICS`
   adds ended above bottom, one row per outcome, run turns and Renown and Trophies at risk.
+- ETH-145 adds `--party-sweep` (`partySweepRow`, `partySweepWarnings`, `formatPartySweep`,
+  `PARTY_SWEEP_MIN_RATIO`), `meanLevel` / member-mean level reporting, and `fell`-based death
+  attribution (`e.killer?.def`, avoiding unattributed `other` deaths). `simArgv` forwards `--preset`,
+  `--upgrades` and `--rules` (omitting defaults so older refs still run), and `formatComparison`
+  throws when two reports ran with different arguments.
 
 ### 11.5 PR gates
 
 Listed for contributors in [`../backlog/README.md`](../backlog/README.md#gates): `npm run
 check` (typecheck, lint and every test, which includes the invariants, soak, determinism and
-app-boot tests), the sim compare table against `origin/main` in the PR body, a look at the
+app-boot tests), the sim compare table in the PR body when the change warrants one (which changes
+do, and at what seed tier: [`DIFFICULTY_PHILOSOPHY.md`](DIFFICULTY_PHILOSOPHY.md) §9), a look at the
 running app for UI changes, and extending the contract/property guards in §11.6 whenever a new
 critical service or extension seam is added.
 
@@ -2508,5 +2660,6 @@ modifying a critical service in the categories below:
 | Any **SimEvent, log formatter, highlight rule, chronicle rule, or drop payload** carrying a player-discoverable secret (`item`, unseen trap/encounter, etc.) | **Non-spoiling event / log / chronicle sweep:** run unidentified/secret event payloads through `describeEvent`, `highlightWhen`, `discoveriesOf`, and `CHRONICLE_TRACKER`, asserting zero `{ ref }` Codex links, zero real-name substrings, `highlight: undefined`, and `[]` discoveries/entries. | `test/ui/logText.test.ts` | **High / Very High** — blocks UI tooltip, highlight, and chronicle spoilers |
 | A new **`Effect['kind']`**, potency-scaled consumable, trait, shrine/fountain effect, or ranked enchantment trigger | **Exhaustive `Effect['kind']` potency contract:** `EFFECT_POTENCY_CASES: Record<EffectKind, () => void>` forces a TypeScript compile error until the new kind's `0.5×` / `1×` / `1.5×+` scaling is specified and tested. | `test/sim/stats.test.ts` | **High / High** — catches unscaled `ctx.potency` at compile time |
 | A new **content kind, Codex renderer, or non-`alwaysKnown` def** (items, statuses, monsters, enchantments, deities, omens, bounties) | **Codex discoverability / reachability check:** map the kind's real producer event(s) in `probesByKind` and verify every non-`alwaysKnown`, non-`hidden` entry yields `>= 1` discovery mark via `discoveriesOf`. | `test/ui/codex.test.tsx` | **Medium-High / High** — guarantees no entry stays permanently stuck at `???` |
+| Anything that sets an item's **`identified` flag** (loot, drops, monster carries) | **Secrecy property guard:** roll gear, potions and scrolls across every def and depth and assert `identified === false` for all of it, plain or not; the snapshot flag, name and `stateNote` of plain and hidden-property variants must be equal, with the type known or not; pickup, drop and sighting events and the AI's quaff and read choices must match too; a stack mixing blessings must look like a pure one. | `test/sim/identifySecrecy.test.ts`, `test/sim/consumableSecrecy.test.ts` | **High / High**: the flag never leaks what an item rolled |
 | A new **`ItemPropertyKind`** (or similar sparse optional field on `ItemInstance` / `RunState` used in equality or `canStack` checks) | **Canonical-value invariant test:** ensure `schema` rejects every default/no-op value (`0`, `true`, `[]`, `{}`, `'uncursed'`) and register it in `CANONICAL_REJECTED`. | `test/sim/itemProperties.test.ts` | **Medium / High** — prevents duplicate unstackable instances and save bloat |
 | A configurable **numeric range `{ min?, max? }`** with positive defaults (spawn counts, loot quantities, depth bounds, cooldowns) | **Use `clampRange` + `{ max: 0 }` boundary test:** compute and clamp `max` before clamping `min <= max` via `clampRange` (`src/core/range.ts`) and assert `{ max: 0 }` produces `{ min: 0, max: 0 }`. | `src/core/range.ts`, `test/core/range.test.ts`, caller suite | **Low-Medium / Medium** — stops positive `defaultMin` from overriding explicit disable (`max: 0`) |

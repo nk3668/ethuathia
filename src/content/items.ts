@@ -270,7 +270,7 @@ export const ITEM_MENDING_DRAUGHT = defineItem({
   value: 30,
   stack: 5,
   bundle: { effects: [{ kind: 'heal', amount: 12 }] },
-  loot: { weight: 10 },
+  loot: { weight: 22 },
 });
 
 export const ITEM_QUICKSTEP_TONIC = defineItem({
@@ -300,7 +300,7 @@ export const ITEM_SCROLL_OF_RENEWAL = defineItem({
   value: 35,
   stack: 5,
   bundle: { effects: [{ kind: 'applyStatus', status: 'status.regenerating', turns: 15 }] },
-  loot: { weight: 4 },
+  loot: { weight: 6 },
 });
 
 export const ITEM_SCROLL_OF_IDENTIFY = defineItem({

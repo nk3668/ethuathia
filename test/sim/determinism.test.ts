@@ -104,16 +104,16 @@ describe('determinism', () => {
   });
 
   it('exercises the commands it sends', () => {
-    const { events } = play(createRun(CONFIG, 1), 0, STEPS);
+    const { events } = play(createRun(CONFIG, 3), 0, STEPS);
     const all = events.flat();
     expect(all.some((e) => e.type === 'commandRejected')).toBe(true);
     expect(all.some((e) => e.type === 'turnedBack' && e.reason === 'ordered')).toBe(true);
-    // The run goes down the stairs, building a floor mid-run.
+    // The run goes down the stairs, building a floor mid-run (seed 3: the party finds them within the steps).
     expect(all.some((e) => e.type === 'floorEntered' && e.firstVisit)).toBe(true);
     // A command changes the run: the same seed without them ends somewhere else.
-    const quiet = createRun(CONFIG, 1);
+    const quiet = createRun(CONFIG, 3);
     for (let i = 0; i < STEPS; i++) step(quiet, []);
-    expect(stateHash(quiet)).not.toBe(play(createRun(CONFIG, 1), 0, STEPS).hashes.at(-1));
+    expect(stateHash(quiet)).not.toBe(play(createRun(CONFIG, 3), 0, STEPS).hashes.at(-1));
   });
 
   it('continues a run saved and loaded mid-run exactly like one never interrupted', () => {
