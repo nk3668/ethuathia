@@ -4,7 +4,7 @@
  */
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets, RUN_RECORD_MOMENTS } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
-import { CONTRACTS, defName, DEITIES, describeMilestoneMet, GOLD_PER_TROPHY } from '../../content';
+import { BUILDINGS, CONTRACTS, defName, DEITIES, describeMilestoneMet, GOLD_PER_TROPHY, tierBand, tierGateId } from '../../content';
 import type { Milestone } from '../../content';
 import {
   CHRONICLE_TRACKER,
@@ -165,6 +165,25 @@ export interface UnlockLine {
   name: string;
   /** The milestone met, as a past-tense clause: "you reached floor 3". */
   why: string;
+  /** For a building tier (ETH-170): the building and the band that opened, which is 2 or more. */
+  tier?: { building: string; band: number };
+}
+
+const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
+
+/** "The Smithy's second tier is open", the run summary's line for a building tier (ETH-170). */
+export function tierOpenText(tier: { building: string; band: number }): string {
+  return `The ${tier.building}'s ${ORDINALS[tier.band - 1] ?? `${tier.band}th`} tier is open`;
+}
+
+/** The building and band a tier gate target id (`tierGateId`) opens, or `undefined` for any other id. */
+function tierOfTarget(id: string): UnlockLine['tier'] {
+  for (const building of BUILDINGS.all()) {
+    for (const gate of building.tierGates ?? []) {
+      if (tierGateId(building.id, gate.fromTier) === id) return { building: building.name, band: tierBand(building, gate.fromTier) };
+    }
+  }
+  return undefined;
 }
 
 /** What the profile's latest run opened, or run number `run`'s (ETH-048), from the `milestones` slice. */
@@ -173,7 +192,9 @@ export function unlockLines(profile: Profile, run?: number): UnlockLine[] {
   const unlocks = run === undefined ? latestUnlocks(profile) : profile.milestones.unlocked.filter((u) => u.run === run);
   return unlocks.flatMap((u) => {
     const target = targets.find((t) => t.id === u.id);
-    return target === undefined ? [] : [{ id: u.id, name: target.name, why: unlockWhy(target.unlock) }];
+    if (target === undefined) return [];
+    const tier = tierOfTarget(u.id);
+    return [{ id: u.id, name: target.name, why: unlockWhy(target.unlock), ...(tier === undefined ? {} : { tier }) }];
   });
 }
 

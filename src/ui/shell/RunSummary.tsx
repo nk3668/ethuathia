@@ -28,6 +28,7 @@ import {
   RENOWN_FORMULA_TEXT,
   renownBreakdown,
   reportFromRecord,
+  tierOpenText,
   unlockLines,
 } from './runSummaryText';
 import { rewardText } from './logText/quests';
@@ -377,7 +378,15 @@ function Unlocked({ run }: { run?: number }) {
         {lines.map((line) => (
           <li key={line.id}>
             <span aria-hidden="true">🔓 </span>
-            <span className={styles.name}>{line.name}</span> opens in town: {line.why}.
+            {line.tier === undefined ? (
+              <>
+                <span className={styles.name}>{line.name}</span> opens in town: {line.why}.
+              </>
+            ) : (
+              <>
+                <span className={styles.name}>{tierOpenText(line.tier)}</span>: {line.why}.
+              </>
+            )}
           </li>
         ))}
       </ul>

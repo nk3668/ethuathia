@@ -12,7 +12,9 @@
  *
  * A **building quest** (ETH-093) is a contract with `opens`: the Town building it opens. That
  * building's `unlock` is the matching `objectiveDone` milestone with `exited: true`. The building
- * quests themselves live in `buildingQuests.ts`.
+ * quests themselves live in `buildingQuests.ts`. A **tier quest** (ETH-170) is the same thing aimed
+ * at one of the building's tier gates (`opens: { building, fromTier }`): the gate's `unlock` is the
+ * matching milestone, and it counts as a building quest for the one-per-run limit.
  *
  * The objective is the shared `Objective` (ETH-114, `objectives.ts`), measured by the sim's
  * objective engine. Later contract types (ETH-026 slay, ETH-027 gather and delve, ETH-032 rescue)
@@ -27,7 +29,8 @@ import { objectiveRefs, objectiveSchema } from './objectives';
 import type { Objective } from './objectives';
 import { DUNGEONS } from './dungeons';
 import { defShape, idSchema, positiveInt } from './schema';
-import { BUILDINGS, CURRENCY_KEY } from './upgrades';
+import { BUILDINGS, CURRENCY_KEY, tierGateId } from './upgrades';
+import type { BuildingDef } from './upgrades';
 
 /**
  * What a contract asks for: an objective (ETH-114, `src/content/objectives.ts`). Kept as a name
@@ -46,9 +49,11 @@ export interface ContractDef extends Def {
    * The Town building this is the quest for (a `building.*` id), making it a building quest
    * (ETH-093): offered while that building is locked and enough of the open buildings' upgrades are
    * bought (`offerAt`), and only one building quest may be taken per run. The building's `unlock`
-   * must be the `objectiveDone` milestone (`exited: true`) on this contract.
+   * must be the `objectiveDone` milestone (`exited: true`) on this contract. A tier quest
+   * (ETH-170) names a building and one of its tier gates instead: `{ building, fromTier }`, and the
+   * gate's `unlock` must be that milestone.
    */
-  readonly opens?: string;
+  readonly opens?: string | OpensTier;
   /**
    * For a building quest: the share (0 to 1) of the open buildings' upgrade nodes that has to be
    * bought before it is offered. Default `BUILDING_QUEST_SHARE`; the first quest asks for none.
@@ -58,15 +63,43 @@ export interface ContractDef extends Def {
   readonly openedText?: string;
 }
 
+/** What a tier quest opens: the building and the first node row (`UpgradeNodeDef.tier`) of its gate (ETH-170). */
+export interface OpensTier {
+  readonly building: string;
+  readonly fromTier: number;
+}
+
 /** The share of the open buildings' nodes that must be bought before a later building's quest is offered (ETH-093). ETH-161 tunes it. */
 export const BUILDING_QUEST_SHARE = 0.3;
 
-/** The share a building quest asks for before it is offered: its `offerAt`, or `BUILDING_QUEST_SHARE`. */
-export function offerShare(def: ContractDef): number {
-  return def.offerAt ?? BUILDING_QUEST_SHARE;
+/** The share of a building's nodes in its open tiers that must be bought before its next tier's quest is offered (ETH-170). ETH-161 tunes it. */
+export const TIER_QUEST_SHARE = 0.5;
+
+/** The building a building quest or tier quest belongs to, or `undefined` for any other contract. */
+export function opensBuilding(def: ContractDef): string | undefined {
+  return typeof def.opens === 'object' ? def.opens.building : def.opens;
 }
 
-/** True for a building quest: a contract that opens a Town building. */
+/** The gate a tier quest opens (`fromTier`), or `undefined` for a quest that opens a whole building. */
+export function opensTier(def: ContractDef): number | undefined {
+  return typeof def.opens === 'object' ? def.opens.fromTier : undefined;
+}
+
+/** The milestone target a building quest or tier quest opens: the building's id, or its gate's id. */
+export function opensTarget(def: ContractDef): string | undefined {
+  if (def.opens === undefined) return undefined;
+  return typeof def.opens === 'object' ? tierGateId(def.opens.building, def.opens.fromTier) : def.opens;
+}
+
+/**
+ * The share a building quest asks for before it is offered: its `offerAt`, or `BUILDING_QUEST_SHARE`
+ * (`TIER_QUEST_SHARE` for a tier quest).
+ */
+export function offerShare(def: ContractDef): number {
+  return def.offerAt ?? (typeof def.opens === 'object' ? TIER_QUEST_SHARE : BUILDING_QUEST_SHARE);
+}
+
+/** True for a building quest or a tier quest: a contract that opens a Town building or one of its tiers. */
 export function isBuildingQuest(def: ContractDef): boolean {
   return def.opens !== undefined;
 }
@@ -81,31 +114,77 @@ export function contractFloor(def: ContractDef): number | undefined {
 /**
  * Building quests have to stay doable as dungeons change (ETH-093): the floor one asks for is no
  * deeper than the shallowest dungeon the player could take it into, and the building it opens
- * names it as its unlock (and the other way round).
+ * names it as its unlock (and the other way round). The same holds for tier quests (ETH-170) and
+ * their gates, and each building's quests get harder: the building's quest, then each tier quest
+ * in gate order, ask for a deeper floor than the one before.
  */
 export function checkBuildingQuests(defs: readonly ContractDef[]): string[] {
   const problems: string[] = [];
   const shallowest = Math.min(...DUNGEONS.all().map((d) => d.depth.min));
   for (const def of defs) {
-    if (def.opens === undefined) continue;
+    const buildingId = opensBuilding(def);
+    if (buildingId === undefined) continue;
     const label = `contract "${def.id}"`;
     const floor = contractFloor(def);
     if (floor !== undefined && floor > shallowest) {
       problems.push(`${label}: asks for floor ${floor}, but a dungeon can be as shallow as ${shallowest} floors, so the quest could not always be done`);
     }
-    const building = BUILDINGS.has(def.opens) ? BUILDINGS.get(def.opens) : undefined;
+    const building = BUILDINGS.has(buildingId) ? BUILDINGS.get(buildingId) : undefined;
     if (building === undefined) continue; // an unknown id is reported by the ref check
-    const u = building.unlock;
-    if (u?.kind !== 'objectiveDone' || u.owner.kind !== 'contract' || u.owner.id !== def.id || u.exited !== true) {
-      problems.push(`${label}: opens "${building.id}", whose unlock must be an objectiveDone milestone on this contract with exited: true`);
+    const tier = opensTier(def);
+    if (tier === undefined) {
+      if (!isQuestMilestone(building.unlock, def.id)) {
+        problems.push(`${label}: opens "${building.id}", whose unlock must be an objectiveDone milestone on this contract with exited: true`);
+      }
+      continue;
+    }
+    const gate = (building.tierGates ?? []).find((g) => g.fromTier === tier);
+    if (gate === undefined) {
+      problems.push(`${label}: opens tier ${tier} of "${building.id}", which has no tier gate at that row`);
+    } else if (!isQuestMilestone(gate.unlock, def.id)) {
+      problems.push(`${label}: opens the tier ${tier} gate of "${building.id}", whose unlock must be an objectiveDone milestone on this contract with exited: true`);
     }
   }
   for (const building of BUILDINGS.all()) {
     const u = building.unlock;
-    if (u?.kind !== 'objectiveDone' || u.owner.kind !== 'contract' || !CONTRACTS.has(u.owner.id)) continue;
-    if (CONTRACTS.get(u.owner.id).opens !== building.id) {
+    if (u?.kind === 'objectiveDone' && u.owner.kind === 'contract' && CONTRACTS.has(u.owner.id) && CONTRACTS.get(u.owner.id).opens !== building.id) {
       problems.push(`building "${building.id}": unlocked by "${u.owner.id}", which does not say it opens this building (\`opens\`)`);
     }
+    for (const gate of building.tierGates ?? []) {
+      const g = gate.unlock;
+      if (g.kind !== 'objectiveDone' || g.owner.kind !== 'contract' || !CONTRACTS.has(g.owner.id)) continue;
+      const opens = CONTRACTS.get(g.owner.id).opens;
+      if (typeof opens !== 'object' || opens.building !== building.id || opens.fromTier !== gate.fromTier) {
+        problems.push(`building "${building.id}": its tier ${gate.fromTier} gate is unlocked by "${g.owner.id}", which does not say it opens that tier (\`opens\`)`);
+      }
+    }
+    problems.push(...checkQuestDepths(building, defs));
+  }
+  return problems;
+}
+
+/** True when `unlock` is the `objectiveDone` milestone, `exited: true`, on contract `id`. */
+function isQuestMilestone(unlock: BuildingDef['unlock'], id: string): boolean {
+  return unlock?.kind === 'objectiveDone' && unlock.owner.kind === 'contract' && unlock.owner.id === id && unlock.exited === true;
+}
+
+/** Each quest of one building asks for a deeper floor than the one before: the building's quest, then each tier quest in gate order. */
+function checkQuestDepths(building: BuildingDef, defs: readonly ContractDef[]): string[] {
+  const problems: string[] = [];
+  const own = defs.filter((d) => opensBuilding(d) === building.id);
+  const ordered = [
+    ...own.filter((d) => opensTier(d) === undefined),
+    ...(building.tierGates ?? []).flatMap((g) => own.filter((d) => opensTier(d) === g.fromTier)),
+  ];
+  let before: ContractDef | undefined;
+  for (const def of ordered) {
+    const floor = contractFloor(def);
+    if (floor === undefined) continue; // a quest with no set floor can't be compared
+    const previous = before === undefined ? undefined : contractFloor(before);
+    if (before !== undefined && previous !== undefined && floor <= previous) {
+      problems.push(`contract "${def.id}": asks for floor ${floor}, which is not deeper than floor ${previous} asked by "${before.id}" earlier in "${building.id}"`);
+    }
+    before = def;
   }
   return problems;
 }
@@ -120,14 +199,17 @@ export const CONTRACT_KIND: ContentKind<ContractDef> = {
     reward: z
       .record(z.string().regex(CURRENCY_KEY, 'must be renown, trophies or favor:deity.<id>'), positiveInt)
       .refine((reward) => Object.keys(reward).length > 0, 'must pay something'),
-    opens: idSchema('building').optional(),
+    opens: z
+      .union([idSchema('building'), z.strictObject({ building: idSchema('building'), fromTier: z.number().int('must be a whole number').min(2, 'must be 2 or more') })])
+      .optional(),
     offerAt: z.number().min(0, 'must be 0 to 1').max(1, 'must be 0 to 1').optional(),
     openedText: z.string().trim().min(1, 'must not be empty').optional(),
   }),
   check: checkBuildingQuests,
   refs: (def) => {
     const refs: ContentRef[] = objectiveRefs('objective', def.objective);
-    if (def.opens !== undefined) refs.push({ path: 'opens', kind: 'building', id: def.opens });
+    const building = opensBuilding(def);
+    if (building !== undefined) refs.push({ path: typeof def.opens === 'object' ? 'opens.building' : 'opens', kind: 'building', id: building });
     for (const key of Object.keys(def.reward)) {
       if (key.startsWith('favor:')) refs.push({ path: `reward.${key}`, kind: 'deity', id: key.slice('favor:'.length) });
     }

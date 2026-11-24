@@ -2151,7 +2151,17 @@ As built (ETH-063):
   closed gate over a row (or `null`), `closedGates` lists them, and `canPurchase` refuses such a
   node as `locked` with `describeGate` ("Tier 4 and up open when you reach floor 6."). A node's
   `tier` stays its row; the UI numbers bands I, II, III from the gates (`tierBand`). No shipped
-  building has gates or ranks yet (ETH-132, ETH-159, ETH-170 add content).
+  building has gates or ranks yet (ETH-132 and ETH-159 add content).
+- **Tier quests (ETH-170):** `ContractDef.opens` is a building id (a building quest, ETH-093) or
+  `{ building, fromTier }` (a tier quest); `opensBuilding`, `opensTier` and `opensTarget` read
+  it. The gate's `unlock` is the `objectiveDone` milestone with `exited: true` on the contract,
+  and `checkBuildingQuests` (in `validateContent`) checks the pairing both ways, that each
+  building's quests ask for deeper floors in order (building quest, then each tier quest in gate
+  order) and that none is deeper than the shallowest dungeon. `questOffer` offers a tier quest
+  while its building is open and its gate is the topmost closed one, once `upgradeShare(profile,
+  building)` (that building's nodes in its open tiers) reaches `TIER_QUEST_SHARE`; before that it
+  is `locked` with progress text, and `hidden` while the building is locked or an earlier gate is
+  closed. A tier quest counts as a building quest for the one-per-run limit.
 - **Engine** (`src/meta/upgrades.ts`, pure): `canPurchase(profile, id)` (`{ ok }` or a
   `status` of `owned` / `excluded` / `locked` / `expensive` / `unknown` with a `reason` for the
   tooltip), `nodeStatus`, `purchase` (throws a `RangeError` with the reason),

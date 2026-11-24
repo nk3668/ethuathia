@@ -45,7 +45,7 @@ More items are added when M2 becomes the current milestone.
 - [ ] [ETH-129 Guild Hall upgrade: constant floor respawns on revisit](ETH-129-guild-hall-constant-respawn.md)
 - [ ] [ETH-132 Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs](ETH-132-rescale-guild-hall-renown-costs.md)
 - [ ] [ETH-159 Smithy upgrade tree spent in Trophies](ETH-159-smithy-tree.md)
-- [ ] [ETH-170 Building-tier quests open each building's next tier](ETH-170-building-tier-quests.md)
+- [x] [ETH-170 Building-tier quests open each building's next tier](ETH-170-building-tier-quests.md)
 - [ ] [ETH-171 Items carried out of the dungeon sell for Trophies](ETH-171-sell-carried-items.md)
 - [x] [ETH-172 Upgrade engine supports ranked nodes and quest-locked tiers](ETH-172-upgrade-ranks-and-tiers.md)
 - [ ] [ETH-174 The Cartographer building](ETH-174-cartographer.md)
