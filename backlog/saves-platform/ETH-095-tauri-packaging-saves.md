@@ -2,7 +2,7 @@
 id: ETH-095
 title: Tauri desktop packaging and save backend
 type: feature
-status: pending-review
+status: done
 priority: P1
 milestone: M2
 epic: saves-platform
@@ -33,3 +33,4 @@ Electron is the fallback if Tauri causes trouble.
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-24: Assigned to Gemini (Antigravity); Claude reviews the PR.
 - 2026-11-24: Implemented Tauri v2 desktop packaging (`src-tauri/`), `TauriSaveStore` + `isTauriRuntime()` + `subscribeTauriClose` (`src/platform/tauri.ts`, `saveStore.ts`, `autosave.ts`), async close saving in `profileStore.ts`, offline CSP/capability invariants tests, `README.md`, and `docs/ARCHITECTURE.md` (§6.5, §8.4) starting at `56049c6`. Verified with `cargo test --manifest-path src-tauri/Cargo.toml` (4 passed, 0 failed), `npm run tauri build` producing `Ethuathia_0.1.0_x64_en-US.msi` (3.34 MiB / 3,497,984 B) and `Ethuathia_0.1.0_x64-setup.exe` (2.40 MiB / 2,521,150 B), `npm run check`, and `npm run build`.
+- 2026-11-24: Reviewed by Claude: npm run check green merged with main (1,410 tests), npm run build, cargo test 4/4 passed; capabilities, CSP and save writes checked. Merged; status done.
