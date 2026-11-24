@@ -108,9 +108,9 @@ describe('getStat', () => {
     const { state, hero } = setup();
     expect(getStat(state, hero, 'hp')).toEqual({
       stat: 'hp',
-      value: 20,
+      value: 33,
       parts: [
-        { op: 'add', value: 14, source: { id: 'attribute.grit', label: 'Grit 14' } },
+        { op: 'add', value: 27, source: { id: 'attribute.grit', label: 'Grit 14' } },
         { op: 'add', value: 6, source: { id: 'attribute.brawn', label: 'Brawn 12' } },
       ],
     });
@@ -122,17 +122,17 @@ describe('getStat', () => {
   it('sums add parts, then applies mul parts, whatever order they come in', () => {
     const { state, hero } = setup();
     attachBundle(state, hero, MIGHT.id, 'class.vanguard');
-    // (14 + 6 + 10) × 1.5
+    // (27 + 6 + 10) × 1.5 = 64.5, rounded up
     const hp = getStat(state, hero, 'hp');
-    expect(hp.value).toBe(45);
+    expect(hp.value).toBe(65);
     expect(hp.parts.map((p) => [p.op, p.value, p.source.label])).toEqual([
-      ['add', 14, 'Grit 14'],
+      ['add', 27, 'Grit 14'],
       ['add', 6, 'Brawn 12'],
       ['add', 10, 'Vanguard'],
       ['mul', 1.5, 'Vanguard'],
     ]);
-    // Brawn 12: +1, then the bundle's +3.
-    expect(statValue(state, hero, 'damage')).toBe(4);
+    // Brawn 12: (12 − 3) × 0.2 = 1.8, then the bundle's +3, rounded.
+    expect(statValue(state, hero, 'damage')).toBe(5);
   });
 
   it('agrees with statValue for every stat', () => {
@@ -151,7 +151,7 @@ describe('getStat', () => {
     stats.base.hp = -100;
     expect(statValue(state, hero, 'hp')).toBe(1);
     stats.base.hp = 0.6;
-    expect(statValue(state, hero, 'hp')).toBe(21);
+    expect(statValue(state, hero, 'hp')).toBe(34);
   });
 
   it('is fed by the stats domain providers and bundle sources, in order', () => {
@@ -172,10 +172,10 @@ describe('bundles', () => {
   it('attach without healing and detach by source, clamping HP back down', () => {
     const { state, hero } = setup();
     attachBundle(state, hero, MIGHT.id, 'item.test_ring');
-    expect(hero.actor.hp).toBe(20);
+    expect(hero.actor.hp).toBe(33);
     hero.actor.hp = 45;
     expect(detachBundles(state, hero, 'item.test_ring')).toBe(1);
-    expect(hero.actor.hp).toBe(20);
+    expect(hero.actor.hp).toBe(33);
     expect(hero.stats?.bundles).toEqual([]);
   });
 
@@ -188,7 +188,7 @@ describe('bundles', () => {
   it('can be given to the party by the run config', () => {
     const { state, hero } = setup({ ...CONFIG, partyBundles: [MIGHT.id], partyStatuses: [{ status: 'status.hasted', turns: 4 }] });
     expect(hero.actor.hp).toBe(statValue(state, hero, 'hp'));
-    expect(hero.actor.hp).toBe(45);
+    expect(hero.actor.hp).toBe(65);
     expect(statusesOf(hero)).toEqual([['status.hasted', 4, 1]]);
     expect(() => setup({ ...CONFIG, partyStatuses: [{ status: 'status.nope', turns: 1 }] })).toThrow(/Unknown party status/);
   });
@@ -210,7 +210,7 @@ describe('timed statuses', () => {
     expect(statusesOf(hero)).toEqual([['status.test_big_feast', 9, 2]]);
     expect(events.map((e) => (e.type === 'statusApplied' ? e.mode : e.type))).toEqual(['new', 'refreshed', 'refreshed']);
     // Potency 2 doubles the +2 HP.
-    expect(statValue(state, hero, 'hp')).toBe(24);
+    expect(statValue(state, hero, 'hp')).toBe(37);
   });
 
   it('different groups stack side by side', () => {
@@ -324,7 +324,7 @@ describe('effects and triggers', () => {
     expect(fireTrigger(state, hero, 'trigger.turn_start', emit, foe.id)).toBe(0);
     expect(fireTrigger(state, hero, 'trigger.test_struck', emit, foe.id)).toBe(1);
     expect(foe.actor.hp).toBe(8);
-    expect(hero.actor.hp).toBe(20);
+    expect(hero.actor.hp).toBe(33);
     // With no other party, an effect aimed at it does nothing.
     fireTrigger(state, hero, 'trigger.test_struck', emit);
     expect(events.filter((e) => e.type === 'damaged')).toHaveLength(1);
@@ -345,7 +345,7 @@ describe('snapshot and invariants', () => {
     const view = snapshot(state).domains.stats.members[hero.id];
     expect(view?.statuses).toEqual([{ status: 'status.hasted', remaining: 4, potency: 1 }]);
     expect(view?.stats.speed.parts.map((p) => p.source.label)).toEqual(['Human', 'Hasted']);
-    expect(snapshot(state).party[0]).toMatchObject({ hp: 20, maxHp: 20 });
+    expect(snapshot(state).party[0]).toMatchObject({ hp: 33, maxHp: 33 });
   });
 
   it('discover a status for the Codex when it lands', () => {

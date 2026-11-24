@@ -7,7 +7,6 @@ import { ATTRIBUTE_IDS, ATTRIBUTES, attributeDefId, CLASS_VANGUARD, defineClass,
 import {
   addEntity,
   ATTRIBUTE_FORMULAS,
-  ATTRIBUTE_NEUTRAL,
   attributeValue,
   checkInvariants,
   createRun,
@@ -85,15 +84,15 @@ describe('attributes', () => {
 });
 
 describe('derived stats', () => {
-  it('give a starting Human Vanguard the same HP and MP as before attributes, plus damage and carry', () => {
+  it('give a starting Human Vanguard the repriced HP, accuracy, damage and carry (ETH-177)', () => {
     const { state, hero: h } = hero();
     const values = Object.fromEntries(STAT_IDS.map((s) => [s, statValue(state, h, s)]));
     expect(values).toEqual({
-      hp: 20,
+      hp: 33,
       mp: 5,
-      accuracy: 0,
-      evasion: 0,
-      damage: 1,
+      accuracy: 2,
+      evasion: 2,
+      damage: 2,
       armor: 0,
       speed: 100,
       sight: 8,
@@ -106,7 +105,7 @@ describe('derived stats', () => {
       flee: 70,
       forceDoor: 48,
     });
-    expect(h.actor).toMatchObject({ hp: 20, mp: 5 });
+    expect(h.actor).toMatchObject({ hp: 33, mp: 5 });
   });
 
   it('follow the formula table for every stat, matching getStat', () => {
@@ -120,27 +119,34 @@ describe('derived stats', () => {
     }
   });
 
-  it('add nothing at the neutral value for formulas measured from it', () => {
+  it('measure from each formula’s own start, so a point at it adds nothing', () => {
     const { state, hero: h } = hero(PLAIN.id);
-    // Human +1 everywhere puts Plain one point above neutral.
-    expect(ATTRIBUTE_NEUTRAL).toBe(10);
-    expect(getStat(state, h, 'accuracy').parts).toEqual([{ op: 'add', value: 1, source: { id: 'attribute.finesse', label: 'Finesse 11' } }]);
+    // Human +1 everywhere puts Plain at Finesse 11: (11 − 5) × 0.3 accuracy.
+    const [part] = getStat(state, h, 'accuracy').parts;
+    expect(part).toMatchObject({ op: 'add', source: { id: 'attribute.finesse', label: 'Finesse 11' } });
+    expect(part?.value).toBeCloseTo(1.8);
+    // Six points off (Finesse 5, the formula's start) it adds nothing.
+    (h.stats as NonNullable<typeof h.stats>).attributes = { finesse: -6 };
+    expect(statValue(state, h, 'accuracy')).toBe(0);
   });
 
   it('can go below zero from a low attribute, and the stat clamps at its minimum', () => {
     const { state, hero: h } = hero(ODD.id);
-    // Brawn 6: (6 − 10) × 0.5 = −2 damage, clamped to 0.
-    expect(getStat(state, h, 'damage').parts).toEqual([{ op: 'add', value: -2, source: { id: 'attribute.brawn', label: 'Brawn 6' } }]);
+    // Brawn 1 (6 − 5): (1 − 3) × 0.2 = −0.4 damage, clamped to 0.
+    (h.stats as NonNullable<typeof h.stats>).attributes = { brawn: -5 };
+    const [part] = getStat(state, h, 'damage').parts;
+    expect(part?.value).toBeCloseTo(-0.4);
     expect(statValue(state, h, 'damage')).toBe(0);
-    // Finesse 16: +6 accuracy and evasion. Wits 21: 21 MP.
-    expect([statValue(state, h, 'accuracy'), statValue(state, h, 'evasion'), statValue(state, h, 'mp')]).toEqual([6, 6, 21]);
+    // Finesse 16: (16 − 5) × 0.3 = 3.3 accuracy and evasion, rounded. Wits 21: 21 MP.
+    (h.stats as NonNullable<typeof h.stats>).attributes = {};
+    expect([statValue(state, h, 'accuracy'), statValue(state, h, 'evasion'), statValue(state, h, 'mp')]).toEqual([3, 3, 21]);
   });
 
   it('rise with points the actor gains (leveling)', () => {
     const { state, hero: h } = hero();
     (h.stats as NonNullable<typeof h.stats>).attributes = { brawn: 2, grit: 3 };
-    // Grit 17 + Brawn 14 × 0.5 = 24 HP; damage (14 − 10) × 0.5 = 2; carry 28.
-    expect([statValue(state, h, 'hp'), statValue(state, h, 'damage'), statValue(state, h, 'carry')]).toEqual([24, 2, 28]);
+    // Grit 17: 4.5 × 9 = 40.5, plus Brawn 14 × 0.5 = 7, is 48 HP; damage (14 − 3) × 0.2 = 2.2 → 2; carry 28.
+    expect([statValue(state, h, 'hp'), statValue(state, h, 'damage'), statValue(state, h, 'carry')]).toEqual([48, 2, 28]);
   });
 
   it('leave an actor without a class or points alone, and derive a monster given points', () => {
@@ -159,11 +165,12 @@ describe('derived stats', () => {
       floor: 'd1',
       pos: { x: 4, y: 2 },
       actor: { energy: 0, hp: 6, mp: 0, faction: 'monster' },
-      stats: { ...newStatsPart({ hp: 6 }), attributes: { brawn: 14 } },
+      stats: { ...newStatsPart({ hp: 6 }), attributes: { brawn: 14, grit: 8 } },
     }) as ActorEntity;
-    expect(getStat(state, brute, 'damage').parts).toEqual([{ op: 'add', value: 2, source: { id: 'attribute.brawn', label: 'Brawn 14' } }]);
+    expect(getStat(state, brute, 'damage').parts[0]).toMatchObject({ op: 'add', source: { id: 'attribute.brawn', label: 'Brawn 14' } });
+    expect(statValue(state, brute, 'damage')).toBe(2);
     expect(getAttribute(brute, 'brawn').parts).toEqual([{ value: 14, source: { id: 'monster.test', label: 'Base' } }]);
-    // Absolute formulas add to the base too: 6 + Brawn 14 × 0.5.
+    // Absolute formulas add to the base too: 6 + Brawn 14 × 0.5, and Grit 8 is where Grit's HP starts.
     expect(statValue(state, brute, 'hp')).toBe(13);
   });
 });

@@ -453,13 +453,13 @@ describe('AI information-leak guards (ETH-131)', () => {
   };
 
   it('makes identical decisions regardless of hidden fields or unknown-type item identity', () => {
-    // 1. Hurt with fountain in view (HP 9/20 = 45%, between 35% quaff threshold and 50% fountain threshold):
+    // 1. Hurt with fountain in view (HP 15/33 = 45%, between 35% quaff threshold and 50% fountain threshold):
     //    carriesHealingPotion must not peek at an unidentified Mending draught.
     const fountainDecisions = (['blessed', undefined, 'cursed'] as const).flatMap((blessing) =>
       [POTION, 'item.quickstep_tonic'].map((def) => {
         const s = createRun({ party: [HERO], depth: 1, floorText: ['#####', '#@.{#', '#####'], monsters: false }, 19);
         const h = getEntity(s, s.party[0] as EntityId) as ActorEntity;
-        h.actor.hp = 9;
+        h.actor.hp = 15;
         h.inventory = { items: [{ def, qty: 1, identified: false, ...(blessing === undefined ? {} : { blessing }) }] };
         return decisionOf(s, h);
       }),
@@ -467,11 +467,11 @@ describe('AI information-leak guards (ETH-131)', () => {
     expect(fountainDecisions[0]?.action).toBe('act.drink_fountain');
     for (const d of fountainDecisions) expect(d).toEqual(fountainDecisions[0]);
 
-    // 2. Critically wounded (HP 4/20 = 20% < 35%): unidentified healing vs speed potion & hidden beatitude choose identically.
+    // 2. Critically wounded (HP 7/33 = 21% < 35%): unidentified healing vs speed potion & hidden beatitude choose identically.
     const urgentDecisions = (['blessed', undefined, 'cursed'] as const).flatMap((blessing) =>
       [POTION, 'item.quickstep_tonic'].map((def) => {
         const { state: s, hero: h } = setup(19);
-        h.actor.hp = 4;
+        h.actor.hp = 7;
         h.inventory = { items: [{ def, qty: 1, identified: false, ...(blessing === undefined ? {} : { blessing }) }] };
         return decisionOf(s, h);
       }),
