@@ -56,7 +56,8 @@ export const BASELINE_FLEE_PERCENT = 35;
  * if there is an escape route (`act.flee` can't be done otherwise, so a cornered adventurer
  * fights on); attack an adjacent enemy (combat, ETH-060); rush a caster in sight that has you in
  * bolt range (ETH-040); once the party has turned back, climb
- * out with it (waiting at the stairs up for the others); once every contract is complete, turn
+ * out with it (waiting at the stairs up for the others); walk back to the party's lead when more
+ * than `PARTY_LEASH` tiles from it (ETH-145); once every contract is complete, turn
  * back and leave, and fetch a contract's item (the relic) once the party has seen it, however far
  * (quests, ETH-024, `src/sim/quests/rules.ts`); head down without waiting once the
  * floor's turn cap is spent; below half HP with no healing potion, drink from a known fountain
@@ -85,6 +86,9 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.hurt_no_healing', params: { below: 50 } }, action: { id: 'act.drink_fountain' }, enabled: true },
   // Items (ETH-061): pick up wanted items a short detour away.
   ...ITEMS_BASELINE_LOOT,
+  // Cohesion (ETH-145): while there is still ground to explore, stay near the party's lead rather
+  // than fight alone. Below every errand and above exploring, so it never fights the descent.
+  { condition: { id: 'cond.party_scattered' }, action: { id: 'act.regroup' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.explore' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.descend' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.gather' }, enabled: true },
