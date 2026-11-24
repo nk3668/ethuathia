@@ -4,7 +4,7 @@
 
 **Current milestone: M2 (Meta loop).**
 
-**Assigned to Gemini (Antigravity)**; Claude reviews each PR: ETH-083, ETH-095, ETH-157, ETH-158 (dependencies done), and ETH-175 (start only once ETH-172 is `done`: both edit `src/ui/town/UpgradeTree.tsx`). Likely conflicts: ETH-083 touches the run-end path that ETH-119 (merged) and ETH-087 (in progress) also change, so merge `main` in before opening the PR.
+**Assigned to Gemini (Antigravity)**; Claude reviews each PR: ETH-083, ETH-095 and ETH-175 (ETH-172 is done, so it can start). ETH-157 and ETH-158 are merged. ETH-083 touches the run-end path that ETH-119 and ETH-087 changed, so merge `main` in before opening the PR.
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
@@ -131,7 +131,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-159](town-meta/ETH-159-smithy-tree.md) | Smithy upgrade tree spent in Trophies | town-meta | M2 | P1 | idea | M |
 | [ETH-160](characters/ETH-160-starter-classes-and-races.md) | Starter set of unlockable classes and races | characters | M2 | P1 | idea | M |
 | [ETH-161](tools-balance/ETH-161-meta-loop-economy-balance.md) | Meta-loop economy balance pass (M2 capstone) | tools-balance | M2 | P1 | idea | M |
-| [ETH-172](town-meta/ETH-172-upgrade-ranks-and-tiers.md) | Upgrade engine supports ranked nodes and quest-locked tiers | town-meta | M2 | P1 | ready | M |
+| [ETH-172](town-meta/ETH-172-upgrade-ranks-and-tiers.md) | Upgrade engine supports ranked nodes and quest-locked tiers | town-meta | M2 | P1 | done | M |
 | [ETH-047](ui-shell/ETH-047-highlights-auto-pause.md) | Highlights feed and optional auto-pause | ui-shell | M2 | P2 | done | M |
 | [ETH-083](town-meta/ETH-083-gold-to-trophies.md) | Leftover gold converts to Trophies when the party exits | town-meta | M2 | P2 | ready | S |
 | [ETH-084](ui-shell/ETH-084-rematch-same-seed.md) | Rematch button on the run summary replays the same seed | ui-shell | M2 | P2 | done | S |
@@ -142,8 +142,8 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-129](town-meta/ETH-129-guild-hall-constant-respawn.md) | Guild Hall upgrade: constant floor respawns on revisit | town-meta | M2 | P2 | idea | S |
 | [ETH-131](tools-balance/ETH-131-contract-and-property-guards.md) | Cross-domain contract and property-based test guards (honesty, secrecy, potency, discoverability) | tools-balance | M2 | P2 | done | S |
 | [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs | town-meta | M2 | P2 | idea | M |
-| [ETH-157](dungeon-gen/ETH-157-split-encounters-module.md) | Split src/sim/combat/encounters.ts into focused modules | dungeon-gen | M2 | P2 | ready | M |
-| [ETH-158](tools-balance/ETH-158-split-headless-tool.md) | Split tools/headless.ts into focused modules | tools-balance | M2 | P2 | pending-review | M |
+| [ETH-157](dungeon-gen/ETH-157-split-encounters-module.md) | Split src/sim/combat/encounters.ts into focused modules | dungeon-gen | M2 | P2 | done | M |
+| [ETH-158](tools-balance/ETH-158-split-headless-tool.md) | Split tools/headless.ts into focused modules | tools-balance | M2 | P2 | done | M |
 | [ETH-170](town-meta/ETH-170-building-tier-quests.md) | Building-tier quests open each building's next tier | town-meta | M2 | P2 | idea | M |
 | [ETH-171](town-meta/ETH-171-sell-carried-items.md) | Items carried out of the dungeon sell for Trophies | town-meta | M2 | P2 | idea | S |
 | [ETH-175](ui-shell/ETH-175-disabled-button-tooltips.md) | Kit button that explains why it is disabled, with a tooltip | ui-shell | M2 | P2 | ready | S |

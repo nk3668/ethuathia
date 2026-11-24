@@ -49,7 +49,7 @@ describe('PrepareScreen', () => {
   });
 
   it('shows more slots once the Guild Hall allows them, and what the town gives', () => {
-    useProfileStore.setState((s) => ({ profile: { ...s.profile, upgrades: { owned: ['upgrade.second_berth', 'upgrade.hardy_recruits'] } } }));
+    useProfileStore.setState((s) => ({ profile: { ...s.profile, upgrades: { owned: ['upgrade.second_berth', 'upgrade.hardy_recruits'], ranks: {} } } }));
     render(<PrepareScreen />);
     expect(within(screen.getByTestId('prepare-party')).getAllByRole('combobox')).toHaveLength(4);
     const town = within(screen.getByTestId('prepare-town'));
