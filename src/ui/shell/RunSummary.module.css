@@ -132,6 +132,25 @@
   border-top: var(--border-width) solid var(--border);
 }
 
+/* Leftover gold conversion or wipe loss beneath the currencies table (ETH-083). */
+.goldLine {
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.goldTrophies {
+  color: var(--trophies);
+  font-weight: var(--font-weight-medium);
+}
+
+.goldLost {
+  color: var(--danger);
+  font-weight: var(--font-weight-medium);
+}
+
 /* Per-floor Renown breakdown beneath the currencies table (ETH-085). */
 .renownBreakdown {
   display: flex;

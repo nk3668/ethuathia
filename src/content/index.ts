@@ -47,3 +47,4 @@ export * from './draughts';
 export * from './dungeons';
 export * from './recruits';
 export * from './grammars';
+export * from './economy';

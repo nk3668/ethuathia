@@ -542,12 +542,15 @@ The reward flow, end to end. The sim never touches banked currency.
 
 ```
 sim events ──► RunTrackers ──► state.domains.run.rewards.atRisk ──► RunResult ──► meta applyRunResult
-(step)         (reduce)        (currency id → amount, this run;     (run end:     (banks atRisk − lost)
-                                ×Omen multiplier, ETH-067)           lost = wipe
-                                                                     share)
+(step)         (reduce)        (currency id → amount, this run;     (run end:     (banks (atRisk − lost)
+                                ×Omen multiplier, ETH-067)           lost = wipe   + (converted ?? {}))
+                                                                     share;
+                                                                     converted =
+                                                                     gold → Trophies
+                                                                     on exit, ETH-083)
 ```
 
-**Order: base → ×Omen → −25%.** The reward multiplier (`rewardMultiplier(state)`, ETH-115: 1 +
+**Order: base → ×Omen → −25%, then post-exit gold conversion.** The reward multiplier (`rewardMultiplier(state)`, ETH-115: 1 +
 the sum of the run modifiers' `rewardBonus`, never below 0) is applied inside `rewards.atRisk`:
 `trackerRewards` and `projectedRewards` sum the trackers, then multiply each currency and round
 down (`applyRewardMultiplier`). So `RunResult.atRisk` is already multiplied and the wipe loss is
@@ -555,15 +558,26 @@ taken from the multiplied amount. With no bonuses it is exactly 1 and nothing ch
 the modifiers in force now, over the whole run's total: a bonus added mid-run counts for earlier
 earnings too, and one that ends stops counting.
 
+**Leftover gold conversion (ETH-083, `src/content/economy.ts`, `src/sim/run/end.ts`).** In-run gold (`state.domains.items.gold`)
+is NOT at-risk currency: it never enters `rewards.atRisk`, is never multiplied by Omens, and is never
+subject to the 25% wipe loss. Instead, when the run ends:
+
+- On `victory` or `retreat`, leftover gold converts into Trophies at `GOLD_PER_TROPHY` (`10` gold = `1` Trophy,
+  rounded down via `goldToTrophies(gold)`), applied **after** the Omen multiplier and recorded in
+  `RunResult.converted` (`{ trophies }`, omitted when 0).
+- On a `wipe`, all leftover gold is lost (`converted` is omitted).
+- Whenever `gold > 0`, `end` emits `goldSettled { gold, trophies, lost }` right before `runEnded` (and
+  after `earningsLost` on a wipe).
+- `runResult` always writes `extras['run.gold']` (`GoldConversionRecord`: `{ gold, trophies, rate }`).
+
 **The wipe loss (ETH-023, `src/sim/run/wipeLoss.ts`).** `WIPE_LOSS_SHARE` (0.25, final per
 Nate) is the one constant. `wipeLoss(atRisk, outcome)` is empty for a victory or a retreat; on a
 wipe each currency keeps `keptAfterWipe(n)` = ⌊0.75 n⌋ and loses the rest (so the loss rounds
 up, and a lone point is lost). `runResult` sets `RunResult.lost` from it. On a wipe the run end
-also emits `earningsLost { lost, atRisk, share }` just before `runEnded` (only if something is
-lost): since the step's trackers haven't run yet, `end.ts` uses `projectedRewards(state,
+also emits `earningsLost { lost, atRisk, share }` just before `runEnded` (and before `goldSettled`,
+only if something is lost): since the step's trackers haven't run yet, `end.ts` uses `projectedRewards(state,
 stepEvents + runEnded)` (`trackers.ts`), which folds the step's events into copies of the tracker
-states, so the event's figures equal the `RunResult`'s. No new run state. In-run gold is not
-at-risk currency (ETH-083 converts it).
+states, so the event's figures equal the `RunResult`'s. No new run state.
 
 - Trackers turn events (kills, depth reached, conducts kept) into at-risk amounts. Nothing else
   writes `rewards.atRisk`.
@@ -572,16 +586,18 @@ at-risk currency (ETH-083 converts it).
   `src/sim/run/result.ts`). Absent means 0.
 - At run end the run domain puts the at-risk totals in the `RunResult` (ETH-062). The type is in
   `src/sim/run/result.ts` and is plain data:
-  `{ outcome: 'victory' | 'retreat' | 'wipe', atRisk, lost, turns, deepestDepth, extras }`.
-  `atRisk` and `lost` are `RewardAmounts` (currency id → amount); `lost` is what a wipe took
-  (`wipeLoss`; empty otherwise) and is never more than `atRisk`. `extras` is an open
-  record that later trackers write under their own id (`'track.kills'`).
+  `{ outcome: 'victory' | 'retreat' | 'wipe', atRisk, lost, converted?, turns, deepestDepth, extras }`.
+  `atRisk`, `lost`, and optional `converted` are `RewardAmounts` (currency id → amount); `lost` is
+  what a wipe took (`wipeLoss`; empty otherwise) and is never more than `atRisk`, while `converted`
+  holds post-exit converted amounts (absent on wipe or when 0). `extras` is an open
+  record that later trackers write under their own id (`'track.kills'`), plus `'run.end'`, `'run.party'`,
+  and `'run.gold'`.
 - `applyRunResult` in meta (§6.4) checks the result (it throws a `RangeError` on a malformed
-  one), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
-  `atRisk - lost`, the `history` slice records the run, and the `adventurers` slice (ETH-119) folds it
+  one, including non-finite/negative `converted` or positive `converted` on a `wipe`), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
+  `(atRisk - lost) + (converted ?? {})`, the `history` slice (v5, `RunRecord.gold`) records the run, the `adventurers` slice (ETH-119) folds it
   into each party member's record, and the `mastery` slice (ETH-087) adds each class's Mastery XP. A step gets a third argument, `before` (a `ProfileBefore`: the
   history as it was before banking), so it can read the run number without depending on slice order. The reward multiplier is already in
-  `atRisk` (see the order above), so the loss follows it.
+  `atRisk` (see the order above), so the loss follows it, and `converted` is added after both.
 - **Run end to profile (ETH-062):** the host calls `onRunEnded(report)` once, right after the
   update with the run's last events (`HostMessage` `runEnded` from the worker). `App` then calls
   `profileStore.applyRunResult(report.result)`, saves, and opens the run summary through

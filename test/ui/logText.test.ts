@@ -191,6 +191,21 @@ describe('log text', () => {
     expect(RUN_DOMAIN_LOG_TEXT.runStarted.text(hiddenHandBuilt, () => 'Mira')).toBe('Mira enters the dungeon.');
   });
 
+  it('words goldSettled for plural, singular, zero trophies, and wipe loss (ETH-083)', () => {
+    expect(describeEvent({ type: 'goldSettled', turn: 10, gold: 35, trophies: 3, lost: false }, () => '').text).toBe(
+      '35 leftover gold converts to 3 Trophies.',
+    );
+    expect(describeEvent({ type: 'goldSettled', turn: 10, gold: 10, trophies: 1, lost: false }, () => '').text).toBe(
+      '10 leftover gold converts to 1 Trophy.',
+    );
+    expect(describeEvent({ type: 'goldSettled', turn: 10, gold: 7, trophies: 0, lost: false }, () => '').text).toBe(
+      '7 leftover gold converts to 0 Trophies.',
+    );
+    expect(describeEvent({ type: 'goldSettled', turn: 10, gold: 35, trophies: 0, lost: true }, () => '').text).toBe(
+      'All 35 leftover gold is lost in the wipe.',
+    );
+  });
+
   it('logs ruleFired skip explanations even when the fallback rule did not change, and folds repeats (ETH-094)', () => {
     const rule = { set: 'baseline' as const, index: 6 };
     const events: { seq: number; event: SimEvent }[] = [
