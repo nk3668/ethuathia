@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-184**
+**Next ID: ETH-185**
 
 **Current milestone: M2 (Meta loop).**
 
@@ -153,6 +153,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-180](town-meta/ETH-180-ranked-tooltip-stacking.md) | Stat tooltips name a ranked upgrade once, with its rank count | town-meta | M2 | P3 | done | S |
 | [ETH-181](ui-shell/ETH-181-whole-number-stats.md) | Show derived stats the way combat uses them, as whole numbers | ui-shell | M2 | P3 | done | S |
 | [ETH-183](ui-shell/ETH-183-trophies-tooltip-single-source.md) | One source for the Trophies tooltip text | ui-shell | M2 | P3 | done | S |
+| [ETH-184](characters/ETH-184-kill-identify-reveal-conditions.md) | Run-scope kill and identify counts, so the Reaver and Lorekeeper get their intended reveals | characters | M2 | P2 | ready | S |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |
 | [ETH-077](ui-shell/ETH-077-prepare-attribute-previews.md) | Show attribute previews in the Prepare screen's class and race selects | ui-shell | M2 | P3 | done | S |
