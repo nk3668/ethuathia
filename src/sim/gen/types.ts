@@ -26,6 +26,8 @@ export interface FloorDraft extends FloorPlan {
   depth: number;
   /** The effective Danger rating of the floor being built (defaults to `depth`). */
   danger: number;
+  /** Adventurers the run sets out with (1 when not known): bigger parties meet more monsters (ETH-145). */
+  partySize: number;
   /** The dungeon variant being built, if known (carries ecology & encounter curves). */
   dungeon?: DungeonDef;
   /**

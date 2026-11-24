@@ -63,6 +63,18 @@ const BUDGET_ANCHORS: readonly [number, number][] = [
   [10, 155],
 ];
 
+/**
+ * How much the floor threat budget grows for each adventurer after the first (ETH-145, Principle 1
+ * of `docs/DIFFICULTY_PHILOSOPHY.md`): a party of 4 meets 30% more monsters than a lone adventurer.
+ * It adds headcount and packs only. Monster stats and templates never change with party size.
+ */
+export const PARTY_SIZE_BUDGET_STEP = 0.1;
+
+/** The multiplier on a floor's threat budget for a party of `size` (1 for one, `1 + STEP` per extra member). */
+export function partySizeBudgetMul(size: number): number {
+  return 1 + PARTY_SIZE_BUDGET_STEP * Math.max(0, Math.floor(size) - 1);
+}
+
 /** Smooth, monotonic Danger-to-threat-budget curve scaled by optional `budgetMul` (default `1`). */
 export function floorThreatBudget(danger: number, budgetMul = 1): number {
   if (danger <= 0 || budgetMul <= 0) return 0;
@@ -644,7 +656,8 @@ export function populateEncounters(draft: FloorDraft, params: EncounterGenParams
     );
   });
 
-  const totalBudget = floorThreatBudget(baseDanger, budgetMul);
+  const partyMul = partySizeBudgetMul(draft.partySize);
+  const totalBudget = Math.round(floorThreatBudget(baseDanger, budgetMul) * partyMul);
   let remainingBudget = totalBudget;
   let nextGroupId = 1;
 
@@ -704,7 +717,7 @@ export function populateEncounters(draft: FloorDraft, params: EncounterGenParams
     }
 
     // If budgetMul > 1 still has budget and every room already has a squad, reinforce rooms.
-    if (budgetMul > 1 && remainingBudget >= 2) {
+    if (budgetMul * partyMul > 1 && remainingBudget >= 2) {
       for (const room of chosenRooms) {
         if (remainingBudget < 2) break;
         const bp = pickBlueprint(baseDanger, basePool, remainingBudget, rng);

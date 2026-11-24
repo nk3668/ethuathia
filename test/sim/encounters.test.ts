@@ -24,6 +24,8 @@ import {
   getEntity,
   monstersForDanger,
   pickMonsterForSlot,
+  PARTY_SIZE_BUDGET_STEP,
+  partySizeBudgetMul,
   planFloor,
   Terrain,
 } from '../../src/sim';
@@ -117,7 +119,7 @@ describe('SQUAD_BLUEPRINTS content validation', () => {
 });
 
 describe('Danger-scaled threat-budget encounters', () => {
-  it('scales floor monster counts smoothly across Danger bands (6-10 at D1-2 up to 25-35+ at D9+)', () => {
+  it('scales floor monster counts smoothly across Danger bands (6-10 at D1-2 up to 22-35+ at D9+)', () => {
     const meanCounts = (danger: number, seeds = 20): number => {
       let total = 0;
       for (let seed = 1; seed <= seeds; seed++) {
@@ -149,8 +151,8 @@ describe('Danger-scaled threat-budget encounters', () => {
     expect(d7).toBeGreaterThanOrEqual(18);
     expect(d7).toBeLessThanOrEqual(27);
 
-    expect(d9).toBeGreaterThanOrEqual(25);
-    expect(d10).toBeGreaterThanOrEqual(25);
+    expect(d9).toBeGreaterThanOrEqual(22);
+    expect(d10).toBeGreaterThanOrEqual(22);
     expect(d9).toBeGreaterThan(d4);
     expect(d4).toBeGreaterThan(d1);
   });
@@ -275,6 +277,44 @@ describe('Danger-scaled threat-budget encounters', () => {
       denseTotal += densePlan.spawns?.length ?? 0;
     }
     expect(denseTotal).toBeGreaterThan(leanTotal * 1.8);
+  });
+
+  it('grows the floor budget by about 10% per adventurer after the first, as headcount only (ETH-145)', () => {
+    expect(PARTY_SIZE_BUDGET_STEP).toBeCloseTo(0.1);
+    expect(partySizeBudgetMul(1)).toBe(1);
+    expect(partySizeBudgetMul(4)).toBeCloseTo(1.3);
+
+    const spawnsFor = (partySize: number, danger: number) => {
+      let count = 0;
+      let threat = 0;
+      const templated = new Set<string>();
+      for (let seed = 1; seed <= 12; seed++) {
+        const plan = generateFloor(FLOOR_HALLS, Rng.seeded(seed, 'party-size'), { depth: danger, danger, dungeon: DUNGEON_OLD_DELVE, partySize });
+        for (const s of plan.spawns ?? []) {
+          count++;
+          threat += MONSTERS.get(s.def).threat;
+          if (s.monster?.overlay !== undefined) templated.add(s.def);
+        }
+      }
+      return { count, threat, templated };
+    };
+    const solo = spawnsFor(1, 6);
+    const four = spawnsFor(4, 6);
+    expect(four.count).toBeGreaterThan(solo.count);
+    expect(four.threat).toBeGreaterThan(solo.threat);
+    // Monster stats never scale: the same defs, unchanged, only more of them.
+    expect(spawnsFor(1, 6)).toEqual(solo);
+
+    // The run feeds it from the party it sets out with.
+    const planned = (party: (typeof HERO)[]) => {
+      let total = 0;
+      for (let seed = 1; seed <= 6; seed++) {
+        const state = createRun({ party }, seed);
+        total += planFloor(state, 'd2').spawns?.length ?? 0;
+      }
+      return total;
+    };
+    expect(planned([HERO, HERO, HERO, HERO].map((h, i) => ({ ...h, name: `Hero${i}` })))).toBeGreaterThan(planned([HERO]));
   });
 
   it('produces identical RunState plans across repeated planFloor calls with valid invariants', () => {

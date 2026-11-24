@@ -51,6 +51,8 @@ export interface GenerateOptions {
   dungeon?: DungeonDef;
   /** The floor's loot RNG (`lootRngState`). Default: `rng` itself, after the layout steps. */
   loot?: Rng;
+  /** Adventurers the run sets out with, for the party-size encounter surcharge (ETH-145). Default 1. */
+  partySize?: number;
 }
 
 /**
@@ -67,6 +69,7 @@ export function generateFloor(type: FloorTypeDef, rng: Rng, options: GenerateOpt
     starts: [],
     depth,
     danger: options.danger ?? depth,
+    partySize: options.partySize ?? 1,
     ...(options.dungeon === undefined ? {} : { dungeon: options.dungeon }),
     loot: options.loot ?? rng,
     items: [],
