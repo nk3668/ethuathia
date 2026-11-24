@@ -6,8 +6,8 @@
  *    attributes and level) contributes `add` and `mul` parts.
  * 2. Every active bundle (`BUNDLE_SOURCES`: attached bundles, statuses, later gear and Omens)
  *    contributes its modifiers for the stat, scaled by its potency.
- * 3. value = (sum of `add` parts) × (product of `mul` parts), rounded to a whole number
- *    (`Math.round`) and clamped to the stat's `min` and `max`, if any (`STAT_INFO`).
+ * 3. raw = (sum of `add` parts) × (product of `mul` parts); value = `combatValue(stat, raw)`: rounded
+ *    to a whole number and clamped to the stat's `min` and `max`, if any (`STAT_INFO`).
  *
  * A leaf module: it imports no sim values except the registries, so core files (perception,
  * the step loop, snapshots, invariants) can call it without an import cycle.
@@ -16,7 +16,8 @@ import { findDef, UPGRADES, upgradeBundle } from '../../content';
 import type { Bundle } from '../../content';
 import { BUNDLE_SOURCES, STAT_PROVIDERS } from '../registries';
 import type { Entity, RunState } from '../state';
-import { STAT_IDS, STAT_INFO } from './statIds';
+import { combatValue } from './combatValue';
+import { STAT_IDS } from './statIds';
 import type { StatId } from './statIds';
 import type { BundleVisitor, StatPart, StatResult, StatSink, StatsPart } from './types';
 
@@ -81,9 +82,7 @@ function collect(state: RunState, entity: Entity, stat: StatId, sink: StatSink):
 }
 
 function finish(stat: StatId, add: number, mul: number): number {
-  const info = STAT_INFO[stat];
-  const value = Math.max(info.min, Math.round(add * mul));
-  return info.max === undefined ? value : Math.min(info.max, value);
+  return combatValue(stat, add * mul);
 }
 
 /** The final value of `stat` on `entity`, without the parts. Use it wherever no tooltip is built. */
@@ -111,7 +110,7 @@ export function getStat(state: RunState, entity: Entity, stat: StatId): StatResu
     if (op === 'add' ? value === 0 : value === 1) return;
     parts.push({ op, value, source: { id: sourceId, label: label ?? sourceLabel(sourceId) } });
   });
-  return { stat, value: finish(stat, add, mul), parts };
+  return { stat, value: finish(stat, add, mul), raw: add * mul, parts };
 }
 
 /** Every stat of `entity`, keyed by id, with parts: what a stat sheet or tooltips show. */

@@ -251,6 +251,8 @@ describe('AppShell at desktop width', () => {
     const tip = await screen.findByRole('tooltip');
     expect(tip.textContent).toContain('From: Vanguard 11, Human +1.');
     expect(tip.textContent).toContain('Adds: Max HP +6, Damage +1.8, Carry +24, Force doors +48%.');
+    // The exact +1.8 stays in the breakdown; the whole stat (with the kit weapon's +1) says what combat rounds it to (ETH-181).
+    expect(tip.textContent).toContain('Totals: Damage 2.8, rounded to 3 in combat.');
     // Race and class are Explain links.
     expect(party.querySelector('[data-explain="class.vanguard"]')).not.toBeNull();
     expect(party.querySelector('[data-explain="race.human"]')).not.toBeNull();

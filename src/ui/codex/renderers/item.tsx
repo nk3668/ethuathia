@@ -35,7 +35,7 @@ function scalingFields(def: ItemDef): CodexField[] {
   if (attribute === undefined) return [];
   const name = attributeDef(attribute).name;
   const unarmed = attributeDef(UNARMED_ATTRIBUTE).name;
-  const rule = `Damage +${DAMAGE_FORMULA.perPoint} per point of ${name} above ${DAMAGE_FORMULA.from}`;
+  const rule = `Damage +${DAMAGE_FORMULA.perPoint} per point of ${name} above ${DAMAGE_FORMULA.from} (damage totals are rounded to whole numbers in combat)`;
   return [
     {
       label: 'Scales with',
