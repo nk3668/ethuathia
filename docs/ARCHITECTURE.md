@@ -624,7 +624,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`), and ETH-148 36 (`AiMemory.fleeing`, `AiMemory.threats`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`), and ETH-147 36 (the `mix` item field: hidden blessing counts in a stack of unidentified potions or scrolls), then ETH-148 37 (`AiMemory.fleeing`, `AiMemory.threats`).
 
 ### Contracts in the run (ETH-024)
 
@@ -924,7 +924,7 @@ per-instance item data adds an `ItemPropertyKind`, not its own edits to `gearBun
   - Built-in `ITEM_PROPERTY_LIST` order: `prop.enchant` (`enchant?: number`), `prop.blessing`
     (`blessing?: 'blessed' | 'cursed'`), `prop.enchantments` (`enchantments?: { id, level }[]`),
     `prop.identified` (`identified?: boolean`, absent = known), `prop.identify_tried` (`identifyTried?: true`,
-    ETH-142), `prop.origin`.
+    ETH-142), `prop.mix` (`mix?: { plain?, blessed?, cursed? }`, ETH-147), `prop.origin`.
   - Cursed gear refuses `unequip` and `equip` replacement in `validate`; `upgradeSlot` skips cursed
     slots and known-cursed items; blessed/cursed consumables scale `runEffects` potency (`1.5×`/`0.5×`)
     and gear shifts enhancement (`+1`/`-1`). `Scroll of uncursing` (`{ kind: 'uncurse' }`) and
@@ -934,6 +934,30 @@ per-instance item data adds an `ItemPropertyKind`, not its own edits to `gearBun
     and armor hide `+N`, beatitude and special enchantments until instance-identified via Wits
     `identify` on pickup (`tryIdentifyOnPickup`), wearing, using, or Scroll of Identify. AI gear
     comparisons pass `knownOnly: true` so the AI never peeks at hidden properties.
+  - **Unidentified potions and scrolls (ETH-147, `src/sim/items/mix.ts`):** the older ETH-044 rule, where
+    learning a type cleared the flag on plain copies, is gone because the flag then told plain copies from
+    special ones. Now `identified: false` means "this copy is not identified" whatever it holds, and
+    `isItemIdentified` ignores what the copy rolled and whether its type is known. Learning a type shows
+    its real name (still no blessing prefix) and a shared "Blessing unknown" note; nothing else changes.
+    Unidentified potions and scrolls of one def stack together whatever their blessing (`canStack` skips
+    `blessing` and `mix` when both are unidentified consumables, so separate stacks give nothing away
+    either). A stack is **plain** (no `blessing`, no `mix`), **uniform** (`blessing` set for every copy)
+    or **mixed** (`mix` counts per group, at least two non-zero, summing to `qty`, no `blessing`):
+    `setHiddenCounts` always writes that canonical form. Merging
+    (`addToStacks`, `placeItem`) sums the counts, and a stack-size overflow splits them off the front of
+    the groups (`takePart`).
+  - **Which copy comes off a mixed stack:** `takeFromInventory(entity, index, qty, state)` draws the
+    copies without replacement on `state.rng.loot` (`drawHidden`), so a use or a partial drop is seeded and
+    nobody can choose a blessed copy. `use` takes one copy, identifies that copy (potency follows its
+    blessing) and leaves the rest hidden; a partial drop puts the drawn copies on the floor with their
+    own counts, and picking them up merges the counts back. A full-stack take needs no draw.
+  - **Identifying a mixed stack** (a Scroll of Identify, the pickup Wits roll, `identifyItemFor`) reveals
+    the whole stack and splits it into one identified stack per group (`identifyInstance` returns the
+    extras, which go into the pack), with one `itemIdentified` event each; a plain group logs "no blessing
+    or curse". `identifyTried` still means one roll per stack (`stacks: 'ignore'`), so split-and-merge
+    cycles gain no extra rolls. Reading an uncursing scroll over a mixed stack turns its cursed copies
+    plain and leaves it unidentified. Known gap: the roll is tracked per stack, not per copy, so merging
+    an untried copy into a tried stack drops the flag and a later drop and pickup can roll the stack again.
 - **Planned kinds:** ETH-045 `affixes` (a bundle and a prefix or suffix each; artifacts are fixed affixes);
   ETH-096 `charges { n, max }`.
 
@@ -2544,6 +2568,11 @@ cards show every member, and the top bar and log show the run.
 
 ### 11.4 Sim compare (`tools/compare.ts`)
 
+- `npm run sim -- --jobs N` (1 to 64, default CPU cores - 1; 1 is today's serial run) runs seeds on
+  worker threads (`tools/parallel.ts`, `tools/parallel-worker.mjs`, which loads the harness through
+  `tsx/esm/api`). Seeds are handed out one at a time and results are stored by seed, so the report is
+  identical for any N; lower it to leave CPU free. `--compare` passes the same `--jobs` to a ref
+  whose `tools/headless.ts` mentions it and runs older refs serially.
 - `npm run sim -- --json FILE` also saves the report: `{ version, args, results }`, every
   seed's `SeedResult`.
 - `npm run sim -- --seeds N --compare REF` checks git ref `REF` out into a temporary detached
@@ -2592,6 +2621,6 @@ modifying a critical service in the categories below:
 | Any **SimEvent, log formatter, highlight rule, chronicle rule, or drop payload** carrying a player-discoverable secret (`item`, unseen trap/encounter, etc.) | **Non-spoiling event / log / chronicle sweep:** run unidentified/secret event payloads through `describeEvent`, `highlightWhen`, `discoveriesOf`, and `CHRONICLE_TRACKER`, asserting zero `{ ref }` Codex links, zero real-name substrings, `highlight: undefined`, and `[]` discoveries/entries. | `test/ui/logText.test.ts` | **High / Very High** — blocks UI tooltip, highlight, and chronicle spoilers |
 | A new **`Effect['kind']`**, potency-scaled consumable, trait, shrine/fountain effect, or ranked enchantment trigger | **Exhaustive `Effect['kind']` potency contract:** `EFFECT_POTENCY_CASES: Record<EffectKind, () => void>` forces a TypeScript compile error until the new kind's `0.5×` / `1×` / `1.5×+` scaling is specified and tested. | `test/sim/stats.test.ts` | **High / High** — catches unscaled `ctx.potency` at compile time |
 | A new **content kind, Codex renderer, or non-`alwaysKnown` def** (items, statuses, monsters, enchantments, deities, omens, bounties) | **Codex discoverability / reachability check:** map the kind's real producer event(s) in `probesByKind` and verify every non-`alwaysKnown`, non-`hidden` entry yields `>= 1` discovery mark via `discoveriesOf`. | `test/ui/codex.test.tsx` | **Medium-High / High** — guarantees no entry stays permanently stuck at `???` |
-| Anything that sets an item's **`identified` flag** (loot, drops, monster carries) | **Secrecy property guard:** roll gear across every def and depth and assert `identified === false` for all of it, plain or not; the snapshot flag, name and `stateNote` of plain and hidden-property variants must be equal; the baseline gear gate must give one verdict for them. | `test/sim/identifySecrecy.test.ts` | **High / High**: the flag never leaks what an item rolled |
+| Anything that sets an item's **`identified` flag** (loot, drops, monster carries) | **Secrecy property guard:** roll gear, potions and scrolls across every def and depth and assert `identified === false` for all of it, plain or not; the snapshot flag, name and `stateNote` of plain and hidden-property variants must be equal, with the type known or not; pickup, drop and sighting events and the AI's quaff and read choices must match too; a stack mixing blessings must look like a pure one. | `test/sim/identifySecrecy.test.ts`, `test/sim/consumableSecrecy.test.ts` | **High / High**: the flag never leaks what an item rolled |
 | A new **`ItemPropertyKind`** (or similar sparse optional field on `ItemInstance` / `RunState` used in equality or `canStack` checks) | **Canonical-value invariant test:** ensure `schema` rejects every default/no-op value (`0`, `true`, `[]`, `{}`, `'uncursed'`) and register it in `CANONICAL_REJECTED`. | `test/sim/itemProperties.test.ts` | **Medium / High** — prevents duplicate unstackable instances and save bloat |
 | A configurable **numeric range `{ min?, max? }`** with positive defaults (spawn counts, loot quantities, depth bounds, cooldowns) | **Use `clampRange` + `{ max: 0 }` boundary test:** compute and clamp `max` before clamping `min <= max` via `clampRange` (`src/core/range.ts`) and assert `{ max: 0 }` produces `{ min: 0, max: 0 }`. | `src/core/range.ts`, `test/core/range.test.ts`, caller suite | **Low-Medium / Medium** — stops positive `defaultMin` from overriding explicit disable (`max: 0`) |

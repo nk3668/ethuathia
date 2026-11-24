@@ -18,9 +18,10 @@ import type { EffectHandler } from '../stats/types';
 import { isCursed, itemEnchantmentIds } from './enchant';
 import { wornItems } from './equipment';
 import { hasHiddenProperties, identifyInstance, isGearDef, isItemIdentified } from './identify';
+import { hiddenCounts, isSecretConsumable, setHiddenCounts } from './mix';
 import { addToStacks } from './instance';
 import type { ItemInstance } from './instance';
-import { inventoryOf } from './inventory';
+import { addToInventory, inventoryOf } from './inventory';
 import { itemName } from './name';
 
 /** Re-merges stacks in `entity`'s pack after identification makes previously distinct stacks equal. */
@@ -32,21 +33,9 @@ export function consolidatePack(entity: Entity): void {
   inv.items = merged;
 }
 
-/** Clears `identified: false` on plain uncursed pack items of `defId` across the party once its type is known. */
-export function clearPlainTypeFlags(state: RunState, defId: string, consolidate = true): void {
-  for (const id of state.party) {
-    const member = state.entities[id];
-    if (member?.inventory === undefined) continue;
-    let touched = false;
-    for (const entry of member.inventory.items) {
-      if (entry.def === defId && entry.identified === false && !isGearDef(entry.def) && !hasHiddenProperties(entry)) {
-        Reflect.deleteProperty(entry, 'identified');
-        Reflect.deleteProperty(entry, 'identifyTried');
-        touched = true;
-      }
-    }
-    if (touched && consolidate) consolidatePack(member);
-  }
+/** True if `defId` is a potion or scroll, whose blessing stays hidden until identified (ETH-147). */
+function isConsumableDef(defId: string): boolean {
+  return ITEMS.has(defId) && (ITEMS.get(defId).category === 'potion' || ITEMS.get(defId).category === 'scroll');
 }
 
 /** Emits `itemIdentified` after identifying `item` (with `was` captured before identification). */
@@ -69,7 +58,7 @@ export function emitIdentified(
     method,
     ...(enchantments.length > 0 ? { enchantments } : {}),
     ...(isCursed(item) ? { cursed: true } : {}),
-    ...(isGearDef(item.def) && !hasHiddenProperties(item) ? { plain: true as const } : {}),
+    ...((isGearDef(item.def) || isConsumableDef(item.def)) && !hasHiddenProperties(item) ? { plain: true as const } : {}),
     floor: actor.floor,
     pos: { x: actor.pos.x, y: actor.pos.y },
   });
@@ -77,7 +66,8 @@ export function emitIdentified(
 
 /**
  * Identifies `item` for `actor` via `method` and emits `itemIdentified` if anything was unknown.
- * Also consolidates plain stacks if a consumable/jewelry type was newly learned (unless deferred).
+ * A mixed stack of potions or scrolls splits by blessing: each group is identified and reported
+ * on its own, and the groups beyond the first go into `actor`'s pack (ETH-147).
  */
 export function identifyItemFor(
   state: RunState,
@@ -89,11 +79,14 @@ export function identifyItemFor(
 ): boolean {
   if (isItemIdentified(state, item)) return false;
   const was = itemName(state, item, actor);
-  const { changed, typeNewlyKnown } = identifyInstance(state, item);
+  const { changed, extras } = identifyInstance(state, item);
   if (!changed) return false;
-  if (typeNewlyKnown) clearPlainTypeFlags(state, item.def, consolidate);
-  if (consolidate) consolidatePack(actor);
   emitIdentified(state, actor, item, was, method, emit);
+  for (const extra of extras) {
+    emitIdentified(state, actor, extra, was, method, emit);
+    addToInventory(actor, extra);
+  }
+  if (consolidate) consolidatePack(actor);
   return true;
 }
 
@@ -114,8 +107,15 @@ export function tryIdentifyOnPickup(state: RunState, actor: ActorEntity, item: I
 
 /** Uncurses `item` in place (if cursed) and emits `itemUncursed`. Returns true if a curse was lifted. */
 export function uncurseItem(state: RunState, actor: Entity, item: ItemInstance, slot: EquipSlot | null, emit: Emit): boolean {
-  if (!isCursed(item)) return false;
-  Reflect.deleteProperty(item, 'blessing');
+  const mixedCurse = isSecretConsumable(item) && (item.mix?.cursed ?? 0) > 0;
+  if (!isCursed(item) && !mixedCurse) return false;
+  if (mixedCurse) {
+    // Cursed copies in a hidden mix turn plain; the stack stays unidentified (ETH-147).
+    const c = hiddenCounts(item);
+    setHiddenCounts(item, { plain: c.plain + c.cursed, blessed: c.blessed, cursed: 0 });
+  } else {
+    Reflect.deleteProperty(item, 'blessing');
+  }
   const name = itemName(state, item, actor);
   emit({
     type: 'itemUncursed',

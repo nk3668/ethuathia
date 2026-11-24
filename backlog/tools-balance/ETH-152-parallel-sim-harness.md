@@ -2,14 +2,14 @@
 id: ETH-152
 title: Run harness seeds in parallel across CPU cores
 type: chore
-status: idea
+status: done
 priority: P2
 milestone: M1.6
 epic: tools-balance
 size: S
 depends_on: []
 created: 2026-11-24
-updated: 2026-11-24
+updated: 2026-11-23
 ---
 
 ## Summary
@@ -23,14 +23,14 @@ Every seed is independent and deterministic, so they parallelize cleanly. Cuttin
 alternative to cutting seeds, which would cost reliability (§9 "Seed tiers").
 
 ## Acceptance criteria
-- [ ] `npm run sim` takes `--jobs N` (default: CPU cores − 1; `--jobs 1` keeps today's serial run).
-- [ ] The report is byte-identical for `--jobs 1` and `--jobs N` on the same seeds (same per-seed
+- [x] `npm run sim` takes `--jobs N` (default: CPU cores − 1; `--jobs 1` keeps today's serial run).
+- [x] The report is byte-identical for `--jobs 1` and `--jobs N` on the same seeds (same per-seed
       results, same order, same summary), with a test proving it on a small seed set.
-- [ ] `--compare` runs the ref's harness with the same `--jobs` when that ref supports the flag, and
+- [x] `--compare` runs the ref's harness with the same `--jobs` when that ref supports the flag, and
       falls back to serial for older refs.
-- [ ] The sim stays DOM-free and uses no `Math.random()`. Workers only take seeds and return
+- [x] The sim stays DOM-free and uses no `Math.random()`. Workers only take seeds and return
       `SeedResult`s.
-- [ ] `docs/ARCHITECTURE.md` §11.4 documents the flag. `npm run check` passes.
+- [x] `docs/ARCHITECTURE.md` §11.4 documents the flag. `npm run check` passes.
 
 ## Notes
 - Node `worker_threads` running `tools/headless.ts` per seed batch; `tsx` needs a loader in workers.
@@ -38,3 +38,13 @@ alternative to cutting seeds, which would cost reliability (§9 "Seed tiers").
 
 ## Log
 - 2026-11-24: Created after Nate asked whether 200-seed sweeps could be cut (approved filing).
+- 2026-11-24: Implemented. `tools/parallel.ts` (pool, seeds handed out one at a time, results stored
+  by seed) and `tools/parallel-worker.mjs` (registers `tsx/esm/api`, then runs `runSeed`).
+  `--jobs N` is 1..64, default cores - 1. `--compare` appends `--jobs` only when the ref's
+  `tools/headless.ts` mentions it. `--seeds 50`: 57.35 s at `--jobs 1`, 18.10 s at 15 jobs (16
+  cores); JSON and printed report identical. No change under `src/`.
+- 2026-11-23: Wrap-up checks (left unmerged): exported `jobsFlagSupported` and added unit tests in
+  `test/tools/parallel.test.ts` for `jobsFlagSupported` and `makeReport` omitting `jobs`. Verified
+  `npm run check` (103 files, 1198 tests passed), `npm run build`, and `--compare` (`--seeds 6 --cap 300 --jobs 3`)
+  against `62cc704` (serial fallback, 0 hash diffs) and `205a9a3` (parallel ref, 0 hash diffs).
+- 2026-11-23: Reviewed and merged into m1.5-living-dungeon by the orchestrator (5c973b4); npm run check green (104 files, 1217 tests); T0 20-seed compare vs ee9e952: all seeds identical.

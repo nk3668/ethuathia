@@ -8,7 +8,7 @@
  *   `RunState.memory`: `noticeItems` records what a member sees, `rememberTile` refreshes one tile.
  *   The AI plans on that memory, never on items it hasn't seen.
  */
-import { Grid } from '../../core';
+import { clonePlain, Grid, Rng } from '../../core';
 import type { Pos } from '../../core';
 import { isJunk } from '../../content';
 import { addEntity, getEntity, getFloor } from '../entities';
@@ -18,7 +18,8 @@ import type { ActorEntity, Entity, FloorId, RunState } from '../state';
 import { statValue } from '../stats/getStat';
 import { isKnownCursed } from './enchant';
 import { appearanceName, isItemIdentified, isTypeIdentified } from './identify';
-import { addToStacks, canStack, itemDef, itemWeight, stackSize } from './instance';
+import { addToStacks, canStack, itemDef, itemWeight, stackSize, takePart } from './instance';
+import { drawHidden, hiddenCounts, isSecretConsumable, mergeHidden, setHiddenCounts } from './mix';
 import type { InventoryPart, ItemInstance } from './instance';
 import { upgradeSlot } from './equipment';
 import { unitValue } from './value';
@@ -67,19 +68,19 @@ export function itemsAt(state: RunState, floorId: FloorId, pos: Pos): ItemEntity
 export function placeItem(state: RunState, floorId: FloorId, pos: Pos, item: ItemInstance): ItemEntity[] {
   const size = stackSize(itemDef(item));
   const touched: ItemEntity[] = [];
-  let left = item.qty;
+  const rest = clonePlain(item);
   for (const e of itemsAt(state, floorId, pos)) {
-    if (left === 0) break;
-    if (!canStack(e.item, item) || e.item.qty >= size) continue;
-    const moved = Math.min(left, size - e.item.qty);
+    if (rest.qty === 0) break;
+    if (!canStack(e.item, rest) || e.item.qty >= size) continue;
+    const moved = Math.min(rest.qty, size - e.item.qty);
+    if (isSecretConsumable(e.item) && isSecretConsumable(rest)) mergeHidden(e.item, rest, moved);
     e.item.qty += moved;
-    left -= moved;
+    takePart(rest, moved);
     touched.push(e);
   }
-  while (left > 0) {
-    const qty = Math.min(left, size);
-    touched.push(addEntity(state, { def: item.def, floor: floorId, pos: { x: pos.x, y: pos.y }, item: { ...item, qty } }) as ItemEntity);
-    left -= qty;
+  while (rest.qty > 0) {
+    const piece = takePart(rest, Math.min(rest.qty, size));
+    touched.push(addEntity(state, { def: item.def, floor: floorId, pos: { x: pos.x, y: pos.y }, item: piece }) as ItemEntity);
   }
   return touched;
 }
@@ -127,12 +128,22 @@ export function addToInventory(entity: Entity, item: ItemInstance): void {
  * Takes `qty` of the pack entry at `index` out of `entity`'s pack and returns them as a new
  * instance. Throws if there is no such entry or not that many.
  */
-export function takeFromInventory(entity: Entity, index: number, qty: number): ItemInstance {
+export function takeFromInventory(entity: Entity, index: number, qty: number, state?: RunState): ItemInstance {
   const items = entity.inventory?.items;
   const entry = items?.[index];
   if (items === undefined || entry === undefined) throw new Error(`Entity ${entity.id} has no pack entry ${index}`);
   if (!Number.isSafeInteger(qty) || qty < 1 || qty > entry.qty) throw new RangeError(`Can't take ${qty} of ${entry.qty} "${entry.def}"`);
-  const taken = { ...entry, qty };
+  const taken = clonePlain(entry);
+  taken.qty = qty;
+  // A mixed stack of unidentified potions or scrolls: which copies come off is drawn from the loot
+  // stream, so it is seeded and nobody can pick a blessed one (ETH-147).
+  if (entry.mix !== undefined && qty < entry.qty) {
+    if (state === undefined) throw new Error('Taking part of a mixed stack needs the run state for its seeded draw');
+    const have = hiddenCounts(entry);
+    const drawn = drawHidden(have, qty, new Rng(state.rng.loot));
+    setHiddenCounts(taken, drawn);
+    setHiddenCounts(entry, { plain: have.plain - drawn.plain, blessed: have.blessed - drawn.blessed, cursed: have.cursed - drawn.cursed });
+  }
   entry.qty -= qty;
   if (entry.qty === 0) items.splice(index, 1);
   return taken;

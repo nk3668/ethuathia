@@ -36,8 +36,9 @@
 import { z } from 'zod';
 import type { Bundle } from '../../content';
 import type { Entity, RunState } from '../state';
-import { enchantmentProblems, PROP_BLESSING, PROP_ENCHANT, PROP_ENCHANTMENTS, PROP_IDENTIFIED, PROP_IDENTIFY_TRIED } from './enchant';
+import { enchantmentProblems, PROP_BLESSING, PROP_ENCHANT, PROP_ENCHANTMENTS, PROP_IDENTIFIED, PROP_IDENTIFY_TRIED, PROP_MIX } from './enchant';
 import type { ItemInstance, ItemOrigin } from './instance';
+import { isSecretConsumable } from './mix';
 import { PROP_WEAPON_SCALING } from './scaling';
 
 /** The fields of `ItemInstance` a property may own: every one but `def` and `qty`. */
@@ -143,6 +144,7 @@ const ITEM_PROPERTY_LIST: readonly ItemPropertyKind[] = [
   PROP_ENCHANTMENTS as ItemPropertyKind,
   PROP_IDENTIFIED as ItemPropertyKind,
   PROP_IDENTIFY_TRIED as ItemPropertyKind,
+  PROP_MIX as ItemPropertyKind,
   PROP_ORIGIN as ItemPropertyKind,
 ];
 
@@ -235,5 +237,11 @@ export function propertyProblems(item: ItemInstance): string[] {
     if (!result.success) problems.push(`"${item.def}" has a bad ${field}: ${result.error.issues[0]?.message ?? 'invalid'}`);
   }
   problems.push(...enchantmentProblems(item));
+  if (item.mix !== undefined) {
+    const total = (item.mix.plain ?? 0) + (item.mix.blessed ?? 0) + (item.mix.cursed ?? 0);
+    if (!isSecretConsumable(item)) problems.push(`"${item.def}" has a mix but is not an unidentified potion or scroll`);
+    if (total !== item.qty) problems.push(`"${item.def}" mix counts ${total} copies but the stack has ${item.qty}`);
+    if (item.blessing !== undefined) problems.push(`"${item.def}" has both a blessing and a mix`);
+  }
   return problems;
 }
