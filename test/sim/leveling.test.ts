@@ -143,7 +143,7 @@ describe('earning XP', () => {
     const brute = spawnMonster(state, 'monster.cavern_brute', 'd1', { x: 3, y: 1 }) as ActorEntity;
     brute.actor.hp = 2;
     expect(MONSTERS.get('monster.cavern_brute').threat).toBe(6);
-    expect(statValue(state, hero, 'hp')).toBe(20);
+    expect(statValue(state, hero, 'hp')).toBe(33);
     grantXp(state, hero, xpForLevel(3) - 6 * XP_PER_THREAT, 'kill', 'x', collect(state).emit);
     expect(levelOf(hero)).toBe(2);
     const events = runUntil(state, (es) => es.some((e) => e.type === 'killed'));
@@ -170,9 +170,9 @@ describe('earning XP', () => {
     expect(types.indexOf('xpGained')).toBeLessThan(types.indexOf('leveledUp'));
 
     // Human Vanguard (Brawn 12, Finesse 10, Wits 5, Grit 14) plus the two rolls: Brawn 15,
-    // Finesse 11, Wits 6, Grit 17 → max HP 17 + 7.5 = 24.5, rounded to 25; Carry 30.
+    // Finesse 11, Wits 6, Grit 17 → max HP 4.5 × 9 + 7.5 = 48; Carry 30.
     const total = sumGains([2, 3].map((l) => rollLevelGains(state, hero.id, CLASS_VANGUARD.id, l)));
-    expect(statValue(state, hero, 'hp')).toBe(25);
+    expect(statValue(state, hero, 'hp')).toBe(48);
     expect(attributeValue(hero, 'finesse')).toBe(11);
     expect(attributeValue(hero, 'wits')).toBe(6);
     expect(levelOf(hero)).toBe(3);
@@ -183,7 +183,7 @@ describe('earning XP', () => {
     expect(attributeValue(hero, 'grit')).toBe(grit);
     expect(growthOf(hero, 'grit')).toBe(total.grit ?? 0);
     expect(getAttribute(hero, 'grit').parts.find((p) => p.source.label === 'Level 3')?.value ?? 0).toBe(total.grit ?? 0);
-    expect(statValue(state, hero, 'hp')).toBe(Math.round(grit + brawn / 2));
+    expect(statValue(state, hero, 'hp')).toBe(Math.round(4.5 * (grit - 8) + brawn / 2));
     expect(statValue(state, hero, 'carry')).toBe(2 * brawn);
   });
 

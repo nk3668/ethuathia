@@ -80,6 +80,7 @@ On the spec numbers the harness showed (100 seeds): Outrider 100% wins (50 seeds
 - Unlocking them (milestone reveals, Guild Hall sells for Renown) is ETH-036, built on these defs.
 - Race slot restrictions and innate bundles (survey 1.1) need equipment slots (ETH-043) and wait for M4.
 - ETH-039's survey (`docs/ROGUELIKE-SURVEY.md` §1) was the starting point. The names are our own.
+- ETH-177 (2026-11-24) repriced the attribute formulas and put the Outrider back on the shared budget (8/14/7/8, +3.25 a level). The Reaver is 13/9/4/9 (35 points, +3.25 a level), two under the shared 37: on 37 it still won 32% against the Vanguard's 14%, its hatchet's +2 damage being the rest of its edge. The Stonekin gained Finesse +1 (3/1/0/4, +8 where the Human has +4, speed 90). The Lorekeeper stays at 5/8/12/8 (33 points, it trails on purpose). The class table in the Proposal above shows the original spec, not the numbers now in `src/content/classes.ts`.
 
 Open decisions:
 - **Decided (Nate, 2026-11-24):** these three classes and two races, named and written as above.

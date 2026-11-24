@@ -70,7 +70,8 @@ export function weaponScaling(wearer: Entity | undefined, item: ItemInstance): W
 export function weaponScalingText(wearer: Entity | undefined, item: ItemInstance): string | null {
   const s = weaponScaling(wearer, item);
   if (s === null) return null;
-  const change = s.change === 0 ? '±0' : `${s.change < 0 ? '−' : '+'}${Math.abs(s.change)}`;
+  const shown = Number(Math.abs(s.change).toFixed(2));
+  const change = shown === 0 ? '±0' : `${s.change < 0 ? '−' : '+'}${shown}`;
   return (
     `Damage scales with ${attributeDef(s.attribute).name} ${s.value} instead of ${attributeDef(s.unarmed).name} ${s.unarmedValue}: ` +
     `${change} damage`

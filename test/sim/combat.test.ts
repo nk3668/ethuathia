@@ -237,6 +237,6 @@ describe('snapshot', () => {
     const m = spawnMonster(state, 'monster.gloam_rat', 'd1', { x: 3, y: 1 });
     const actors = snapshot(state).floor.actors;
     expect(actors).toContainEqual({ id: m.id, def: 'monster.gloam_rat', pos: { x: 3, y: 1 }, faction: 'monster', name: 'Gloam rat', hp: 3, maxHp: 3 });
-    expect(actors.find((a) => a.id === hero.id)).toMatchObject({ name: 'Brannoc', hp: 20, maxHp: 20 });
+    expect(actors.find((a) => a.id === hero.id)).toMatchObject({ name: 'Brannoc', hp: 33, maxHp: 33 });
   });
 });

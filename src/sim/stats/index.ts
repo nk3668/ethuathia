@@ -65,7 +65,6 @@ export { fireTrigger, MAX_TRIGGER_DEPTH, runEffect, runEffects } from './effects
 export { attachBundle, detachBundles } from './bundles';
 export {
   ATTRIBUTE_FORMULAS,
-  ATTRIBUTE_NEUTRAL,
   attributeValue,
   DAMAGE_FORMULA,
   formulasFor,

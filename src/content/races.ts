@@ -54,8 +54,8 @@ export const RACE_STONEKIN = defineRace({
     'and slower to fall.',
   hint: 'Stone-boned folk who take a long time to fall over.',
   tags: [],
-  // +7 points where the Human has +4: the 90 speed costs a tenth of its turns (ETH-160 balance).
-  attributes: { brawn: 3, grit: 4 },
+  // +8 points where the Human has +4: the 90 speed costs a tenth of its turns (ETH-160, ETH-177 balance).
+  attributes: { brawn: 3, finesse: 1, grit: 4 },
   speed: 90,
 });
 
