@@ -76,7 +76,10 @@ export interface StatPart {
 /** A stat's final value and every contribution to it, in order: what a stat tooltip shows. */
 export interface StatResult {
   stat: StatId;
+  /** What combat uses: `raw` rounded and clamped (`combatValue`). */
   value: number;
+  /** The exact total before rounding (1.8 where `value` is 2), for tooltips (ETH-181). */
+  raw: number;
   parts: StatPart[];
 }
 

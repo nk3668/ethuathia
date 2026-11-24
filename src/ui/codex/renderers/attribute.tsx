@@ -10,7 +10,7 @@ export default defineCodexRenderer({
   alwaysKnown: true,
   fields: (def) => [
     { label: 'Short', value: def.abbr, hint: 'How party cards abbreviate it.' },
-    { label: 'Raises', value: attributeEffectText(def.key), hint: 'The stats it derives, per point of the attribute.', key: true },
+    { label: 'Raises', value: attributeEffectText(def.key), hint: 'The stats it derives, per point of the attribute. A stat total is rounded to a whole number in combat.', key: true },
     { label: 'Second job', value: attributeSkillText(def.key), hint: attributeSkillDetails(def.key) },
   ],
 });
