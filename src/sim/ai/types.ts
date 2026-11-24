@@ -115,11 +115,12 @@ export interface AiMemory {
    */
   waitingFor: EntityId | null;
   /**
-   * Set while the actor is fleeing (ETH-148): the turn it started and the turn it last saw a
-   * threat. Fleeing goes on until HP recovers or no threat has been seen for a while. Only
-   * adventurers (party) update it.
+   * Set while the actor is fleeing (ETH-148): the turn it started, the turn it last saw a threat,
+   * and how many decisions in a row it has held still with nowhere to run (`FLEE_HOLD_TURNS`).
+   * Fleeing goes on until HP recovers or no threat has been seen for a while. Only adventurers
+   * (party) update it.
    */
-  fleeing: { since: number; lastSeen: number } | null;
+  fleeing: { since: number; lastSeen: number; held: number } | null;
   /** The threats seen recently and where, newest sighting per monster (ETH-148). */
   threats: ThreatMark[];
 }

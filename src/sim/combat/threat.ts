@@ -19,7 +19,7 @@ import type { PathGrid } from '../goalMap';
 import type { AiActor, AiCtx, ThreatMark } from '../ai/types';
 import { nameOf } from '../ai/navigate';
 import type { ActorEntity, Entity, RunState } from '../state';
-import { AVOID_PENALTY, AVOID_RADIUS, BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
+import { AVOID_PENALTY, AVOID_RADIUS, BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_HOLD_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
 import { hpPercent, visibleEnemies } from './rules';
 import { overlayOf, templatesOf } from './overlay';
 
@@ -93,10 +93,16 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
   const hp = hpPercent(state, actor);
   const fleeing = memory.fleeing;
   if (fleeing === null) {
-    if (hp < BASELINE_FLEE_PERCENT && visible.length > 0) memory.fleeing = { since: state.turn, lastSeen: state.turn };
+    if (hp < BASELINE_FLEE_PERCENT && visible.length > 0) memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
     return;
   }
   if (visible.length > 0) fleeing.lastSeen = state.turn;
+  // Holding still with nowhere to run only works for so long: then give up fleeing and carry on.
+  fleeing.held = memory.intent?.action === 'act.hold_position' ? fleeing.held + 1 : 0;
+  if (fleeing.held > FLEE_HOLD_TURNS) {
+    memory.fleeing = null;
+    return;
+  }
   if (hp >= FLEE_RELEASE_PERCENT || state.turn - fleeing.lastSeen >= FLEE_CALM_TURNS) memory.fleeing = null;
 }
 

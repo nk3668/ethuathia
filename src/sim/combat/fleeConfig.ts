@@ -15,3 +15,5 @@ export const THREAT_MEMORY_TURNS = 60;
 export const AVOID_RADIUS = 6;
 /** The extra cost of the tile a remembered threat was last seen on, at the moment it was seen. */
 export const AVOID_PENALTY = 24;
+/** Decisions in a row an adventurer holds still, fleeing with nowhere left to run, before it gives up fleeing. */
+export const FLEE_HOLD_TURNS = 12;

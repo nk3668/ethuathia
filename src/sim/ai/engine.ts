@@ -337,7 +337,7 @@ registerInvariant('core.aiMemory', (state) => {
     }
     const fleeing = memory.fleeing;
     if (fleeing !== null) {
-      if (!Number.isSafeInteger(fleeing.since) || !Number.isSafeInteger(fleeing.lastSeen) || fleeing.lastSeen < fleeing.since) {
+      if (!Number.isSafeInteger(fleeing.since) || !Number.isSafeInteger(fleeing.lastSeen) || fleeing.lastSeen < fleeing.since || !Number.isSafeInteger(fleeing.held) || fleeing.held < 0) {
         problems.push(`actor ${entity.id} has invalid fleeing`);
       }
     }

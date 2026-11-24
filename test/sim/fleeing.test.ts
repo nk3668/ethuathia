@@ -127,7 +127,7 @@ describe('flee hysteresis', () => {
     const { state, hero, maxHp } = hall();
     hero.ai.rules = hold();
     hpTo(hero, maxHp, BASELINE_FLEE_PERCENT + 10);
-    hero.ai.memory.fleeing = { since: state.turn, lastSeen: state.turn };
+    hero.ai.memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
     for (let i = 0; i < FLEE_CALM_TURNS - 3; i++) step(state, []);
     expect(hero.ai.memory.fleeing).not.toBeNull();
     for (let i = 0; i < 10; i++) {
