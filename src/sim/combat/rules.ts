@@ -277,6 +277,29 @@ export const ACT_FLEE = defineRuleAction({
   describe: () => 'flee from the threats in sight',
 });
 
+/**
+ * Stay put when there is nowhere left to run (ETH-148). Once an adventurer is fleeing and the flee
+ * map has no free step, walking on would only take it back toward the threat (exploring leads past
+ * it), so it holds still until the threat comes (and `act.attack_adjacent` fights it), HP recovers,
+ * or the coast has been clear for `FLEE_CALM_TURNS`.
+ */
+export const ACT_HOLD_POSITION = defineRuleAction({
+  id: 'act.hold_position',
+  name: 'Hold position',
+  description:
+    'Stand still while fleeing with no escape route left, rather than walk back toward the enemy that was ' +
+    'being fled. Ends when HP has recovered, when no threat has been seen for a while, or when an enemy ' +
+    'reaches the adventurer and there is a fight to be had.',
+  idle: true,
+  parse: noParams,
+  resolve({ state, actor }): Resolved | null {
+    if (actor.actor.faction !== 'party' || actor.ai.memory.fleeing === null) return null;
+    if (adjacentEnemies(state, actor).length > 0) return null;
+    return { request: { id: 'wait' }, detail: `nowhere left to run; holding still until the coast is clear, HP ${Math.round(hpPercent(state, actor))}%` };
+  },
+  describe: () => 'hold still while fleeing with nowhere to run',
+});
+
 /** How many turns a wandering creature keeps to one heading before it picks another. */
 export const WANDER_LEG = 6;
 
@@ -317,4 +340,4 @@ export const ACT_WANDER = defineRuleAction({
 export const COMBAT_CONDITIONS: readonly ConditionDef[] = [COND_ENEMY_ADJACENT, COND_ENEMY_VISIBLE, COND_HP_BELOW, COND_FLEEING];
 
 /** The combat domain's rule actions, in registration order. */
-export const COMBAT_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_ATTACK_ADJACENT, ACT_APPROACH_ENEMY, ACT_FLEE, ACT_WANDER];
+export const COMBAT_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_ATTACK_ADJACENT, ACT_APPROACH_ENEMY, ACT_FLEE, ACT_HOLD_POSITION, ACT_WANDER];
