@@ -2,7 +2,7 @@
 epic: town-meta
 title: Town, currencies and upgrades
 status: active
-milestones: [M2, M3, M7, later]
+milestones: [M2, M3, M7, M8, later]
 ---
 
 ## Goal
@@ -43,5 +43,9 @@ More items are added when M2 becomes the current milestone.
 - [ ] [ETH-124 Retire veterans to Tavern jobs for permanent passive bonuses](ETH-124-tavern-veterans-retirement.md)
 - [ ] [ETH-127 Achievements tracked with the objective engine](ETH-127-achievements.md)
 - [ ] [ETH-129 Guild Hall upgrade: constant floor respawns on revisit](ETH-129-guild-hall-constant-respawn.md)
-- [ ] [ETH-132 Rescale Guild Hall Renown costs for depth-weighted rewards](ETH-132-rescale-guild-hall-renown-costs.md)
+- [ ] [ETH-132 Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs](ETH-132-rescale-guild-hall-renown-costs.md)
 - [ ] [ETH-159 Smithy upgrade tree spent in Trophies](ETH-159-smithy-tree.md)
+- [ ] [ETH-170 Building-tier quests open each building's next tier](ETH-170-building-tier-quests.md)
+- [ ] [ETH-171 Items carried out of the dungeon sell for Trophies](ETH-171-sell-carried-items.md)
+- [ ] [ETH-172 Upgrade engine supports ranked nodes and quest-locked tiers](ETH-172-upgrade-ranks-and-tiers.md)
+- [ ] [ETH-174 The Cartographer building](ETH-174-cartographer.md)

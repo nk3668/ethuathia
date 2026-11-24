@@ -7,7 +7,7 @@ priority: P1
 milestone: M2
 epic: town-meta
 size: M
-depends_on: [ETH-063, ETH-086, ETH-043, ETH-044]
+depends_on: [ETH-063, ETH-086, ETH-043, ETH-044, ETH-172]
 created: 2026-11-24
 updated: 2026-11-24
 ---
@@ -22,7 +22,7 @@ Trophies have no sink today: the Smithy is a locked placeholder building (`src/c
 - [ ] The Smithy tree has at least two pick-one tiers, and each numeric node shares its tier with a capability node (`CLAUDE.md` §4)
 - [ ] Gear-kit nodes change the starting equipment of new runs
 - [ ] An identification-knowledge node starts runs with some item types already known
-- [ ] The Smithy is a Foundation tree (ETH-086)
+- [ ] The Smithy is a Foundation tree (ETH-086) built on ranks and tiers (ETH-172): about 15 to 25 nodes, stronger nodes in higher tiers
 - [ ] Every node has a tooltip and Codex text
 
 ## Notes
@@ -30,3 +30,4 @@ Needs decomposing before work starts. It may split into the tree data plus the s
 
 ## Log
 - 2026-11-24: Created in the backlog reorganization by theme (gap: Trophies had no sink).
+- 2026-11-24: Progression discussion with Nate: deeper tree on ranks and tiers; gear does not carry over, so Smithy kits are the gear progression.
