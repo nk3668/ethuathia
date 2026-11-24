@@ -1,4 +1,4 @@
-import { BUILDINGS, CONTRACTS, defName, describeMilestone, describeProgress } from '../../content';
+import { BUILDINGS, CONTRACTS, defName, describeMilestone, describeProgress, tierGateId } from '../../content';
 import type { BuildingDef, Milestone } from '../../content';
 import { formatNumber } from '../../core';
 import { latestUnlocks, lockingMilestone, milestoneProgress, questOffer, unlockOf } from '../../meta';
@@ -19,6 +19,8 @@ export function TownPanel() {
   const profile = useProfileStore((s) => s.profile);
   const { renown, trophies } = profile.currencies;
   const fresh = new Set(latestUnlocks(profile).map((u) => u.id));
+  // A building is new when it just opened, or when a tier of it did (ETH-170).
+  const isFresh = (building: BuildingDef) => fresh.has(building.id) || (building.tierGates ?? []).some((g) => fresh.has(tierGateId(building.id, g.fromTier)));
   const items: TabItem[] = BUILDINGS.all().map((building) => {
     const shut = lockingMilestone(profile, building.id);
     if (shut !== null) {
@@ -47,7 +49,7 @@ export function TownPanel() {
         <Tooltip content={about}>
           <span>
             {building.name}
-            {fresh.has(building.id) && (
+            {isFresh(building) && (
               <>
                 {' '}
                 <span className={styles.fresh}>New</span>
@@ -109,7 +111,7 @@ function LockedBuilding({ building, milestone }: { building: BuildingDef; milest
 /** For a building with a quest (ETH-093): where to take it, or what is still needed before it is offered. */
 function QuestHint({ buildingId }: { buildingId: string }) {
   const profile = useProfileStore((s) => s.profile);
-  const quest = CONTRACTS.all().find((c) => c.opens === buildingId);
+  const quest = CONTRACTS.all().find((c) => c.opens === buildingId); // a plain building quest, not a tier quest
   if (quest === undefined) return null;
   const offer = questOffer(profile, quest);
   return (

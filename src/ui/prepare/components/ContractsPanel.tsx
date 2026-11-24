@@ -32,7 +32,7 @@ export function ContractsPanel({ profile, choices, update }: PreparePanelProps) 
       {CONTRACTS.all().map((c) => {
         const offer = questOffer(profile, c);
         // A building quest whose building is open is done and gone from the list (ETH-093).
-        if (offer.state === 'done') return null;
+        if (offer.state === 'done' || offer.state === 'hidden') return null;
         const open = isAvailable(profile, c.id) && offer.state === 'offered';
         const on = chosen.includes(c.id);
         // With one slot a pick swaps the old one out, so only a second slot can clash.

@@ -37,6 +37,21 @@
   letter-spacing: var(--letter-spacing-label);
 }
 
+/* A band the latest run opened (ETH-170): an underline, with the "New" note above carrying the meaning. */
+.freshTier {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.fresh {
+  padding: 0 var(--space-1);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-card);
+  font-size: 0.75em;
+  font-weight: var(--font-weight-heading);
+  text-transform: uppercase;
+}
+
 .graph {
   position: relative;
   flex: 1;
