@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { buildingNodes, groupNodes, UPGRADES } from '../../content';
+import { BUILDINGS, buildingNodes, groupNodes, TREE_KIND_INFO, UPGRADES } from '../../content';
 import type { UpgradeNodeDef } from '../../content';
 import { formatNumber } from '../../core';
 import {
@@ -10,14 +10,17 @@ import {
   nodeCost,
   nodeStatus,
   owns,
+  respecBlock,
   respecFee,
   respecPlan,
+  resetPlan,
   shortfall,
 } from '../../meta';
 import type { Currencies, NodeStatus, Profile } from '../../meta';
 import { Button, Card, Tooltip } from '../kit';
 import { cx } from '../kit/cx';
 import { useProfileStore } from '../stores/profileStore';
+import { useRunActive } from '../stores/runStore';
 import styles from './UpgradeTree.module.css';
 
 /** Row height and gap of the graph in px. Set here once and passed to CSS, so edges line up. */
@@ -63,6 +66,7 @@ export function UpgradeTree({ buildingId }: UpgradeTreeProps) {
 
   return (
     <div className={styles.tree}>
+      <TreeHeader buildingId={buildingId} profile={profile} />
       <div className={styles.graphRow} style={vars}>
         <ol className={styles.tiers} aria-hidden="true">
           {Array.from({ length: tiers }, (_, i) => (
@@ -117,6 +121,54 @@ export function UpgradeTree({ buildingId }: UpgradeTreeProps) {
         <NodeDetail node={selectedNode} profile={profile} />
       ) : (
         <p className={styles.hint}>Select an upgrade to see what it does and buy it.</p>
+      )}
+    </div>
+  );
+}
+
+/** A fee in words: "no fee" when it is zero. */
+function feeText(fee: Currencies): string {
+  const text = formatCurrencies(fee);
+  return text === 'nothing' ? 'no fee' : `a fee of ${text}`;
+}
+
+/** A button that stays visible but disabled with the reason in a tooltip (and read out) when `reason` is set. */
+function GuardedButton({ reason, onClick, children }: { reason: string | null; onClick(): void; children: ReactNode }) {
+  if (reason === null) return <Button onClick={onClick}>{children}</Button>;
+  return (
+    <Tooltip content={reason}>
+      <span tabIndex={0} className={styles.guarded}>
+        <Button disabled>
+          {children}
+        </Button>
+        <span className="sr-only"> ({reason})</span>
+      </span>
+    </Tooltip>
+  );
+}
+
+/** The tree's kind (Foundation or Tactic, with a tooltip saying what that means) and Reset tree. */
+function TreeHeader({ buildingId, profile }: { buildingId: string; profile: Profile }) {
+  const runActive = useRunActive();
+  const doReset = useProfileStore((s) => s.resetTree);
+  const info = TREE_KIND_INFO[BUILDINGS.get(buildingId).kind];
+  const plan = resetPlan(profile, buildingId);
+  const reason = respecBlock({ runActive }) ?? (plan === null ? 'Nothing in this tree is bought yet.' : null);
+  return (
+    <div className={styles.header}>
+      <Tooltip content={info.about}>
+        <span tabIndex={0} className={styles.kind}>
+          <span aria-hidden="true">{BUILDINGS.get(buildingId).kind === 'foundations' ? '▣' : '✦'} </span>
+          {info.name} tree
+        </span>
+      </Tooltip>
+      <GuardedButton reason={reason} onClick={() => doReset(buildingId, runActive)}>
+        Reset tree
+      </GuardedButton>
+      {plan !== null && reason === null && (
+        <span className={styles.respecNote}>
+          Refunds {formatCurrencies(plan.refund)} with {feeText(plan.fee)}.
+        </span>
       )}
     </div>
   );
@@ -215,8 +267,8 @@ function NodeFacts({ node, profile }: { node: UpgradeNodeDef; profile: Profile }
         <>
           <dt>Pick one</dt>
           <dd>
-            Instead of {rivals.map((n) => n.name).join(' or ')}. Switching later costs a respec fee of{' '}
-            {formatCurrencies(respecFee(node))}.
+            Instead of {rivals.map((n) => n.name).join(' or ')}. Switching later between runs has{' '}
+            {feeText(respecFee(node))}.
           </dd>
         </>
       )}
@@ -240,6 +292,7 @@ function NodeTooltip({ node, profile, status }: { node: UpgradeNodeDef; profile:
 function NodeDetail({ node, profile }: { node: UpgradeNodeDef; profile: Profile }) {
   const buy = useProfileStore((s) => s.purchase);
   const doRespec = useProfileStore((s) => s.respec);
+  const runActive = useRunActive();
   const status = nodeStatus(profile, node.id);
   const check = canPurchase(profile, node.id);
   const group = node.exclusiveGroup;
@@ -265,15 +318,15 @@ function NodeDetail({ node, profile }: { node: UpgradeNodeDef; profile: Profile 
           </Button>
         )}
         {showRespec && (
-          <Button onClick={() => doRespec(plan.group)}>
+          <GuardedButton reason={respecBlock({ runActive })} onClick={() => doRespec(plan.group, runActive)}>
             Respec: give up {UPGRADES.get(plan.chosen).name}
-          </Button>
+          </GuardedButton>
         )}
       </div>
       {showRespec && (
         <p className={styles.respecNote}>
           Respec gives up {plan.removed.map((id) => UPGRADES.get(id).name).join(', ')} and pays back{' '}
-          {formatCurrencies(plan.refund)}, less a fee of {formatCurrencies(plan.fee)}.
+          {formatCurrencies(plan.refund)}, with {feeText(plan.fee)}.
         </p>
       )}
     </Card>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defineBuilding, defineUpgrade } from '../../src/content';
+import { defineBuilding, defineUpgrade, UPGRADES } from '../../src/content';
 import {
   canPurchase,
   capacity,
@@ -12,7 +12,14 @@ import {
   nodeStatus,
   profileGrants,
   purchase,
+  FOUNDATIONS_RESPEC_FEE_RATE,
   respec,
+  respecBlock,
+  respecFee,
+  resetPlan,
+  resetTree,
+  RUN_ACTIVE_REASON,
+  treeKind,
   respecPlan,
 } from '../../src/meta';
 import type { Profile } from '../../src/meta';
@@ -21,7 +28,7 @@ import type { Profile } from '../../src/meta';
 // hardy_recruits / contract_board (T2); third_berth (T3) needs roster_ledger.
 
 // A test-only building with a Favor cost and an unlock grant.
-defineBuilding({ id: 'building.test_shrine', name: 'Test Shrine', description: 'A test shrine.', tags: [] });
+defineBuilding({ id: 'building.test_shrine', name: 'Test Shrine', description: 'A test shrine.', tags: [], kind: 'tactics' });
 defineUpgrade({
   id: 'upgrade.test_vow',
   name: 'Test Vow',
@@ -33,6 +40,21 @@ defineUpgrade({
   cost: { renown: 3, 'favor:deity.dawn': 5 },
   requires: [],
   grants: [{ kind: 'unlock', id: 'class.vanguard' }],
+});
+
+// A Foundations building with a two-currency node, for fee rounding.
+defineBuilding({ id: 'building.test_forge', name: 'Test Forge', description: 'A test forge.', tags: [], kind: 'foundations' });
+defineUpgrade({
+  id: 'upgrade.test_forge_a',
+  name: 'Test Forge A',
+  description: 'A test node.',
+  tags: [],
+  building: 'building.test_forge',
+  tier: 1,
+  column: 0,
+  cost: { renown: 7, trophies: 3 },
+  requires: [],
+  grants: [{ kind: 'capacity', key: 'ruleSlots', amount: 1 }],
 });
 
 // A pick-one pair whose left node has a chain of dependents, for the respec cascade.
@@ -124,20 +146,61 @@ describe('pick-one groups', () => {
   });
 });
 
+// The Guild Hall is a Foundations tree, the Test Shrine a Tactics tree (ETH-086).
+const FEE_HALF = { foundationsFeeRate: 0.5 };
+
+describe('tree kinds', () => {
+  it('sets the Foundations fee constant to 0', () => {
+    expect(FOUNDATIONS_RESPEC_FEE_RATE).toBe(0);
+  });
+
+  it('reads a node\'s tree kind from its building', () => {
+    expect(treeKind(UPGRADES.get('upgrade.second_berth'))).toBe('foundations');
+    expect(treeKind(UPGRADES.get('upgrade.test_left'))).toBe('tactics');
+  });
+});
+
 describe('respec', () => {
-  it('gives up the chosen node, refunds it less a fee of half its cost, and frees the group', () => {
+  it('is free by default: refunds the chosen node in full and frees the group (Foundations)', () => {
     const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.contract_board');
     expect(p.currencies.renown).toBe(830);
     const plan = respecPlan(p, 'guild_hall.tier2');
     expect(plan).toMatchObject({ chosen: 'upgrade.contract_board', removed: ['upgrade.contract_board'] });
     expect(plan?.refund.renown).toBe(120);
-    expect(plan?.fee.renown).toBe(60);
+    expect(plan?.fee.renown).toBe(0);
 
     const after = respec(p, 'guild_hall.tier2');
     expect(after.upgrades.owned).toEqual(['upgrade.second_berth']);
-    expect(after.currencies.renown).toBe(890);
+    expect(after.currencies.renown).toBe(950);
     expect(nodeStatus(after, 'upgrade.hardy_recruits')).toBe('available');
     expect(purchase(after, 'upgrade.hardy_recruits').upgrades.owned).toContain('upgrade.hardy_recruits');
+  });
+
+  it('is free for Tactics too', () => {
+    const p = buy(rich(1000), 'upgrade.test_left');
+    expect(respec(p, 'test_shrine.t1').currencies.renown).toBe(1000);
+  });
+
+  it('charges a Foundations fee of the constant\'s share of the chosen node when it is nonzero', () => {
+    const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.contract_board');
+    const plan = respecPlan(p, 'guild_hall.tier2', FEE_HALF);
+    expect(plan?.refund.renown).toBe(120);
+    expect(plan?.fee.renown).toBe(60);
+    expect(respec(p, 'guild_hall.tier2', FEE_HALF).currencies.renown).toBe(890);
+    expect(respecFee(UPGRADES.get('upgrade.contract_board'), FEE_HALF).renown).toBe(60);
+  });
+
+  it('never charges Tactics, whatever the Foundations rate', () => {
+    const p = buy(rich(1000), 'upgrade.test_left');
+    expect(respecFee(UPGRADES.get('upgrade.test_left'), FEE_HALF).renown).toBe(0);
+    expect(respecPlan(p, 'test_shrine.t1', FEE_HALF)?.fee.renown).toBe(0);
+    expect(respec(p, 'test_shrine.t1', FEE_HALF).currencies.renown).toBe(1000);
+  });
+
+  it('rounds a Foundations fee up per currency and clamps the rate to 0..1', () => {
+    expect(respecFee(UPGRADES.get('upgrade.test_forge_a'), { foundationsFeeRate: 0.5 })).toMatchObject({ renown: 4, trophies: 2 });
+    expect(respecFee(UPGRADES.get('upgrade.test_forge_a'), { foundationsFeeRate: 3 })).toMatchObject({ renown: 7, trophies: 3 });
+    expect(respecFee(UPGRADES.get('upgrade.test_forge_a'), { foundationsFeeRate: -1 })).toMatchObject({ renown: 0, trophies: 0 });
   });
 
   it('also gives up owned nodes that need the chosen one, directly or not, refunding them in full', () => {
@@ -147,7 +210,7 @@ describe('respec', () => {
     expect(plan?.removed).toEqual(['upgrade.test_left', 'upgrade.test_after', 'upgrade.test_last']);
     const after = respec(p, 'test_shrine.t1');
     expect(after.upgrades.owned).toEqual([]);
-    expect(after.currencies.renown).toBe(1000 - 4); // the fee: half of 7, rounded up
+    expect(after.currencies.renown).toBe(1000);
   });
 
   it('leaves owned nodes in other branches alone', () => {
@@ -164,6 +227,68 @@ describe('respec', () => {
   it('refuses when nothing in the group is owned', () => {
     expect(respecPlan(rich(), 'guild_hall.tier2')).toBeNull();
     expect(() => respec(rich(), 'guild_hall.tier2')).toThrow(/Nothing to respec/);
+  });
+
+  it('is refused during a run, for both kinds, changing nothing', () => {
+    const f = buy(rich(1000), 'upgrade.second_berth', 'upgrade.contract_board');
+    const t = buy(rich(1000), 'upgrade.test_left');
+    expect(respecBlock({ runActive: true })).toBe(RUN_ACTIVE_REASON);
+    expect(respecBlock({ runActive: false })).toBeNull();
+    expect(respecBlock()).toBeNull();
+    expect(() => respec(f, 'guild_hall.tier2', { runActive: true })).toThrow(RUN_ACTIVE_REASON);
+    expect(() => respec(t, 'test_shrine.t1', { runActive: true })).toThrow(RUN_ACTIVE_REASON);
+    expect(respec(f, 'guild_hall.tier2', { runActive: false }).upgrades.owned).toEqual(['upgrade.second_berth']);
+  });
+});
+
+describe('resetTree', () => {
+  const OWNED_HALL = ['upgrade.second_berth', 'upgrade.roster_ledger', 'upgrade.hardy_recruits'];
+
+  it('gives up the whole tree and refunds everything, free by default', () => {
+    const start = rich(1000);
+    const p = buy(start, ...OWNED_HALL);
+    expect(p.currencies.renown).toBeLessThan(1000);
+    const plan = resetPlan(p, 'building.guild_hall');
+    expect(plan?.removed).toEqual(OWNED_HALL);
+    expect(plan?.fee.renown).toBe(0);
+    const after = resetTree(p, 'building.guild_hall');
+    expect(after.upgrades.owned).toEqual([]);
+    expect(after.currencies).toEqual(start.currencies);
+  });
+
+  it('only touches the named building', () => {
+    const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.test_left');
+    const after = resetTree(p, 'building.test_shrine');
+    expect(after.upgrades.owned).toEqual(['upgrade.second_berth']);
+    expect(after.currencies.renown).toBe(1000 - 50);
+  });
+
+  it('charges a Foundations fee on the whole refund when the constant is nonzero, never Tactics', () => {
+    const p = buy(rich(1000), ...OWNED_HALL);
+    const plan = resetPlan(p, 'building.guild_hall', FEE_HALF);
+    expect(plan?.fee.renown).toBe(Math.ceil((plan?.refund.renown ?? 0) / 2));
+    expect(resetTree(p, 'building.guild_hall', FEE_HALF).currencies.renown).toBe(1000 - (plan?.fee.renown ?? 0));
+    const t = buy(rich(1000), 'upgrade.test_left', 'upgrade.test_after');
+    expect(resetPlan(t, 'building.test_shrine', FEE_HALF)?.fee.renown).toBe(0);
+    expect(resetTree(t, 'building.test_shrine', FEE_HALF).currencies.renown).toBe(1000);
+  });
+
+  it('refuses when nothing is owned, and during a run', () => {
+    expect(resetPlan(rich(), 'building.guild_hall')).toBeNull();
+    expect(() => resetTree(rich(), 'building.guild_hall')).toThrow(/Nothing to reset/);
+    const p = buy(rich(), 'upgrade.second_berth');
+    expect(() => resetTree(p, 'building.guild_hall', { runActive: true })).toThrow(RUN_ACTIVE_REASON);
+  });
+});
+
+describe('saves from before tree kinds', () => {
+  it('load unchanged: kinds live in content, so the upgrades slice has no new data', () => {
+    const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.contract_board');
+    const old = JSON.parse(encodeSave(p, 1)) as { slices: { upgrades: { version: number; data: unknown } } };
+    expect(old.slices.upgrades).toEqual({ version: 1, data: { owned: ['upgrade.second_berth', 'upgrade.contract_board'] } });
+    const decoded = decodeSave(JSON.stringify(old));
+    expect(decoded.ok && decoded.profile.upgrades.owned).toEqual(['upgrade.second_berth', 'upgrade.contract_board']);
+    if (decoded.ok) expect(respec(decoded.profile, 'guild_hall.tier2').upgrades.owned).toEqual(['upgrade.second_berth']);
   });
 });
 

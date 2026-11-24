@@ -14,6 +14,7 @@ export const BUILDING_GUILD_HALL = defineBuilding({
     'Where adventurers sign their names and take their contracts. Its upgrades let more of them ' +
     'descend together and keep more of them on the books.',
   tags: ['town'],
+  kind: 'foundations',
 });
 
 const building = BUILDING_GUILD_HALL.id;

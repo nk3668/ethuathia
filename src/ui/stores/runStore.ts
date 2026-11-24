@@ -148,3 +148,17 @@ export function watchAutoRestart(timers: RestartTimers = REAL_TIMERS): Unsubscri
     handle = null;
   };
 }
+
+/**
+ * Whether a run is going: the run screen is showing and it hasn't ended. Upgrade trees can only
+ * be reset or changed when this is false (ETH-086). The run summary and the Prepare screen are
+ * between runs.
+ */
+export function isRunActive(state: Pick<RunStoreState, 'screen' | 'report'>): boolean {
+  return state.screen === 'run' && state.report === null;
+}
+
+/** `isRunActive` as a hook. */
+export function useRunActive(): boolean {
+  return useRunStore(isRunActive);
+}
