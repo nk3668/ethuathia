@@ -3,6 +3,7 @@ import type { ChangeEvent } from 'react';
 import { downloadTextFile, readTextFile } from '../../platform';
 import { Button } from '../kit';
 import { useProfileStore } from '../stores/profileStore';
+import type { SaveStatus } from '../stores/profileStore';
 import styles from './SaveOptions.module.css';
 
 const TIME_FORMAT = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
@@ -62,7 +63,7 @@ export function SaveOptions() {
       )}
 
       <div className={styles.row}>
-        <Button disabled={status !== 'ready'} onClick={() => void save(true)}>
+        <Button disabledReason={saveDisabledReason(status)} onClick={() => void save(true)}>
           Save now
         </Button>
         <Button onClick={() => setText(exportSave())}>Export as text</Button>
@@ -84,7 +85,7 @@ export function SaveOptions() {
         onChange={(e) => setText(e.target.value)}
       />
       <div className={styles.row}>
-        <Button disabled={text.trim() === ''} onClick={() => void runImport(text)}>
+        <Button disabledReason={text.trim() === '' ? 'Paste save text above first.' : undefined} onClick={() => void runImport(text)}>
           Import text
         </Button>
         <Button onClick={() => fileRef.current?.click()}>Import from file</Button>
@@ -132,7 +133,20 @@ export function SaveOptions() {
   );
 }
 
-function statusLine(status: string, lastSavedAt: number | null, storeLabel: string | null): string {
+function saveDisabledReason(status: SaveStatus): string | undefined {
+  switch (status) {
+    case 'loading':
+      return 'Still loading your save.';
+    case 'failed':
+      return 'Saving is paused until the save is imported or reset.';
+    case 'ready':
+      return undefined;
+    default:
+      return 'Saving is not set up.';
+  }
+}
+
+function statusLine(status: SaveStatus, lastSavedAt: number | null, storeLabel: string | null): string {
   const where = storeLabel === null ? '' : ` Saves go to ${storeLabel}.`;
   switch (status) {
     case 'loading':

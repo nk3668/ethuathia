@@ -33,6 +33,8 @@ export interface ReportArgs {
   rules?: HeadlessRulesPreset;
   classId?: string | null;
   raceId?: string | null;
+  /** Random recruits from the Prepare screen's fill (`--recruits`, ETH-178). Absent for a uniform party. */
+  recruits?: boolean;
   /** Worker threads (`--jobs`). Not part of a report: it never changes the results. */
   jobs?: number;
 }
@@ -56,6 +58,7 @@ export function makeReport(args: ReportArgs, results: SeedResult[]): SimReport {
     ...(args.rules !== undefined && args.rules !== 'baseline' ? { rules: args.rules } : {}),
     ...(args.classId != null ? { classId: args.classId } : {}),
     ...(args.raceId != null ? { raceId: args.raceId } : {}),
+    ...(args.recruits === true ? { recruits: true } : {}),
   };
   return { version: REPORT_VERSION, args: reportArgs, summary: summarizeReport(results), results };
 }
@@ -158,6 +161,9 @@ export const METRICS: Metric[] = [
   { name: 'run turns, mean (ended)', value: (rs) => mean(rs.flatMap((r) => (r.runTurns === undefined ? [] : [r.runTurns]))), digits: 1 },
   { name: 'renown at risk, mean', value: (rs) => mean(rs.map((r) => r.atRisk?.renown ?? 0)), digits: 1 },
   { name: 'trophies at risk, mean', value: (rs) => mean(rs.map((r) => r.atRisk?.trophies ?? 0)), digits: 1 },
+  // Trophies converted on exit (ETH-083 gold, ETH-171 sold items). Reports from before ETH-171 read '-'.
+  { name: 'trophies converted on exit, mean', value: (rs) => mean(present(rs.map((r) => r.convertedTrophies))), digits: 1 },
+  { name: 'trophies from sold items, mean', value: (rs) => mean(present(rs.map((r) => r.itemTrophies))), digits: 1 },
   // The wipe loss (ETH-023): what wipes took, and what the runs banked. Reports from before it read '-'.
   { name: 'renown lost to wipes, mean', value: (rs) => mean(present(rs.map((r) => (r.lost === undefined ? undefined : (r.lost.renown ?? 0))))), digits: 1 },
   { name: 'trophies lost to wipes, mean', value: (rs) => mean(present(rs.map((r) => (r.lost === undefined ? undefined : (r.lost.trophies ?? 0))))), digits: 1 },
@@ -332,6 +338,7 @@ export function simArgv(args: ReportArgs): string[] {
     ...(args.rules !== undefined && args.rules !== 'baseline' ? ['--rules', args.rules] : []),
     ...(args.classId != null ? ['--class', args.classId] : []),
     ...(args.raceId != null ? ['--race', args.raceId] : []),
+    ...(args.recruits === true ? ['--recruits'] : []),
   ];
 }
 

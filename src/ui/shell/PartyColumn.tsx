@@ -329,11 +329,28 @@ function itemNote(stateNote?: string, scaling?: string, locked?: string): string
   return parts.length === 0 ? undefined : parts.join(' ');
 }
 
-/** A small pack button for a possessed adventurer's item actions, with a tooltip saying what it does. */
-function PackAction({ label, hint, disabled, onClick }: { label: string; hint: string; disabled?: boolean; onClick(): void }) {
+/** A small pack button for a possessed adventurer's item actions, with a tooltip saying what it does (or why it is disabled). */
+function PackAction({
+  label,
+  hint,
+  disabledReason,
+  onClick,
+}: {
+  label: string;
+  hint: string;
+  disabledReason?: string;
+  onClick(): void;
+}) {
+  if (disabledReason !== undefined) {
+    return (
+      <Button variant="ghost" className={styles.packAction} disabledReason={disabledReason} onClick={onClick}>
+        {label}
+      </Button>
+    );
+  }
   return (
     <Tooltip content={hint}>
-      <Button variant="ghost" className={styles.packAction} disabled={disabled} onClick={onClick}>
+      <Button variant="ghost" className={styles.packAction} onClick={onClick}>
         {label}
       </Button>
     </Tooltip>
@@ -383,12 +400,12 @@ function Pack({ id, possessed }: { id: EntityId; possessed: boolean }) {
               {possessed && (
                 <PackAction
                   label={worn.cursed === true ? 'Cursed' : 'Take off'}
-                  disabled={worn.cursed === true}
-                  hint={
+                  disabledReason={
                     worn.cursed === true
                       ? (worn.locked ?? `${worn.name} is cursed and cannot be removed until uncursed.`)
-                      : `Take off ${worn.name} and put it in the pack. Spends the turn.`
+                      : undefined
                   }
+                  hint={`Take off ${worn.name} and put it in the pack. Spends the turn.`}
                   onClick={() => act({ id: 'unequip', slot: worn.slot })}
                 />
               )}

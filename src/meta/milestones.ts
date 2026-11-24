@@ -47,8 +47,9 @@ export function milestoneTargets(): MilestoneTarget[] {
  */
 export function milestoneProgress(profile: Profile, result?: RunResult): MilestoneProgress {
   const { deepestDepth, runs, victories } = profile.history.totals;
-  if (result === undefined) return { deepestDepth, runs, victories, metInRun: [], objectivesDone: [] };
-  return { deepestDepth, runs, victories, metInRun: metRequirements(result.extras), objectivesDone: completedObjectives(result.extras) };
+  if (result === undefined) return { deepestDepth, runs, victories, metInRun: [], objectivesDone: [], objectivesExited: [] };
+  const objectivesDone = completedObjectives(result.extras);
+  return { deepestDepth, runs, victories, metInRun: metRequirements(result.extras), objectivesDone, objectivesExited: result.outcome === 'wipe' ? [] : objectivesDone };
 }
 
 /**

@@ -9,7 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applyRunResult, masteryGainBanked, newProfile, runRecord } from '../../src/meta';
 import type { ClassMasteryGain } from '../../src/meta';
-import { GOLD_PER_TROPHY } from '../../src/content';
+import { GOLD_PER_TROPHY, VALUE_PER_TROPHY } from '../../src/content';
 import { masteryBreakdown, masteryLine } from '../../src/ui/shell/masteryText';
 import { createRun, depthRenown, emptyRunResult, favorKey, InlineHost, renownForFloor, turnsRenown } from '../../src/sim';
 import type { RunConfig, RunReport } from '../../src/sim';
@@ -22,6 +22,8 @@ import {
   epitaph,
   GOLD_CONVERSION_TOOLTIP,
   goldConversionOf,
+  ITEM_SALE_TOOLTIP,
+  itemSaleOf,
   lossNote,
   NO_CAUSE,
   RENOWN_FORMULA_TEXT,
@@ -333,6 +335,41 @@ describe('RunSummary', () => {
     expect(useProfileStore.getState().dirty).toBe(true);
   });
 
+  it('shows Items sold on victory and Items lost on a wipe, and rebuilds them from a record (ETH-171)', async () => {
+    render(<RunSummary />);
+    const sale = { items: 4, value: 125, trophies: 12, rate: VALUE_PER_TROPHY };
+    const victoryReport: RunReport = {
+      result: {
+        ...emptyRunResult('victory'),
+        atRisk: { renown: 40, trophies: 6 },
+        converted: { trophies: 12 },
+        turns: 200,
+        deepestDepth: 2,
+        extras: { 'run.items': sale },
+      },
+      end: { outcome: 'victory', turn: 200, cause: 'Contract complete.', depth: 2 },
+    };
+    act(() => useRunStore.getState().runEnded(victoryReport));
+    let dialog = screen.getByRole('dialog', { name: /Victory/ });
+    expect(dialog.textContent).toContain('Items sold: 4 items → +12 Trophies');
+    act(() => within(dialog).getByText('Items sold').focus());
+    expect((await screen.findByRole('tooltip')).textContent).toBe(ITEM_SALE_TOOLTIP(VALUE_PER_TROPHY));
+    expect(itemSaleOf(victoryReport)).toEqual(sale);
+
+    const rebuilt = reportFromRecord(runRecord(6, victoryReport.result));
+    expect(rebuilt.result.converted).toEqual({ trophies: 12 });
+    expect(itemSaleOf(rebuilt)).toEqual(sale);
+    expect(currencyRows(rebuilt)).toEqual(currencyRows(victoryReport));
+
+    const wipe: RunReport = {
+      ...WIPE,
+      result: { ...WIPE.result, extras: { ...WIPE.result.extras, 'run.items': { ...sale, trophies: 0 } } },
+    };
+    act(() => useRunStore.getState().runEnded(wipe));
+    dialog = screen.getByRole('dialog', { name: /Wipe/ });
+    expect(dialog.textContent).toContain('Items lost: 4 items');
+  });
+
   it('shows Gold converted on victory/retreat and Gold lost on wipe with conversion-rate tooltips (ETH-083)', async () => {
     render(<RunSummary />);
     const victoryReport: RunReport = {
@@ -514,7 +551,8 @@ describe('run history (ETH-048)', () => {
   });
 
   it("shows a past run's own unlocks, not the latest run's", () => {
-    let profile = applyRunResult(newProfile(), PARTY_WIPE.result);
+    const anvil = [{ key: 'contract:contract.cold_anvil', owner: { kind: 'contract', id: 'contract.cold_anvil' }, status: 'complete' }];
+    let profile = applyRunResult(newProfile(), { ...emptyRunResult('retreat'), turns: 10, deepestDepth: 3, extras: { 'quests.objectives': anvil } });
     profile = applyRunResult(profile, { ...emptyRunResult('retreat'), turns: 10, deepestDepth: 1 });
     expect(unlockLines(profile, 1).map((l) => l.id)).toContain('building.smithy');
     expect(unlockLines(profile)).toEqual([]);

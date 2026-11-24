@@ -28,6 +28,9 @@ function offlineCsp(): Plugin {
     name: 'ethuathia:offline-csp',
     apply: 'build',
     transformIndexHtml() {
+      // Under Tauri, tauri.conf.json's `app.security.csp` is authoritative (allowing the local IPC
+      // bridge); browser builds keep the stricter meta tag.
+      if (process.env.TAURI_ENV_PLATFORM !== undefined) return [];
       return [
         {
           tag: 'meta',
@@ -67,6 +70,8 @@ function fontLicenses(): Plugin {
 }
 
 export default defineConfig({
+  clearScreen: false,
+  server: { port: 1420, strictPort: true },
   plugins: [react(), offlineCsp(), fontLicenses()],
   // The sim worker (src/ui/host/sim.worker.ts) is a module worker, bundled like the app.
   worker: { format: 'es' },

@@ -3,6 +3,7 @@
  */
 import { RUN_OUTCOMES, TURNS_PER_SECOND } from '../../src/sim';
 import { DEFAULT_TURN_CAP, MAX_PARTY } from './config';
+import { formatMixed } from './mixed';
 import type { SeedResult } from './runner';
 import { flagReason, PARTY_SWEEP_MIN_RATIO, partySweepWarnings, percent, summarizeReport } from './summary';
 import type { PartySweepRow } from './summary';
@@ -98,6 +99,8 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
       ? ''
       : `Renown banked per run: mean ${s.renownBankedMean.toFixed(1)}, ${s.renownPerHour1x.toFixed(1)}/hr at 1x (${TURNS_PER_SECOND} steps/s).`;
 
+  const mixedText = formatMixed(s.mixed);
+
   const flagged = results.flatMap((r) => {
     const reason = flagReason(r, cap);
     return reason === null ? [] : [`  seed ${r.seed}: ${reason}`];
@@ -118,6 +121,7 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     ...(combatLine === '' ? [] : [combatLine]),
     ...(renownLine === '' ? [] : [renownLine]),
     ...(masteryLine === '' ? [] : [masteryLine]),
+    ...(mixedText === '' ? [] : [mixedText]),
     flagged.length === 0 ? 'Flagged seeds: none.' : `Flagged seeds:\n${flagged.join('\n')}`,
   ].join('\n');
 }

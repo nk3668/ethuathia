@@ -4,6 +4,8 @@
 import { TURNS_PER_SECOND } from '../../src/sim';
 import type { Explored, RunOutcome } from '../../src/sim';
 import { DEFAULT_TURN_CAP, MAX_PARTY } from './config';
+import { summarizeMixed } from './mixed';
+import type { MixedSummary } from './mixed';
 import type { Outcome, SeedResult } from './runner';
 
 /** Why a seed needs a look, or `null` if it went fine. */
@@ -118,6 +120,8 @@ export interface ReportSummary {
   /** Median Class Mastery XP of a victory (ETH-087), the number its curve is calibrated on. */
   masteryXpWinMedian: number | null;
   masteryXpMean: number | null;
+  /** Per-class and per-race breakdown; only when the party was mixed (`--recruits`, ETH-178). */
+  mixed?: MixedSummary;
 }
 
 const avg = (xs: readonly number[]): number | null => (xs.length === 0 ? null : xs.reduce((a, b) => a + b, 0) / xs.length);
@@ -158,6 +162,7 @@ export function summarizeReport(results: readonly SeedResult[]): ReportSummary {
     }
   }
   const banked = results.map(bankedRenown).filter((n): n is number => n !== null);
+  const mixed = summarizeMixed(results);
 
   return {
     runs,
@@ -207,6 +212,7 @@ export function summarizeReport(results: readonly SeedResult[]): ReportSummary {
     renownPerHour1x: renownPerHour(results),
     masteryXpWinMedian: median(results.flatMap((r) => (r.end === 'victory' && r.masteryXp !== undefined ? [r.masteryXp] : []))),
     masteryXpMean: avg(results.flatMap((r) => (r.masteryXp === undefined ? [] : [r.masteryXp]))),
+    ...(mixed === undefined ? {} : { mixed }),
   };
 }
 

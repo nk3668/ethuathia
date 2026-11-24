@@ -14,6 +14,7 @@ import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
 import { depthRevealed, dungeonDepth, floorNode, floorTypeOf } from '../floors/dungeon';
 import { kitOf } from '../items/kit';
+import { itemSale } from '../items/sale';
 import { VICTORY_CHECKS } from '../registries';
 import type { EntityId, RunState } from '../state';
 import { TROPHIES } from './result';
@@ -193,6 +194,10 @@ function end(state: RunState, stepEvents: readonly SimEvent[], emit: Emit, outco
       lost: outcome === 'wipe',
     });
   }
+  const sale = itemSale(state, outcome);
+  if (sale.items > 0) {
+    emit({ type: 'itemsSettled', items: sale.items, value: sale.value, trophies: sale.trophies, lost: outcome === 'wipe' });
+  }
   emit(ended);
 }
 
@@ -236,7 +241,8 @@ export function deathLine(name: string, killer: Killer | null, depth: number, te
  * The finished run's `RunResult`, for meta's `applyRunResult`: the at-risk totals, any post-exit
  * `converted` currencies (ETH-083), the turns, the deepest floor and every tracker's extras (plus
  * `extras['run.end']`, the `RunEnd`, `extras['run.party']`, the party's `PartyMemberRecord`s, and
- * `extras['run.gold']`, the `GoldConversionRecord`). `lost` is what a wipe takes (`wipeLoss`,
+ * `extras['run.gold']`, the `GoldConversionRecord`, and `extras['run.items']`, the `ItemSaleRecord`,
+ * ETH-171).`lost` is what a wipe takes (`wipeLoss`,
  * ETH-023), empty for a victory or a retreat. Throws if the run hasn't ended.
  */
 export function runResult(state: RunState): RunResult {
@@ -246,14 +252,16 @@ export function runResult(state: RunState): RunResult {
   const gold = state.domains.items.gold;
   const trophies = runEnd.outcome === 'wipe' ? 0 : goldToTrophies(gold);
   const goldRecord: GoldConversionRecord = { gold, trophies, rate: GOLD_PER_TROPHY };
+  const sale = itemSale(state, runEnd.outcome);
+  const converted = trophies + sale.trophies;
   return clonePlain({
     outcome: runEnd.outcome,
     atRisk,
     lost: wipeLoss(atRisk, runEnd.outcome),
-    ...(trophies > 0 ? { converted: { [TROPHIES]: trophies } } : {}),
+    ...(converted > 0 ? { converted: { [TROPHIES]: converted } } : {}),
     turns: state.turn,
     deepestDepth: state.domains.floors.deepest,
-    extras: { ...trackerExtras(state), 'run.end': runEnd, 'run.party': partyRecords(state), 'run.gold': goldRecord },
+    extras: { ...trackerExtras(state), 'run.end': runEnd, 'run.party': partyRecords(state), 'run.gold': goldRecord, 'run.items': sale },
   });
 }
 

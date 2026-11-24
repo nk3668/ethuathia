@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { BUILDINGS, buildingNodes, maxRank, tierBand, TREE_KIND_INFO, UPGRADE_HELP, UPGRADES } from '../../content';
+import { BUILDINGS, buildingNodes, CONTRACTS, maxRank, opensBuilding, opensTier, tierBand, tierGateId, TREE_KIND_INFO, UPGRADE_HELP, UPGRADES } from '../../content';
 import type { TierGate, UpgradeNodeDef } from '../../content';
 import { formatNumber } from '../../core';
 import {
@@ -12,7 +12,9 @@ import {
   nextRankCost,
   nodeCost,
   nodeStatus,
+  latestUnlocks,
   owns,
+  questOffer,
   rankOf,
   respecBlock,
   respecPlan,
@@ -55,16 +57,25 @@ export function UpgradeTree({ buildingId }: UpgradeTreeProps) {
   const height = tiers * ROW_HEIGHT + (tiers - 1) * ROW_GAP;
   const x = (column: number) => `${((column + 0.5) / columns) * 100}%`;
   const top = (tier: number) => (tier - 1) * (ROW_HEIGHT + ROW_GAP);
+  // The bands the latest run opened (ETH-170): their tier labels and a note say so.
+  const building = BUILDINGS.get(buildingId);
+  const freshIds = new Set(latestUnlocks(profile).map((u) => u.id));
+  const freshBands = (building.tierGates ?? []).filter((g) => freshIds.has(tierGateId(buildingId, g.fromTier))).map((g) => tierBand(building, g.fromTier));
   const selectedNode = selected !== null && UPGRADES.has(selected) ? UPGRADES.get(selected) : null;
   const vars = { '--row-height': `${ROW_HEIGHT}px`, '--row-gap': `${ROW_GAP}px`, '--columns': columns } as CSSProperties;
 
   return (
     <div className={styles.tree}>
       <TreeHeader buildingId={buildingId} profile={profile} />
+      {freshBands.length > 0 && (
+        <p className={styles.hint}>
+          <span className={styles.fresh}>New</span> {freshBands.map((b) => `Tier ${roman(b)}`).join(' and ')} just opened.
+        </p>
+      )}
       <div className={styles.graphRow} style={vars}>
         <ol className={styles.tiers} aria-hidden="true">
           {Array.from({ length: tiers }, (_, i) => (
-            <li key={i} className={styles.tierLabel}>
+            <li key={i} className={cx(styles.tierLabel, freshBands.includes(tierBand(building, i + 1)) && styles.freshTier)}>
               {roman(i + 1)}
             </li>
           ))}
@@ -100,7 +111,7 @@ export function UpgradeTree({ buildingId }: UpgradeTreeProps) {
           {closedGates(profile, buildingId)
             .filter((gate) => gate.fromTier <= tiers)
             .map((gate) => (
-              <GateDivider key={gate.id} gate={gate} band={tierBand(BUILDINGS.get(buildingId), gate.fromTier)} y={top(gate.fromTier) - ROW_GAP / 2} />
+              <GateDivider key={gate.id} gate={gate} buildingId={buildingId} band={tierBand(BUILDINGS.get(buildingId), gate.fromTier)} y={top(gate.fromTier) - ROW_GAP / 2} />
             ))}
           <ul className={styles.nodes} aria-label="Upgrades">
             {nodes.map((node) => (
@@ -125,21 +136,6 @@ export function UpgradeTree({ buildingId }: UpgradeTreeProps) {
   );
 }
 
-/** A button that stays visible but disabled with the reason in a tooltip (and read out) when `reason` is set. */
-function GuardedButton({ reason, onClick, children }: { reason: string | null; onClick(): void; children: ReactNode }) {
-  if (reason === null) return <Button onClick={onClick}>{children}</Button>;
-  return (
-    <Tooltip content={reason}>
-      <span tabIndex={0} className={styles.guarded}>
-        <Button disabled>
-          {children}
-        </Button>
-        <span className="sr-only"> ({reason})</span>
-      </span>
-    </Tooltip>
-  );
-}
-
 /** The tree's kind (Foundation or Tactic, with a tooltip saying what that means) and Reset tree. */
 function TreeHeader({ buildingId, profile }: { buildingId: string; profile: Profile }) {
   const runActive = useRunActive();
@@ -155,9 +151,9 @@ function TreeHeader({ buildingId, profile }: { buildingId: string; profile: Prof
           {info.name} tree
         </span>
       </Tooltip>
-      <GuardedButton reason={reason} onClick={() => doReset(buildingId, runActive)}>
+      <Button disabledReason={reason} onClick={() => doReset(buildingId, runActive)}>
         Reset tree
-      </GuardedButton>
+      </Button>
       {plan !== null && reason === null && (
         <span className={styles.respecNote}>
           Refunds {formatCurrencies(plan.refund)} with {feeText(plan.fee)}.
@@ -233,7 +229,11 @@ function TreeNode({ node, profile, selected, onSelect }: TreeNodeProps) {
  * full requirement and what building tiers are in its tooltip. The lock glyph and the words
  * carry the meaning, not color.
  */
-function GateDivider({ gate, band, y }: { gate: TierGate; band: number; y: number }) {
+function GateDivider({ gate, buildingId, band, y }: { gate: TierGate; buildingId: string; band: number; y: number }) {
+  const profile = useProfileStore((s) => s.profile);
+  // The tier quest that opens this gate (ETH-170), if there is one, and whether it is offered yet.
+  const quest = CONTRACTS.all().find((c) => opensBuilding(c) === buildingId && opensTier(c) === gate.fromTier);
+  const offer = quest === undefined ? null : questOffer(profile, quest);
   return (
     <Tooltip
       content={
@@ -242,6 +242,12 @@ function GateDivider({ gate, band, y }: { gate: TierGate; band: number; y: numbe
             <strong>Tier {roman(band)}</strong> · Locked
           </p>
           <p className={styles.reason}>{describeGate(gate)}</p>
+          {quest !== undefined && offer !== null && (
+            <p className={styles.help}>
+              Quest: <strong>{quest.name}</strong>.{' '}
+              {offer.state === 'offered' ? 'Take it as a contract on the Prepare screen.' : offer.state === 'locked' ? `Not offered yet. ${offer.need}.` : ''}
+            </p>
+          )}
           <p className={styles.help}>
             {UPGRADE_HELP.tiers.name}: {UPGRADE_HELP.tiers.about}
           </p>
@@ -309,14 +315,14 @@ function NodeDetail({ node, profile }: { node: UpgradeNodeDef; profile: Profile 
       {!check.ok && status !== 'owned' && <p className={styles.reason}>{check.reason}</p>}
       <div className={styles.actions}>
         {status !== 'owned' && status !== 'excluded' && (
-          <Button variant="primary" disabled={!check.ok} onClick={() => buy(node.id)}>
+          <Button variant="primary" disabledReason={check.ok ? undefined : check.reason} onClick={() => buy(node.id)}>
             Buy {ranked ? `rank ${roman(rank + 1)} ` : ''}for {formatCurrencies(price)}
           </Button>
         )}
         {showRespec && (
-          <GuardedButton reason={respecBlock({ runActive })} onClick={() => doRespec(plan.group, runActive)}>
+          <Button disabledReason={respecBlock({ runActive })} onClick={() => doRespec(plan.group, runActive)}>
             Respec: give up {UPGRADES.get(plan.chosen).name}
-          </GuardedButton>
+          </Button>
         )}
       </div>
       {showRespec && (

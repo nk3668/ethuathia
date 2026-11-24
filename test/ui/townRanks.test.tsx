@@ -108,6 +108,12 @@ describe('a closed building tier in the Town tree', () => {
     const tip = (await screen.findByRole('tooltip')).textContent ?? '';
     expect(tip).toContain('Tier 2 and up open when you reach floor 5.');
     expect(tip).toContain('Building tiers:');
+    await user.click(deep);
+    const detail = screen.getByRole('region', { name: 'Deep Test details' });
+    const buy = within(detail).getByRole('button', { name: /Buy/ });
+    expect(buy).toHaveProperty('disabled', true);
+    await act(async () => (buy.parentElement as HTMLElement).focus());
+    expect((await screen.findByRole('tooltip')).textContent).toContain('Tier 2 and up open when you reach floor 5.');
   });
 
   it('draws no divider once the gate is open', async () => {

@@ -570,6 +570,8 @@ subject to the 25% wipe loss. Instead, when the run ends:
   after `earningsLost` on a wipe).
 - `runResult` always writes `extras['run.gold']` (`GoldConversionRecord`: `{ gold, trophies, rate }`).
 
+**Carried-item sale (ETH-171, `src/sim/items/sale.ts`).** The same exit path also sells gear. `itemSale(state, outcome)` sums the base `value` of every item the *living* members carry or wear that passes `soldOnExit(item)` (not kit items, not zero-value items, not gold; heirlooms join the exceptions in M7) and converts it at `VALUE_PER_TROPHY` (`10`, rounded down once over the sum, not Omen-multiplied). The Trophies add to `RunResult.converted` beside gold's, `extras['run.items']` records `{ items, value, trophies, rate }` (on a wipe the amount lost, `trophies: 0`), and `end` emits `itemsSettled { items, value, trophies, lost }` after `goldSettled` when `items > 0`.
+
 **The wipe loss (ETH-023, `src/sim/run/wipeLoss.ts`).** `WIPE_LOSS_SHARE` (0.25, final per
 Nate) is the one constant. `wipeLoss(atRisk, outcome)` is empty for a victory or a retreat; on a
 wipe each currency keeps `keptAfterWipe(n)` = ⌊0.75 n⌋ and loses the rest (so the loss rounds
@@ -591,10 +593,10 @@ states, so the event's figures equal the `RunResult`'s. No new run state.
   what a wipe took (`wipeLoss`; empty otherwise) and is never more than `atRisk`, while `converted`
   holds post-exit converted amounts (absent on wipe or when 0). `extras` is an open
   record that later trackers write under their own id (`'track.kills'`), plus `'run.end'`, `'run.party'`,
-  and `'run.gold'`.
+  `'run.gold'` and `'run.items'`.
 - `applyRunResult` in meta (§6.4) checks the result (it throws a `RangeError` on a malformed
   one, including non-finite/negative `converted` or positive `converted` on a `wipe`), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
-  `(atRisk - lost) + (converted ?? {})`, the `history` slice (v5, `RunRecord.gold`) records the run, the `adventurers` slice (ETH-119) folds it
+  `(atRisk - lost) + (converted ?? {})`, the `history` slice (v6, `RunRecord.gold` and `RunRecord.items`) records the run, the `adventurers` slice (ETH-119) folds it
   into each party member's record, and the `mastery` slice (ETH-087) adds each class's Mastery XP. A step gets a third argument, `before` (a `ProfileBefore`: the
   history as it was before banking), so it can read the run number without depending on slice order. The reward multiplier is already in
   `atRisk` (see the order above), so the loss follows it, and `converted` is added after both.
@@ -2151,7 +2153,17 @@ As built (ETH-063):
   closed gate over a row (or `null`), `closedGates` lists them, and `canPurchase` refuses such a
   node as `locked` with `describeGate` ("Tier 4 and up open when you reach floor 6."). A node's
   `tier` stays its row; the UI numbers bands I, II, III from the gates (`tierBand`). No shipped
-  building has gates or ranks yet (ETH-132, ETH-159, ETH-170 add content).
+  building has gates or ranks yet (ETH-132 and ETH-159 add content).
+- **Tier quests (ETH-170):** `ContractDef.opens` is a building id (a building quest, ETH-093) or
+  `{ building, fromTier }` (a tier quest); `opensBuilding`, `opensTier` and `opensTarget` read
+  it. The gate's `unlock` is the `objectiveDone` milestone with `exited: true` on the contract,
+  and `checkBuildingQuests` (in `validateContent`) checks the pairing both ways, that each
+  building's quests ask for deeper floors in order (building quest, then each tier quest in gate
+  order) and that none is deeper than the shallowest dungeon. `questOffer` offers a tier quest
+  while its building is open and its gate is the topmost closed one, once `upgradeShare(profile,
+  building)` (that building's nodes in its open tiers) reaches `TIER_QUEST_SHARE`; before that it
+  is `locked` with progress text, and `hidden` while the building is locked or an earlier gate is
+  closed. A tier quest counts as a building quest for the one-per-run limit.
 - **Engine** (`src/meta/upgrades.ts`, pure): `canPurchase(profile, id)` (`{ ok }` or a
   `status` of `owned` / `excluded` / `locked` / `expensive` / `unknown` with a `reason` for the
   tooltip), `nodeStatus`, `purchase` (throws a `RangeError` with the reason),
@@ -2237,14 +2249,24 @@ in-memory store for tests. The save is a versioned envelope
 current one. Export and import use the same string. Autosave runs on a timer, at run end and
 on window close.
 
-As built (ETH-059):
+As built (ETH-059, ETH-095):
 
+- `src/platform/tauri.ts`: the sole boundary importing `@tauri-apps/api`. Exposes
+  `isTauriRuntime()` (`window.__TAURI_INTERNALS__`), `invokeTauri()`, and
+  `subscribeTauriClose(onClose)` (which uses `getCurrentWindow().onCloseRequested`, calls
+  `event.preventDefault()` synchronously before awaiting `onClose()`, guards re-entry, and
+  calls `win.destroy()` in `finally`).
 - `src/platform/saveStore.ts`: `SaveStore { label, load, save, clear }` with
   `MemorySaveStore`, `IndexedDbSaveStore` (database `ethuathia`, store `saves`, key `profile`)
-  and `TauriSaveStore`, a stub that rejects every call until packaging lands (§8.4).
-  `createSaveStore()` picks IndexedDB, or memory where there is none (jsdom).
-- `src/platform/autosave.ts`: `startAutosave(save, { intervalMs, target })` saves every 30 s
-  and on `beforeunload`, `pagehide` and the page becoming hidden.
+  and `TauriSaveStore`, which calls the backend `load_save`, `write_save` and `clear_save`
+  commands to persist `save.json` in `app_data_dir` (§8.4).
+  `createSaveStore()` picks `TauriSaveStore` when `isTauriRuntime()` is true, else
+  `IndexedDbSaveStore` when `indexedDB` exists, else `MemorySaveStore`.
+- `src/platform/autosave.ts`: `startAutosave(save, { intervalMs, target, onCloseRequested })`
+  accepts async `save()` callbacks, saves every 30 s and on `beforeunload`, `pagehide` and the
+  page becoming hidden, and registers `onCloseRequested` (defaulting to `subscribeTauriClose`
+  when `isTauriRuntime()`, tracking disposal so `stop()` unsubscribes cleanly). `profileStore`
+  returns `useProfileStore.getState().save()` directly so desktop closes await the file write.
 - `src/meta/save.ts`: `encodeSave(profile, savedAt)` and `decodeSave(text)`. The envelope is
   `{ format: 'ethuathia.save', version: SAVE_VERSION, savedAt, slices: { <key>: { version, data } } }`.
   Loading runs `ENVELOPE_MIGRATIONS` up to `SAVE_VERSION`, then each slice's own migrations,
@@ -2387,10 +2409,12 @@ carry game-wide behavior:
 - **`NodeGraph`:** draws an upgrade tree as SVG from each node's `tier` and `column`.
 
 `Panel`, `Card`, `Button`, `Tabs`, `Tooltip` and `Bar` exist (ETH-011) and are exported from
-`ui/kit/index.ts`; the others arrive with the features that first need them. Kit stylesheets
-use tokens only, which `test/ui/tokens.test.ts` enforces. In dev mode, `?kit` on the dev server
-URL opens `ui/dev/KitGallery`, which shows every component and state; production builds drop
-it.
+`ui/kit/index.ts`; the others arrive with the features that first need them. `Button` also accepts
+`disabledReason` (with optional `tooltipPlacement`) to keep a button visible and natively
+disabled inside a focusable `Tooltip` trigger with an `aria-describedby` reason for screen readers
+(ETH-175). Kit stylesheets use tokens only, which `test/ui/tokens.test.ts` enforces. In dev mode,
+`?kit` on the dev server URL opens `ui/dev/KitGallery`, which shows every component and state;
+production builds drop it.
 
 ### 8.5 Codex and `Explain` (`ui/codex/`, ETH-065)
 
@@ -2525,8 +2549,24 @@ As built (ETH-014), in `ui/input/`:
 
 ### 8.4 Desktop packaging
 
-Tauri is added in M2, when file saves are needed. Before that the game runs in a dev browser
-tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
+Packaged with **Tauri v2** (`src-tauri/`, ETH-095). Nothing in `ui/` imports `@tauri-apps/api`
+directly; all desktop runtime checks, IPC calls, and close interception go through
+`src/platform/tauri.ts`.
+
+- **Rust backend (`src-tauri/src/lib.rs`, crate `ethuathia_lib`):** exposes three
+  `#[tauri::command]` handlers — `load_save`, `write_save`, and `clear_save` — backed by pure
+  `&Path` helpers (`read_save_file`, `write_save_file`, `clear_save_file`) that read and remove
+  `save.json` and write atomically via `save.json.tmp` + rename inside
+  `app.path().app_data_dir()` (`com.ethuathia.app`).
+- **Offline-only security & capabilities:** `src-tauri/Cargo.toml` includes no network,
+  filesystem, shell, or opener plugins; `src-tauri/capabilities/default.json` grants only
+  `core:default` and `core:window:allow-destroy` (needed by `subscribeTauriClose`).
+- **CSP & bundling:** `vite.config.ts` skips injecting the `<meta>` CSP tag when
+  `TAURI_ENV_PLATFORM` is defined so `src-tauri/tauri.conf.json`'s `app.security.csp` is
+  authoritative (allowing `connect-src 'self' ipc: http://ipc.localhost` for the local IPC
+  bridge), while browser `npm run build` retains the strict `OFFLINE_CSP` (`connect-src 'self'`).
+  `tauri.conf.json` builds `dist/` via `npm run build` (`frontendDist: "../dist"`) and bundles
+  icons generated from `public/favicon.svg`.
 
 ---
 

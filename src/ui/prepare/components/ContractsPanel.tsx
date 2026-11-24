@@ -4,7 +4,7 @@
  * takes at least one, so the last one can't be cleared.
  */
 import { CONTRACTS } from '../../../content';
-import { chosenContracts, contractSlots, isAvailable } from '../../../meta';
+import { buildingQuestRefusal, chosenContracts, contractSlots, isAvailable, questOffer } from '../../../meta';
 import { Explain } from '../../codex/Explain';
 import { rewardText } from '../../shell/logText/quests';
 import styles from '../panels.module.css';
@@ -12,7 +12,8 @@ import type { PreparePanelProps } from '../types';
 
 export function ContractsPanel({ profile, choices, update }: PreparePanelProps) {
   const slots = contractSlots(profile);
-  const chosen = chosenContracts(profile, choices.contracts).map((d) => d.id);
+  const chosenDefs = chosenContracts(profile, choices.contracts);
+  const chosen = chosenDefs.map((d) => d.id);
   const full = chosen.length >= slots;
   const toggle = (id: string, on: boolean) => {
     if (on) {
@@ -29,9 +30,14 @@ export function ContractsPanel({ profile, choices, update }: PreparePanelProps) 
         Contracts · {chosen.length} of {slots} {slots === 1 ? 'slot' : 'slots'}
       </legend>
       {CONTRACTS.all().map((c) => {
-        const open = isAvailable(profile, c.id);
+        const offer = questOffer(profile, c);
+        // A building quest whose building is open is done and gone from the list (ETH-093).
+        if (offer.state === 'done' || offer.state === 'hidden') return null;
+        const open = isAvailable(profile, c.id) && offer.state === 'offered';
         const on = chosen.includes(c.id);
-        const locked = !open || (on && chosen.length === 1) || (!on && full && slots > 1);
+        // With one slot a pick swaps the old one out, so only a second slot can clash.
+        const refusal = on || slots === 1 || !open ? null : buildingQuestRefusal(chosenDefs, c);
+        const locked = !open || refusal !== null || (on && chosen.length === 1) || (!on && full && slots > 1);
         return (
           <label key={c.id} className={styles.choice} data-disabled={open ? undefined : 'true'}>
             <input type="checkbox" name="prepare-contracts" value={c.id} checked={on} disabled={locked} onChange={(e) => toggle(c.id, e.currentTarget.checked)} />
@@ -42,7 +48,8 @@ export function ContractsPanel({ profile, choices, update }: PreparePanelProps) 
               </span>
               <span className={styles.note}>
                 Pays {rewardText(c.reward)}
-                {!open && ' · locked: unlocked by an upgrade'}
+                {offer.state === 'locked' ? ` · not offered yet: ${offer.need}` : !open && ' · locked: unlocked by an upgrade'}
+                {refusal !== null && ` · ${refusal}`}
               </span>
             </span>
           </label>

@@ -202,7 +202,7 @@ describe('tracked objectives', () => {
 
 describe('the objectiveDone milestone', () => {
   const milestone = { kind: 'objectiveDone', owner: { kind: 'quest', id: 'quest.smithy' } } as const;
-  const progress = { deepestDepth: 1, runs: 1, victories: 0, metInRun: [], objectivesDone: [] as string[] };
+  const progress = { deepestDepth: 1, runs: 1, victories: 0, metInRun: [], objectivesDone: [] as string[], objectivesExited: [] as string[] };
 
   it('is met by a run that ended with that owner complete', () => {
     expect(milestoneSchema.safeParse(milestone).success).toBe(true);

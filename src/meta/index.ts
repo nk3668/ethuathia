@@ -88,9 +88,11 @@ export { BASE_PARTY_SIZE, MAX_PARTY_SIZE, partySize, RANDOM_PICK, recruitName } 
 export type { PartyChoice, RecruitPick } from './prepare/party';
 export { chosenDungeon } from './prepare/dungeon';
 export type { DungeonChoice } from './prepare/dungeon';
-export { availableContracts, BASE_CONTRACT_SLOTS, chosenContracts, contractSlots } from './prepare/contracts';
+export { availableContracts, BASE_CONTRACT_SLOTS, chosenContracts, contractSlots, lockedBuildingQuests } from './prepare/contracts';
+export { buildingQuestRefusal, questNeedText, questOffer, upgradeShare } from './prepare/buildingQuests';
+export type { QuestOffer, UpgradeShare } from './prepare/buildingQuests';
 export type { ContractsChoice } from './prepare/contracts';
-export { buildRunConfig, checkRunConfig, PREPARE_STREAM, startRun, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
+export { buildRunConfig, checkRunConfig, PREPARE_STREAM, recruitParty, startRun, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
 export {
   canAfford,
   canPurchase,

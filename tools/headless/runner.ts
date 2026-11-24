@@ -75,6 +75,10 @@ export interface SeedResult {
   atRisk?: RewardAmounts;
   /** What a wipe took from `atRisk` (ETH-023); empty otherwise. Missing from reports before ETH-023. */
   lost?: RewardAmounts;
+  /** Trophies the run converted on exit (leftover gold plus sold items, ETH-083/ETH-171); 0 when none. Missing before ETH-171. */
+  convertedTrophies?: number;
+  /** Trophies from sold carried items alone (ETH-171). Missing from reports before it. */
+  itemTrophies?: number;
   /** Party turns (steps) run, including the ones spent confirming the party had settled. */
   steps: number;
   /** How much of the last floor reached the party saw. */
@@ -115,8 +119,21 @@ export interface SeedResult {
   moments?: number;
   /** Class Mastery XP the run banked, summed over its classes (ETH-087). Only for runs that ended. */
   masteryXp?: number;
+  /** Each party member, for a mixed party (`--recruits`, ETH-178). Absent for a uniform party. */
+  members?: MemberResult[];
+  /** Class Mastery XP the run banked per class (ETH-178), with `members`; empty until the run ended. */
+  classXp?: Record<string, number>;
   /** `stateHash` of where the run stopped, to tell whether a change altered behavior. */
   hash: string;
+}
+
+/** One party member of a mixed party (ETH-178). */
+export interface MemberResult {
+  classId: string;
+  raceId: string;
+  died: boolean;
+  /** Their share of the class's Mastery XP (`MasteryMemberGain.gained`); 0 until the run ended. */
+  masteryXp: number;
 }
 
 /**
@@ -181,7 +198,7 @@ function meanMemberLevel(levels: readonly number[]): number {
 /** Runs one seed until the party settles, the cap is hit or the run stalls. */
 export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult {
   const cap = options.cap ?? DEFAULT_TURN_CAP;
-  const config = buildHeadlessConfig(options);
+  const config = buildHeadlessConfig(options, seed);
   const ownRules = resolveHeadlessRules(options.rules);
   const runner = createRunner(config, seed, ownRules);
   const stuck: SeedResult['stuck'] = { count: 0, firstTurn: null };
@@ -204,6 +221,8 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
   let equips = 0;
   let chronicle = CHRONICLE_TRACKER.init();
   const party = new Set(snap.party.map((m) => m.id));
+  const fallen = new Set<number>();
+  const roster = snap.party.map((m) => ({ id: m.id, classId: m.classId, raceId: m.raceId }));
   const deathCauses: Record<string, number> = {};
   /** Who killed each party member struck down, until their `fell` event. */
   const slain = new Map<number, string>();
@@ -227,6 +246,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
       chronicle = CHRONICLE_TRACKER.reduce(chronicle, e);
       if (e.type === 'fell') {
         deaths++;
+        fallen.add(e.actor);
         const cause = e.killer?.def ?? slain.get(e.actor) ?? 'unknown';
         deathCauses[cause] = (deathCauses[cause] ?? 0) + 1;
       }
@@ -298,13 +318,36 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
     atRisk: { ...snap.domains.run.atRisk },
     lost: { ...(runner.report()?.result.lost ?? {}) },
+    convertedTrophies: runner.report()?.result.converted?.trophies ?? 0,
+    itemTrophies: itemTrophiesOf(runner.report()),
     ...masteryOf(runner.report()),
+    ...(options.recruits === true ? mixedOf(runner.report(), roster, fallen) : {}),
   };
+}
+
+/** The Trophies a finished run's sold items paid (`extras['run.items']`, ETH-171), for `SeedResult.itemTrophies`. */
+function itemTrophiesOf(report: RunReport | null): number {
+  const sale = report?.result.extras['run.items'] as { trophies?: number } | undefined;
+  return sale?.trophies ?? 0;
 }
 
 /** The Mastery XP a finished run banks (ETH-087), for `SeedResult.masteryXp`. */
 function masteryOf(report: RunReport | null): { masteryXp?: number } {
   return report === null ? {} : { masteryXp: masteryShares(report.result).reduce((n, c) => n + c.xp, 0) };
+}
+
+/** `members` and `classXp` for a mixed party (ETH-178): who was fielded, who fell, what Mastery they earned. */
+function mixedOf(
+  report: RunReport | null,
+  roster: readonly { id: number; classId: string; raceId: string }[],
+  fallen: ReadonlySet<number>,
+): { members: MemberResult[]; classXp: Record<string, number> } {
+  const shares = report === null ? [] : masteryShares(report.result);
+  const gained = new Map(shares.flatMap((s) => s.members.map((m) => [m.actor, m.gained] as const)));
+  return {
+    members: roster.map((m) => ({ classId: m.classId, raceId: m.raceId, died: fallen.has(m.id), masteryXp: gained.get(m.id) ?? 0 })),
+    classXp: Object.fromEntries(shares.map((s) => [s.classId, s.xp])),
+  };
 }
 
 /** Runs `count` seeds in a row from `from`. */

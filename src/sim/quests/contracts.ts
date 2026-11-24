@@ -17,13 +17,13 @@
  */
 import { CONTRACTS, ITEMS } from '../../content';
 import { objectiveOwnerKey } from '../../content';
-import type { ContractDef, ObjectiveOwner } from '../../content';
+import type { ContractDef, ObjectiveOwner, RecoverObjective } from '../../content';
 import { DIRS_8, Grid, Rng } from '../../core';
 import type { Pos } from '../../core';
 import type { FloorPlanHook, RunTracker, VictoryCheck } from '../domain';
 import type { Emit, SimEvent } from '../events';
 import type { FloorPlan } from '../floorText';
-import { dungeonDepth, floorIdAt, isBottomFloor } from '../floors/dungeon';
+import { dungeonDepth, floorIdAt } from '../floors/dungeon';
 import { inventoryOf } from '../items/inventory';
 import type { RewardAmounts } from '../run/result';
 import { Terrain } from '../state';
@@ -267,17 +267,17 @@ export function contractRng(seed: number, floorId: FloorId): Rng {
 }
 
 /**
- * `quests.relic`: on the bottom floor, each selected `recover` contract's item is put on a free
- * tile far from the stairs up (`relicTile`). Deterministic from the seed, the config and the floor.
+ * `quests.relic`: on its floor (the bottom floor, or the one a `recover` objective names with
+ * `depth`), each selected `recover` contract's item is put on a free tile far from the stairs up
+ * (`relicTile`). Deterministic from the seed, the config and the floor.
  */
 export const RELIC_PLAN_HOOK: FloorPlanHook = {
   id: 'quests.relic',
   apply(state, floorId, plan) {
-    if (!isBottomFloor(state, floorId)) return;
     const rng = contractRng(state.seed, floorId);
     for (const id of configContracts(state.config)) {
       const { objective } = contractDef(id);
-      if (objective.kind !== 'recover' || !ITEMS.has(objective.item)) continue;
+      if (objective.kind !== 'recover' || !ITEMS.has(objective.item) || relicFloorId(state, objective) !== floorId) continue;
       const pos = relicTile(plan, rng);
       if (pos === null) throw new Error(`Floor "${floorId}" has no free tile for the ${ITEMS.get(objective.item).name}`);
       plan.items = [...(plan.items ?? []), { pos, item: { def: objective.item, qty: 1 } }];
@@ -299,4 +299,12 @@ export function relicCount(state: RunState, item: string): { carried: EntityId[]
 /** The bottom floor's id, whether or not it has been built. */
 export function bottomFloorId(state: RunState): FloorId {
   return floorIdAt(dungeonDepth(state));
+}
+
+/**
+ * The floor a `recover` objective's item lies on, whether or not it has been built: the floor
+ * `depth` names, or the bottom floor (also when the dungeon is shallower than `depth`).
+ */
+export function relicFloorId(state: RunState, objective: RecoverObjective): FloorId {
+  return floorIdAt(Math.min(objective.depth ?? Number.MAX_SAFE_INTEGER, dungeonDepth(state)));
 }

@@ -7,7 +7,8 @@
  * objective engine (`src/sim/quests/objectives.ts`, `OBJECTIVE_KINDS`) gives each kind its
  * meaning: how its progress is measured, its target and its wording. Kinds:
  *
- * - `recover { item }`: a living party member carries `item` (1 of 1). Measured from the state.
+ * - `recover { item, depth? }`: a living party member carries `item`, which lies on floor `depth`
+ *   (default the bottom floor) (1 of 1). Measured from the state.
  * - `count { event, match?, count }`: an event of type `event` whose fields equal every entry of
  *   `match` happened `count` times since the objective was tracked. Measured from events.
  * - `reach { depth }`: the party has reached floor `depth`. Measured from the state.
@@ -31,11 +32,17 @@ import { idSchema, positiveInt } from './schema';
  */
 export type EventMatch = Readonly<Record<string, string | number | boolean>>;
 
-/** Recover an item placed on the bottom floor and carry it (ETH-024). */
+/** Recover an item placed on one floor (the bottom floor unless `depth` says otherwise) and carry it (ETH-024, ETH-093). */
 export interface RecoverObjective {
   readonly kind: 'recover';
   /** The item to recover (an `item.*` id of category `relic`). */
   readonly item: string;
+  /**
+   * The floor the item lies on (1 is the first floor). Leave it out for the bottom floor, however
+   * deep the dungeon goes. A floor deeper than the dungeon falls back to its bottom floor, but
+   * content must not rely on that (the contracts content check, ETH-093).
+   */
+  readonly depth?: number;
 }
 
 /** Make an event happen `count` times, counted from when the objective is tracked. */
@@ -102,7 +109,7 @@ const matchSchema = z
   .refine((m) => Object.keys(m).length > 0, 'must list at least one field, or be left out');
 
 export const objectiveSchema: z.ZodType<Objective> = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('recover'), item: idSchema('item') }),
+  z.strictObject({ kind: z.literal('recover'), item: idSchema('item'), depth: positiveInt.optional() }),
   z.strictObject({ kind: z.literal('count'), event: eventName, match: matchSchema.optional(), count: positiveInt }),
   z.strictObject({ kind: z.literal('reach'), depth: positiveInt }),
   z.strictObject({ kind: z.literal('condition'), requirement: requirementSchema }),

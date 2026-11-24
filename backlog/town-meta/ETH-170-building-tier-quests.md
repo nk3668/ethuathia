@@ -2,14 +2,14 @@
 id: ETH-170
 title: Building-tier quests open each building's next tier
 type: feature
-status: ready
+status: done
 priority: P2
 milestone: M2
 epic: town-meta
 size: M
 depends_on: [ETH-093, ETH-172]
 created: 2026-11-24
-updated: 2026-11-24
+updated: 2026-11-25
 ---
 
 ## Summary
@@ -25,12 +25,12 @@ Nate (2026-11-24): buildings should grow in stages, each stage opened by a thema
 
 ## Acceptance criteria
 - [x] Spec reviewed by Nate before building (spec gate)
-- [ ] **Tier quests are contracts** with `opens: { building, fromTier }` (ETH-093's `opens` widened). Each tier gate's `unlock` is the matching `objectiveDone` milestone with `exited: true`.
-- [ ] **Offered** when the building is open, the gate is closed, and the bought share of the building's nodes **in its open tiers** is at least `TIER_QUEST_SHARE` (default 0.5). A ranked node (ETH-172) counts as bought in proportion to its ranks. Before then the quest shows greyed with its progress ("Buy half of the Smithy's open upgrades: 5 of 10").
-- [ ] **Counts as a building quest** for the one-per-run limit and uses a contract slot (ETH-093).
-- [ ] **Harder than the one before:** a content check (in `validateContent`, so ETH-132 and ETH-159 get it for free) that each building's quests ask for a deeper floor than its previous one.
-- [ ] **Shown:** the run summary line ("The Smithy's second tier is open"), a Town highlight on the newly opened band, and the gate divider's tooltip names the quest.
-- [ ] **Tests:** the offer threshold with plain and ranked nodes; completing the quest opens exactly that gate; a wipe doesn't; a gate already opened stays open after content changes.
+- [x] **Tier quests are contracts** with `opens: { building, fromTier }` (ETH-093's `opens` widened). Each tier gate's `unlock` is the matching `objectiveDone` milestone with `exited: true`.
+- [x] **Offered** when the building is open, the gate is closed, and the bought share of the building's nodes **in its open tiers** is at least `TIER_QUEST_SHARE` (default 0.5). A ranked node (ETH-172) counts as bought in proportion to its ranks. Before then the quest shows greyed with its progress ("Buy half of the Smithy's open upgrades: 5 of 10").
+- [x] **Counts as a building quest** for the one-per-run limit and uses a contract slot (ETH-093).
+- [x] **Harder than the one before:** a content check (in `validateContent`, so ETH-132 and ETH-159 get it for free) that each building's quests ask for a deeper floor than its previous one.
+- [x] **Shown:** the run summary line ("The Smithy's second tier is open"), a Town highlight on the newly opened band, and the gate divider's tooltip names the quest.
+- [x] **Tests:** the offer threshold with plain and ranked nodes; completing the quest opens exactly that gate; a wipe doesn't; a gate already opened stays open after content changes.
 
 ## Proposed quests (for Nate to shape)
 | Building | Opens | Quest | Asks |
@@ -54,3 +54,4 @@ Decisions (Nate, 2026-11-24, defaults accepted):
 - 2026-11-24: Created from the progression discussion with Nate.
 - 2026-11-24: (spec gate) Detailed spec written on top of ETH-172's tier gates and ETH-093's building quests, with a proposed quest table; awaiting Nate's review.
 - 2026-11-24: Nate asked Claude to review and settle #101 with the defaults. Review fix: this item ships the mechanism with fixture tests; each tier quest ships with the tree item that adds its gate (ETH-132, ETH-159). Status ready.
+- 2026-11-25: Done (mechanism only; no shipped building has gates). `opens` is a building id or `{ building, fromTier }`. Offer uses `upgradeShare(profile, building)` over that building's nodes in its open tiers; a tier quest is offered only for the topmost closed gate and is hidden while its building is locked. Depth-order content check (building quest, then tier quests in gate order; quests with no set floor are skipped). Shown: run summary line, "New" on the Town tab and band, gate divider tooltip names the quest. Sim: 20 seeds, state hashes identical to origin/main.

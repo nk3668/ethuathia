@@ -2,7 +2,7 @@
  * Command-line argument parsing and usage help for `tools/sim.ts` (and `int` helper shared with `tools/run-soak.ts`).
  */
 import { parseArgs } from 'node:util';
-import { CLASSES, RACES } from '../../src/content';
+import { CLASSES, CONTRACTS, RACES } from '../../src/content';
 import { partySize } from '../../src/meta';
 import {
   buildHeadlessProfile,
@@ -32,6 +32,10 @@ export interface SimArgs {
   classId: string | null;
   /** Race of every adventurer (`--race`, ETH-160); null is the Human. */
   raceId: string | null;
+  /** The one contract every run takes (`--contract`, ETH-093); null is the default, Recover the relic. */
+  contract: string | null;
+  /** Field the Prepare screen's random party per seed (`--recruits`, ETH-178); `party` is its size. */
+  recruits: boolean;
   /** Worker threads to run seeds on (`--jobs`); 1 is a serial run. Doesn't change the results. */
   jobs: number;
   /** Write the report as JSON to this file (`--json`). */
@@ -45,7 +49,7 @@ export interface SimArgs {
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
                       [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious]
-                      [--class ID] [--race ID]
+                      [--class ID | --race ID | --recruits] [--contract ID]
                       [--party-sweep] [--jobs N] [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
@@ -62,6 +66,10 @@ above the bottom or trigger stuck detection are listed at the end.
   --rules NAME            behavior rule preset: baseline (default) or cautious
   --class ID              class of every adventurer, e.g. outrider or class.outrider (default vanguard)
   --race ID               race of every adventurer, e.g. fenling or race.fenling (default human)
+  --contract ID           the contract every run takes, e.g. cold_anvil or contract.cold_anvil (default recover_relic)
+  --recruits              field the party the Prepare screen gives a new player: random recruits from the
+                          available classes and races, drawn from each seed (--party sets the size), and add
+                          a per-class and per-race breakdown to the report (not with --class or --race)
   --party-sweep           run party sizes 1 to ${MAX_PARTY} on the same seeds and preset, print win rate and
                           level per size, and warn when win rate does not rise with party size or party
                           ${MAX_PARTY} wins less than ${PARTY_SWEEP_MIN_RATIO}x as often as solo (--party is ignored; not with
@@ -96,6 +104,14 @@ function parseContentId(flag: string, kind: 'class' | 'race', raw: string | unde
   throw new Error(`${flag} "${raw}" is not a ${kind}. Available: ${registry.all().map((d) => d.id).join(', ')}`);
 }
 
+/** Resolves `--contract`: a full id or the part after the dot. */
+function parseContract(raw: string | undefined): string | null {
+  if (raw === undefined) return null;
+  const id = raw.includes('.') ? raw : `contract.${raw}`;
+  if (CONTRACTS.has(id)) return id;
+  throw new Error(`--contract "${raw}" is not a contract. Available: ${CONTRACTS.all().map((d) => d.id).join(', ')}`);
+}
+
 function parseUpgradeList(raw: string | undefined): string[] {
   if (raw === undefined) return [];
   if (raw.trim() === '') throw new Error('--upgrades must be a comma-separated list of upgrade ids');
@@ -118,6 +134,8 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       rules: { type: 'string' },
       class: { type: 'string' },
       race: { type: 'string' },
+      contract: { type: 'string' },
+      recruits: { type: 'boolean' },
       'party-sweep': { type: 'boolean' },
       jobs: { type: 'string' },
       json: { type: 'string' },
@@ -130,6 +148,9 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
   });
   if (values.compare !== undefined && values.baseline !== undefined) {
     throw new Error('Use --compare or --baseline, not both');
+  }
+  if (values.recruits === true && (values.class !== undefined || values.race !== undefined)) {
+    throw new Error('--recruits fields random classes and races, so it can not be combined with --class or --race');
   }
   const preset = parsePreset(values.preset);
   const upgrades = parseUpgradeList(values.upgrades);
@@ -145,6 +166,8 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     rules,
     classId: parseContentId('--class', 'class', values.class),
     raceId: parseContentId('--race', 'race', values.race),
+    contract: parseContract(values.contract),
+    recruits: values.recruits ?? false,
     partySweep: values['party-sweep'] ?? false,
     jobs: int('--jobs', values.jobs, defaultJobs(), 1, MAX_JOBS),
     json: values.json ?? null,
