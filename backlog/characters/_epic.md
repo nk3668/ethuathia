@@ -40,4 +40,5 @@ Adventurers have attributes, grow by class when they level, have race aptitudes 
 - [ ] [ETH-104 Personality quirks](ETH-104-personality-quirks.md)
 - [x] [ETH-110 Rolled growth, shared kill XP and uncapped levels](ETH-110-leveling-followup.md)
 - [ ] [ETH-160 Starter set of unlockable classes and races](ETH-160-starter-classes-and-races.md)
+- [ ] [ETH-176 Classes start each run with a kit of gear](ETH-176-class-starting-kits.md)
 - [ ] [ETH-173 A class that can resurrect a fallen party member during a run](ETH-173-resurrection-class.md)
