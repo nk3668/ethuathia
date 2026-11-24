@@ -72,6 +72,8 @@ ${USAGE}`);
     `cap ${args.cap} party turns per run`,
     `preset ${args.preset}`,
     `rules ${args.rules}`,
+    ...(args.classId === null ? [] : [`class ${args.classId}`]),
+    ...(args.raceId === null ? [] : [`race ${args.raceId}`]),
     ...(args.upgrades.length === 0 ? [] : [`upgrades ${args.upgrades.join(',')}`]),
   ].join(', ');
   console.log(`Headless run: ${details}\n`);
@@ -81,7 +83,7 @@ ${USAGE}`);
     args.seeds,
     {
       cap: args.cap,
-      party: headlessParty(args.party),
+      party: headlessParty(args.party, args.classId ?? undefined, args.raceId ?? undefined),
       preset: args.preset,
       upgrades: args.upgrades,
       rules: args.rules,

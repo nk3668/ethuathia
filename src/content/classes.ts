@@ -124,3 +124,63 @@ export const CLASS_VANGUARD = defineClass({
   },
   kit: ['item.oak_cudgel', 'item.round_shield'],
 });
+
+export const CLASS_OUTRIDER = defineClass({
+  id: 'class.outrider',
+  name: 'Outrider',
+  description:
+    'A rider without a horse: the guild’s eyes on the road ahead. Quick hands, quick feet, and no wish ' +
+    'to be the one standing when the fighting starts.',
+  hint: 'Ranges ahead of the party and is first to see the trap.',
+  tags: ['martial', 'scout'],
+  // 32 starting points and +2 a level, under the Vanguard's 37 and +3.25: Finesse pays for accuracy,
+  // evasion and dagger damage at once, so on the shared budget the Outrider won every run (ETH-160).
+  attributes: { brawn: 8, finesse: 12, wits: 6, grit: 6 },
+  // Each level, on average: Finesse +0.75, Brawn +0.5, Grit +0.5, Wits +0.25.
+  growth: {
+    brawn: { min: 1, max: 1, chance: 0.5 },
+    finesse: { min: 1, max: 1, chance: 0.75 },
+    wits: { min: 1, max: 1, chance: 0.25 },
+    grit: { min: 1, max: 1, chance: 0.5 },
+  },
+  kit: ['item.skinning_knife', 'item.soft_boots'],
+});
+
+export const CLASS_LOREKEEPER = defineClass({
+  id: 'class.lorekeeper',
+  name: 'Lorekeeper',
+  description:
+    'A scholar of the guild’s library who goes down to read the dungeon itself: its marks, its traps and the ' +
+    'things it leaves lying about. Until its spells arrive the Lorekeeper is a weak fighter, and the most ' +
+    'fragile of the guild.',
+  hint: 'Reads the dark the way others read a ledger.',
+  tags: ['scholar'],
+  // 33 starting points, +3.25 a level. Wits has no combat use until spells, so it is trimmed to trail the field.
+  attributes: { brawn: 5, finesse: 8, wits: 12, grit: 8 },
+  // Each level, on average: Wits +1.5, Grit +0.75, Brawn +0.5, Finesse +0.5.
+  growth: {
+    brawn: { min: 1, max: 1, chance: 0.5 },
+    finesse: { min: 1, max: 1, chance: 0.5 },
+    wits: { min: 1, max: 2 },
+    grit: { min: 1, max: 1, chance: 0.75 },
+  },
+  kit: ['item.ashwood_staff', 'item.quilted_jerkin'],
+});
+
+export const CLASS_REAVER = defineClass({
+  id: 'class.reaver',
+  name: 'Reaver',
+  description: 'A hireling from the border holds who settles every argument with an axe. Hits hard, thinks later.',
+  hint: 'Clears a room by making it smaller.',
+  tags: ['martial'],
+  // 32 starting points and +2.5 a level (the hatchet's +2 damage is the rest of its edge; ETH-160).
+  attributes: { brawn: 12, finesse: 8, wits: 4, grit: 8 },
+  // Each level, on average: Brawn +1, Grit +0.75, Finesse +0.5, Wits +0.25.
+  growth: {
+    brawn: { min: 1, max: 1 },
+    finesse: { min: 1, max: 1, chance: 0.5 },
+    wits: { min: 1, max: 1, chance: 0.25 },
+    grit: { min: 1, max: 1, chance: 0.75 },
+  },
+  kit: ['item.iron_hatchet', 'item.iron_cap'],
+});

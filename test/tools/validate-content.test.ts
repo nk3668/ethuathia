@@ -6,8 +6,8 @@ describe('tools/validate-content', () => {
     const report = validateContent();
     // On failure the message lists every problem, each naming its def.
     expect(report.problems, formatReport(report)).toEqual([]);
-    expect(report.counts).toContain('class: 1');
-    expect(report.counts).toContain('race: 1');
+    expect(report.counts).toContain('class: 4');
+    expect(report.counts).toContain('race: 3');
   });
 
   it('formats a report', () => {

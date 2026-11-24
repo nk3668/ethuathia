@@ -2559,7 +2559,7 @@ tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
   steps and every event; it then saves four seeds before the first step, mid-run and late,
   loads them and checks the rest of the run matches. Extend the command script as commands are
   added.
-- **Headless runs:** `npm run sim -- --seeds N [--from S] [--cap T] [--party P]`
+- **Headless runs:** `npm run sim -- --seeds N [--from S] [--cap T] [--party P] [--class ID] [--race ID]`
   (`tools/sim.ts`, logic in `tools/headless.ts`) runs each seed's dungeon through a
   `SimSession` until the party settles (every living member on the baseline `act.wait` for
   longer than a dropped goal lasts, `DROP_TURNS`): `done` on the bottom floor, `idle` above

@@ -31,6 +31,8 @@ export interface ReportArgs {
   preset?: HeadlessPreset;
   upgrades?: string[];
   rules?: HeadlessRulesPreset;
+  classId?: string | null;
+  raceId?: string | null;
   /** Worker threads (`--jobs`). Not part of a report: it never changes the results. */
   jobs?: number;
 }
@@ -52,6 +54,8 @@ export function makeReport(args: ReportArgs, results: SeedResult[]): SimReport {
     ...(args.preset !== undefined && args.preset !== 'fresh' ? { preset: args.preset } : {}),
     ...(args.upgrades !== undefined && args.upgrades.length > 0 ? { upgrades: [...args.upgrades] } : {}),
     ...(args.rules !== undefined && args.rules !== 'baseline' ? { rules: args.rules } : {}),
+    ...(args.classId != null ? { classId: args.classId } : {}),
+    ...(args.raceId != null ? { raceId: args.raceId } : {}),
   };
   return { version: REPORT_VERSION, args: reportArgs, summary: summarizeReport(results), results };
 }
@@ -326,6 +330,8 @@ export function simArgv(args: ReportArgs): string[] {
     ...(args.preset !== undefined && args.preset !== 'fresh' ? ['--preset', args.preset] : []),
     ...(args.upgrades !== undefined && args.upgrades.length > 0 ? ['--upgrades', args.upgrades.join(',')] : []),
     ...(args.rules !== undefined && args.rules !== 'baseline' ? ['--rules', args.rules] : []),
+    ...(args.classId != null ? ['--class', args.classId] : []),
+    ...(args.raceId != null ? ['--race', args.raceId] : []),
   ];
 }
 
