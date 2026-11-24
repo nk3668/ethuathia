@@ -3,7 +3,7 @@
  */
 import { ATTRIBUTE_IDS } from '../../../content';
 import type { Attributes, ClassDef, RaceDef } from '../../../content';
-import { ATTRIBUTE_FORMULAS, STAT_INFO } from '../../../sim';
+import { ATTRIBUTE_FORMULAS, combatValue, STAT_INFO } from '../../../sim';
 import type { StatId } from '../../../sim';
 import { attributeLine, kitLine } from '../../codex/attributeText';
 
@@ -12,9 +12,8 @@ function deriveStat(stat: StatId, attrs: Attributes): number {
   for (const f of ATTRIBUTE_FORMULAS) {
     if (f.stat === stat) add += (attrs[f.attribute] - f.from) * f.perPoint;
   }
-  const info = STAT_INFO[stat];
-  const value = Math.max(info.min, Math.round(add));
-  return info.max === undefined ? value : Math.min(info.max, value);
+  // The same rounding the sim ends every stat with (ETH-181), so the preview can't drift from it.
+  return combatValue(stat, add);
 }
 
 function combineAttributes(cls: ClassDef, race: RaceDef): Attributes {

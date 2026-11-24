@@ -59,6 +59,7 @@ export {
   sourceLabel,
   statValue,
 } from './getStat';
+export { combatValue, exactText, roundedText } from './combatValue';
 export { applyStatus, ensureStats, removeStatus, resistedTurns, tickStatuses } from './statuses';
 export type { StatusApplyMode } from './statuses';
 export { fireTrigger, MAX_TRIGGER_DEPTH, runEffect, runEffects } from './effects';

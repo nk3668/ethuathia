@@ -41,5 +41,5 @@ A consistent, readable dark interface: shared tokens and components, the in-run 
 - [x] [ETH-084 Rematch button on the run summary replays the same seed](ETH-084-rematch-same-seed.md)
 - [x] [ETH-090 Q and E cycle adventurers; diagonals while possessed](ETH-090-qe-cycle-keys.md)
 - [x] [ETH-175 Kit button that explains why it is disabled, with a tooltip](ETH-175-disabled-button-tooltips.md)
-- [ ] [ETH-181 Show derived stats the way combat uses them, as whole numbers](ETH-181-whole-number-stats.md)
+- [x] [ETH-181 Show derived stats the way combat uses them, as whole numbers](ETH-181-whole-number-stats.md)
 - [ ] [ETH-183 One source for the Trophies tooltip text](ETH-183-trophies-tooltip-single-source.md)

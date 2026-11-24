@@ -69,6 +69,7 @@ describe('skill stats', () => {
     }
     // Finesse 10 on a Human Vanguard: Base 40, then +30 from Finesse.
     expect(getStat(state, hero, 'flee')).toEqual({
+      raw: 70,
       stat: 'flee',
       value: 70,
       parts: [
