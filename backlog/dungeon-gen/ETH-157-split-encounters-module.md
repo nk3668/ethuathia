@@ -2,7 +2,7 @@
 id: ETH-157
 title: Split src/sim/combat/encounters.ts into focused modules
 type: chore
-status: ready
+status: pending-review
 priority: P2
 milestone: M2
 epic: dungeon-gen
@@ -23,12 +23,12 @@ Files should stay small and single-purpose so they are easy to read and change
 (`docs/ARCHITECTURE.md` §10.1). Found when the `max-lines` warning was added.
 
 ## Acceptance criteria
-- [ ] The file is split along its concerns (for example threat budgeting, group engagement,
+- [x] The file is split along its concerns (for example threat budgeting, group engagement,
       corridor patrols), with the public API re-exported from the original path; **or** it keeps
       an `eslint-disable max-lines` comment with a stated reason.
-- [ ] Behavior-neutral: no test changes, and the fixed-seed state hashes match (T0 identity
+- [x] Behavior-neutral: no test changes, and the fixed-seed state hashes match (T0 identity
       check, `docs/DIFFICULTY_PHILOSOPHY.md` §9).
-- [ ] `npm run lint` shows no `max-lines` warning for this file.
+- [x] `npm run lint` shows no `max-lines` warning for this file.
 
 ## Notes
 Refactor on green, in its own commit (§10.1).
@@ -36,3 +36,4 @@ Refactor on green, in its own commit (§10.1).
 ## Log
 - 2026-11-24: Created.
 - 2026-11-24: Assigned to Gemini (Antigravity); Claude reviews the PR.
+- 2026-11-24: Split `src/sim/combat/encounters.ts` into `encounterShared.ts`, `encounterPatrols.ts`, `encounterSurge.ts`, and `encounters.ts` preserving the exact public API (commit `8b5b235`); `npm run check` passed (0 errors, 0 `max-lines` warnings on `src/sim/combat/encounter*.ts`, 108 test files / 1323 tests), and both 20-seed T0 `npm run sim -- --compare origin/main` checks (default fresh party-1 and `--preset progressed --party 4`) produced 0 state-hash diffs. Marked `pending-review`.
