@@ -5,6 +5,7 @@ coverage/
 
 # Tauri build output
 src-tauri/target/
+src-tauri/gen/schemas/
 
 # Local settings and editor files
 .claude/settings.local.json
