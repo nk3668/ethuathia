@@ -89,8 +89,18 @@ export { completeRunChoices, defaultRunChoices, RUN_CHOICES } from './prepare';
 export type { RunChoiceKey, RunChoices } from './prepare';
 export { defineRunChoice } from './prepare/choice';
 export type { BuildCtx, ChoiceOf, RunChoiceSection } from './prepare/choice';
-export { availableClasses, availableDungeons, availableRaces, isAvailable, lockedByUpgrade, masteryClasses } from './prepare/available';
-export { BASE_PARTY_SIZE, MAX_PARTY_SIZE, partySize, RANDOM_PICK, recruitName } from './prepare/party';
+export {
+  availableClasses,
+  availableDungeons,
+  availableRaces,
+  isAvailable,
+  isTeaser,
+  lockedByUpgrade,
+  masteryClasses,
+  teaserClasses,
+  teaserRaces,
+} from './prepare/available';
+export { BASE_PARTY_SIZE, MAX_PARTY_SIZE, partySize, RANDOM_PICK, recruitName, TEASER_CHANCE } from './prepare/party';
 export type { PartyChoice, RecruitPick } from './prepare/party';
 export { chosenDungeon } from './prepare/dungeon';
 export type { DungeonChoice } from './prepare/dungeon';
@@ -118,6 +128,7 @@ export {
   purchase,
   rankCost,
   rankOf,
+  revealText,
   shortfall,
   tierGate,
 } from './upgrades';

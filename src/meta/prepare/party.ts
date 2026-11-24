@@ -11,7 +11,7 @@ import { idSchema } from '../../content/schema';
 import { textRng } from '../../core';
 import type { Profile } from '../profile';
 import { capacity } from '../upgrades';
-import { availableClasses, availableRaces } from './available';
+import { availableClasses, availableRaces, teaserClasses, teaserRaces } from './available';
 import { defineRunChoice } from './choice';
 import type { BuildCtx } from './choice';
 
@@ -41,6 +41,13 @@ export function partySize(profile: Profile): number {
   return Math.min(MAX_PARTY_SIZE, Math.max(1, capacity(profile, 'partySize', BASE_PARTY_SIZE)));
 }
 
+/**
+ * The chance (ETH-036) that a random class or race pick draws a teaser instead: a class or race
+ * a run has revealed but the player hasn't bought. Rolled only while one exists, so a profile
+ * with no teasers draws exactly what it did before.
+ */
+export const TEASER_CHANCE = 0.1;
+
 const MAX_NAME_ATTEMPTS = 16;
 
 /**
@@ -68,11 +75,16 @@ export function fillParty({ profile, seed, rng, config }: BuildCtx, slots: reado
   const classes = availableClasses(profile).map((d) => d.id);
   const races = availableRaces(profile).map((d) => d.id);
   if (classes.length === 0 || races.length === 0) throw new RangeError('No class or race is available to recruit from');
+  const teasingClasses = teaserClasses(profile).map((d) => d.id);
+  const teasingRaces = teaserRaces(profile).map((d) => d.id);
+  /** A random pick: from the teasers with `TEASER_CHANCE` (if there are any), else from the available ones. */
+  const randomPick = (open: readonly string[], teasers: readonly string[]) =>
+    teasers.length > 0 && rng.chance(TEASER_CHANCE) ? rng.pick(teasers) : rng.pick(open);
   for (let i = 0; i < size; i++) {
     const pick = slots[i] ?? RANDOM_PICK;
     // A pick the profile no longer allows is a random recruit instead.
-    const classId = pick.classId !== null && classes.includes(pick.classId) ? pick.classId : rng.pick(classes);
-    const raceId = pick.raceId !== null && races.includes(pick.raceId) ? pick.raceId : rng.pick(races);
+    const classId = pick.classId !== null && classes.includes(pick.classId) ? pick.classId : randomPick(classes, teasingClasses);
+    const raceId = pick.raceId !== null && races.includes(pick.raceId) ? pick.raceId : randomPick(races, teasingRaces);
     const name = recruitName(seed, i, config.party.map((m) => m.name));
     config.party.push({ name, classId, raceId });
   }

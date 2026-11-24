@@ -2077,6 +2077,7 @@ interface UpgradeNode extends Def {
   cost: Partial<Record<CurrencyId, number>>
   requires: string[]               // node ids
   exclusiveGroup?: string          // pick one of the nodes sharing this group
+  reveal?: Milestone               // ETH-036: sealed until a run meets it; recorded in `milestones` under the node id
   grants: Grant[]
 }
 

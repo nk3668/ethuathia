@@ -2,6 +2,7 @@
 import { ATTRIBUTE_IDS, attributeDef, CLASSES } from '../../../content';
 import { attributeHint, attributeLine, growthLine, KIT_HINT, kitLine, xpSourcesText } from '../attributeText';
 import { MASTERY_HELP } from '../../shell/masteryText';
+import { trainingFields } from '../trainingField';
 import { defineCodexRenderer } from '../types';
 
 /** How leveling works, for the growth field's tooltip. */
@@ -15,6 +16,7 @@ export default defineCodexRenderer({
   order: 10,
   hint: 'Take one into the dungeon to learn about it.',
   fields: (def) => [
+    ...trainingFields(def.id),
     { label: 'Attributes', value: attributeLine(def.attributes), hint: 'Starting attributes, before the race adjusts them.', key: true },
     { label: 'Growth per level', value: growthLine(def.growth), hint: GROWTH_HINT, key: true },
     ...(def.kit === undefined ? [] : [{ label: 'Starting kit', value: kitLine(def.kit), hint: KIT_HINT, key: true }]),

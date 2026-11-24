@@ -36,12 +36,14 @@ describe('--recruits (ETH-178)', () => {
   });
 
   it('uses only available classes and races, and a mix over many seeds', () => {
-    const profile = buildHeadlessProfile();
+    // Classes and races are sold in the town (ETH-036): a fresh profile has only the Vanguard and Human.
+    const upgrades = ['upgrade.outrider_training', 'upgrade.fenling_recruitment'];
+    const profile = buildHeadlessProfile('fresh', upgrades);
     const classes = availableClasses(profile).map((d) => d.id);
     const races = availableRaces(profile).map((d) => d.id);
     const seen = { classes: new Set<string>(), races: new Set<string>() };
     for (let seed = 1; seed <= 40; seed++) {
-      const party = buildHeadlessConfig({ recruits: true, partySize: 4 }, seed).party;
+      const party = buildHeadlessConfig({ recruits: true, partySize: 4, upgrades }, seed).party;
       expect(party).toHaveLength(4);
       for (const m of party) {
         expect(classes).toContain(m.classId);
