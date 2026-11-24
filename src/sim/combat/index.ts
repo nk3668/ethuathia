@@ -53,12 +53,14 @@ import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, hpPe
 export * from './death';
 export * from './encounters';
 export * from './flee';
+export * from './fleeConfig';
 export * from './groupAi';
 export * from './monsters';
 export * from './ood';
 export * from './overlay';
 export * from './roles';
 export * from './rules';
+export * from './threat';
 
 /**
  * How an event names the monsters in it whose overlay changes their name (ETH-117), keyed by

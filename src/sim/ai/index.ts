@@ -30,6 +30,7 @@ export type {
   AiActor,
   AiCtx,
   AiMemory,
+  ThreatMark,
   AiPart,
   ConditionDef,
   ConditionResult,

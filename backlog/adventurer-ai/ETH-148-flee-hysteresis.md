@@ -2,7 +2,7 @@
 id: ETH-148
 title: Smarter fleeing: hysteresis, only from real threats, and no walking back into danger
 type: bug
-status: idea
+status: in-progress
 priority: P2
 milestone: M1.6
 epic: adventurer-ai
@@ -35,27 +35,27 @@ Fix all three so fleeing actually gets the adventurer out of danger.
   walking back wastes the escape, and fleeing from something harmless wastes turns.
 
 ## Acceptance criteria
-- [ ] **Only real threats:** flee (and its "enemy in sight" checks) consider only enemies that can
+- [x] **Only real threats:** flee (and its "enemy in sight" checks) consider only enemies that can
       hurt the party: those with damage above 0, a damaging role power (e.g. a bolt), or a damaging
       status or bundle effect. Monsters like moss tenders (`damage: 0`, heal kin) don't trigger flight.
       One shared helper decides "is a threat", so flee, hysteresis and the avoidance below all agree.
       Content-driven, not a hard-coded list.
-- [ ] **Hysteresis:** once fleeing starts, the adventurer keeps fleeing (or regrouping, per ETH-145)
+- [x] **Hysteresis:** once fleeing starts, the adventurer keeps fleeing (or regrouping, per ETH-145)
       until HP is back above a higher release threshold **or** no threat has been visible for N turns.
       Both are shared constants.
-- [ ] **No walking back:** while an adventurer is wounded (below the release threshold) and has no
+- [x] **No walking back:** while an adventurer is wounded (below the release threshold) and has no
       healing, `act.explore` and `act.pick_up` avoid tiles near a remembered threat's last known
       position (e.g. by weighting the goal map). The memory fades after N turns.
-- [ ] The trace says why: "still fleeing: a fetid stalker is in pursuit, HP 33%", "ignoring the moss
+- [x] The trace says why: "still fleeing: a fetid stalker is in pursuit, HP 33%", "ignoring the moss
       tender: it can't hurt anyone", "avoiding the crypt sentinel's last position while wounded".
-- [ ] Sim tests, fixed seed and hand-built map:
+- [x] Sim tests, fixed seed and hand-built map:
   - a pursued adventurer at the threshold doesn't return to exploring until the release condition
     holds, and one with no pursuer releases normally;
   - an adventurer at low HP doesn't flee from a harmless monster;
   - a wounded adventurer with no healing doesn't path back past a remembered threat to reach an item
     or unexplored tile, when another way exists.
-- [ ] Codex and tooltip text for flee mention the threat rule and the hysteresis.
-- [ ] Sim gate per `docs/DIFFICULTY_PHILOSOPHY.md` §9 (balance-affecting AI change): T2 paired compare
+- [x] Codex and tooltip text for flee mention the threat rule and the hysteresis.
+- [x] Sim gate per `docs/DIFFICULTY_PHILOSOPHY.md` §9 (balance-affecting AI change): T2 paired compare
       for party 1 and 4. The party-size ordering (ETH-145 check) still holds. `npm run check` passes.
 
 ## Notes
@@ -71,3 +71,5 @@ Fix all three so fleeing actually gets the adventurer out of danger.
 - 2026-11-24: Widened per Nate: flee only from real threats (moss tenders, ETH-142 follow-up seed
   189), and no walking back into danger while wounded without healing (seeds 189/185). Size S → M;
   title updated.
+- 2026-11-24: Started (Sonnet agent). Interpretation of 'damage above 0': a blow always does at least 1 (rollDamage), and damage-0 swarms, rats and toads do chase and hurt, so a threat is an enemy that will come and hurt the party: damage stat above 0, a bolt, a rule that approaches/surrounds/bolts, or a damaging or harmful-status bundle or template effect. Moss tenders (support, never pursue) are not threats. Constants (FLEE_RELEASE_PERCENT 60, FLEE_CALM_TURNS 12, THREAT_MEMORY_TURNS 60, AVOID_RADIUS 6, AVOID_PENALTY 24) are exported from src/sim/combat/fleeConfig.ts for ETH-080 to tune. STATE_VERSION 37 (AiMemory.fleeing, AiMemory.threats).
+- 2026-11-24: Implemented at 67a8db4 (merged with m1.5-living-dungeon 8e2586f, STATE_VERSION 37). The 100-seed party 1 compare found two regressions in the first cut, fixed here: keep-fleeing made the adventurer fail Flee checks next to enemies (now it fights a threat next to it once HP is back above 35%), and fleeing into a dead end then exploring back caused flee/explore ping-pong stuck events (new act.hold_position, bounded by FLEE_HOLD_TURNS 12). T2 vs m1.5: party 1 win 21 -> 22%, stuck events 12 -> 6; party 4 progressed win 49 -> 51%, stuck events 81 -> 19. Party sweep (progressed, 100 seeds) 31/38/39/51%. run-summary UI tests moved from seed 1 (now a wipe) to seed 5 (victory).

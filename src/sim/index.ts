@@ -98,6 +98,7 @@ export type {
   AiActor,
   AiCtx,
   AiMemory,
+  ThreatMark,
   AiPart,
   Choice,
   ConditionDef,

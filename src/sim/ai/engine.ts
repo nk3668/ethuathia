@@ -20,6 +20,7 @@ import type { ActionRequest } from '../actions';
 import type { Emit } from '../events';
 import { ITEMS_BASELINE_LOOT, ITEMS_BASELINE_URGENT } from '../items/rules';
 import { registerInvariant } from '../invariants';
+import { updateThreatMemory } from '../combat/threat';
 import { explored } from '../perception';
 import { QUESTS_BASELINE } from '../quests/rules';
 import { CONDITIONS, RULE_ACTIONS } from '../registries';
@@ -46,14 +47,12 @@ const PLAIN_WAIT = 'act.wait';
 /** How many turns a dropped goal's rule is skipped for. */
 export const DROP_TURNS = 20;
 
-/** The HP fraction, in percent, below which the baseline flees (baseline #2). */
-export const BASELINE_FLEE_PERCENT = 35;
-
 /**
  * The built-in rules every adventurer falls back on after its own (CLAUDE.md §5.3), in order:
  * quaff healing below 35% HP and drop the least valuable thing when overloaded (items, ETH-061);
- * back off after getting stuck; below `BASELINE_FLEE_PERCENT`% HP with an enemy in sight, flee
- * if there is an escape route (`act.flee` can't be done otherwise, so a cornered adventurer
+ * back off after getting stuck; below `BASELINE_FLEE_PERCENT`% HP with a threat in sight, flee (and keep
+ * fleeing until HP is back to `FLEE_RELEASE_PERCENT`% or no threat has been seen for `FLEE_CALM_TURNS`,
+ * ETH-148) if there is an escape route (`act.flee` can't be done otherwise, so a cornered adventurer
  * fights on); attack an adjacent enemy (combat, ETH-060); rush a caster in sight that has you in
  * bolt range (ETH-040); once the party has turned back, climb
  * out with it (waiting at the stairs up for the others); walk back to the party's lead when more
@@ -74,10 +73,12 @@ export const BASELINE_RULES: readonly Rule[] = [
   // Items (ETH-061): quaff healing when hurt, drop the least valuable thing when overloaded.
   ...ITEMS_BASELINE_URGENT,
   { condition: { id: 'cond.stuck' }, action: { id: 'act.back_off' }, enabled: true },
-  { condition: { id: 'cond.hp_below', params: { percent: BASELINE_FLEE_PERCENT } }, action: { id: 'act.flee' }, enabled: true },
+  { condition: { id: 'cond.fleeing' }, action: { id: 'act.flee' }, enabled: true },
   { condition: { id: 'cond.enemy_adjacent' }, action: { id: 'act.attack_adjacent' }, enabled: true },
   // Combat roles (ETH-040): rush a caster that can bolt you rather than stand under fire.
   { condition: { id: 'cond.in_bolt_range' }, action: { id: 'act.rush_caster' }, enabled: true },
+  // Fleeing with nowhere left to run: hold still rather than walk back toward the threat (ETH-148).
+  { condition: { id: 'cond.fleeing' }, action: { id: 'act.hold_position' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   // Quests (ETH-024): once every contract is complete, head out; fetch a contract item once seen.
@@ -130,6 +131,7 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
   const memory = ctx.actor.ai.memory;
   const traced = actor.actor.faction === 'party';
   const partyStill = traced && checkProgress(ctx, emit);
+  if (traced) updateThreatMemory(state, ctx.actor);
 
   let choice = chooseRule(ctx);
   // Waiting too long with nobody moving drops the waiting rule; choose again without it.
@@ -306,7 +308,7 @@ function partyKey(state: RunState): string {
 
 /**
  * AI memory holds sane values: `intent.goal` (when set) has non-negative safe integers, `still` is a count, `waited` a count below
- * `WAIT_STUCK_TURNS`, and `waitingFor` is `null` or another entity's id that was handed out (the entity itself may have left the run since).
+ * `WAIT_STUCK_TURNS`, and `fleeing` and `threats` are well-formed (ETH-148), and `waitingFor` is `null` or another entity's id that was handed out (the entity itself may have left the run since).
  */
 registerInvariant('core.aiMemory', (state) => {
   const problems: string[] = [];
@@ -332,6 +334,20 @@ registerInvariant('core.aiMemory', (state) => {
     }
     if (memory.dropped !== null && memory.dropped.backedOff !== undefined && memory.dropped.backedOff !== true) {
       problems.push(`actor ${entity.id} has invalid dropped.backedOff`);
+    }
+    const fleeing = memory.fleeing;
+    if (fleeing !== null) {
+      if (!Number.isSafeInteger(fleeing.since) || !Number.isSafeInteger(fleeing.lastSeen) || fleeing.lastSeen < fleeing.since || !Number.isSafeInteger(fleeing.held) || fleeing.held < 0) {
+        problems.push(`actor ${entity.id} has invalid fleeing`);
+      }
+    }
+    if (!Array.isArray(memory.threats)) problems.push(`actor ${entity.id} has no threat list`);
+    else {
+      for (const m of memory.threats) {
+        if (!Number.isSafeInteger(m.seen) || m.seen > state.turn || !Number.isSafeInteger(m.pos.x) || !Number.isSafeInteger(m.pos.y)) {
+          problems.push(`actor ${entity.id} has an invalid threat mark for ${m.id}`);
+        }
+      }
     }
     const waitingFor = memory.waitingFor;
     if (waitingFor === null) continue;
