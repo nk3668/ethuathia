@@ -2523,11 +2523,14 @@ cards show every member, and the top bar and log show the run.
   seed's `SeedResult`.
 - `npm run sim -- --seeds N --compare REF` checks git ref `REF` out into a temporary detached
   worktree under `.sim-compare/` in this checkout (git-ignored; inside the checkout so the ref's
-  code finds this checkout's `node_modules`), runs **that ref's** `tools/sim.ts` there with the
+  code finds this checkout's `node_modules`, or a parent checkout's when this is itself a git
+  worktree), runs **that ref's** `tools/sim.ts` there with the
   same arguments and `--json`, then removes the worktree. When `REF` is ahead of its merge base
   with `HEAD`, it warns with the commit count and suggests rebasing or running `--compare merge-base`
   (which resolves the merge base against `origin/main`, falling back to `main`). Refs from before
-  `--json` are read from their printed table. `--baseline FILE` compares with a saved report instead.
+  `--json` are read from their printed table. `--baseline FILE` compares with a saved report instead. `tsx` is resolved the way Node
+  does (walking up from the repo root), so `--compare` works from a worktree without its own
+  `node_modules`.
 - It prints a table of `METRICS` (runs, done, settled above bottom, hit cap, stalled, stuck,
   turns mean/min/max, explored, depth mean/max, turns per floor) with before, after and delta,
   then how many seeds end in a different state hash. Reports from before ETH-058 count as depth

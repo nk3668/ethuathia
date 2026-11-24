@@ -11,6 +11,7 @@
  * To add a metric, add a row to `METRICS`.
  */
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { existsSync, mkdirSync, readFileSync, rmdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -338,7 +339,8 @@ export function runRef(ref: string | ResolvedCompareRef, args: ReportArgs): SimR
   const dir = join(COMPARE_DIR, `${sha.slice(0, 12)}-${process.pid}`);
   git(['worktree', 'add', '--detach', dir, sha]);
   try {
-    const tsx = join(REPO_ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+    // Resolved the way Node does, so it also works in a git worktree whose node_modules lives in a parent checkout.
+    const tsx = join(dirname(createRequire(join(REPO_ROOT, 'package.json')).resolve('tsx/package.json')), 'dist', 'cli.mjs');
     const out = join(dir, 'sim-report.json');
     const run = (extra: string[]) =>
       spawnSync(process.execPath, [tsx, 'tools/sim.ts', ...simArgv(args), ...extra], {
