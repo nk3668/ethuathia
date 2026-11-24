@@ -10,7 +10,7 @@ import type { RunConfig, RunModifierConfig } from '../../sim';
 import type { Profile } from '../profile';
 import { milestoneRequirements } from '../milestones';
 import { newRecord } from '../adventurers';
-import { ownedNodes } from '../upgrades';
+import { ownedNodes, rankOf } from '../upgrades';
 import { CHOICE_ENTRIES } from './index';
 import type { RunChoices } from './index';
 import { MAX_PARTY_SIZE } from './party';
@@ -21,24 +21,33 @@ export const PREPARE_STREAM = 'prepare';
 /**
  * The upgrade nodes whose party bundles every adventurer starts with: owned nodes with a
  * `bundle` grant of scope `party`, in purchase order. The sim attaches each by node id
- * (`bundleOf` reads the node's grants), so stat tooltips credit "Hardy Recruits".
+ * (`bundleOf` reads the node's grants), so stat tooltips credit "Hardy Recruits". A ranked node
+ * (ETH-172) is listed once per rank, so its bundle stacks.
  */
 export function upgradePartyBundles(profile: Profile): string[] {
   return ownedNodes(profile)
     .filter((node) => upgradeBundle(node, 'party') !== undefined)
-    .map((node) => node.id);
+    .flatMap((node) => Array.from({ length: rankOf(profile, node.id) }, () => node.id));
 }
 
 /**
  * The run modifiers owned upgrades give (ETH-115): one per owned node with a `bundle` grant of
  * scope `run`, in purchase order, keyed and credited by the node (id and name) and carrying the
  * node's merged run-scope grants as its bundle. Scope `party`: an upgrade the player bought helps
- * the party, including allies outside the party roster.
+ * the party, including allies outside the party roster. A ranked node (ETH-172) gets one per
+ * rank, the first keyed by the node id and the rest `<id>#<rank>`, so they stack.
  */
 export function upgradeRunModifiers(profile: Profile): RunModifierConfig[] {
   return ownedNodes(profile)
     .filter((node) => upgradeBundle(node, 'run') !== undefined)
-    .map((node) => ({ key: node.id, source: { id: node.id, label: node.name }, scope: 'party', bundle: node.id }));
+    .flatMap((node) =>
+      Array.from({ length: rankOf(profile, node.id) }, (_, i): RunModifierConfig => ({
+        key: i === 0 ? node.id : `${node.id}#${i + 1}`,
+        source: { id: node.id, label: node.name },
+        scope: 'party',
+        bundle: node.id,
+      })),
+    );
 }
 
 /**

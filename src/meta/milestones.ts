@@ -10,7 +10,7 @@
  * asks the sim to watch its requirement (`milestoneRequirements`), and `unlockMilestones` reads
  * which ones the run met from its `RunResult.extras['track.requirements']`.
  */
-import { BUILDINGS, milestoneMet, requirementKey } from '../content';
+import { BUILDINGS, milestoneMet, requirementKey, tierBand, tierGateId } from '../content';
 import type { Milestone, MilestoneProgress, Requirement } from '../content';
 import { completedObjectives, metRequirements } from '../sim';
 import type { RunResult } from '../sim';
@@ -24,11 +24,18 @@ export interface MilestoneTarget {
   readonly unlock: Milestone;
 }
 
-/** Every def with an unlock milestone. Only Town buildings have one so far. */
+/**
+ * Every def with an unlock milestone: Town buildings, and each building's tier gates (ETH-172),
+ * which come right after their building under the id `tierGateId(building, fromTier)`.
+ */
 export function milestoneTargets(): MilestoneTarget[] {
   const targets: MilestoneTarget[] = [];
   for (const building of BUILDINGS.all()) {
     if (building.unlock !== undefined) targets.push({ id: building.id, name: building.name, unlock: building.unlock });
+    for (const gate of building.tierGates ?? []) {
+      const band = tierBand(building, gate.fromTier);
+      targets.push({ id: tierGateId(building.id, gate.fromTier), name: gate.name ?? `${building.name}, tier ${band}`, unlock: gate.unlock });
+    }
   }
   return targets;
 }

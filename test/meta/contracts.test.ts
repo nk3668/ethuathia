@@ -16,7 +16,7 @@ const SECOND = defineContract({
 });
 
 const RELIC = CONTRACT_RECOVER_RELIC.id;
-const own = (profile: Profile, ...ids: string[]): Profile => ({ ...profile, upgrades: { owned: [...profile.upgrades.owned, ...ids] } });
+const own = (profile: Profile, ...ids: string[]): Profile => ({ ...profile, upgrades: { ...profile.upgrades, owned: [...profile.upgrades.owned, ...ids] } });
 
 describe('contracts section', () => {
   it('defaults to Recover the relic in the one starting slot', () => {

@@ -238,7 +238,7 @@ describe('run modifiers: saves, snapshot and meta', () => {
   });
 
   it('turns owned run-scope upgrade grants into run modifiers credited to the node', () => {
-    const profile: Profile = { ...newProfile(), upgrades: { owned: ['upgrade.test_lanterns'] } };
+    const profile: Profile = { ...newProfile(), upgrades: { owned: ['upgrade.test_lanterns'], ranks: {} } };
     expect(upgradeRunModifiers(profile)).toEqual([
       { key: 'upgrade.test_lanterns', source: { id: 'upgrade.test_lanterns', label: 'Test Lanterns' }, scope: 'party', bundle: 'upgrade.test_lanterns' },
     ]);
