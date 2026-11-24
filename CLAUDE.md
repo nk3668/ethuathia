@@ -272,6 +272,7 @@ Imports only point downward in this list: `core` imports nothing, `ui` may impor
 
 ### Conventions
 - **Formatting:** prettier is not used; there is no config and no `format` script, so never run `npx prettier --write` (it reformats whole files). Follow the existing style of the file you edit; ESLint (`npm run lint`) is the gate. Line endings are pinned to LF by `.gitattributes`.
+- **File size and refactoring:** keep files small and single-purpose; look hard at ~400 lines, split at ~600 unless there's a stated reason not to. Refactor only on green, after tests pass, in its own commit. See `docs/ARCHITECTURE.md` §10.1.
 - **Clean-room.** Roguathia is LGPL-3.0. Do not copy its code, names, lore or text (e.g. no "Selyk"). Using it as a source of ideas is fine.
 - Gameplay randomness must use the sim's seeded RNG, never `Math.random()`.
 - Every new mechanic needs Codex and tooltip text and a log message.

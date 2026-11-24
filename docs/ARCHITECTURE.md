@@ -2518,6 +2518,41 @@ tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
   a recording fake context (`test/ui/map.test.ts`); how the map looks is checked by eye in the
   dev tab.
 
+### 10.1 File size and refactoring
+
+Keep files small and focused. A file should have one job that its name describes, so a
+reader (or an agent working on one item) can hold it in their head and change it without
+touching unrelated code.
+
+- **When to split.** Treat roughly **400 lines** of source as the point to look hard at a
+  file, and **600** as the point to split it, unless it is a flat list of data (content defs,
+  tables) that reads fine top to bottom. Size is only a signal; split sooner when a file has
+  more than one reason to change, mixes layers or concerns (logic and formatting, state and
+  rendering), has functions longer than a screen, or needs a long comment to say what lives
+  where. React components follow the same rule: pull out subcomponents and hooks once one
+  component does several things.
+- **Going over 600 is allowed with a reason.** Keep a file whole when splitting it would
+  make it worse, for example one tightly coupled algorithm whose pieces only make sense
+  together, or a split that would just scatter one concept across files. Say why in a comment
+  at the top of the file, and add `/* eslint-disable max-lines -- <reason> */` so the reason
+  is in the code and the warning goes away. ESLint warns (`max-lines`, 600 lines not counting
+  blanks and comments, `src/content/` exempt); a warning doesn't fail `npm run lint`, but
+  don't leave one unexplained.
+- **How to split.** Split along the domain-module and contract lines above (§Contracts,
+  "Where new things go"), not by size alone. Keep the public API stable by re-exporting from
+  the original module path, so callers and tests don't churn. Test files mirror the source
+  files they cover and split with them.
+- **Order: tests first, then refactor.** Refactoring happens on green, never alongside a
+  behavior change. Write or extend the tests that pin the current behavior, get them passing,
+  and only then restructure. Run `npm run check` before and after; a behavior-neutral refactor
+  must not change a test or a fixed-seed state hash (the headless hash column, §10, and the
+  T0 identity check in `docs/DIFFICULTY_PHILOSOPHY.md` §9). Put the refactor in its own
+  commit, separate from the feature or fix, so reviewers can check it changes nothing.
+- **Scope.** A small refactor that the current item needs (splitting a file it is growing
+  past the limit) belongs in that item, done after its tests pass. A larger refactor found
+  along the way becomes its own `chore` item in the backlog rather than an unplanned change
+  (CLAUDE.md §11).
+
 ---
 
 ## 11. Invariants and gates

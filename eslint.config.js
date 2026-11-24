@@ -90,6 +90,15 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
 
+  {
+    // File size signal (docs/ARCHITECTURE.md §10.1). A warning, not an error: going over is fine
+    // with a reasonable argument. Content defs are flat data and exempt.
+    name: 'ethuathia/file-size',
+    files: ['src/**/*.{ts,tsx}', 'tools/**/*.ts'],
+    ignores: ['src/content/**'],
+    rules: { 'max-lines': ['warn', { max: 600, skipBlankLines: true, skipComments: true }] },
+  },
+
   ...layerConfigs,
 
   {
