@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BUILDING_KIND,
+  BUILDINGS,
   buildingNodes,
   checkKinds,
   CLASS_KIND,
@@ -20,8 +21,8 @@ function withDefs<T extends Def>(kind: ContentKind<T>, defs: unknown[]): Content
   return { ...kind, registry };
 }
 
-const hall = { id: 'building.hall', name: 'Hall', description: 'A test hall.', tags: [] };
-const other = { id: 'building.other', name: 'Other', description: 'Another hall.', tags: [] };
+const hall = { id: 'building.hall', name: 'Hall', description: 'A test hall.', tags: [], kind: 'foundations' };
+const other = { id: 'building.other', name: 'Other', description: 'Another hall.', tags: [], kind: 'tactics' };
 
 function node(id: string, fields: Partial<UpgradeNodeDef> = {}): UpgradeNodeDef {
   return {
@@ -53,6 +54,22 @@ describe('upgrade node content', () => {
   it('is a registered content kind alongside buildings', () => {
     expect(CONTENT_KINDS).toContain(UPGRADE_KIND);
     expect(CONTENT_KINDS).toContain(BUILDING_KIND);
+  });
+
+  it('requires every building to be a Foundations or Tactics tree', () => {
+    const problems = (defs: unknown[]) => checkKinds([withDefs(BUILDING_KIND, defs)], []);
+    const noKind: Record<string, unknown> = { ...hall };
+    delete noKind.kind;
+    expect(problems([hall, other])).toEqual([]);
+    expect(problems([noKind])).toEqual([expect.stringContaining('building "building.hall": kind')]);
+    expect(problems([{ ...hall, kind: 'basics' }])).toEqual([expect.stringContaining('building "building.hall": kind')]);
+  });
+
+  it('gives the shipped buildings their kinds', () => {
+    expect(BUILDINGS.all().map((b) => [b.id, b.kind])).toEqual([
+      ['building.guild_hall', 'foundations'],
+      ['building.smithy', 'foundations'],
+    ]);
   });
 
   it('accepts a well-formed tree with every grant kind', () => {

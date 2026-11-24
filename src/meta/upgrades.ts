@@ -13,7 +13,7 @@
  * - `isUnlocked(profile, id)`: whether an upgrade unlocked a content id (ETH-036 class unlocks).
  */
 import { BUILDINGS, CAPACITY_INFO, defName, describeMilestone, findDef, groupNodes, UPGRADES } from '../content';
-import type { CapacityKey, UpgradeGrant, UpgradeNodeDef } from '../content';
+import type { CapacityKey, TreeKind, UpgradeGrant, UpgradeNodeDef } from '../content';
 import { formatNumber } from '../core';
 import { describeRequirement } from '../sim';
 import { addCurrencies, CURRENCY_INFO, emptyCurrencies, subtractCurrencies } from './currencies';
@@ -22,8 +22,35 @@ import { lockingMilestone } from './milestones';
 import type { Profile } from './profile';
 import { currenciesFromRewards } from './runResult';
 
-/** Share of the chosen node's cost kept as the respec fee, rounded up per currency. */
-export const RESPEC_FEE_RATE = 0.5;
+/**
+ * Share of the price of what a respec or reset gives up that a **Foundations** tree keeps as a
+ * fee, rounded up per currency (0 to 1). Currently 0: no fee (Nate, 2026-11-24). Tactics trees
+ * (CLAUDE.md §4) never pay a fee, whatever this is. Tests override it with
+ * `RespecOptions.foundationsFeeRate`.
+ */
+export const FOUNDATIONS_RESPEC_FEE_RATE = 0;
+
+/** Why a respec or reset is refused while a run is going. */
+export const RUN_ACTIVE_REASON = 'Upgrades can only be reset or changed between runs, not during one.';
+
+/** The context a respec or reset needs; the meta layer can't know it, so the caller passes it. */
+export interface RespecOptions {
+  /** A run is going. Respec and reset refuse with `RUN_ACTIVE_REASON`. Defaults to false. */
+  readonly runActive?: boolean;
+  /** Overrides `FOUNDATIONS_RESPEC_FEE_RATE`, for tests. */
+  readonly foundationsFeeRate?: number;
+}
+
+/** What a reset of a whole building's tree would do. */
+export interface ResetPlan {
+  readonly building: string;
+  /** Every owned node of the building, in purchase order. */
+  readonly removed: readonly string[];
+  /** The full price of every removed node, paid back. */
+  readonly refund: Currencies;
+  /** Kept back from the refund (Foundations only; see `FOUNDATIONS_RESPEC_FEE_RATE`). */
+  readonly fee: Currencies;
+}
 
 /** How a node stands for this profile. The Town tree draws one look per status. */
 export type NodeStatus = 'owned' | 'available' | 'expensive' | 'locked' | 'excluded';
@@ -59,7 +86,7 @@ export interface RespecPlan {
   readonly removed: readonly string[];
   /** The full price of every removed node, paid back. */
   readonly refund: Currencies;
-  /** Kept back from the refund: `RESPEC_FEE_RATE` of the chosen node's cost. */
+  /** Kept back from the refund: the Foundations fee rate of the chosen node's cost; none for Tactics. */
   readonly fee: Currencies;
 }
 
@@ -175,25 +202,33 @@ export function purchase(profile: Profile, nodeId: string): Profile {
 
 // --- Respec ----------------------------------------------------------------------------------
 
-/** The respec fee for giving up `node`: `RESPEC_FEE_RATE` of its cost, rounded up. */
-export function respecFee(node: UpgradeNodeDef): Currencies {
-  const cost = nodeCost(node);
-  const fee = (n: number) => Math.ceil(n * RESPEC_FEE_RATE);
+/** The kind of tree `node` is in, from its building. */
+export function treeKind(node: UpgradeNodeDef): TreeKind {
+  return BUILDINGS.get(node.building).kind;
+}
+
+/** The refusal reason if a respec or reset can't happen now, else `null`. */
+export function respecBlock(options: RespecOptions = {}): string | null {
+  return options.runActive === true ? RUN_ACTIVE_REASON : null;
+}
+
+/** The fee for giving up `cost` from a tree of `kind`: the rate of it, rounded up; zero for Tactics. */
+function feeFor(kind: TreeKind, cost: Currencies, options: RespecOptions): Currencies {
+  const rate = kind === 'foundations' ? Math.min(1, Math.max(0, options.foundationsFeeRate ?? FOUNDATIONS_RESPEC_FEE_RATE)) : 0;
+  const fee = (n: number) => Math.ceil(n * rate);
   const favor: Record<string, number> = {};
   for (const [deity, n] of Object.entries(cost.favor)) favor[deity] = fee(n);
   return { renown: fee(cost.renown), trophies: fee(cost.trophies), favor };
 }
 
-/**
- * What respeccing `group` would do, or `null` if no node of the group is owned. The chosen node
- * and every owned node that needs it (directly or through others) are given up and their full
- * price paid back, less the fee. The refund always covers the fee, so a respec is never refused
- * for lack of currency.
- */
-export function respecPlan(profile: Profile, group: string): RespecPlan | null {
-  const chosen = chosenInGroup(profile, group);
-  if (!chosen) return null;
-  const removed = new Set([chosen.id]);
+/** The respec fee for giving up `node`: its tree kind's rate of its cost, rounded up; none for Tactics. */
+export function respecFee(node: UpgradeNodeDef, options: RespecOptions = {}): Currencies {
+  return feeFor(treeKind(node), nodeCost(node), options);
+}
+
+/** `chosen` and every owned node that needs it, directly or not, in purchase order. */
+function dependentsOf(profile: Profile, chosen: string): string[] {
+  const removed = new Set([chosen]);
   for (let grew = true; grew; ) {
     grew = false;
     for (const node of ownedNodes(profile)) {
@@ -203,22 +238,71 @@ export function respecPlan(profile: Profile, group: string): RespecPlan | null {
       }
     }
   }
-  const ids = profile.upgrades.owned.filter((id) => removed.has(id));
-  const refund = ids.reduce((sum, id) => addCurrencies(sum, nodeCost(UPGRADES.get(id))), emptyCurrencies());
-  return { group, chosen: chosen.id, removed: [chosen.id, ...ids.filter((id) => id !== chosen.id)], refund, fee: respecFee(chosen) };
+  return profile.upgrades.owned.filter((id) => removed.has(id));
+}
+
+function priceOf(ids: readonly string[]): Currencies {
+  return ids.reduce((sum, id) => addCurrencies(sum, nodeCost(UPGRADES.get(id))), emptyCurrencies());
+}
+
+/**
+ * What respeccing `group` would do, or `null` if no node of the group is owned. The chosen node
+ * and every owned node that needs it (directly or through others) are given up and their full
+ * price paid back, less the fee (Foundations only, see `FOUNDATIONS_RESPEC_FEE_RATE`). The refund
+ * always covers the fee, so a respec is never refused for lack of currency.
+ */
+export function respecPlan(profile: Profile, group: string, options: RespecOptions = {}): RespecPlan | null {
+  const chosen = chosenInGroup(profile, group);
+  if (!chosen) return null;
+  const ids = dependentsOf(profile, chosen.id);
+  return {
+    group,
+    chosen: chosen.id,
+    removed: [chosen.id, ...ids.filter((id) => id !== chosen.id)],
+    refund: priceOf(ids),
+    fee: respecFee(chosen, options),
+  };
 }
 
 /**
  * Undoes the choice in a pick-one group (see `respecPlan`), so any node of the group can be
- * bought again. Throws a `RangeError` if no node of the group is owned.
+ * bought again. Throws a `RangeError` during a run (`options.runActive`) or if no node of the
+ * group is owned.
  */
-export function respec(profile: Profile, group: string): Profile {
-  const plan = respecPlan(profile, group);
+export function respec(profile: Profile, group: string, options: RespecOptions = {}): Profile {
+  const blocked = respecBlock(options);
+  if (blocked !== null) throw new RangeError(blocked);
+  const plan = respecPlan(profile, group, options);
   if (!plan) throw new RangeError(`Nothing to respec: no node of pick-one group "${group}" is owned.`);
-  const removed = new Set(plan.removed);
+  return applyGiveUp(profile, plan.removed, plan.refund, plan.fee);
+}
+
+/** What resetting the whole tree of `buildingId` would do, or `null` if nothing in it is owned. */
+export function resetPlan(profile: Profile, buildingId: string, options: RespecOptions = {}): ResetPlan | null {
+  const ids = profile.upgrades.owned.filter((id) => UPGRADES.has(id) && UPGRADES.get(id).building === buildingId);
+  if (ids.length === 0) return null;
+  const refund = priceOf(ids);
+  return { building: buildingId, removed: ids, refund, fee: feeFor(BUILDINGS.get(buildingId).kind, refund, options) };
+}
+
+/**
+ * Gives up every owned node of a building's tree and pays back its full price, less the fee
+ * (Foundations only). Throws a `RangeError` during a run (`options.runActive`) or if nothing in
+ * the tree is owned.
+ */
+export function resetTree(profile: Profile, buildingId: string, options: RespecOptions = {}): Profile {
+  const blocked = respecBlock(options);
+  if (blocked !== null) throw new RangeError(blocked);
+  const plan = resetPlan(profile, buildingId, options);
+  if (!plan) throw new RangeError(`Nothing to reset: no node of "${buildingId}" is owned.`);
+  return applyGiveUp(profile, plan.removed, plan.refund, plan.fee);
+}
+
+function applyGiveUp(profile: Profile, removedIds: readonly string[], refund: Currencies, fee: Currencies): Profile {
+  const removed = new Set(removedIds);
   return {
     ...profile,
-    currencies: subtractCurrencies(addCurrencies(profile.currencies, plan.refund), plan.fee),
+    currencies: subtractCurrencies(addCurrencies(profile.currencies, refund), fee),
     upgrades: { ...profile.upgrades, owned: profile.upgrades.owned.filter((id) => !removed.has(id)) },
   };
 }

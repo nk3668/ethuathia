@@ -59,7 +59,7 @@ describe('milestone content', () => {
   it('validates a building unlock milestone', () => {
     const registry = new Registry<BuildingDef>('building');
     const kind: ContentKind<BuildingDef> = { ...BUILDING_KIND, registry };
-    const base = { name: 'Hut', description: 'A hut.', tags: [] };
+    const base = { name: 'Hut', description: 'A hut.', tags: [], kind: 'foundations' as const };
     registry.register({ ...base, id: 'building.ok', unlock: { kind: 'winRuns', count: 1 } });
     registry.register({ ...base, id: 'building.none' });
     registry.register({ ...base, id: 'building.zero', unlock: { kind: 'reachDepth', depth: 0 } });

@@ -2111,8 +2111,19 @@ As built (ETH-063):
   `status` of `owned` / `excluded` / `locked` / `expensive` / `unknown` with a `reason` for the
   tooltip), `nodeStatus`, `purchase` (throws a `RangeError` with the reason),
   `respecPlan(profile, group)` and `respec`: the chosen node and every owned node that needs it
-  are given up and refunded in full, less a fee of `RESPEC_FEE_RATE` (50%) of the chosen
-  node's cost. `profileGrants(profile)` returns `{ source, grant }[]` for `buildRunConfig`
+  are given up and refunded in full, less the fee. `resetPlan` / `resetTree(profile, buildingId)`
+  give up a building's whole tree the same way. **Tree kinds (ETH-086):** every building def has
+  a required `kind`, `foundations` (Guild Hall, Smithy, Cartographer, Temple, Ossuary, Tavern) or
+  `tactics` (Library, doctrine, class talent trees), validated at content load; `TREE_KIND_INFO`
+  holds the Town tooltip text. The kind lives in content, so the `upgrades` slice is unchanged
+  and old saves need no migration. Both kinds can be reset or changed between runs, never during
+  one: the meta layer can't know whether a run is going, so `respec`, `resetTree` and
+  `respecBlock` take `{ runActive }` (the UI passes `useRunActive()` from `runStore`, true on
+  the run screen until the run ends) and throw `RUN_ACTIVE_REASON`. The fee is
+  `FOUNDATIONS_RESPEC_FEE_RATE` (0) of what a Foundations respec gives up (the chosen node for
+  `respec`, the whole refund for `resetTree`), rounded up; Tactics never pay. Tests override the
+  rate with `{ foundationsFeeRate }`. ETH-172 ranks plug in by pricing a node's ranks in
+  `nodeCost`/`priceOf`, so refunds cover every rank. `profileGrants(profile)` returns `{ source, grant }[]` for `buildRunConfig`
   (ETH-064); `capacity(profile, key, base)` and `isUnlocked(profile, id)` derive from it.
   `describeGrant` words a grant for tooltips and the Codex.
 
