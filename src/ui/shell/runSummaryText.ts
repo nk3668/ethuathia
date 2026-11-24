@@ -4,7 +4,7 @@
  */
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets, RUN_RECORD_MOMENTS } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
-import { BUILDINGS, CONTRACTS, defName, DEITIES, describeMilestoneMet, GOLD_PER_TROPHY, tierBand, tierGateId, VALUE_PER_TROPHY } from '../../content';
+import { BUILDINGS, CONTRACTS, defName, DEITIES, describeMilestoneMet, tierBand, tierGateId } from '../../content';
 import type { Milestone } from '../../content';
 import {
   CHRONICLE_TRACKER,
@@ -60,16 +60,6 @@ export function currencyRows(report: RunReport): CurrencyRow[] {
     const gone = lost[key] ?? 0;
     return { key, atRisk: earned, lost: gone, banked: earned - gone };
   });
-}
-
-/** Tooltip text explaining the leftover gold to Trophies conversion rule (ETH-083). */
-export function GOLD_CONVERSION_TOOLTIP(rate = GOLD_PER_TROPHY): string {
-  return `Leftover gold converts at ${rate} gold = 1 Trophy (rounded down), applied after the Omen multiplier (gold is not multiplied); on a wipe all gold is lost.`;
-}
-
-/** Tooltip text explaining the carried-item sale (ETH-171). */
-export function ITEM_SALE_TOOLTIP(rate = VALUE_PER_TROPHY): string {
-  return `Every item the surviving party carries or wears is sold on exit at its value, ${rate} value = 1 Trophy (summed, then rounded down; not multiplied by Omens). Starting kit, quest relics and gold are not sold, the fallen's items are lost with them, and on a wipe everything is lost.`;
 }
 
 /** The carried-item sale record (`extras['run.items']`, ETH-171), or `null` when absent, malformed or empty. */

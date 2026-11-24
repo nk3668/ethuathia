@@ -7,7 +7,7 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { applyRunResult, masteryGainBanked, newProfile, runRecord } from '../../src/meta';
+import { applyRunResult, goldConversionText, itemSaleText, masteryGainBanked, newProfile, runRecord } from '../../src/meta';
 import type { ClassMasteryGain } from '../../src/meta';
 import { GOLD_PER_TROPHY, VALUE_PER_TROPHY } from '../../src/content';
 import { masteryBreakdown, masteryLine } from '../../src/ui/shell/masteryText';
@@ -20,9 +20,7 @@ import {
   currencyName,
   currencyRows,
   epitaph,
-  GOLD_CONVERSION_TOOLTIP,
   goldConversionOf,
-  ITEM_SALE_TOOLTIP,
   itemSaleOf,
   lossNote,
   NO_CAUSE,
@@ -353,7 +351,7 @@ describe('RunSummary', () => {
     let dialog = screen.getByRole('dialog', { name: /Victory/ });
     expect(dialog.textContent).toContain('Items sold: 4 items → +12 Trophies');
     act(() => within(dialog).getByText('Items sold').focus());
-    expect((await screen.findByRole('tooltip')).textContent).toBe(ITEM_SALE_TOOLTIP(VALUE_PER_TROPHY));
+    expect((await screen.findByRole('tooltip')).textContent).toBe(itemSaleText(VALUE_PER_TROPHY));
     expect(itemSaleOf(victoryReport)).toEqual(sale);
 
     const rebuilt = reportFromRecord(runRecord(6, victoryReport.result));
@@ -391,7 +389,7 @@ describe('RunSummary', () => {
 
     // Focusing Gold converted and Trophies reveals the conversion rate tooltip.
     act(() => within(dialog).getByText('Gold converted').focus());
-    expect((await screen.findByRole('tooltip')).textContent).toBe(GOLD_CONVERSION_TOOLTIP(GOLD_PER_TROPHY));
+    expect((await screen.findByRole('tooltip')).textContent).toBe(goldConversionText(GOLD_PER_TROPHY));
 
     act(() => within(dialog).getByText('Trophies').focus());
     const trophyTip = (await screen.findByRole('tooltip')).textContent ?? '';
@@ -426,7 +424,7 @@ describe('RunSummary', () => {
     dialog = screen.getByRole('dialog', { name: /Wipe/ });
     expect(dialog.textContent).toContain('Gold lost: 28 gold');
     act(() => within(dialog).getByText('Gold lost').focus());
-    expect((await screen.findByRole('tooltip')).textContent).toBe(GOLD_CONVERSION_TOOLTIP(GOLD_PER_TROPHY));
+    expect((await screen.findByRole('tooltip')).textContent).toBe(goldConversionText(GOLD_PER_TROPHY));
   });
 });
 

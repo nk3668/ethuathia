@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { GOLD_PER_TROPHY, VALUE_PER_TROPHY } from '../../content';
+import { GOLD_PER_TROPHY } from '../../content';
 import { formatNumber } from '../../core';
-import { masteryGainBanked } from '../../meta';
+import { goldConversionText, itemSaleText, masteryGainBanked, TROPHIES_KILLS_TEXT, TROPHIES_OMEN_TEXT } from '../../meta';
 import { RENOWN, TROPHIES } from '../../sim';
 import type { GoldConversionRecord, ItemSaleRecord, RunOutcome, RunReport } from '../../sim';
 import { Button, Tooltip } from '../kit';
@@ -18,9 +18,7 @@ import {
   epitaph,
   cursedGearTurnsOf,
   fallenOf,
-  GOLD_CONVERSION_TOOLTIP,
   goldConversionOf,
-  ITEM_SALE_TOOLTIP,
   itemSaleOf,
   lossNote,
   momentsOf,
@@ -209,7 +207,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
           </table>
           {goldInfo !== null && (
             <p className={styles.goldLine}>
-              <Tooltip content={GOLD_CONVERSION_TOOLTIP(goldInfo.rate)}>
+              <Tooltip content={goldConversionText(goldInfo.rate)}>
                 {report.end.outcome === 'wipe' ? 'Gold lost' : 'Gold converted'}
               </Tooltip>
               {': '}
@@ -227,7 +225,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
           )}
           {itemInfo !== null && (
             <p className={styles.goldLine}>
-              <Tooltip content={ITEM_SALE_TOOLTIP(itemInfo.rate)}>
+              <Tooltip content={itemSaleText(itemInfo.rate)}>
                 {report.end.outcome === 'wipe' ? 'Items lost' : 'Items sold'}
               </Tooltip>
               {': '}
@@ -339,8 +337,7 @@ function TrophiesFormulaContent({
     <>
       <strong>Trophies formula</strong>
       <br />
-      Earned from kills (weighted by monster threat, multiplied by Omens) plus leftover gold converted on exit (
-      {rate} gold = 1 Trophy, rounded down, not multiplied by Omens).
+      {TROPHIES_KILLS_TEXT} {goldConversionText(rate)}
       {gold !== null && outcome !== 'wipe' && gold.trophies > 0 && (
         <>
           <br />
@@ -355,8 +352,7 @@ function TrophiesFormulaContent({
         </>
       )}
       <br />
-      Carried items sell on exit at {items?.rate ?? VALUE_PER_TROPHY} value = 1 Trophy (summed, rounded down, not multiplied by
-      Omens; starting kit is not sold).
+      {itemSaleText(items?.rate)} {TROPHIES_OMEN_TEXT}
       {items !== null && outcome !== 'wipe' && (
         <>
           <br />
