@@ -38,3 +38,4 @@ the player should make (`CLAUDE.md` §1, "Idle decisions matter").
 
 ## Log
 - 2026-11-24: Created during ETH-145 (Nate chose a new M3 item over extending ETH-071).
+- 2026-11-24: Nate: doctrines are unlocked through building trees. *Spread out* is unlocked by a Library node (ETH-163); *Stick together* stays the default.
