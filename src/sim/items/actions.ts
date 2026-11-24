@@ -133,7 +133,7 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
     execute: ({ state, actor, emit }, { index, qty }) => {
       const entry = inventoryOf(actor)[index];
       if (entry === undefined) return;
-      const taken = takeFromInventory(actor, index, qty ?? entry.qty);
+      const taken = takeFromInventory(actor, index, qty ?? entry.qty, state);
       const pos = { x: actor.pos.x, y: actor.pos.y };
       const typeKnown = isInstanceTypeKnown(state, taken);
       placeItem(state, actor.floor, pos, taken);
@@ -166,7 +166,7 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
       const entry = inventoryOf(actor)[index];
       if (entry === undefined) return;
       const def = itemDef(entry);
-      const used = takeFromInventory(actor, index, 1);
+      const used = takeFromInventory(actor, index, 1, state);
       const potency = consumablePotency(used);
       // Using a consumable identifies its type for the rest of the run (ETH-044).
       identifyItemFor(state, actor, used, 'use', emit);

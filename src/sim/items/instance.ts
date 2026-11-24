@@ -13,6 +13,8 @@
 import { ITEMS } from '../../content';
 import { clonePlain } from '../../core';
 import type { EquipSlot, ItemBlessing, ItemDef } from '../../content';
+import { hiddenCounts, isSecretConsumable, mergeHidden, setHiddenCounts, takeInOrder } from './mix';
+import type { ItemMix } from './mix';
 import { propertyKindFor } from './properties';
 
 /** One special named/effect enchantment carried by an item (`prop.enchantments`, ETH-044). */
@@ -46,6 +48,11 @@ export interface ItemInstance {
    * never affects stacking.
    */
   identifyTried?: true;
+  /**
+   * Hidden blessing counts of a stack of unidentified potions or scrolls whose copies differ
+   * (ETH-147, `prop.mix`). Only ever on an `identified: false` stack, never in a snapshot.
+   */
+  mix?: ItemMix;
   /** Heirloom history and flavor (ETH-118 `prop.origin`; ETH-069, ETH-109). Never stacks. */
   origin?: ItemOrigin;
 }
@@ -103,10 +110,13 @@ function stableText(value: unknown): string {
  */
 export function canStack(a: ItemInstance, b: ItemInstance): boolean {
   if (a.def !== b.def || stackSize(itemDef(a)) <= 1) return false;
+  // Unidentified potions and scrolls look alike whatever their blessing, so they share stacks (ETH-147).
+  const secret = isSecretConsumable(a) && isSecretConsumable(b);
   const fa = a as unknown as Record<string, unknown>;
   const fb = b as unknown as Record<string, unknown>;
   for (const field of new Set([...Object.keys(a), ...Object.keys(b)])) {
     if (field === 'def' || field === 'qty') continue;
+    if (secret && (field === 'blessing' || field === 'mix')) continue;
     const va = fa[field];
     const vb = fb[field];
     if (va === undefined && vb === undefined) continue;
@@ -124,28 +134,42 @@ export function itemWeight(item: ItemInstance): number {
 }
 
 /**
+ * Splits `k` copies off `rest` in place and returns them as a new instance. A stack of unidentified
+ * potions or scrolls splits its hidden blessing counts off the front of its groups (ETH-147).
+ */
+export function takePart(rest: ItemInstance, k: number): ItemInstance {
+  const piece = clonePlain(rest);
+  piece.qty = k;
+  if (isSecretConsumable(rest)) {
+    const counts = hiddenCounts(rest);
+    const taken = takeInOrder(counts, k);
+    setHiddenCounts(piece, taken);
+    setHiddenCounts(rest, { plain: counts.plain - taken.plain, blessed: counts.blessed - taken.blessed, cursed: counts.cursed - taken.cursed });
+  }
+  rest.qty -= k;
+  return piece;
+}
+
+/**
  * Adds `item` to `stacks` in place: first topping up stacks it can share (`canStack`), up to the
  * stack size, then as new entries at the end. `item` itself is never stored, only copies.
  */
 export function addToStacks(stacks: ItemInstance[], item: ItemInstance): void {
   const size = stackSize(itemDef(item));
-  let left = item.qty;
+  const rest = clonePlain(item);
   for (const stack of stacks) {
-    if (left === 0) break;
-    if (!canStack(stack, item) || stack.qty >= size) continue;
-    const moved = Math.min(left, size - stack.qty);
+    if (rest.qty === 0) break;
+    if (!canStack(stack, rest) || stack.qty >= size) continue;
+    const moved = Math.min(rest.qty, size - stack.qty);
+    if (isSecretConsumable(stack) && isSecretConsumable(rest)) mergeHidden(stack, rest, moved);
     stack.qty += moved;
-    left -= moved;
     // A flag only some of the merged items carry (`stacks: 'ignore'`) can't be claimed for all of them.
     for (const field of Object.keys(stack)) {
-      if (propertyKindFor(field)?.stacks === 'ignore' && !Object.hasOwn(item, field)) Reflect.deleteProperty(stack, field);
+      if (propertyKindFor(field)?.stacks === 'ignore' && !Object.hasOwn(rest, field)) Reflect.deleteProperty(stack, field);
     }
+    takePart(rest, moved);
   }
-  while (left > 0) {
-    const qty = Math.min(left, size);
-    stacks.push({ ...clonePlain(item), qty });
-    left -= qty;
-  }
+  while (rest.qty > 0) stacks.push(takePart(rest, Math.min(rest.qty, size)));
 }
 
 /** Why `item`'s def or quantity is wrong, or `null` if they are fine. Property fields: `propertyProblems`. */

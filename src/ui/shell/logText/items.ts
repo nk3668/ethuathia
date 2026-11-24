@@ -66,7 +66,7 @@ export const ITEMS_LOG_TEXT: LogTextRecord<ItemsEvent> = {
     text: (e, nameOf) => [
       `${nameOf(e.actor)} identifies ${e.was} as `,
       mention(e.item, e.name),
-      e.cursed === true ? ' — it is cursed!' : e.plain === true ? ': no enchantment or curse.' : '.',
+      e.cursed === true ? ' — it is cursed!' : e.plain === true ? (ITEMS.has(e.item) && ITEMS.get(e.item).gear === undefined ? ': no blessing or curse.' : ': no enchantment or curse.') : '.',
     ],
   },
   gearHeld: {
