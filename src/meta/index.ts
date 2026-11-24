@@ -77,24 +77,34 @@ export {
   canPurchase,
   capacity,
   chosenInGroup,
-  describeGrant,
+  closedGates,
+  describeGate,
   formatCurrencies,
+  gateGoal,
   isUnlocked,
+  nextRankCost,
   nodeCost,
   nodeStatus,
   ownedNodes,
   owns,
   profileGrants,
   purchase,
+  rankCost,
+  rankOf,
+  shortfall,
+  tierGate,
+} from './upgrades';
+export type { ActiveGrant, ClosedGate, NodeStatus, PurchaseCheck } from './upgrades';
+export { describeGrant } from './grantText';
+export {
   FOUNDATIONS_RESPEC_FEE_RATE,
   respec,
-  respecFee,
   respecBlock,
+  respecFee,
   respecPlan,
   resetPlan,
   resetTree,
   RUN_ACTIVE_REASON,
   treeKind,
-  shortfall,
-} from './upgrades';
-export type { ActiveGrant, NodeStatus, PurchaseCheck, RespecOptions, RespecPlan, ResetPlan } from './upgrades';
+} from './respec';
+export type { RespecOptions, RespecPlan, ResetPlan } from './respec';

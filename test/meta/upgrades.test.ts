@@ -141,7 +141,7 @@ describe('pick-one groups', () => {
   });
 
   it('reports excluded before locked', () => {
-    const p = { ...rich(), upgrades: { owned: ['upgrade.contract_board'] } };
+    const p = { ...rich(), upgrades: { owned: ['upgrade.contract_board'], ranks: {} } };
     expect(nodeStatus(p, 'upgrade.hardy_recruits')).toBe('excluded');
   });
 });
@@ -282,12 +282,12 @@ describe('resetTree', () => {
 });
 
 describe('saves from before tree kinds', () => {
-  it('load unchanged: kinds live in content, so the upgrades slice has no new data', () => {
+  it('load unchanged: kinds live in content, so the owned list is unchanged, and v1 saves gain empty ranks', () => {
     const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.contract_board');
     const old = JSON.parse(encodeSave(p, 1)) as { slices: { upgrades: { version: number; data: unknown } } };
-    expect(old.slices.upgrades).toEqual({ version: 1, data: { owned: ['upgrade.second_berth', 'upgrade.contract_board'] } });
+    old.slices.upgrades = { version: 1, data: { owned: ['upgrade.second_berth', 'upgrade.contract_board'] } };
     const decoded = decodeSave(JSON.stringify(old));
-    expect(decoded.ok && decoded.profile.upgrades.owned).toEqual(['upgrade.second_berth', 'upgrade.contract_board']);
+    expect(decoded.ok && decoded.profile.upgrades).toEqual({ owned: ['upgrade.second_berth', 'upgrade.contract_board'], ranks: {} });
     if (decoded.ok) expect(respec(decoded.profile, 'guild_hall.tier2').upgrades.owned).toEqual(['upgrade.second_berth']);
   });
 });
@@ -314,7 +314,7 @@ describe('grants', () => {
   });
 
   it('derives unlocks from owned nodes and ignores ids no longer in content', () => {
-    const p = { ...newProfile(), upgrades: { owned: ['upgrade.test_vow', 'upgrade.removed_long_ago'] } };
+    const p = { ...newProfile(), upgrades: { owned: ['upgrade.test_vow', 'upgrade.removed_long_ago'], ranks: {} } };
     expect(isUnlocked(p, 'class.vanguard')).toBe(true);
     expect(isUnlocked(newProfile(), 'class.vanguard')).toBe(false);
     expect(profileGrants(p)).toHaveLength(1);
@@ -331,15 +331,15 @@ describe('grants', () => {
 
 describe('the upgrades slice', () => {
   it('starts empty and survives a save round trip', () => {
-    expect(newProfile().upgrades).toEqual({ owned: [] });
+    expect(newProfile().upgrades).toEqual({ owned: [], ranks: {} });
     const p = buy(rich(), 'upgrade.second_berth');
     const decoded = decodeSave(encodeSave(p, 1));
     if (!decoded.ok) throw new Error(decoded.error);
-    expect(decoded.profile.upgrades).toEqual({ owned: ['upgrade.second_berth'] });
+    expect(decoded.profile.upgrades).toEqual({ owned: ['upgrade.second_berth'], ranks: {} });
   });
 
   it('rejects a node listed twice', () => {
-    const p = { ...newProfile(), upgrades: { owned: ['upgrade.second_berth', 'upgrade.second_berth'] } };
+    const p = { ...newProfile(), upgrades: { owned: ['upgrade.second_berth', 'upgrade.second_berth'], ranks: {} } };
     expect(checkProfile(p)).toEqual(['upgrades.owned: must not list a node twice']);
   });
 });

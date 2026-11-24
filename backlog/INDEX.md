@@ -131,7 +131,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-159](town-meta/ETH-159-smithy-tree.md) | Smithy upgrade tree spent in Trophies | town-meta | M2 | P1 | idea | M |
 | [ETH-160](characters/ETH-160-starter-classes-and-races.md) | Starter set of unlockable classes and races | characters | M2 | P1 | idea | M |
 | [ETH-161](tools-balance/ETH-161-meta-loop-economy-balance.md) | Meta-loop economy balance pass (M2 capstone) | tools-balance | M2 | P1 | idea | M |
-| [ETH-172](town-meta/ETH-172-upgrade-ranks-and-tiers.md) | Upgrade engine supports ranked nodes and quest-locked tiers | town-meta | M2 | P1 | ready | M |
+| [ETH-172](town-meta/ETH-172-upgrade-ranks-and-tiers.md) | Upgrade engine supports ranked nodes and quest-locked tiers | town-meta | M2 | P1 | done | M |
 | [ETH-047](ui-shell/ETH-047-highlights-auto-pause.md) | Highlights feed and optional auto-pause | ui-shell | M2 | P2 | done | M |
 | [ETH-083](town-meta/ETH-083-gold-to-trophies.md) | Leftover gold converts to Trophies when the party exits | town-meta | M2 | P2 | ready | S |
 | [ETH-084](ui-shell/ETH-084-rematch-same-seed.md) | Rematch button on the run summary replays the same seed | ui-shell | M2 | P2 | done | S |
