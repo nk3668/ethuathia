@@ -1,56 +1,28 @@
 /**
- * The upgrade engine (docs/ARCHITECTURE.md §6.2): buying and respeccing upgrade nodes, and the
- * grants owned nodes give. One engine serves every Town building and, later, deity devotion
- * trees; buildings differ only in their content (`src/content/upgrades.ts`).
+ * The upgrade engine (docs/ARCHITECTURE.md §6.2): buying upgrade nodes and the grants owned
+ * nodes give. One engine serves every Town building and, later, deity devotion trees; buildings
+ * differ only in their content (`src/content/upgrades.ts`). Respec and reset are in `respec.ts`,
+ * grant wording in `grantText.ts`.
  *
  * Everything here is pure: profile in, new profile (or a derived value) out. State is just
- * `profile.upgrades.owned`; unlocks, capacities and bundles are derived from it on demand.
+ * `profile.upgrades` (`owned` and the sparse `ranks`); unlocks, capacities and bundles are
+ * derived from it on demand.
  *
  * The API later items call:
- * - `profileGrants(profile)`: every active grant with the node it came from, for `buildRunConfig`
- *   (ETH-064) and the sim.
+ * - `profileGrants(profile)`: every active grant with the node it came from (once per rank), for
+ *   `buildRunConfig` (ETH-064) and the sim.
  * - `capacity(profile, key, base)`: a limit such as `partySize` or `contractSlots` (ETH-028).
  * - `isUnlocked(profile, id)`: whether an upgrade unlocked a content id (ETH-036 class unlocks).
  */
-import { BUILDINGS, CAPACITY_INFO, defName, describeMilestone, findDef, groupNodes, UPGRADES } from '../content';
-import type { CapacityKey, TreeKind, UpgradeGrant, UpgradeNodeDef } from '../content';
+import { BUILDINGS, defName, describeMilestone, findDef, groupNodes, maxRank, rankPrice, tierGateId, UPGRADES } from '../content';
+import type { CapacityKey, TierGate, UpgradeGrant, UpgradeNodeDef } from '../content';
 import { formatNumber } from '../core';
 import { describeRequirement } from '../sim';
-import { addCurrencies, CURRENCY_INFO, emptyCurrencies, subtractCurrencies } from './currencies';
+import { CURRENCY_INFO, subtractCurrencies } from './currencies';
 import type { Currencies } from './currencies';
-import { lockingMilestone } from './milestones';
+import { isMilestoneOpen, lockingMilestone } from './milestones';
 import type { Profile } from './profile';
 import { currenciesFromRewards } from './runResult';
-
-/**
- * Share of the price of what a respec or reset gives up that a **Foundations** tree keeps as a
- * fee, rounded up per currency (0 to 1). Currently 0: no fee (Nate, 2026-11-24). Tactics trees
- * (CLAUDE.md §4) never pay a fee, whatever this is. Tests override it with
- * `RespecOptions.foundationsFeeRate`.
- */
-export const FOUNDATIONS_RESPEC_FEE_RATE = 0;
-
-/** Why a respec or reset is refused while a run is going. */
-export const RUN_ACTIVE_REASON = 'Upgrades can only be reset or changed between runs, not during one.';
-
-/** The context a respec or reset needs; the meta layer can't know it, so the caller passes it. */
-export interface RespecOptions {
-  /** A run is going. Respec and reset refuse with `RUN_ACTIVE_REASON`. Defaults to false. */
-  readonly runActive?: boolean;
-  /** Overrides `FOUNDATIONS_RESPEC_FEE_RATE`, for tests. */
-  readonly foundationsFeeRate?: number;
-}
-
-/** What a reset of a whole building's tree would do. */
-export interface ResetPlan {
-  readonly building: string;
-  /** Every owned node of the building, in purchase order. */
-  readonly removed: readonly string[];
-  /** The full price of every removed node, paid back. */
-  readonly refund: Currencies;
-  /** Kept back from the refund (Foundations only; see `FOUNDATIONS_RESPEC_FEE_RATE`). */
-  readonly fee: Currencies;
-}
 
 /** How a node stands for this profile. The Town tree draws one look per status. */
 export type NodeStatus = 'owned' | 'available' | 'expensive' | 'locked' | 'excluded';
@@ -77,24 +49,16 @@ export interface ActiveGrant {
   readonly grant: UpgradeGrant;
 }
 
-/** What a respec of one pick-one group would do. */
-export interface RespecPlan {
-  readonly group: string;
-  /** The owned node in the group. */
-  readonly chosen: string;
-  /** Every node given up: the chosen one, then owned nodes that need it, directly or not. */
-  readonly removed: readonly string[];
-  /** The full price of every removed node, paid back. */
-  readonly refund: Currencies;
-  /** Kept back from the refund: the Foundations fee rate of the chosen node's cost; none for Tactics. */
-  readonly fee: Currencies;
-}
-
 // --- Costs -----------------------------------------------------------------------------------
 
-/** A node's price as `Currencies`. */
+/** A node's rank 1 price as `Currencies`. */
 export function nodeCost(node: UpgradeNodeDef): Currencies {
   return currenciesFromRewards(node.cost);
+}
+
+/** What rank `rank` of `node` costs (`rankPrice`: growth, rounded, never below the rank before). */
+export function rankCost(node: UpgradeNodeDef, rank: number): Currencies {
+  return currenciesFromRewards(rankPrice(node, rank));
 }
 
 /** What `have` lacks to pay `cost`; all zero (and no Favor entries) when it can pay. */
@@ -127,6 +91,24 @@ export function owns(profile: Profile, nodeId: string): boolean {
   return profile.upgrades.owned.includes(nodeId);
 }
 
+/**
+ * The rank the player holds of `nodeId`: 0 if not owned, else 1 up to the node's top rank. A
+ * node whose content lost ranks since the save is held at its new top rank.
+ */
+export function rankOf(profile: Profile, nodeId: string): number {
+  if (!owns(profile, nodeId)) return 0;
+  const stored = profile.upgrades.ranks[nodeId] ?? 1;
+  return UPGRADES.has(nodeId) ? Math.min(stored, maxRank(UPGRADES.get(nodeId))) : stored;
+}
+
+/** What the next rank of `nodeId` costs, or `null` if it is at its top rank or doesn't exist. */
+export function nextRankCost(profile: Profile, nodeId: string): Currencies | null {
+  if (!UPGRADES.has(nodeId)) return null;
+  const node = UPGRADES.get(nodeId);
+  const next = rankOf(profile, nodeId) + 1;
+  return next > maxRank(node) ? null : rankCost(node, next);
+}
+
 /** The owned nodes that exist in content, oldest purchase first. */
 export function ownedNodes(profile: Profile): UpgradeNodeDef[] {
   return profile.upgrades.owned.filter((id) => UPGRADES.has(id)).map((id) => UPGRADES.get(id));
@@ -141,13 +123,50 @@ function nodeName(id: string): string {
   return UPGRADES.has(id) ? UPGRADES.get(id).name : id;
 }
 
+// --- Tier gates ------------------------------------------------------------------------------
+
+/** A closed building tier gate: what keeps rows from `fromTier` down locked. */
+export interface ClosedGate extends TierGate {
+  /** The milestone target id (`building.smithy_t4`). */
+  readonly id: string;
+}
+
+/** Every gate of a building not yet open, top to bottom. */
+export function closedGates(profile: Profile, buildingId: string): ClosedGate[] {
+  const gates = BUILDINGS.has(buildingId) ? (BUILDINGS.get(buildingId).tierGates ?? []) : [];
+  return gates.map((g) => ({ ...g, id: tierGateId(buildingId, g.fromTier) })).filter((g) => !isMilestoneOpen(profile, g.id));
+}
+
+/**
+ * The gate that keeps row `tier` of a building locked, or `null` if its band is open. With
+ * several closed gates above the row, the topmost, the one to open first.
+ */
+export function tierGate(profile: Profile, buildingId: string, tier: number): ClosedGate | null {
+  return closedGates(profile, buildingId).find((g) => g.fromTier <= tier) ?? null;
+}
+
+/** What opens a gate, as a short goal: "Reach floor 3", "Complete the Anvil quest". */
+export function gateGoal(gate: TierGate): string {
+  return describeMilestone(gate.unlock, describeRequirement, defName);
+}
+
+/** "Tier 4 and up open when you reach floor 3.", from the gate's milestone. */
+export function describeGate(gate: TierGate): string {
+  const what = gateGoal(gate);
+  return `Tier ${gate.fromTier} and up open when you ${what.charAt(0).toLowerCase()}${what.slice(1)}.`;
+}
+
 // --- Buying ----------------------------------------------------------------------------------
 
-/** Whether `nodeId` can be bought now, and if not, why. */
+/**
+ * Whether `nodeId` can be bought now, and if not, why. For a ranked node this is its next rank:
+ * `owned` only at the top rank, `available` or `expensive` before it.
+ */
 export function canPurchase(profile: Profile, nodeId: string): PurchaseCheck {
   if (!UPGRADES.has(nodeId)) return { ok: false, status: 'unknown', reason: `There is no upgrade "${nodeId}".` };
   const node = UPGRADES.get(nodeId);
-  if (owns(profile, nodeId)) return { ok: false, status: 'owned', reason: 'Already owned.' };
+  const rank = rankOf(profile, nodeId);
+  if (rank >= maxRank(node)) return { ok: false, status: 'owned', reason: rank > 1 ? 'Fully ranked.' : 'Already owned.' };
 
   const shut = lockingMilestone(profile, node.building);
   if (shut !== null) {
@@ -155,9 +174,12 @@ export function canPurchase(profile: Profile, nodeId: string): PurchaseCheck {
     return { ok: false, status: 'locked', missing: [], reason: `The ${building} opens when you ${describeMilestone(shut, describeRequirement, defName).toLowerCase()}.` };
   }
 
+  const gate = tierGate(profile, node.building, node.tier);
+  if (gate !== null) return { ok: false, status: 'locked', missing: [], reason: describeGate(gate) };
+
   if (node.exclusiveGroup !== undefined) {
     const chosen = chosenInGroup(profile, node.exclusiveGroup);
-    if (chosen) {
+    if (chosen && chosen.id !== nodeId) {
       return {
         ok: false,
         status: 'excluded',
@@ -172,7 +194,7 @@ export function canPurchase(profile: Profile, nodeId: string): PurchaseCheck {
     return { ok: false, status: 'locked', missing, reason: `Needs ${missing.map(nodeName).join(' and ')} first.` };
   }
 
-  const short = shortfall(profile.currencies, nodeCost(node));
+  const short = shortfall(profile.currencies, rankCost(node, rank + 1));
   if (!isZero(short)) return { ok: false, status: 'expensive', short, reason: `Needs ${formatCurrencies(short)} more.` };
   return { ok: true };
 }
@@ -186,132 +208,30 @@ export function nodeStatus(profile: Profile, nodeId: string): NodeStatus {
 }
 
 /**
- * Buys `nodeId`: pays its cost from the banked currencies and adds it to the owned list.
+ * Buys `nodeId`, or its next rank if it is ranked and already owned: pays the cost from the
+ * banked currencies and adds the node to the owned list (first purchase) or raises its rank.
  * Throws a `RangeError` with `canPurchase`'s reason if it can't be bought.
  */
 export function purchase(profile: Profile, nodeId: string): Profile {
   const check = canPurchase(profile, nodeId);
   if (!check.ok) throw new RangeError(`Cannot buy ${nodeName(nodeId)}: ${check.reason}`);
   const node = UPGRADES.get(nodeId);
+  const rank = rankOf(profile, nodeId) + 1;
+  const { owned, ranks } = profile.upgrades;
   return {
     ...profile,
-    currencies: subtractCurrencies(profile.currencies, nodeCost(node)),
-    upgrades: { ...profile.upgrades, owned: [...profile.upgrades.owned, nodeId] },
-  };
-}
-
-// --- Respec ----------------------------------------------------------------------------------
-
-/** The kind of tree `node` is in, from its building. */
-export function treeKind(node: UpgradeNodeDef): TreeKind {
-  return BUILDINGS.get(node.building).kind;
-}
-
-/** The refusal reason if a respec or reset can't happen now, else `null`. */
-export function respecBlock(options: RespecOptions = {}): string | null {
-  return options.runActive === true ? RUN_ACTIVE_REASON : null;
-}
-
-/** The fee for giving up `cost` from a tree of `kind`: the rate of it, rounded up; zero for Tactics. */
-function feeFor(kind: TreeKind, cost: Currencies, options: RespecOptions): Currencies {
-  const rate = kind === 'foundations' ? Math.min(1, Math.max(0, options.foundationsFeeRate ?? FOUNDATIONS_RESPEC_FEE_RATE)) : 0;
-  const fee = (n: number) => Math.ceil(n * rate);
-  const favor: Record<string, number> = {};
-  for (const [deity, n] of Object.entries(cost.favor)) favor[deity] = fee(n);
-  return { renown: fee(cost.renown), trophies: fee(cost.trophies), favor };
-}
-
-/** The respec fee for giving up `node`: its tree kind's rate of its cost, rounded up; none for Tactics. */
-export function respecFee(node: UpgradeNodeDef, options: RespecOptions = {}): Currencies {
-  return feeFor(treeKind(node), nodeCost(node), options);
-}
-
-/** `chosen` and every owned node that needs it, directly or not, in purchase order. */
-function dependentsOf(profile: Profile, chosen: string): string[] {
-  const removed = new Set([chosen]);
-  for (let grew = true; grew; ) {
-    grew = false;
-    for (const node of ownedNodes(profile)) {
-      if (!removed.has(node.id) && node.requires.some((id) => removed.has(id))) {
-        removed.add(node.id);
-        grew = true;
-      }
-    }
-  }
-  return profile.upgrades.owned.filter((id) => removed.has(id));
-}
-
-function priceOf(ids: readonly string[]): Currencies {
-  return ids.reduce((sum, id) => addCurrencies(sum, nodeCost(UPGRADES.get(id))), emptyCurrencies());
-}
-
-/**
- * What respeccing `group` would do, or `null` if no node of the group is owned. The chosen node
- * and every owned node that needs it (directly or through others) are given up and their full
- * price paid back, less the fee (Foundations only, see `FOUNDATIONS_RESPEC_FEE_RATE`). The refund
- * always covers the fee, so a respec is never refused for lack of currency.
- */
-export function respecPlan(profile: Profile, group: string, options: RespecOptions = {}): RespecPlan | null {
-  const chosen = chosenInGroup(profile, group);
-  if (!chosen) return null;
-  const ids = dependentsOf(profile, chosen.id);
-  return {
-    group,
-    chosen: chosen.id,
-    removed: [chosen.id, ...ids.filter((id) => id !== chosen.id)],
-    refund: priceOf(ids),
-    fee: respecFee(chosen, options),
-  };
-}
-
-/**
- * Undoes the choice in a pick-one group (see `respecPlan`), so any node of the group can be
- * bought again. Throws a `RangeError` during a run (`options.runActive`) or if no node of the
- * group is owned.
- */
-export function respec(profile: Profile, group: string, options: RespecOptions = {}): Profile {
-  const blocked = respecBlock(options);
-  if (blocked !== null) throw new RangeError(blocked);
-  const plan = respecPlan(profile, group, options);
-  if (!plan) throw new RangeError(`Nothing to respec: no node of pick-one group "${group}" is owned.`);
-  return applyGiveUp(profile, plan.removed, plan.refund, plan.fee);
-}
-
-/** What resetting the whole tree of `buildingId` would do, or `null` if nothing in it is owned. */
-export function resetPlan(profile: Profile, buildingId: string, options: RespecOptions = {}): ResetPlan | null {
-  const ids = profile.upgrades.owned.filter((id) => UPGRADES.has(id) && UPGRADES.get(id).building === buildingId);
-  if (ids.length === 0) return null;
-  const refund = priceOf(ids);
-  return { building: buildingId, removed: ids, refund, fee: feeFor(BUILDINGS.get(buildingId).kind, refund, options) };
-}
-
-/**
- * Gives up every owned node of a building's tree and pays back its full price, less the fee
- * (Foundations only). Throws a `RangeError` during a run (`options.runActive`) or if nothing in
- * the tree is owned.
- */
-export function resetTree(profile: Profile, buildingId: string, options: RespecOptions = {}): Profile {
-  const blocked = respecBlock(options);
-  if (blocked !== null) throw new RangeError(blocked);
-  const plan = resetPlan(profile, buildingId, options);
-  if (!plan) throw new RangeError(`Nothing to reset: no node of "${buildingId}" is owned.`);
-  return applyGiveUp(profile, plan.removed, plan.refund, plan.fee);
-}
-
-function applyGiveUp(profile: Profile, removedIds: readonly string[], refund: Currencies, fee: Currencies): Profile {
-  const removed = new Set(removedIds);
-  return {
-    ...profile,
-    currencies: subtractCurrencies(addCurrencies(profile.currencies, refund), fee),
-    upgrades: { ...profile.upgrades, owned: profile.upgrades.owned.filter((id) => !removed.has(id)) },
+    currencies: subtractCurrencies(profile.currencies, rankCost(node, rank)),
+    upgrades: { owned: rank === 1 ? [...owned, nodeId] : owned, ranks: rank >= 2 ? { ...ranks, [nodeId]: rank } : ranks },
   };
 }
 
 // --- Grants ----------------------------------------------------------------------------------
 
-/** Every grant of every owned node, in purchase order, with the node it came from. */
+/** Every grant of every owned node, in purchase order, with the node it came from, once per rank. */
 export function profileGrants(profile: Profile): ActiveGrant[] {
-  return ownedNodes(profile).flatMap((node) => node.grants.map((grant) => ({ source: node.id, grant })));
+  return ownedNodes(profile).flatMap((node) =>
+    Array.from({ length: rankOf(profile, node.id) }, () => node.grants.map((grant) => ({ source: node.id, grant }))).flat(),
+  );
 }
 
 /** `base` plus every owned `capacity` grant for `key`. */
@@ -326,40 +246,4 @@ export function capacity(profile: Profile, key: CapacityKey, base: number): numb
 /** True if an owned node unlocks the content id `id`. */
 export function isUnlocked(profile: Profile, id: string): boolean {
   return profileGrants(profile).some(({ grant }) => grant.kind === 'unlock' && grant.id === id);
-}
-
-/** A grant in words, for tooltips and the Codex: "Party size +1", "Unlocks Vanguard". */
-export function describeGrant(grant: UpgradeGrant): string {
-  switch (grant.kind) {
-    case 'capacity':
-      return `${CAPACITY_INFO[grant.key].name} +${grant.amount}`;
-    case 'unlock':
-      return `Unlocks ${findDef(grant.id)?.name ?? grant.id}`;
-    case 'bundle': {
-      const who = grant.scope === 'party' ? 'each adventurer' : 'the run';
-      const parts = (grant.bundle.modifiers ?? []).map((m) =>
-        m.op === 'add' ? `${m.value > 0 ? '+' : ''}${m.value} ${statName(m.stat)}` : `×${m.value} ${statName(m.stat)}`,
-      );
-      const triggers = grant.bundle.triggers?.length ?? 0;
-      if (triggers > 0) parts.push(`${triggers} triggered effect${triggers === 1 ? '' : 's'}`);
-      return `${parts.join(', ')} for ${who}`;
-    }
-  }
-}
-
-/** Display names for stat ids in grant text. */
-const STAT_NAMES: Readonly<Record<string, string>> = {
-  hp: 'max HP',
-  mp: 'max MP',
-  accuracy: 'accuracy',
-  evasion: 'evasion',
-  damage: 'damage',
-  armor: 'armor',
-  speed: 'speed',
-  sight: 'sight',
-  carry: 'carry',
-};
-
-function statName(stat: string): string {
-  return STAT_NAMES[stat] ?? stat;
 }
