@@ -33,3 +33,4 @@ Confidence that the sim is deterministic and that balance changes are measured, 
 - [x] [ETH-143 Content check that every discoverable def can actually appear in a run](ETH-143-content-spawn-reachability-check.md)
 - [ ] [ETH-145 Fix the party-size inversion so solo is the hardest way to play](ETH-145-party-size-ordering.md)
 - [ ] [ETH-146 Composition and rules balance pass (M3 milestone balance check)](ETH-146-composition-balance-pass.md)
+- [ ] [ETH-149 Tooling hygiene: formatter policy, line endings and worktree-safe tests](ETH-149-tooling-hygiene.md)

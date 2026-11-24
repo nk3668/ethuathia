@@ -23,7 +23,9 @@ Uses `ETH-133`'s extensible Danger scale and `DungeonDef` difficulty/ecology pro
 - [ ] Unlockable via Cartographer/quest progression with tuned Danger curve, ecology weights, and `npm run check` passing
 
 ## Notes
+- Reachability (ETH-143): the check counts only a dungeon's own floors, not return-trip `depthShift` or out-of-depth boosts. With a second dungeon, decide whether those paths should count, so a monster reachable only through them is not flagged (or is, deliberately).
 - All names, descriptions, and monsters must be 100% original (clean-room, `CLAUDE.md` §9).
 
 ## Log
 - 2026-11-23: Created as a future themed dungeon placeholder leveraging ETH-133's extensible Danger schema.
+- 2026-11-24: Added a note from the M1.5/M1.6 fan-out (Nate approved).

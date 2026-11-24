@@ -24,7 +24,9 @@ ETH-043 auto-equips only Pareto upgrades (`compareGear` / `bestUpgrade`), so a p
 - [ ] Sim compare shows no flip-flopping between two pieces
 
 ## Notes
+- ETH-142's `hiddenGearMargin` (`src/sim/items/hiddenValue.ts`) counts one enhancement point the same in every stat. A weighted gear score should feed that margin too, so the unidentified-gear gate weighs gains the same way auto-equip does.
 - Decide with Nate whether weights are fixed, per class (ETH-038) or set by the player.
 
 ## Log
 - 2026-11-18: Created from Nate's answer to the ETH-043 auto-equip question (tabled; keep Pareto-only for now).
+- 2026-11-24: Added a note from the M1.5/M1.6 fan-out (Nate approved).

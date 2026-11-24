@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-147**
+**Next ID: ETH-152**
 
 **Assigned to Antigravity** (low risk; pick any whose dependencies are done): ETH-090, ETH-077, ETH-019, then ETH-094, ETH-085, ETH-084.
 
@@ -13,7 +13,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [project-setup](project-setup/_epic.md) | Project setup and tooling | active | M0 |
 | [sim-core](sim-core/_epic.md) | Simulation core | active | M0, M1, M2 |
 | [dungeon-gen](dungeon-gen/_epic.md) | Dungeon generation | active | M0, M1, M1.5, M4, M5, M6, later |
-| [adventurer-ai](adventurer-ai/_epic.md) | Decision engine and baseline AI | active | M0, M1, M4 |
+| [adventurer-ai](adventurer-ai/_epic.md) | Decision engine and baseline AI | active | M0, M1, M1.6, M4 |
 | [behavior-rules](behavior-rules/_epic.md) | Behavior rules | active | M2, M3 |
 | [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M1.6, M2, M5, later |
 | [content](content/_epic.md) | Content definitions | active | M0, M1, M2, M3, M4, M5, M6 |
@@ -91,6 +91,9 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-142](combat-items/ETH-142-identify-secrecy-and-curse-safety.md) | Identification secrecy and curse safety for the idle player | combat-items | M1.6 | P1 | done | M |
 | [ETH-143](tools-balance/ETH-143-content-spawn-reachability-check.md) | Content check that every discoverable def can actually appear in a run | tools-balance | M1.6 | P2 | done | S |
 | [ETH-144](codex-tooltips/ETH-144-per-monster-kill-tiers.md) | Per-monster Codex kill-tier thresholds for rare monsters | codex-tooltips | M1.6 | P3 | done | S |
+| [ETH-147](combat-items/ETH-147-consumable-hidden-property-leak.md) | Known-type potions and scrolls stop giving away a hidden blessing or curse | combat-items | M1.6 | P2 | idea | S |
+| [ETH-148](adventurer-ai/ETH-148-flee-hysteresis.md) | Flee with hysteresis so a hurt adventurer doesn't return to exploring while chased | adventurer-ai | M1.6 | P2 | idea | S |
+| [ETH-149](tools-balance/ETH-149-tooling-hygiene.md) | Tooling hygiene: formatter policy, line endings and worktree-safe tests | tools-balance | M1.6 | P3 | idea | S |
 | [ETH-059](saves-platform/ETH-059-profile-saves.md) | Profile, banked currencies and versioned local saves | saves-platform | M2 | P0 | done | M |
 | [ETH-023](town-meta/ETH-023-at-risk-run-currency.md) | Track run earnings as at-risk currency and lose 25% on a wipe | town-meta | M2 | P1 | done | M |
 | [ETH-063](town-meta/ETH-063-upgrade-engine-town.md) | Upgrade engine and the Town screen with a Guild Hall | town-meta | M2 | P1 | done | M |
@@ -133,6 +136,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-109](bestiary/ETH-109-ethan-rare-boss.md) | Ethan, an extremely rare and very weak boss | bestiary | M2 | P3 | idea | S |
 | [ETH-130](combat-items/ETH-130-more-enchantments.md) | Expand the enchantment pool with additional effects and triggers | combat-items | M2 | P3 | idea | M |
 | [ETH-141](quests/ETH-141-scale-contract-rewards-by-depth.md) | Scale contract rewards by completion depth and balance M2 payouts | quests | M2 | P3 | idea | S |
+| [ETH-150](codex-tooltips/ETH-150-rare-monster-codex-polish.md) | Codex polish for rare monsters: a faster-reveal hint and a lore-tier content warning | codex-tooltips | M2 | P3 | idea | S |
 | [ETH-110](characters/ETH-110-leveling-followup.md) | Rolled growth, shared kill XP and uncapped levels | characters | M1 | P1 | done | M |
 | [ETH-031](quests/ETH-031-quest-rule-conditions-ai.md) | Quest rule conditions and objective weighting in the AI | quests | M3 | P2 | idea | M |
 | [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M3 | P2 | idea | M |
@@ -140,6 +144,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-088](characters/ETH-088-class-mastery-trees.md) | Class Mastery trees with class-specific nodes | characters | M3 | P2 | idea | M |
 | [ETH-112](combat-items/ETH-112-weighted-gear-score.md) | Weighted gear score so auto-equip can take trade-offs | combat-items | M3 | P3 | idea | M |
 | [ETH-146](tools-balance/ETH-146-composition-balance-pass.md) | Composition and rules balance pass (M3 milestone balance check) | tools-balance | M3 | P2 | idea | M |
+| [ETH-151](behavior-rules/ETH-151-formation-doctrine.md) | Formation doctrine: stick together or spread out | behavior-rules | M3 | P2 | idea | M |
 | [ETH-116](dungeon-gen/ETH-116-dungeon-encounters.md) | Dungeon encounters: placed interactive features with an interact action, choices and outcomes | dungeon-gen | M4 | P1 | ready | M |
 | [ETH-067](risk-omens/ETH-067-omens-conducts-core.md) | Omens with ranks, the reward multiplier and conduct tracking | risk-omens | M4 | P2 | idea | M |
 | [ETH-072](dungeon-gen/ETH-072-fountains.md) | Fountains with a documented effect table and a drink action | dungeon-gen | M4 | P2 | done | M |

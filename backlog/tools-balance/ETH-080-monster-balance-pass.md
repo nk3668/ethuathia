@@ -7,7 +7,7 @@ priority: P1
 milestone: M1.5
 epic: tools-balance
 size: M
-depends_on: [ETH-024, ETH-025, ETH-034, ETH-040, ETH-043, ETH-044, ETH-085, ETH-133, ETH-134, ETH-135, ETH-136, ETH-145]
+depends_on: [ETH-024, ETH-025, ETH-034, ETH-040, ETH-043, ETH-044, ETH-085, ETH-133, ETH-134, ETH-135, ETH-136, ETH-145, ETH-142]
 created: 2026-11-18
 updated: 2026-11-23
 ---
@@ -29,6 +29,7 @@ All sweeps use **200 seeds** (at 100 seeds the 95% interval on a ~20% rate is ab
 - [ ] Record the final 200-seed numbers in `docs/DIFFICULTY_PHILOSOPHY.md` §9.2 as the M1.5 baseline.
 
 ## Notes
+- ETH-142 tunables to retune here: `LOOT_CURSE_CHANCE`, `CURSED_MILD_CHANCE`, the cursed `gearDelta`, and `CURSE_LOCK_PREMIUM` (`src/sim/items/hiddenValue.ts`, Nate: keep it, tune it here). At 4 it makes +1 unidentified gear (all gloves, boots and amulets) wait for an identify; check how often those slots stay empty and retune if it hurts the bands.
 - Run last in M1.5, after `ETH-145` has fixed the party-size inversion and the XP curve.
 - Harness prep landed in `2cdb89b` (`--preset`, `--upgrades`, `--rules` flags and §2 metrics); the tuning itself has not started.
 - Design reference: `docs/DIFFICULTY_PHILOSOPHY.md` (§1, §2, §7, §8, §9).
@@ -40,3 +41,4 @@ All sweeps use **200 seeds** (at 100 seeds the 95% interval on a ~20% rate is ab
 - 2026-11-23: Added ETH-142 (identification secrecy and curse safety) to depends_on so loot is balanced on fair curse odds.
 - 2026-11-23: Dropped ETH-142 from depends_on (moved to M1.6). Retune `LOOT_CURSE_CHANCE` and the cursed enchantment range again once ETH-142 lands.
 - 2026-11-23: Review: on committed `d693b47` a progressed party of 4 wins no more often than fresh solo (8/24 each), and in-progress tuning flipped it into a full inversion (solo 66% at mean L17; party of 4 at 0%). Split it out as ETH-145 (now a dependency), moved the composition spread to ETH-146 (M3), raised sweeps to 200 seeds, and ordered the levers.
+- 2026-11-24: Added a note from the M1.5/M1.6 fan-out (Nate approved).
