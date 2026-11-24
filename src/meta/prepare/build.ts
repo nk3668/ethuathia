@@ -6,14 +6,14 @@
 import { CLASSES, CONTRACTS, isBuildingQuest, RACES, upgradeBundle } from '../../content';
 import { Rng } from '../../core';
 import { configDepth, hasBundle, requirementProblems, runModifierListProblems } from '../../sim';
-import type { RunConfig, RunModifierConfig } from '../../sim';
+import type { AdventurerConfig, RunConfig, RunModifierConfig } from '../../sim';
 import type { Profile } from '../profile';
 import { milestoneRequirements } from '../milestones';
 import { newRecord } from '../adventurers';
 import { ownedNodes, rankOf } from '../upgrades';
 import { CHOICE_ENTRIES } from './index';
 import type { RunChoices } from './index';
-import { MAX_PARTY_SIZE } from './party';
+import { fillParty, MAX_PARTY_SIZE, partySize } from './party';
 
 /** The RNG stream name recruits and other setup draws use, seeded from the run's seed. */
 export const PREPARE_STREAM = 'prepare';
@@ -72,6 +72,19 @@ export function buildRunConfig(profile: Profile, choices: RunChoices, seed: numb
   const problems = checkRunConfig(config);
   if (problems.length > 0) throw new RangeError(`Invalid run config: ${problems.join('; ')}`);
   return config;
+}
+
+/**
+ * The party the Prepare screen's random fill gives `seed`: `size` recruits (default: the
+ * profile's party size) from the profile's available classes and races, with names, drawn from
+ * the `prepare` stream exactly as `buildRunConfig` draws them. For `size === partySize(profile)`
+ * it is `buildRunConfig(profile, defaultRunChoices(), seed).party`. The sim harness's
+ * `--recruits` uses it (ETH-178).
+ */
+export function recruitParty(profile: Profile, seed: number, size: number = partySize(profile)): AdventurerConfig[] {
+  const config: RunConfig = { party: [] };
+  fillParty({ profile, seed, rng: Rng.seeded(seed, PREPARE_STREAM), config }, [], size);
+  return config.party;
 }
 
 /**

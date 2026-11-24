@@ -1,6 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
-import { IndexedDbSaveStore, MemorySaveStore, startAutosave, TauriSaveStore } from '../../src/platform';
-import type { AutosaveTarget } from '../../src/platform';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  createSaveStore,
+  IndexedDbSaveStore,
+  isTauriRuntime,
+  MemorySaveStore,
+  startAutosave,
+  subscribeTauriClose,
+  TauriSaveStore,
+} from '../../src/platform';
+import type { AutosaveTarget, TauriCloseEvent, TauriCloseWindow, TauriInvoker } from '../../src/platform';
 
 /**
  * Just enough of IndexedDB for `IndexedDbSaveStore`: databases of key-value object stores, with
@@ -47,6 +55,10 @@ function fakeIndexedDb(): { factory: IDBFactory; opens: () => number } {
   return { factory: factory as unknown as IDBFactory, opens: () => opens };
 }
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe('MemorySaveStore', () => {
   it('saves, loads and clears', async () => {
     const store = new MemorySaveStore();
@@ -74,11 +86,69 @@ describe('IndexedDbSaveStore', () => {
 });
 
 describe('TauriSaveStore', () => {
-  it('is a stub that refuses every call', async () => {
-    const store = new TauriSaveStore();
-    await expect(store.load()).rejects.toThrow(/not available yet/);
-    await expect(store.save('x')).rejects.toThrow(/not available yet/);
-    await expect(store.clear()).rejects.toThrow(/not available yet/);
+  function fakeInvoker() {
+    let saved: string | null = null;
+    const calls: { command: string; args?: Record<string, unknown> }[] = [];
+    const invoke: TauriInvoker = async <T = unknown>(command: string, args?: Record<string, unknown>) => {
+      calls.push({ command, args });
+      switch (command) {
+        case 'load_save':
+          return saved as T;
+        case 'write_save':
+          saved = String(args?.data ?? '');
+          return undefined as T;
+        case 'clear_save':
+          saved = null;
+          return undefined as T;
+        default:
+          throw new Error(`Unexpected command: ${command}`);
+      }
+    };
+    return { invoke, calls };
+  }
+
+  it('returns null when no save exists, round-trips save/load, and clears', async () => {
+    const { invoke, calls } = fakeInvoker();
+    const store = new TauriSaveStore(invoke);
+    expect(store.label).toBe('app data folder');
+
+    expect(await store.load()).toBeNull();
+    await store.save('{"version":1}');
+    expect(await store.load()).toBe('{"version":1}');
+    await store.clear();
+    expect(await store.load()).toBeNull();
+
+    expect(calls).toEqual([
+      { command: 'load_save', args: undefined },
+      { command: 'write_save', args: { data: '{"version":1}' } },
+      { command: 'load_save', args: undefined },
+      { command: 'clear_save', args: undefined },
+      { command: 'load_save', args: undefined },
+    ]);
+  });
+
+  it('forwards backend errors from load, save and clear', async () => {
+    const failing: TauriInvoker = () => Promise.reject(new Error('disk full'));
+    const store = new TauriSaveStore(failing);
+    await expect(store.load()).rejects.toThrow('disk full');
+    await expect(store.save('payload')).rejects.toThrow('disk full');
+    await expect(store.clear()).rejects.toThrow('disk full');
+  });
+});
+
+describe('createSaveStore', () => {
+  it('picks TauriSaveStore in Tauri, IndexedDbSaveStore in a browser, and MemorySaveStore otherwise', () => {
+    vi.stubGlobal('window', undefined);
+    vi.stubGlobal('indexedDB', undefined);
+    expect(isTauriRuntime()).toBe(false);
+    expect(createSaveStore()).toBeInstanceOf(MemorySaveStore);
+
+    vi.stubGlobal('indexedDB', fakeIndexedDb().factory);
+    expect(createSaveStore()).toBeInstanceOf(IndexedDbSaveStore);
+
+    vi.stubGlobal('window', { __TAURI_INTERNALS__: {} });
+    expect(isTauriRuntime()).toBe(true);
+    expect(createSaveStore()).toBeInstanceOf(TauriSaveStore);
   });
 });
 
@@ -117,5 +187,125 @@ describe('startAutosave', () => {
     win.tick();
     win.fire('beforeunload');
     expect(save).toHaveBeenCalledTimes(4);
+  });
+
+  it('awaits async save on close-requested hook and unsubscribes when stopped', async () => {
+    const win = fakeWindow();
+    let resolveSave!: () => void;
+    const saveDone = new Promise<void>((resolve) => {
+      resolveSave = resolve;
+    });
+    const save = vi.fn(() => saveDone);
+    const unlisten = vi.fn();
+    const hook: { fn: (() => void | Promise<void>) | null } = { fn: null };
+
+    const stop = startAutosave(save, {
+      target: win.target,
+      onCloseRequested: (cb) => {
+        hook.fn = cb;
+        return Promise.resolve(unlisten);
+      },
+    });
+    await Promise.resolve();
+
+    expect(hook.fn).not.toBeNull();
+    let finished = false;
+    const pending = Promise.resolve(hook.fn?.()).then(() => {
+      finished = true;
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(finished).toBe(false);
+
+    resolveSave();
+    await pending;
+    expect(finished).toBe(true);
+
+    stop();
+    expect(unlisten).toHaveBeenCalledTimes(1);
+  });
+
+  it('unsubscribes once an async close subscription resolves after stop()', async () => {
+    const win = fakeWindow();
+    const unlisten = vi.fn();
+    let resolveSubscribe!: (fn: () => void) => void;
+
+    const stop = startAutosave(vi.fn(), {
+      target: win.target,
+      onCloseRequested: () =>
+        new Promise<() => void>((resolve) => {
+          resolveSubscribe = resolve;
+        }),
+    });
+
+    stop();
+    expect(unlisten).not.toHaveBeenCalled();
+
+    resolveSubscribe(unlisten);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(unlisten).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('subscribeTauriClose', () => {
+  function fakeCloseWindow() {
+    const destroyed = vi.fn(() => Promise.resolve());
+    const unlisten = vi.fn();
+    let handler: ((event: TauriCloseEvent) => void | Promise<void>) | undefined;
+    const win: TauriCloseWindow = {
+      onCloseRequested: (fn) => {
+        handler = fn;
+        return Promise.resolve(unlisten);
+      },
+      destroy: destroyed,
+    };
+    return {
+      win,
+      destroyed,
+      unlisten,
+      fire: (event: TauriCloseEvent) => {
+        if (!handler) throw new Error('close handler not registered');
+        return handler(event);
+      },
+    };
+  }
+
+  it('prevents default immediately, awaits onClose once despite re-entry, and destroys window in finally', async () => {
+    const fake = fakeCloseWindow();
+
+    let releaseSave!: () => void;
+    const onClose = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseSave = resolve;
+        }),
+    );
+
+    const stop = await subscribeTauriClose(onClose, fake.win);
+    const event1 = { preventDefault: vi.fn() };
+    const event2 = { preventDefault: vi.fn() };
+
+    const first = fake.fire(event1);
+    const second = fake.fire(event2);
+    expect(event1.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event2.preventDefault).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(fake.destroyed).not.toHaveBeenCalled();
+
+    releaseSave();
+    await first;
+    await second;
+    expect(fake.destroyed).toHaveBeenCalledTimes(1);
+
+    stop();
+    expect(fake.unlisten).toHaveBeenCalledTimes(1);
+  });
+
+  it('still destroys the window if onClose rejects', async () => {
+    const fake = fakeCloseWindow();
+
+    await subscribeTauriClose(() => Promise.reject(new Error('write error')), fake.win);
+    await expect(fake.fire({ preventDefault: vi.fn() })).rejects.toThrow('write error');
+    expect(fake.destroyed).toHaveBeenCalledTimes(1);
   });
 });

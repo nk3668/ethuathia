@@ -2237,14 +2237,24 @@ in-memory store for tests. The save is a versioned envelope
 current one. Export and import use the same string. Autosave runs on a timer, at run end and
 on window close.
 
-As built (ETH-059):
+As built (ETH-059, ETH-095):
 
+- `src/platform/tauri.ts`: the sole boundary importing `@tauri-apps/api`. Exposes
+  `isTauriRuntime()` (`window.__TAURI_INTERNALS__`), `invokeTauri()`, and
+  `subscribeTauriClose(onClose)` (which uses `getCurrentWindow().onCloseRequested`, calls
+  `event.preventDefault()` synchronously before awaiting `onClose()`, guards re-entry, and
+  calls `win.destroy()` in `finally`).
 - `src/platform/saveStore.ts`: `SaveStore { label, load, save, clear }` with
   `MemorySaveStore`, `IndexedDbSaveStore` (database `ethuathia`, store `saves`, key `profile`)
-  and `TauriSaveStore`, a stub that rejects every call until packaging lands (§8.4).
-  `createSaveStore()` picks IndexedDB, or memory where there is none (jsdom).
-- `src/platform/autosave.ts`: `startAutosave(save, { intervalMs, target })` saves every 30 s
-  and on `beforeunload`, `pagehide` and the page becoming hidden.
+  and `TauriSaveStore`, which calls the backend `load_save`, `write_save` and `clear_save`
+  commands to persist `save.json` in `app_data_dir` (§8.4).
+  `createSaveStore()` picks `TauriSaveStore` when `isTauriRuntime()` is true, else
+  `IndexedDbSaveStore` when `indexedDB` exists, else `MemorySaveStore`.
+- `src/platform/autosave.ts`: `startAutosave(save, { intervalMs, target, onCloseRequested })`
+  accepts async `save()` callbacks, saves every 30 s and on `beforeunload`, `pagehide` and the
+  page becoming hidden, and registers `onCloseRequested` (defaulting to `subscribeTauriClose`
+  when `isTauriRuntime()`, tracking disposal so `stop()` unsubscribes cleanly). `profileStore`
+  returns `useProfileStore.getState().save()` directly so desktop closes await the file write.
 - `src/meta/save.ts`: `encodeSave(profile, savedAt)` and `decodeSave(text)`. The envelope is
   `{ format: 'ethuathia.save', version: SAVE_VERSION, savedAt, slices: { <key>: { version, data } } }`.
   Loading runs `ENVELOPE_MIGRATIONS` up to `SAVE_VERSION`, then each slice's own migrations,
@@ -2527,8 +2537,24 @@ As built (ETH-014), in `ui/input/`:
 
 ### 8.4 Desktop packaging
 
-Tauri is added in M2, when file saves are needed. Before that the game runs in a dev browser
-tab. Nothing in `ui/` calls Tauri directly; it goes through `platform/`.
+Packaged with **Tauri v2** (`src-tauri/`, ETH-095). Nothing in `ui/` imports `@tauri-apps/api`
+directly; all desktop runtime checks, IPC calls, and close interception go through
+`src/platform/tauri.ts`.
+
+- **Rust backend (`src-tauri/src/lib.rs`, crate `ethuathia_lib`):** exposes three
+  `#[tauri::command]` handlers — `load_save`, `write_save`, and `clear_save` — backed by pure
+  `&Path` helpers (`read_save_file`, `write_save_file`, `clear_save_file`) that read and remove
+  `save.json` and write atomically via `save.json.tmp` + rename inside
+  `app.path().app_data_dir()` (`com.ethuathia.app`).
+- **Offline-only security & capabilities:** `src-tauri/Cargo.toml` includes no network,
+  filesystem, shell, or opener plugins; `src-tauri/capabilities/default.json` grants only
+  `core:default` and `core:window:allow-destroy` (needed by `subscribeTauriClose`).
+- **CSP & bundling:** `vite.config.ts` skips injecting the `<meta>` CSP tag when
+  `TAURI_ENV_PLATFORM` is defined so `src-tauri/tauri.conf.json`'s `app.security.csp` is
+  authoritative (allowing `connect-src 'self' ipc: http://ipc.localhost` for the local IPC
+  bridge), while browser `npm run build` retains the strict `OFFLINE_CSP` (`connect-src 'self'`).
+  `tauri.conf.json` builds `dist/` via `npm run build` (`frontendDist: "../dist"`) and bundles
+  icons generated from `public/favicon.svg`.
 
 ---
 

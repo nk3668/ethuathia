@@ -33,6 +33,8 @@ export interface ReportArgs {
   rules?: HeadlessRulesPreset;
   classId?: string | null;
   raceId?: string | null;
+  /** Random recruits from the Prepare screen's fill (`--recruits`, ETH-178). Absent for a uniform party. */
+  recruits?: boolean;
   /** Worker threads (`--jobs`). Not part of a report: it never changes the results. */
   jobs?: number;
 }
@@ -56,6 +58,7 @@ export function makeReport(args: ReportArgs, results: SeedResult[]): SimReport {
     ...(args.rules !== undefined && args.rules !== 'baseline' ? { rules: args.rules } : {}),
     ...(args.classId != null ? { classId: args.classId } : {}),
     ...(args.raceId != null ? { raceId: args.raceId } : {}),
+    ...(args.recruits === true ? { recruits: true } : {}),
   };
   return { version: REPORT_VERSION, args: reportArgs, summary: summarizeReport(results), results };
 }
@@ -332,6 +335,7 @@ export function simArgv(args: ReportArgs): string[] {
     ...(args.rules !== undefined && args.rules !== 'baseline' ? ['--rules', args.rules] : []),
     ...(args.classId != null ? ['--class', args.classId] : []),
     ...(args.raceId != null ? ['--race', args.raceId] : []),
+    ...(args.recruits === true ? ['--recruits'] : []),
   ];
 }
 
