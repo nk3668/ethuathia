@@ -24,7 +24,8 @@ export const CURRENCY_INFO: Readonly<Record<CurrencyId, { name: string; about: s
   },
   trophies: {
     name: 'Trophies',
-    about: 'Earned by kills, weighted by how dangerous the monster was. Spent in the Smithy.',
+    about:
+      'Earned by kills (weighted by how dangerous the monster was) and from leftover gold carried out of the dungeon. Spent in the Smithy.',
   },
   favor: {
     name: 'Favor',
