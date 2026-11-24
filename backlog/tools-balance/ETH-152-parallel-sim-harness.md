@@ -2,14 +2,14 @@
 id: ETH-152
 title: Run harness seeds in parallel across CPU cores
 type: chore
-status: in-progress
+status: done
 priority: P2
 milestone: M1.6
 epic: tools-balance
 size: S
 depends_on: []
 created: 2026-11-24
-updated: 2026-11-24
+updated: 2026-11-23
 ---
 
 ## Summary
@@ -47,3 +47,4 @@ alternative to cutting seeds, which would cost reliability (§9 "Seed tiers").
   `test/tools/parallel.test.ts` for `jobsFlagSupported` and `makeReport` omitting `jobs`. Verified
   `npm run check` (103 files, 1198 tests passed), `npm run build`, and `--compare` (`--seeds 6 --cap 300 --jobs 3`)
   against `62cc704` (serial fallback, 0 hash diffs) and `205a9a3` (parallel ref, 0 hash diffs).
+- 2026-11-23: Reviewed and merged into m1.5-living-dungeon by the orchestrator (5c973b4); npm run check green (104 files, 1217 tests); T0 20-seed compare vs ee9e952: all seeds identical.
