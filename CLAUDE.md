@@ -52,12 +52,12 @@ Roguathia's gaps, and our answers to them:
 
 ### Starting a run (Prepare screen)
 1. **Party:** pick 1–4 adventurers from the roster (party size is an upgrade). Empty slots are filled with random recruits from the unlocked classes and races.
-2. **Loadout:** assign traits and buffs bought in town, plus starting gear from the Smithy.
+2. **Loadout:** assign traits and buffs bought in town, starting gear from the Smithy, and each adventurer's talent build (§4).
 3. **Rules:** choose a behavior rule set per adventurer, or a party-wide one.
 4. **Patron deity:** optional. It grants a blessing and imposes a taboo (§6).
 5. **Omens:** toggle difficulty modifiers. The total Omen level is shown as a reward multiplier.
 6. **Dungeon:** pick a dungeon variant once more than one is unlocked (depth, floor size, theme).
-7. **Contracts:** pick a main quest for each contract slot (one slot to start; the Guild Hall adds more). See §6.
+7. **Contracts:** pick a main quest for each contract slot (one slot to start; the Guild Hall adds more). A building quest (§4) is one kind of contract. See §6.
 8. **Bounties:** accept side quests from the bounty board (§6).
 
 ### Ending a run
@@ -75,7 +75,7 @@ Each currency rewards a different playstyle. No currency only buys "make it hard
 | Currency | Earned by | Spent on |
 |---|---|---|
 | **Renown** | Depth reached (each floor deeper is worth more) and turns survived | Guild Hall (classes, races, party size, rule slots), Library |
-| **Trophies** | Kills, weighted by monster difficulty | Smithy (starting gear, enchantments), Bestiary unlocks |
+| **Trophies** | Kills, weighted by monster difficulty; items and gold carried out of the dungeon | Smithy (starting gear, enchantments), Bestiary unlocks |
 | **Favor** (per deity) | Victories, kept conducts, honoring your patron | Temple / devotion trees; the prestige layer |
 
 The Omen multiplier applies to all three.
@@ -84,13 +84,21 @@ The Omen multiplier applies to all three.
 
 **Gold** is a fourth, in-run-only currency, spent at dungeon merchants. It is not at-risk currency. When the party leaves the dungeon, leftover gold converts into Trophies; on a wipe all gold is lost.
 
+**Gear does not carry over.** Equipment found in a run is lost when the run ends; items the party carries out are sold for Trophies. The Smithy's starting kits are the gear progression, and heirlooms (§7) are the one exception.
+
 Numbers should stay readable: use suffixes (1.2k, 3.4M), not scientific notation.
 
 ---
 
 ## 4. Upgrades between runs: the Town
 
-The town is a set of buildings. Each building has its own upgrade tree, and each building is unlocked by finishing its own small quest (e.g. the Smithy opens once a run brings an anvil back from floor 3).
+The town is a set of buildings. Each building has its own upgrade tree, and each building is unlocked by finishing its own small quest.
+
+### Building quests
+- A **building quest** is a contract (§6) themed on what it unlocks, and it pays currency like any contract. It takes a contract slot, and only one building quest can be taken per run. Like every contract it lasts one run: failing it means taking it again on a later run.
+- Building quests open in a chain, starting with the Smithy, so the player alternates between spending and questing. A new building's quest is offered once a set share of the nodes in the open buildings has been bought (the share is set by the pacing work in ETH-161). Example quests: Smithy, bring an anvil back from floor 3; Library, recover a tome from a named foe; Cartographer, reach floor 6 and return; Temple, pray at an altar; Ossuary, bury the first fallen adventurer; Tavern, an adventurer survives five runs.
+- **Building tiers:** each building's tree also opens in tiers. Once **50% of all the building's available nodes** are bought (from any tiers), a harder quest in the same theme unlocks its next tier. Higher tiers hold stronger nodes.
+- Classes and races can be unlocked by building trees, by quests or by milestones (§7).
 
 | Building | Tree contents |
 |---|---|
@@ -104,12 +112,22 @@ The town is a set of buildings. Each building has its own upgrade tree, and each
 
 ### Upgrade tree rules
 - There are two kinds of tree:
-  - **Foundations** are permanent: Guild Hall, Smithy, Cartographer, Temple, Ossuary and Tavern. Switching a pick costs a respec fee.
-  - **Tactics** can be redone for free between runs (never during one): the Library, doctrine, and the class Mastery trees.
-- **Class Mastery:** each class has one guild-wide Mastery level. Every adventurer of that class earns Mastery XP for it, the fallen included, and each level gives about one point for that class's tree (spell damage, healing, spell unlocks, techniques). Simple classes get fewer, bigger nodes; complex classes get more, smaller ones.
+  - **Foundations:** Guild Hall, Smithy, Cartographer, Temple, Ossuary and Tavern.
+  - **Tactics:** the Library, doctrine, and the class talent trees.
+  - Both can be redone between runs (never during one). There is **no respec fee for now**; Foundations may get one later. Talent trees must always be free to redo.
+- Trees are deep (roughly 15–25 nodes per building), with cheap early nodes and costs that grow by tier, so every run can buy something. Some numeric nodes have **ranks** (e.g. Hardy Recruits I–V); capability nodes have one rank.
+- Trees are bounded: they can be finished. Adventurer levels and Mastery levels are endless.
 - Nodes branch. At least some tiers are **pick one of two**.
 - A numeric upgrade (e.g. +10% HP) shares its tier with an option that unlocks a capability (e.g. a new rule action).
 - Show costs, effects and prerequisites in the tooltip. Locked nodes show what they need.
+
+### Class Mastery and talents
+Adventurer levels reset to 1 every run. The lasting power of a class lives in its **Mastery**.
+- **Mastery XP:** each class has one guild-wide Mastery level. Every adventurer of that class adds the XP they earned in the run, the fallen included, plus a run-end bonus that grows with depth reached and challenges completed (contracts, bounties). In one run, the 1st to 4th adventurer of the same class contribute 100% / 75% / 50% / 25%. A temporary companion (§7) contributes 50%. Mastery XP is tracked from M2; the trees arrive in M4.
+- **Pacing:** slow. A really solid run that completes all its objectives earns about 5 talent points; a short loss earns little. A class's trees hold about 40 points (whether per tree or across all three is set in M4). Points past the end of the trees go into small repeatable bonuses.
+- **Talent points:** each Mastery level gives a point. **Every adventurer of the class gets the full budget** and spends it on their own build, so two adventurers of one class can play differently.
+- **Three trees per class**, named to fit the class (e.g. a Vanguard damage tree and a tanking tree). Nodes are class skills and bonuses: a higher starting level, bonus damage, damage mitigation, a new starting weapon, and so on. Some nodes take several points (ranks). Mixing trees is allowed; deeper nodes need points in that tree, and each tree ends in a very valuable **capstone**.
+- **Builds:** each adventurer keeps their build between runs. Random recruits get the class's default build; players can save named builds and apply them on the Prepare screen. Rebuilding is free between runs.
 
 ---
 
@@ -157,7 +175,7 @@ unrelated to the offline-only constraint.
 ## 6. Run modifiers and goals
 
 ### Quests
-- **Contracts** are main quests, picked on the Prepare screen. Types: *Recover the relic* (bottom floor), *Slay a named foe* (a unique on a set floor), *Gather* (N magical items spread over the floors), *Delve* (reach depth N), and later *Rescue* (a lost adventurer or a fallen one's heirloom, §7).
+- **Contracts** are main quests, picked on the Prepare screen. Types: *Recover the relic* (bottom floor), *Slay a named foe* (a unique on a set floor), *Gather* (N magical items spread over the floors), *Delve* (reach depth N), *Building quests* that open a town building or its next tier (§4), and later *Rescue* (a lost adventurer or a fallen one's heirloom, §7). Contracts last one run; a failed contract can be taken again on a later run.
 - The player starts with one contract slot; the Guild Hall adds more. **Victory needs every selected contract complete, and the party then has to walk back out.** Each contract pays its own reward, so taking more is a risk the player chooses, like an Omen.
 - **The return trip:** floors already explored are crossed quickly along known paths, but some monsters respawn, so retreat rules still matter.
 - **Bounties** are side quests ("kill 3 trolls", "drink from a fountain"). They come from a bounty board on the Prepare screen and from encounters in the dungeon. A bounty never ends the run and never sends the party home. Its reward joins the run's at-risk total, so a wipe loses 25% of it like any other earnings (§3).
@@ -196,11 +214,11 @@ Floor types include caves, mines, flooded floors, fortresses, swamps, lava field
 
 ## 7. Lineage
 
-- **Roster:** named adventurers with level, history (runs, deepest floor, kills) and traits. Survivors come back with XP.
+- **Roster:** named adventurers with history (runs, deepest floor, peak level, kills), traits, titles and a talent build. Survivors come back with these, but **levels reset to 1** each run (§4, Class Mastery). The dead leave the roster for the graveyard. A future class may resurrect a fallen party member during a run, at a high cost (a reagent bought in town or found in the dungeon).
 - **Gravestones:** a fallen adventurer leaves a grave on the floor where they died, holding one **heirloom** (their best item). Later runs can find it. Some graves raise a **ghost**, either hostile or an ally if the Ossuary is upgraded. The party can **pay respects** at a grave: read the epitaph, take minor loot from that adventurer's last run, and receive a short boon from the fallen adventurer's patron deity.
 - **Retirement:** veterans can retire to a Tavern job for a permanent passive bonus (smith → better starting gear, cartographer → map knowledge, and so on).
 - **Descendants:** new recruits can be kin of a fallen adventurer and inherit one trait.
-- **Found in the dungeon:** very rarely the party meets a lost adventurer who joins them at a lower level than the party's best, even beyond the party cap. If they survive the run they join the roster permanently, with a line of backstory.
+- **Found in the dungeon:** very rarely the party meets a lost adventurer who joins them for the rest of the run, at a lower level than the party's best, even beyond the party cap. They can be of a class the guild hasn't unlocked yet. They earn 50% Mastery XP for their class, and leave after the run unless their class is unlocked during that run, in which case they join the roster with a line of backstory.
 - **Graveyard tab:** a memorial list with epitaphs. It is cosmetic, but it gives the game personality.
 
 ---
@@ -291,9 +309,9 @@ The milestones are broken down into work items in the backlog (§11). Every mile
 4. **M1.6 – Review follow-ups:** fixes found while reviewing merged items. Identification secrecy and curse safety for the idle player (`ETH-142`), a content check that every discoverable def can appear in a run (`ETH-143`), and per-monster Codex kill tiers (`ETH-144`).
 From M2 on, each milestone is one theme, so a milestone delivers one capability the player can feel. Work is ordered by that capability, not by which epic it touches. (The shared foundations, such as the objective engine, run-wide modifiers, monster templates, the chronicle and the Codex, were built early and are already done.)
 
-5. **M2 – Meta loop:** a run's earnings buy choices in town that change the next run. Guild Hall and Smithy trees, Foundations vs. Tactics, a starter set of classes and races to unlock, building unlock quests, gold to Trophies, persistent adventurer records, desktop packaging with file saves; economy pacing capstone.
+5. **M2 – Meta loop:** a run's earnings buy choices in town that change the next run. deeper Guild Hall and Smithy trees with ranked nodes, Foundations vs. Tactics, a starter set of classes and races to unlock, building and building-tier quests, gold and carried items to Trophies, persistent adventurer records, Class Mastery XP tracking, desktop packaging with file saves; economy pacing capstone.
 6. **M3 – Behavior rules and AI:** the rules editor, Library, presets, doctrines (clear vs. stairs, formation), smarter baseline escapes; rules balance capstone.
-7. **M4 – Classes and roles:** proficiencies and aptitudes, signature abilities, class-aware AI roles, Class Mastery levels and trees; composition balance capstone.
+7. **M4 – Classes and roles:** proficiencies and aptitudes, signature abilities, class-aware AI roles, the talent tree engine (three trees per class, per-adventurer builds), a resurrection class; composition balance capstone.
 8. **M5 – Foes and loot:** uniques, monster families, elites and mini-bosses, sleeping monsters, affixes and artifacts, more enchantments, food buffs, gear score, identify polish, party-scaled return surge; danger and loot capstone.
 9. **M6 – Quests and risk:** everything the player opts into on the Prepare screen: more contract types and contract slots, the bounty board and bounty encounters, dungeon encounters, Omens, conducts and the reward multiplier, traps; risk/reward capstone.
 10. **M7 – Lineage:** roster and graveyard, gravestones and heirlooms, retirement and the Tavern, allied creatures and ghosts, descendants, dungeon recruits, the Rescue contract; campaign capstone.

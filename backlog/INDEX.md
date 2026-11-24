@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-170**
+**Next ID: ETH-175**
 
 **Current milestone: M2 (Meta loop).**
 
@@ -32,7 +32,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [behavior-rules](behavior-rules/_epic.md) | Behavior rules | active | M2, M3 |
 | [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M1.6, M5, M7, later |
 | [content](content/_epic.md) | Content definitions | active | M0, M7 |
-| [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M3, M7, later |
+| [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M3, M7, M8, later |
 | [saves-platform](saves-platform/_epic.md) | Saves, desktop packaging and time-away | active | M2, M8 |
 | [risk-omens](risk-omens/_epic.md) | Omens and conducts | active | M2, M6 |
 | [lineage](lineage/_epic.md) | Lineage | active | M2, M7, M8 |
@@ -118,16 +118,18 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-064](ui-shell/ETH-064-prepare-screen.md) | Prepare screen and building a run config from the profile | ui-shell | M2 | P1 | done | M |
 | [ETH-065](codex-tooltips/ETH-065-codex-framework.md) | Codex tab, discovery tracking and Explain tooltips from content | codex-tooltips | M2 | P1 | done | M |
 | [ETH-086](town-meta/ETH-086-foundations-and-tactics-trees.md) | Split upgrade trees into permanent Foundations and free Tactics | town-meta | M2 | P1 | ready | M |
+| [ETH-087](characters/ETH-087-class-mastery-levels.md) | Class Mastery XP: every run banks XP toward a guild-wide level per class | characters | M2 | P1 | idea | M |
 | [ETH-095](saves-platform/ETH-095-tauri-packaging-saves.md) | Tauri desktop packaging and save backend | saves-platform | M2 | P1 | ready | M |
 | [ETH-114](quests/ETH-114-objective-engine.md) | Objective engine: reusable objectives with progress, generalized from contracts | quests | M2 | P1 | done | M |
 | [ETH-115](risk-omens/ETH-115-run-wide-modifiers.md) | Run-wide modifiers: a run-level BundleSource with sources, scopes, flags and tooltips | risk-omens | M2 | P1 | done | M |
 | [ETH-117](bestiary/ETH-117-monster-templates.md) | Monster templates: prefixes, traits and named overrides layered on a base MonsterDef | bestiary | M2 | P1 | done | M |
-| [ETH-119](lineage/ETH-119-adventurer-records.md) | Persistent adventurer records: a profile slice with identity, history, traits, level and death | lineage | M2 | P1 | ready | M |
+| [ETH-119](lineage/ETH-119-adventurer-records.md) | Persistent adventurer records: a profile slice with identity, history, traits, peak level and death | lineage | M2 | P1 | ready | M |
 | [ETH-120](sim-core/ETH-120-run-chronicle.md) | Run chronicle: a durable list of a run's notable events, kept apart from the event buffer | sim-core | M2 | P1 | done | M |
 | [ETH-121](behavior-rules/ETH-121-shared-conditions-requirements.md) | Shared conditions: run-scope conditions and a Requirement type usable outside rules | behavior-rules | M2 | P1 | done | M |
 | [ETH-159](town-meta/ETH-159-smithy-tree.md) | Smithy upgrade tree spent in Trophies | town-meta | M2 | P1 | idea | M |
 | [ETH-160](characters/ETH-160-starter-classes-and-races.md) | Starter set of unlockable classes and races | characters | M2 | P1 | idea | M |
 | [ETH-161](tools-balance/ETH-161-meta-loop-economy-balance.md) | Meta-loop economy balance pass (M2 capstone) | tools-balance | M2 | P1 | idea | M |
+| [ETH-172](town-meta/ETH-172-upgrade-ranks-and-tiers.md) | Upgrade engine supports ranked nodes and quest-locked tiers | town-meta | M2 | P1 | idea | M |
 | [ETH-047](ui-shell/ETH-047-highlights-auto-pause.md) | Highlights feed and optional auto-pause | ui-shell | M2 | P2 | done | M |
 | [ETH-083](town-meta/ETH-083-gold-to-trophies.md) | Leftover gold converts to Trophies when the party exits | town-meta | M2 | P2 | ready | S |
 | [ETH-084](ui-shell/ETH-084-rematch-same-seed.md) | Rematch button on the run summary replays the same seed | ui-shell | M2 | P2 | done | S |
@@ -137,7 +139,9 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-093](town-meta/ETH-093-building-unlock-quests.md) | Unlock town buildings by finishing a quest for each | town-meta | M2 | P2 | idea | M |
 | [ETH-129](town-meta/ETH-129-guild-hall-constant-respawn.md) | Guild Hall upgrade: constant floor respawns on revisit | town-meta | M2 | P2 | idea | S |
 | [ETH-131](tools-balance/ETH-131-contract-and-property-guards.md) | Cross-domain contract and property-based test guards (honesty, secrecy, potency, discoverability) | tools-balance | M2 | P2 | done | S |
-| [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rescale Guild Hall Renown costs for depth-weighted rewards | town-meta | M2 | P2 | idea | S |
+| [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs | town-meta | M2 | P2 | idea | M |
+| [ETH-170](town-meta/ETH-170-building-tier-quests.md) | Building-tier quests open each building's next tier | town-meta | M2 | P2 | idea | M |
+| [ETH-171](town-meta/ETH-171-sell-carried-items.md) | Items carried out of the dungeon sell for Trophies | town-meta | M2 | P2 | idea | S |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |
 | [ETH-077](ui-shell/ETH-077-prepare-attribute-previews.md) | Show attribute previews in the Prepare screen's class and race selects | ui-shell | M2 | P3 | done | S |
@@ -153,9 +157,9 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-035](characters/ETH-035-proficiencies-aptitudes.md) | Class equipment proficiencies and race aptitudes | characters | M4 | P2 | idea | M |
 | [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M4 | P2 | idea | M |
 | [ETH-038](characters/ETH-038-class-aware-ai-roles.md) | Class-aware AI roles | characters | M4 | P2 | idea | M |
-| [ETH-087](characters/ETH-087-class-mastery-levels.md) | Class Mastery: a shared level per class that earns tree points | characters | M4 | P2 | idea | M |
-| [ETH-088](characters/ETH-088-class-mastery-trees.md) | Class Mastery trees with class-specific nodes | characters | M4 | P2 | idea | M |
+| [ETH-088](characters/ETH-088-class-mastery-trees.md) | Talent tree engine: three trees per class and a build per adventurer | characters | M4 | P2 | idea | M |
 | [ETH-146](tools-balance/ETH-146-composition-balance-pass.md) | Composition and rules balance pass (M4 capstone) | tools-balance | M4 | P2 | idea | M |
+| [ETH-173](characters/ETH-173-resurrection-class.md) | A class that can resurrect a fallen party member during a run | characters | M4 | P3 | idea | M |
 | [ETH-041](bestiary/ETH-041-named-uniques.md) | Named uniques and bosses | bestiary | M5 | P2 | idea | M |
 | [ETH-042](bestiary/ETH-042-monster-families-floor-themes.md) | Monster families and floor themes | bestiary | M5 | P2 | idea | M |
 | [ETH-045](combat-items/ETH-045-affixes-artifacts.md) | Light affixes and named artifacts | combat-items | M5 | P2 | idea | M |
@@ -204,6 +208,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-070](deities/ETH-070-deity-core.md) | Patron deities with a blessing, a taboo and Favor | deities | M8 | P2 | idea | M |
 | [ETH-128](saves-platform/ETH-128-time-away-catch-up.md) | Time-away catch-up simulation and summary | saves-platform | M8 | P2 | idea | M |
 | [ETH-169](tools-balance/ETH-169-gods-and-world-balance-pass.md) | Deities, merchants and themed dungeons balance pass (M8 capstone) | tools-balance | M8 | P2 | idea | M |
+| [ETH-174](town-meta/ETH-174-cartographer.md) | The Cartographer building | town-meta | M8 | P2 | idea | M |
 | [ETH-049](dungeon-gen/ETH-049-dungeon-merchants.md) | Dungeon merchants | dungeon-gen | M8 | P3 | idea | M |
 | [ETH-098](dungeon-gen/ETH-098-hand-made-vaults.md) | Hand-made room vaults | dungeon-gen | M8 | P3 | idea | M |
 | [ETH-107](dungeon-gen/ETH-107-dungeon-events.md) | Rare floor-wide dungeon events | dungeon-gen | M8 | P3 | idea | M |
