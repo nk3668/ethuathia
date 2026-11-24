@@ -2,14 +2,14 @@
 id: ETH-080
 title: Systemic monster, loot and progression balance pass (M1.5 capstone)
 type: chore
-status: in-progress
+status: done
 priority: P1
 milestone: M1.5
 epic: tools-balance
 size: M
 depends_on: [ETH-024, ETH-025, ETH-034, ETH-040, ETH-043, ETH-044, ETH-085, ETH-133, ETH-134, ETH-135, ETH-136, ETH-145, ETH-142]
 created: 2026-11-18
-updated: 2026-11-23
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -70,3 +70,4 @@ Sim state `a669cc3`, 200 seeds per cell, win % (mean highest level). Before is b
 Party 4 over solo: fresh 1.63x -> 2.56x, progressed 1.52x -> 2.06x. Fresh solo: floor 3+ 91.0% -> 90.0%, return-trip lethality 10.9% -> 20.0% (9/45), deaths per run 0.71 -> 0.82. Death causes stay diverse (largest: bone_gnawer 21 of 164, fetid_stalker 20, slate_hound 17, crypt_sentinel 16, status.poisoned 14). Renown banked per run (fresh solo) 346.8 -> 294.0, 3293/hr at 1x. Changed constants: `RECOVERY_INTERVAL` 8 -> 12, `KILL_GROUP_BONUS` 0.25 -> 0.55, surge `templateBonus` 0.15 -> 0.10 (`countMul` 1.1 unchanged).
 
 Meta economy review (no costs retuned): a fresh solo run banks about 294 Renown on average (3293/hr at 1x). The Guild Hall tree totals about 2,020 Renown, so the whole tree is about 7 average runs, and the first node (second berth, 50) costs under one run, against the Principle 7 wish for several tense runs first. ETH-132 should rescale against about 290 Renown per fresh run (and about 1,100 per 10-floor victory), with the second berth at roughly 2 to 3 runs.
+- 2026-11-24: Reviewed and merged into m1.5-living-dungeon by the orchestrator (5288e43, merge c2e645e); npm run check green (106 files, 1255 tests). Orchestrator re-ran T3 on c2e645e: seeds 1-200 reproduce exactly (fresh 18.0/32.5/38.0/46.0, progressed 26.5/37.0/45.0/54.5). Robustness check on seeds 201-400 progressed: 27.5/33.0/40.0/50.5 -- ordering holds, but party 4 is 1.84x solo, under 2x. The 2x ratio on progressed is at the edge of noise; flagged to Nate.
