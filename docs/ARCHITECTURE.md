@@ -2397,10 +2397,12 @@ carry game-wide behavior:
 - **`NodeGraph`:** draws an upgrade tree as SVG from each node's `tier` and `column`.
 
 `Panel`, `Card`, `Button`, `Tabs`, `Tooltip` and `Bar` exist (ETH-011) and are exported from
-`ui/kit/index.ts`; the others arrive with the features that first need them. Kit stylesheets
-use tokens only, which `test/ui/tokens.test.ts` enforces. In dev mode, `?kit` on the dev server
-URL opens `ui/dev/KitGallery`, which shows every component and state; production builds drop
-it.
+`ui/kit/index.ts`; the others arrive with the features that first need them. `Button` also accepts
+`disabledReason` (with optional `tooltipPlacement`) to keep a button visible and natively
+disabled inside a focusable `Tooltip` trigger with an `aria-describedby` reason for screen readers
+(ETH-175). Kit stylesheets use tokens only, which `test/ui/tokens.test.ts` enforces. In dev mode,
+`?kit` on the dev server URL opens `ui/dev/KitGallery`, which shows every component and state;
+production builds drop it.
 
 ### 8.5 Codex and `Explain` (`ui/codex/`, ETH-065)
 
@@ -2585,7 +2587,7 @@ directly; all desktop runtime checks, IPC calls, and close interception go throu
   steps and every event; it then saves four seeds before the first step, mid-run and late,
   loads them and checks the rest of the run matches. Extend the command script as commands are
   added.
-- **Headless runs:** `npm run sim -- --seeds N [--from S] [--cap T] [--party P]`
+- **Headless runs:** `npm run sim -- --seeds N [--from S] [--cap T] [--party P] [--class ID] [--race ID]`
   (`tools/sim.ts`, logic in `tools/headless.ts`) runs each seed's dungeon through a
   `SimSession` until the party settles (every living member on the baseline `act.wait` for
   longer than a dropped goal lasts, `DROP_TURNS`): `done` on the bottom floor, `idle` above

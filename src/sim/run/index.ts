@@ -52,6 +52,11 @@ export type RunDomainEvent =
    * `floorType` (or `null` if hand-built).
    */
   | { type: 'runStarted'; party: { actor: EntityId; name: string; classId: string; raceId: string }[]; depth: number | null; floorType: string | null }
+  /**
+   * Right after `runStarted`, once per adventurer whose class has a kit (ETH-176): the item defs
+   * they set out wearing, in kit order.
+   */
+  | { type: 'kitIssued'; actor: EntityId; name: string; items: string[] }
   /** The party turned back for the surface: ordered (`actor` null) or by `actor`'s retreat rule. */
   | { type: 'turnedBack'; actor: EntityId | null; reason: LeavingReason }
   /**
@@ -274,6 +279,8 @@ export const RUN_DOMAIN: SimDomain<RunDomainTypes> = {
       ...e.party.flatMap((m) => [{ id: m.classId, mark: 'seen' as const }, { id: m.raceId, mark: 'seen' as const }]),
       ...(e.floorType === null ? [] : [{ id: e.floorType, mark: 'seen' as const }]),
     ],
+    // A class kit is worn from the start, so its items are used (ETH-176).
+    kitIssued: (e) => e.items.map((id) => ({ id, mark: 'used' as const })),
   },
   chronicle: RUN_DOMAIN_CHRONICLE,
   chronicleKinds: [CHRONICLE_FELL, CHRONICLE_EARNINGS_LOST],

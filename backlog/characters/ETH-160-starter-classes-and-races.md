@@ -2,7 +2,7 @@
 id: ETH-160
 title: Starter set of unlockable classes and races
 type: content
-status: ready
+status: done
 priority: P1
 milestone: M2
 epic: characters
@@ -50,12 +50,31 @@ Lore lines (Codex `description` and `hint`):
 
 ## Acceptance criteria
 - [x] Spec reviewed by Nate before building (spec gate): names, lore and numbers above, or his changes
-- [ ] The three classes and two races are content defs with Codex text and tooltips; class kits use ETH-176
-- [ ] Until ETH-036 gates them, every new class and race is open from the start (`src/meta/prepare/available.ts` already does this); the Guild Hall Mastery list (ETH-087) shows only available classes plus any class with Mastery XP
-- [ ] `npm run sim` gets `--class <id>` and `--race <id>` to field a solo adventurer of one class and race
-- [ ] A T1 run (50 seeds per class with Human, and per race with Vanguard) shows each one within the band set in `docs/DIFFICULTY_PHILOSOPHY.md` §9 of the field, except the Lorekeeper, which may trail until M4 spells; tune the numbers above until they are, and put the table in the PR
-- [ ] The Lorekeeper's Codex text says it is a weak fighter until its spells arrive, so the gap reads as intended
-- [ ] Tests: content validation passes; each class's start matches its table row; each race's speed reaches the sim
+- [x] The three classes and two races are content defs with Codex text and tooltips; class kits use ETH-176
+- [x] Until ETH-036 gates them, every new class and race is open from the start (`src/meta/prepare/available.ts` already does this); the Guild Hall Mastery list (ETH-087) shows only available classes plus any class with Mastery XP
+- [x] `npm run sim` gets `--class <id>` and `--race <id>` to field a solo adventurer of one class and race
+- [x] A T1 run (50 seeds per class with Human, and per race with Vanguard) shows each one within the band set in `docs/DIFFICULTY_PHILOSOPHY.md` §9 of the field, except the Lorekeeper, which may trail until M4 spells; tune the numbers above until they are, and put the table in the PR
+- [x] The Lorekeeper's Codex text says it is a weak fighter until its spells arrive, so the gap reads as intended
+- [x] Tests: content validation passes; each class's start matches its table row; each race's speed reaches the sim
+
+## Balance (T1, 200 seeds, solo, fresh, The Old Delve at budgetMul 1.5, kits on)
+
+| Adventurer | Win | Floor 3+ | Mean depth |
+|---|---|---|---|
+| Vanguard / Human (the field) | 21.0% | 96.0% | 6.1 |
+| Outrider / Human | 22.5% | 96.5% | 6.1 |
+| Lorekeeper / Human | 14.0% | 87.5% | 5.3 |
+| Reaver / Human | 23.5% | 97.0% | 6.2 |
+| Vanguard / Stonekin | 17.0% | 99.5% | 6.2 |
+| Vanguard / Fenling | 21.5% | 98.0% | 6.0 |
+
+On the spec numbers the harness showed (100 seeds): Outrider 100% wins (50 seeds), Reaver 65%, Lorekeeper 35%, Stonekin 9.5% (200 seeds), Fenling about 26%. Changes made to reach the band:
+- **Outrider:** 8/12/6/6 (32 points, was 8/14/7/8), growth Finesse +0.75, Brawn +0.5, Grit +0.5, Wits +0.25 (+2 a level, was +3.25). Finesse buys accuracy, evasion and dagger damage at once, so on the shared budget it was worth far more than a point of Grit.
+- **Reaver:** 12/8/4/8 (32 points, was 15/9/4/9), growth Brawn +1, Grit +0.75, Finesse +0.5, Wits +0.25 (+2.5 a level, was +3.25). The hatchet's +2 damage is the rest of its edge.
+- **Lorekeeper:** 5/8/12/8 (33 points, was 6/9/14/8), growth unchanged. At spec it won 35%, ahead of the Vanguard, so it was trimmed to trail as intended; it sits just under the band.
+- **Stonekin:** Brawn +3, Grit +4, Finesse 0 (was +2, +3, -1), speed 90. The slower speed costs a tenth of its turns, so it needs more points than the Human's +4 (spec 9.5%).
+- **Fenling:** Brawn -2 (was -1); the rest as written, speed 110.
+- Kits, the Vanguard, Human and the dungeon are untouched.
 
 ## Notes
 - Unlocking them (milestone reveals, Guild Hall sells for Renown) is ETH-036, built on these defs.
@@ -71,3 +90,5 @@ Open decisions:
 - 2026-11-24: Created in the backlog reorganization by theme (gap: one class and one race exist).
 - 2026-11-24: (spec gate) Proposal written: three classes, two races, numbers on the Vanguard's budget; starting kits split out to ETH-176. Awaiting Nate's review.
 - 2026-11-24: Spec approved by Nate: classes, races and lore as written; the Lorekeeper may trail until M4 spells; each kit adds a piece of armor. Status ready.
+- 2026-11-24: Started. Defs, sim flags and Mastery list filter built; T1 balance in progress.
+- 2026-11-24: Built. Three classes, two races, `--class` / `--race` on `npm run sim`, Mastery list shows available classes plus any with XP. T1 on 200 seeds: Outrider, Reaver, Stonekin and Fenling in the band after trimming points (table above); Lorekeeper trails at 14%. Random recruits can now be any class or race, so tests that assumed a Vanguard recruit were loosened. Status done.

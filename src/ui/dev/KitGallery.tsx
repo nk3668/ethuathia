@@ -110,6 +110,9 @@ function ButtonSamples() {
           Cancel
         </Button>
       </div>
+      <div className={styles.row}>
+        <Button disabledReason="Respec is between runs, not during one.">Reset tree</Button>
+      </div>
       <div className={styles.row} role="group" aria-label="Speed">
         {SPEEDS.map((step) => (
           <Button key={step} pressed={speed === step} onClick={() => setSpeed(step)}>

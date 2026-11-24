@@ -147,4 +147,38 @@ describe('possession keys', () => {
     run(1);
     expect(mira()?.possessed).toBe(false);
   });
+
+  it('explains why a cursed worn item button is disabled via tooltip on focus', async () => {
+    render(<AppShell />);
+    run(1);
+    act(() => useUiStore.getState().select(mira()?.id ?? null));
+    fireEvent.click(partyPanel().getByRole('button', { name: 'Possess' }));
+    run(2);
+
+    const snap = structuredClone(useSimStore.getState().snapshot);
+    const id = mira()?.id ?? 0;
+    if (snap === null) throw new Error('no snapshot');
+    snap.domains.items.members[id] = {
+      items: [],
+      equipped: [
+        {
+          def: 'item.iron_cap',
+          name: 'Cursed Iron cap',
+          weight: 3,
+          value: 5,
+          slot: 'head',
+          cursed: true,
+          locked: 'Head slot is locked until uncursed.',
+        },
+      ],
+      weight: 3,
+      carry: 50,
+    };
+    act(() => useSimStore.getState().receiveSnapshot(snap));
+
+    const cursedBtn = partyPanel().getByRole('button', { name: 'Cursed' });
+    expect(cursedBtn).toHaveProperty('disabled', true);
+    await act(async () => (cursedBtn.parentElement as HTMLElement).focus());
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Head slot is locked until uncursed.');
+  });
 });

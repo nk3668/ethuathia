@@ -52,9 +52,9 @@ export const MAX_PARTY = 4;
 
 const NAMES = ['Brannoc', 'Mira', 'Oren', 'Tamsin'] as const;
 
-/** A party of `size` adventurers. M0 has one class and one race, so they all share them. */
-export function headlessParty(size: number): AdventurerConfig[] {
-  return NAMES.slice(0, size).map((name) => ({ name, classId: CLASS_VANGUARD.id, raceId: RACE_HUMAN.id }));
+/** A party of `size` adventurers who all share one class and race (the Vanguard and Human unless given, ETH-160). */
+export function headlessParty(size: number, classId: string = CLASS_VANGUARD.id, raceId: string = RACE_HUMAN.id): AdventurerConfig[] {
+  return NAMES.slice(0, size).map((name) => ({ name, classId, raceId }));
 }
 
 export type HeadlessPreset = 'fresh' | 'progressed';

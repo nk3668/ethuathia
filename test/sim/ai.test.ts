@@ -152,7 +152,7 @@ describe('decision engine', () => {
       rule('cond.always', 'act.test_step', { x: 0, y: 1 }), // this one
       rule('cond.always', 'act.test_step', { x: 1, y: 1 }),
     ]);
-    const events = step(state, []).filter((e) => e.type !== 'runStarted');
+    const events = step(state, []).filter((e) => e.type !== 'runStarted' && e.type !== 'kitIssued');
     expect(events).toEqual([
       {
         type: 'ruleFired',

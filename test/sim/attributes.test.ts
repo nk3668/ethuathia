@@ -46,7 +46,10 @@ const ROOM = ['#######', '#@....#', '#.....#', '#######'];
 function hero(classId = CLASS_VANGUARD.id): { state: RunState; hero: ActorEntity } {
   const config: RunConfig = { party: [{ name: 'Mira', classId, raceId: RACE_HUMAN.id }], floorText: ROOM };
   const state = createRun(config, 1);
-  return { state, hero: getEntity(state, state.party[0] as EntityId) as ActorEntity };
+  const entity = getEntity(state, state.party[0] as EntityId) as ActorEntity;
+  // These tests are about attributes alone, so the class kit (ETH-176) is taken off.
+  Reflect.deleteProperty(entity, 'inventory');
+  return { state, hero: entity };
 }
 
 /** What the formula table says `stat` gains from `values`, worked by hand. */

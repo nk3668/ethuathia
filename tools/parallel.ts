@@ -62,14 +62,14 @@ export async function runSeedsParallel(
 
 /** `--party-sweep`: runs party sizes 1 to `MAX_PARTY` on the pool, one size after another, and returns the table text. */
 export async function runPartySweep(
-  args: Pick<SimArgs, 'from' | 'seeds' | 'cap' | 'preset' | 'upgrades' | 'rules' | 'jobs'>,
+  args: Pick<SimArgs, 'from' | 'seeds' | 'cap' | 'preset' | 'upgrades' | 'rules' | 'jobs'> & Partial<Pick<SimArgs, 'classId' | 'raceId'>>,
 ): Promise<string> {
   const rows = [];
   for (let size = 1; size <= MAX_PARTY; size++) {
     const results = await runSeedsParallel(
       args.from,
       args.seeds,
-      { cap: args.cap, party: headlessParty(size), preset: args.preset, upgrades: args.upgrades, rules: args.rules },
+      { cap: args.cap, party: headlessParty(size, args.classId ?? undefined, args.raceId ?? undefined), preset: args.preset, upgrades: args.upgrades, rules: args.rules },
       args.jobs,
     );
     rows.push(partySweepRow(size, results));

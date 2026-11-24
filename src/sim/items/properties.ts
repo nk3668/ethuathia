@@ -36,7 +36,8 @@
 import { z } from 'zod';
 import type { Bundle } from '../../content';
 import type { Entity, RunState } from '../state';
-import { enchantmentProblems, PROP_BLESSING, PROP_ENCHANT, PROP_ENCHANTMENTS, PROP_IDENTIFIED, PROP_IDENTIFY_TRIED, PROP_MIX } from './enchant';
+import { enchantmentProblems, PROP_BLESSING, PROP_ENCHANT, PROP_ENCHANTMENTS, PROP_IDENTIFIED, PROP_IDENTIFY_TRIED, PROP_KIT, PROP_MIX } from './enchant';
+import { itemDef } from './instance';
 import type { ItemInstance, ItemOrigin } from './instance';
 import { isSecretConsumable } from './mix';
 import { PROP_WEAPON_SCALING } from './scaling';
@@ -146,6 +147,7 @@ const ITEM_PROPERTY_LIST: readonly ItemPropertyKind[] = [
   PROP_IDENTIFY_TRIED as ItemPropertyKind,
   PROP_MIX as ItemPropertyKind,
   PROP_ORIGIN as ItemPropertyKind,
+  PROP_KIT as ItemPropertyKind,
 ];
 
 const kinds: ItemPropertyKind[] = [];
@@ -237,6 +239,7 @@ export function propertyProblems(item: ItemInstance): string[] {
     if (!result.success) problems.push(`"${item.def}" has a bad ${field}: ${result.error.issues[0]?.message ?? 'invalid'}`);
   }
   problems.push(...enchantmentProblems(item));
+  if (item.kit !== undefined && itemDef(item).gear === undefined) problems.push(`"${item.def}" is marked as kit but is not gear`);
   if (item.mix !== undefined) {
     const total = (item.mix.plain ?? 0) + (item.mix.blessed ?? 0) + (item.mix.cursed ?? 0);
     if (!isSecretConsumable(item)) problems.push(`"${item.def}" has a mix but is not an unidentified potion or scroll`);

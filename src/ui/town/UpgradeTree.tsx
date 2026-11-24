@@ -125,21 +125,6 @@ export function UpgradeTree({ buildingId }: UpgradeTreeProps) {
   );
 }
 
-/** A button that stays visible but disabled with the reason in a tooltip (and read out) when `reason` is set. */
-function GuardedButton({ reason, onClick, children }: { reason: string | null; onClick(): void; children: ReactNode }) {
-  if (reason === null) return <Button onClick={onClick}>{children}</Button>;
-  return (
-    <Tooltip content={reason}>
-      <span tabIndex={0} className={styles.guarded}>
-        <Button disabled>
-          {children}
-        </Button>
-        <span className="sr-only"> ({reason})</span>
-      </span>
-    </Tooltip>
-  );
-}
-
 /** The tree's kind (Foundation or Tactic, with a tooltip saying what that means) and Reset tree. */
 function TreeHeader({ buildingId, profile }: { buildingId: string; profile: Profile }) {
   const runActive = useRunActive();
@@ -155,9 +140,9 @@ function TreeHeader({ buildingId, profile }: { buildingId: string; profile: Prof
           {info.name} tree
         </span>
       </Tooltip>
-      <GuardedButton reason={reason} onClick={() => doReset(buildingId, runActive)}>
+      <Button disabledReason={reason} onClick={() => doReset(buildingId, runActive)}>
         Reset tree
-      </GuardedButton>
+      </Button>
       {plan !== null && reason === null && (
         <span className={styles.respecNote}>
           Refunds {formatCurrencies(plan.refund)} with {feeText(plan.fee)}.
@@ -309,14 +294,14 @@ function NodeDetail({ node, profile }: { node: UpgradeNodeDef; profile: Profile 
       {!check.ok && status !== 'owned' && <p className={styles.reason}>{check.reason}</p>}
       <div className={styles.actions}>
         {status !== 'owned' && status !== 'excluded' && (
-          <Button variant="primary" disabled={!check.ok} onClick={() => buy(node.id)}>
+          <Button variant="primary" disabledReason={check.ok ? undefined : check.reason} onClick={() => buy(node.id)}>
             Buy {ranked ? `rank ${roman(rank + 1)} ` : ''}for {formatCurrencies(price)}
           </Button>
         )}
         {showRespec && (
-          <GuardedButton reason={respecBlock({ runActive })} onClick={() => doRespec(plan.group, runActive)}>
+          <Button disabledReason={respecBlock({ runActive })} onClick={() => doRespec(plan.group, runActive)}>
             Respec: give up {UPGRADES.get(plan.chosen).name}
-          </GuardedButton>
+          </Button>
         )}
       </div>
       {showRespec && (

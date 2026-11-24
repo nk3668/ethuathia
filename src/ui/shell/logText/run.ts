@@ -1,6 +1,6 @@
 /** Log wording for the run domain's events (`src/sim/run/`). One entry per event type. */
 import { formatNumber } from '../../../core';
-import { MONSTERS, STATUSES } from '../../../content';
+import { ITEMS, MONSTERS, STATUSES } from '../../../content';
 import { deathLine } from '../../../sim';
 import type { RunDomainEvent } from '../../../sim';
 import { currencyName } from '../runSummaryText';
@@ -63,6 +63,20 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
       }
       const floors = `${e.depth} ${e.depth === 1 ? 'floor' : 'floors'} deep`;
       return e.floorType === null ? `${lead}, ${floors}.` : [`${lead} (`, mention(e.floorType), `, ${floors}).`];
+    },
+  },
+  // "Mira shoulders an oak cudgel and a round shield." Each item links to its Codex entry.
+  kitIssued: {
+    category: 'system',
+    text: (e) => {
+      const parts: LogPart[] = [`${e.name} shoulders `];
+      e.items.forEach((id, i) => {
+        const name = ITEMS.has(id) ? ITEMS.get(id).name.toLowerCase() : 'an item';
+        if (i > 0) parts.push(i === e.items.length - 1 ? ' and ' : ', ');
+        parts.push(`${/^[aeiou]/.test(name) ? 'an' : 'a'} `, mention(id, name));
+      });
+      parts.push('.');
+      return parts;
     },
   },
   turnedBack: {
