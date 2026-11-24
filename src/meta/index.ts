@@ -25,7 +25,7 @@ export {
 } from './milestones';
 export type { MilestoneTarget } from './milestones';
 export type { Milestones, MilestoneUnlock } from './slices/milestones';
-export { checkRunResult, currenciesFromRewards } from './runResult';
+export { bankedFromRunResult, checkRunResult, currenciesFromRewards } from './runResult';
 export { decodeSave, decodeSaveWith, encodeSave, MAX_SAVE_LENGTH, SAVE_FORMAT, SAVE_VERSION } from './save';
 export type { DecodeResult, StoredSlice } from './save';
 export { defineSlice } from './slice';
@@ -33,7 +33,7 @@ export type { ProfileBefore, ProfileSlice, SliceMigration, SliceState } from './
 export { discoveriesSchema, mergeMonsterKills, monsterKillsSchema } from './slices/codex';
 export type { Codex, MonsterKills } from './slices/codex';
 export { HISTORY_LIMIT, recordMoments, RUN_RECORD_MOMENTS, runRecord } from './slices/history';
-export type { History, RunRecord, RunRecordContract, RunRecordMember } from './slices/history';
+export type { History, RunRecord, RunRecordContract, RunRecordGold, RunRecordMember } from './slices/history';
 export {
   activeRecords,
   addTrait,

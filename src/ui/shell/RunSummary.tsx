@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { GOLD_PER_TROPHY } from '../../content';
 import { formatNumber } from '../../core';
-import { RENOWN } from '../../sim';
-import type { RunReport } from '../../sim';
+import { RENOWN, TROPHIES } from '../../sim';
+import type { GoldConversionRecord, RunOutcome, RunReport } from '../../sim';
 import { Button, Tooltip } from '../kit';
 import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
@@ -15,6 +16,8 @@ import {
   epitaph,
   cursedGearTurnsOf,
   fallenOf,
+  GOLD_CONVERSION_TOOLTIP,
+  goldConversionOf,
   lossNote,
   momentsOf,
   OUTCOME_LOOK,
@@ -73,6 +76,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const contracts = contractsOf(report);
   const moments = momentsOf(report);
   const renown = renownBreakdown(report);
+  const goldInfo = goldConversionOf(report);
   const renownSources =
     renown === null
       ? []
@@ -182,6 +186,10 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
                   <th scope="row">
                     {row.key === RENOWN ? (
                       <Tooltip content={<RenownFormulaContent />}>{currencyName(row.key)}</Tooltip>
+                    ) : row.key === TROPHIES ? (
+                      <Tooltip content={<TrophiesFormulaContent gold={goldInfo} outcome={report.end.outcome} />}>
+                        {currencyName(row.key)}
+                      </Tooltip>
                     ) : (
                       currencyName(row.key)
                     )}
@@ -193,6 +201,24 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
               ))}
             </tbody>
           </table>
+          {goldInfo !== null && (
+            <p className={styles.goldLine}>
+              <Tooltip content={GOLD_CONVERSION_TOOLTIP(goldInfo.rate)}>
+                {report.end.outcome === 'wipe' ? 'Gold lost' : 'Gold converted'}
+              </Tooltip>
+              {': '}
+              {report.end.outcome === 'wipe' ? (
+                <span className={styles.goldLost}>{formatNumber(goldInfo.gold)} gold</span>
+              ) : (
+                <span>
+                  {formatNumber(goldInfo.gold)} gold →{' '}
+                  <span className={styles.goldTrophies}>
+                    +{formatNumber(goldInfo.trophies)} {goldInfo.trophies === 1 ? 'Trophy' : 'Trophies'}
+                  </span>
+                </span>
+              )}
+            </p>
+          )}
           {showRenownBreakdown && renown !== null && (
             <div className={styles.renownBreakdown}>
               <div className={styles.breakdownHead}>
@@ -266,6 +292,32 @@ function RenownFormulaContent() {
       {RENOWN_FORMULA_TEXT}
       <br />
       {RENOWN_FORMULA_EXAMPLES}
+    </>
+  );
+}
+
+/** Tooltip body explaining Trophies from kills and leftover gold conversion (ETH-083). */
+function TrophiesFormulaContent({ gold, outcome }: { gold: GoldConversionRecord | null; outcome: RunOutcome }) {
+  const rate = gold?.rate ?? GOLD_PER_TROPHY;
+  return (
+    <>
+      <strong>Trophies formula</strong>
+      <br />
+      Earned from kills (weighted by monster threat, multiplied by Omens) plus leftover gold converted on exit (
+      {rate} gold = 1 Trophy, rounded down, not multiplied by Omens).
+      {gold !== null && outcome !== 'wipe' && gold.trophies > 0 && (
+        <>
+          <br />
+          Leftover gold: {formatNumber(gold.gold)} gold → +{formatNumber(gold.trophies)}{' '}
+          {gold.trophies === 1 ? 'Trophy' : 'Trophies'}.
+        </>
+      )}
+      {gold !== null && outcome === 'wipe' && gold.gold > 0 && (
+        <>
+          <br />
+          On a wipe all {formatNumber(gold.gold)} leftover gold is lost.
+        </>
+      )}
     </>
   );
 }
