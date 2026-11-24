@@ -44,4 +44,4 @@ More items are added when M1 becomes the current milestone.
 - [x] [ETH-118 Item properties: per-instance layers that feed gearBundles, value, names and stacking](ETH-118-item-properties.md)
 - [ ] [ETH-123 Allied non-party creatures: actors that fight with the party without being members](ETH-123-allied-creatures.md)
 - [ ] [ETH-130 Expand the enchantment pool with additional effects and triggers](ETH-130-more-enchantments.md)
-- [ ] [ETH-142 Identification secrecy and curse safety for the idle player](ETH-142-identify-secrecy-and-curse-safety.md)
+- [x] [ETH-142 Identification secrecy and curse safety for the idle player](ETH-142-identify-secrecy-and-curse-safety.md)
