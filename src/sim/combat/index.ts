@@ -53,6 +53,7 @@ import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, hpPe
 export * from './death';
 export * from './encounters';
 export * from './flee';
+export * from './fleeConfig';
 export * from './groupAi';
 export * from './monsters';
 export * from './ood';

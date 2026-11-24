@@ -15,7 +15,8 @@ import type { PathGrid } from '../goalMap';
 import { fieldOfView, sightRadius } from '../perception';
 import type { ActorEntity, Entity, RunState } from '../state';
 import { statValue } from '../stats/getStat';
-import { BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_RELEASE_PERCENT, freshThreats, visibleThreats } from './threat';
+import { BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_RELEASE_PERCENT } from './fleeConfig';
+import { freshThreats, visibleThreats } from './threat';
 import { DIRS_8 } from '../../core';
 
 /** True if `a` and `b` are actors on opposing sides: the party against monsters. Neutrals fight nobody. */

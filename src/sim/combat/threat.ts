@@ -19,21 +19,9 @@ import type { PathGrid } from '../goalMap';
 import type { AiActor, AiCtx, ThreatMark } from '../ai/types';
 import { nameOf } from '../ai/navigate';
 import type { ActorEntity, Entity, RunState } from '../state';
+import { AVOID_PENALTY, AVOID_RADIUS, BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
 import { hpPercent, visibleEnemies } from './rules';
 import { overlayOf, templatesOf } from './overlay';
-
-/** The HP percentage below which an adventurer with a threat in sight starts to flee. */
-export const BASELINE_FLEE_PERCENT = 35;
-/** Once fleeing, the HP percentage at which the adventurer stops (so it does not flip at the edge of the start threshold). */
-export const FLEE_RELEASE_PERCENT = 60;
-/** Turns without seeing a threat after which fleeing ends even if HP is still low. */
-export const FLEE_CALM_TURNS = 12;
-/** Turns a remembered threat sighting is kept (and avoided, fading). */
-export const THREAT_MEMORY_TURNS = 60;
-/** Tiles (either axis) around a remembered threat that cost extra to walk through while wounded. */
-export const AVOID_RADIUS = 6;
-/** The extra cost of the tile a remembered threat was last seen on, at the moment it was seen. */
-export const AVOID_PENALTY = 24;
 
 /** Rule actions that make a creature come after its enemies. */
 const PROACTIVE_ACTIONS: ReadonlySet<string> = new Set(['act.approach_enemy', 'act.surround', 'act.cast_bolt']);
