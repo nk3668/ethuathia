@@ -46,6 +46,80 @@ describe('Button', () => {
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'On' }));
   });
+
+  it('shows a tooltip on focus (dismissed by Escape) and hover when disabledReason is set', async () => {
+    const user = userEvent.setup();
+    render(
+      <Button disabledReason="Needs 40 Renown more.">
+        Buy
+      </Button>,
+    );
+    expect(screen.queryByRole('tooltip')).toBeNull();
+
+    await user.tab();
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip.textContent).toBe('Needs 40 Renown more.');
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('tooltip')).toBeNull();
+
+    await user.hover(screen.getByRole('button', { name: 'Buy' }));
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Needs 40 Renown more.');
+    await user.unhover(screen.getByRole('button', { name: 'Buy' }));
+    expect(screen.queryByRole('tooltip')).toBeNull();
+  });
+
+  it('stays natively disabled, refuses activation, keeps clean name, and links aria-describedby', async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <>
+        <p id="extra-help">Extra detail</p>
+        <Button disabledReason="Respec is between runs, not during one." aria-describedby="extra-help" onClick={onClick}>
+          Reset tree
+        </Button>
+      </>,
+    );
+
+    const button = screen.getByRole('button', { name: 'Reset tree' });
+    expect(button).toHaveProperty('disabled', true);
+
+    const describedBy = button.getAttribute('aria-describedby') ?? '';
+    const ids = describedBy.split(/\s+/).filter(Boolean);
+    expect(ids).toContain('extra-help');
+    const descriptionText = ids.map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
+    expect(descriptionText).toContain('Respec is between runs, not during one.');
+
+    await user.click(button);
+    await user.tab();
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, null, ''])('behaves as an enabled plain button when disabledReason is %j', async (emptyReason) => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    const ref = createRef<HTMLButtonElement>();
+    const { container } = render(
+      <Button ref={ref} disabledReason={emptyReason} onClick={onClick}>
+        Save
+      </Button>,
+    );
+
+    const button = screen.getByRole('button', { name: 'Save' });
+    expect(ref.current).toBe(button);
+    expect(button).toHaveProperty('disabled', false);
+    expect(button.hasAttribute('aria-describedby')).toBe(false);
+    expect(container.firstElementChild).toBe(button);
+
+    await user.tab();
+    expect(document.activeElement).toBe(button);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+
+    await user.click(button);
+    expect(onClick).toHaveBeenCalledOnce();
+  });
 });
 
 describe('Panel', () => {
