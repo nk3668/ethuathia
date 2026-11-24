@@ -816,7 +816,95 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
   ].join('\n');
 }
 
+/** One party size's row in a `--party-sweep` (ETH-145). */
+export interface PartySweepRow {
+  size: number;
+  runs: number;
+  winRatePct: number;
+  retreatRatePct: number;
+  wipeRatePct: number;
+  /** Mean over runs of the highest member level. */
+  levelHighest: number | null;
+  /** Mean over runs of the mean member level. */
+  levelMember: number | null;
+  deathsPerRun: number | null;
+}
+
+/** Summarizes one party size's runs as a sweep row. */
+export function partySweepRow(size: number, results: readonly SeedResult[]): PartySweepRow {
+  const s = summarizeReport(results);
+  return {
+    size,
+    runs: s.runs,
+    winRatePct: s.winRatePct,
+    retreatRatePct: s.retreatRatePct,
+    wipeRatePct: s.wipeRatePct,
+    levelHighest: s.levelMean,
+    levelMember: s.memberLevelMean,
+    deathsPerRun: s.deathsPerRun,
+  };
+}
+
+/** How many times the biggest party must win as often as a lone adventurer (ETH-145). */
+export const PARTY_SWEEP_MIN_RATIO = 2;
+
+/**
+ * What is wrong with the party-size ordering (`docs/DIFFICULTY_PHILOSOPHY.md` Principle 6): win rate
+ * must rise with every extra adventurer, and a party of 4 must win at least
+ * `PARTY_SWEEP_MIN_RATIO` times as often as a solo adventurer. Empty when it holds.
+ */
+export function partySweepWarnings(rows: readonly PartySweepRow[]): string[] {
+  const warnings: string[] = [];
+  const sorted = [...rows].sort((a, b) => a.size - b.size);
+  for (let i = 1; i < sorted.length; i++) {
+    const lo = sorted[i - 1] as PartySweepRow;
+    const hi = sorted[i] as PartySweepRow;
+    if (!(hi.winRatePct > lo.winRatePct)) {
+      warnings.push(
+        `ordering broken: party ${hi.size} wins ${hi.winRatePct.toFixed(1)}%, not more than party ${lo.size} at ${lo.winRatePct.toFixed(1)}%`,
+      );
+    }
+  }
+  const solo = sorted.find((r) => r.size === 1);
+  const four = sorted.find((r) => r.size === MAX_PARTY);
+  if (solo !== undefined && four !== undefined && four.winRatePct < PARTY_SWEEP_MIN_RATIO * solo.winRatePct) {
+    warnings.push(
+      `ratio broken: party ${MAX_PARTY} wins ${four.winRatePct.toFixed(1)}%, under ${PARTY_SWEEP_MIN_RATIO}x solo's ${solo.winRatePct.toFixed(1)}%`,
+    );
+  }
+  return warnings;
+}
+
+/** The sweep as a table plus a warning line per broken rule (or "ordering holds"). */
+export function formatPartySweep(rows: readonly PartySweepRow[]): string {
+  const fmt = (n: number | null, digits = 1) => (n === null ? '-' : n.toFixed(digits));
+  const header = ['party', 'runs', 'win %', 'retreat %', 'wipe %', 'level (highest)', 'level (member mean)', 'deaths/run'];
+  const body = rows.map((r) => [
+    String(r.size),
+    String(r.runs),
+    fmt(r.winRatePct),
+    fmt(r.retreatRatePct),
+    fmt(r.wipeRatePct),
+    fmt(r.levelHighest, 2),
+    fmt(r.levelMember, 2),
+    fmt(r.deathsPerRun, 2),
+  ]);
+  const widths = header.map((h, i) => Math.max(h.length, ...body.map((row) => (row[i] as string).length)));
+  const line = (cells: string[]) => cells.map((c, i) => c.padStart(widths[i] as number)).join('  ');
+  const warnings = partySweepWarnings(rows);
+  return [
+    line(header),
+    ...body.map(line),
+    '',
+    ...(warnings.length === 0
+      ? [`Party-size ordering holds: win rate rises with every adventurer and party ${MAX_PARTY} wins at least ${PARTY_SWEEP_MIN_RATIO}x as often as solo.`]
+      : warnings.map((w) => `WARNING: ${w}`)),
+  ].join('\n');
+}
+
 export interface SimArgs {
+  /** Run party sizes 1 to `MAX_PARTY` and check the win-rate ordering (`--party-sweep`, ETH-145). */
+  partySweep: boolean;
   /** The first seed. */
   from: number;
   /** How many seeds (one run each) to run. */
@@ -837,7 +925,7 @@ export interface SimArgs {
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
                       [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious]
-                      [--json FILE] [--compare REF | --baseline FILE]
+                      [--party-sweep] [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
 hit, and reports per seed the turns taken, the depth reached, how much of the last floor was
@@ -851,6 +939,9 @@ above the bottom or trigger stuck detection are listed at the end.
   --preset NAME           profile preset: fresh (default) or progressed
   --upgrades ID1,ID2,...  comma-separated upgrade node ids to apply (e.g. upgrade.hardy_recruits,upgrade.drill_yard)
   --rules NAME            behavior rule preset: baseline (default) or cautious
+  --party-sweep           run party sizes 1 to ${MAX_PARTY} on the same seeds and preset, print win rate and
+                          level per size, and warn when win rate does not rise with party size or party
+                          ${MAX_PARTY} wins less than ${PARTY_SWEEP_MIN_RATIO}x as often as solo (--party is ignored)
   --json FILE             also write the report as JSON, to keep as a baseline
   --compare REF           run the same seeds on git ref REF (e.g. origin/main, or merge-base for the
                           merge base with origin/main) and print a before/after table of the report
@@ -890,6 +981,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       preset: { type: 'string' },
       upgrades: { type: 'string' },
       rules: { type: 'string' },
+      'party-sweep': { type: 'boolean' },
       json: { type: 'string' },
       compare: { type: 'string' },
       baseline: { type: 'string' },
@@ -913,6 +1005,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     preset,
     upgrades,
     rules,
+    partySweep: values['party-sweep'] ?? false,
     json: values.json ?? null,
     compare: values.compare ?? null,
     baseline: values.baseline ?? null,
