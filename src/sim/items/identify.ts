@@ -5,7 +5,7 @@
  *   hidden behind a deterministic per-seed appearance name (`appearanceName(seed, defId)`) until
  *   that def id is recorded in `state.domains.items.identifiedTypes`. Plain items created without
  *   `identified: false` (e.g. hand-built tests) count as already known.
- * - **Instance-level identification:** enchanted, blessed, or cursed items keep `identified: false`
+ * - **Instance-level identification:** all gear (ETH-142) and enchanted, blessed, or cursed consumables keep `identified: false`
  *   until identified by a Wits `identify` check on pickup, equipping, using, or a Scroll of Identify.
  *   Once a potion/scroll/jewelry type is in `identifiedTypes`, plain uncursed instances of that type
  *   are immediately known while blessed/cursed/enchanted ones reveal their base type and keep their
@@ -49,7 +49,19 @@ export function isInstanceTypeKnown(state: RunState, item: ItemInstance): boolea
 export function isItemIdentified(state: RunState, item: ItemInstance): boolean {
   if (item.identified !== false) return true;
   if (!isTypeIdentified(state, item.def)) return false;
+  // Gear stays unidentified until identified, whether or not it rolled anything (ETH-142).
+  if (isGearDef(item.def)) return false;
   return !hasHiddenProperties(item);
+}
+
+/** `item` as unidentified gear: gear without the flag gets `identified: false`, anything else is returned as it is (ETH-142). */
+export function secretGear(item: ItemInstance): ItemInstance {
+  return isGearDef(item.def) && item.identified === undefined ? { ...item, identified: false } : item;
+}
+
+/** True if `defId` is a weapon, armor or jewelry def: its `identified: false` flag never depends on what it rolled (ETH-142). */
+export function isGearDef(defId: string): boolean {
+  return ITEMS.has(defId) && ITEMS.get(defId).gear !== undefined;
 }
 
 /** Records `defId` in `state.domains.items.identifiedTypes` (sorted, unique). Returns true if newly learned. */
@@ -74,6 +86,8 @@ export function identifyInstance(state: RunState, item: ItemInstance): { changed
     Reflect.deleteProperty(item, 'identified');
     cleared = true;
   }
+  // The once-per-instance Wits roll only matters while unidentified (ETH-142).
+  Reflect.deleteProperty(item, 'identifyTried');
   return { changed: !wasKnown || typeNewlyKnown || cleared, typeNewlyKnown };
 }
 

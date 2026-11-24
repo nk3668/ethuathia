@@ -624,7 +624,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), and ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field).
 
 ### Contracts in the run (ETH-024)
 
@@ -822,8 +822,21 @@ Content in `src/content/items.ts`, sim in `src/sim/items/equipment.ts` and `acti
   its trace names it for rings ("… (left ring), nothing worn there yet"). A clear upgrade is
   always wanted (`wantsItem`), and while overloaded the baseline puts one on before dropping
   anything (`ITEMS_BASELINE_URGENT`), since worn gear frees the pack.
-  `act.equip_upgrade` (baseline, first of `ITEMS_BASELINE_LOOT`, so not next to an enemy) puts it
+  `act.equip_upgrade` (baseline, after `act.use_identify` and `act.read_unknown_scroll` in `ITEMS_BASELINE_LOOT`, so not next to an enemy) puts it
   on with a trace line ("equipping the Arming sword (Damage +2, Accuracy +1) in place of …").
+  **Unidentified gear (ETH-142):** all gear starts `identified: false`, so the baseline weighs it
+  through `evaluateUpgrade`, which reads known stats, the def and the floor's depth number, never the
+  hidden properties. It waits while the pack holds a known Scroll of Identify. Otherwise the gain in
+  base stats (in enhancement points of the def's base enchantment) must beat `hiddenGearMargin(def,
+  depth)` from `loot.ts`: the expected value of what `rollItemProperties` may have rolled (computed from
+  its chances, specials converted by `valuePerLevel`) plus `CURSE_LOCK_PREMIUM × P(cursed) × expected
+  curse penalty`, the price of the rest-of-run slot lock. The trace shows the numbers ("gain +2 vs margin
+  1.04 (expected hidden +0.14, curse lock risk +0.9)"). Items held back, and gear that would beat a cursed
+  worn piece (a locked slot), come through the rule action's `skipped` text, which does not change from
+  turn to turn while nothing changes. `WornView.locked` explains a locked slot on the party card, and
+  `track.cursedGear` counts the turns a living party member wore cursed gear for the run summary.
+  The Wits roll on pickup happens once per item instance (`prop.identify_tried`, `stacks: 'ignore'`,
+  cleared when the item is identified).
   Tradeoffs are left to player rules or possession. `modifierText`, `gearStatsText(state,
   wearer, item)` and `bundleStatsText(bundles)` (the Codex, on a def's bundle) word stats.
 - **Snapshot / UI:** `InventoryView.equipped: WornView[]` (`{ slot, def, name, weight, value }`); the
@@ -910,7 +923,8 @@ per-instance item data adds an `ItemPropertyKind`, not its own edits to `gearBun
     `enchant.keen`, `enchant.venomous`, `enchant.vampiric`, `enchant.nimble`, `enchant.warding`).
   - Built-in `ITEM_PROPERTY_LIST` order: `prop.enchant` (`enchant?: number`), `prop.blessing`
     (`blessing?: 'blessed' | 'cursed'`), `prop.enchantments` (`enchantments?: { id, level }[]`),
-    `prop.identified` (`identified?: boolean`, absent = known), `prop.origin`.
+    `prop.identified` (`identified?: boolean`, absent = known), `prop.identify_tried` (`identifyTried?: true`,
+    ETH-142), `prop.origin`.
   - Cursed gear refuses `unequip` and `equip` replacement in `validate`; `upgradeSlot` skips cursed
     slots and known-cursed items; blessed/cursed consumables scale `runEffects` potency (`1.5×`/`0.5×`)
     and gear shifts enhancement (`+1`/`-1`). `Scroll of uncursing` (`{ kind: 'uncurse' }`) and
@@ -2536,5 +2550,6 @@ modifying a critical service in the categories below:
 | Any **SimEvent, log formatter, highlight rule, chronicle rule, or drop payload** carrying a player-discoverable secret (`item`, unseen trap/encounter, etc.) | **Non-spoiling event / log / chronicle sweep:** run unidentified/secret event payloads through `describeEvent`, `highlightWhen`, `discoveriesOf`, and `CHRONICLE_TRACKER`, asserting zero `{ ref }` Codex links, zero real-name substrings, `highlight: undefined`, and `[]` discoveries/entries. | `test/ui/logText.test.ts` | **High / Very High** — blocks UI tooltip, highlight, and chronicle spoilers |
 | A new **`Effect['kind']`**, potency-scaled consumable, trait, shrine/fountain effect, or ranked enchantment trigger | **Exhaustive `Effect['kind']` potency contract:** `EFFECT_POTENCY_CASES: Record<EffectKind, () => void>` forces a TypeScript compile error until the new kind's `0.5×` / `1×` / `1.5×+` scaling is specified and tested. | `test/sim/stats.test.ts` | **High / High** — catches unscaled `ctx.potency` at compile time |
 | A new **content kind, Codex renderer, or non-`alwaysKnown` def** (items, statuses, monsters, enchantments, deities, omens, bounties) | **Codex discoverability / reachability check:** map the kind's real producer event(s) in `probesByKind` and verify every non-`alwaysKnown`, non-`hidden` entry yields `>= 1` discovery mark via `discoveriesOf`. | `test/ui/codex.test.tsx` | **Medium-High / High** — guarantees no entry stays permanently stuck at `???` |
+| Anything that sets an item's **`identified` flag** (loot, drops, monster carries) | **Secrecy property guard:** roll gear across every def and depth and assert `identified === false` for all of it, plain or not; the snapshot flag, name and `stateNote` of plain and hidden-property variants must be equal; the baseline gear gate must give one verdict for them. | `test/sim/identifySecrecy.test.ts` | **High / High**: the flag never leaks what an item rolled |
 | A new **`ItemPropertyKind`** (or similar sparse optional field on `ItemInstance` / `RunState` used in equality or `canStack` checks) | **Canonical-value invariant test:** ensure `schema` rejects every default/no-op value (`0`, `true`, `[]`, `{}`, `'uncursed'`) and register it in `CANONICAL_REJECTED`. | `test/sim/itemProperties.test.ts` | **Medium / High** — prevents duplicate unstackable instances and save bloat |
 | A configurable **numeric range `{ min?, max? }`** with positive defaults (spawn counts, loot quantities, depth bounds, cooldowns) | **Use `clampRange` + `{ max: 0 }` boundary test:** compute and clamp `max` before clamping `min <= max` via `clampRange` (`src/core/range.ts`) and assert `{ max: 0 }` produces `{ min: 0, max: 0 }`. | `src/core/range.ts`, `test/core/range.test.ts`, caller suite | **Low-Medium / Medium** — stops positive `defaultMin` from overriding explicit disable (`max: 0`) |

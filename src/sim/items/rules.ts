@@ -9,12 +9,14 @@ import type { Pos } from '../../core';
 import { EQUIP_SLOT_INFO, gearSlots, hasEffectKind, healAmount, ITEMS } from '../../content';
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
-import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } from '../ai/types';
+import type { AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, Rule, RuleActionDef } from '../ai/types';
 import { getFloor } from '../entities';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { statValue } from '../stats/getStat';
 import { isCursed } from './enchant';
-import { bestUpgrade, gearStatsText, wornItems } from './equipment';
+import { visibleEnemies } from '../combat/rules';
+import { knownStairs } from '../floors/rules';
+import { bestUpgrade, gearStatsText, heldUpgradeNotes, wornItems } from './equipment';
 import { appearanceName, isInstanceTypeKnown, isItemIdentified, isTypeIdentified } from './identify';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
@@ -73,6 +75,31 @@ export const COND_OVERLOADED = defineCondition({
     return { ok: true, detail: `carrying ${carryWeight(state, actor)} of ${carryLimit(state, actor)}` };
   },
   describe: () => 'overloaded',
+});
+
+/** True while the actor can test an unknown scroll without risk: no enemy in sight, healthy, a known way out. */
+export const COND_SAFE_TO_TEST = defineCondition({
+  id: 'cond.safe_to_test',
+  name: 'Safe to test',
+  description:
+    'True while no enemy is in sight, HP is above the healing threshold and stairs the adventurer remembers can be reached: a calm moment to try something unknown.',
+  parse: noParams,
+  evaluate(ctx) {
+    const { state, actor } = ctx;
+    if (visibleEnemies(state, actor).length > 0) return { ok: false, detail: '' };
+    const max = statValue(state, actor, 'hp');
+    if (actor.actor.hp * 100 < max * HEAL_BELOW_PERCENT) return { ok: false, detail: '' };
+    const paths = aiPathGrid(ctx);
+    for (const dir of ['down', 'up'] as const) {
+      const stairs = knownStairs(state, actor.floor, dir);
+      if (stairs === null) continue;
+      if (buildGoalMap(paths, [stairs]).get(actor.pos.x, actor.pos.y) !== UNREACHABLE) {
+        return { ok: true, detail: `no enemy in sight, healthy, stairs ${dir} in reach` };
+      }
+    }
+    return { ok: false, detail: '' };
+  },
+  describe: () => 'safe to test something unknown',
 });
 
 /** True while the actor is wearing at least one cursed item (ETH-044). */
@@ -237,15 +264,24 @@ export const ACT_EQUIP_UPGRADE = defineRuleAction({
     'Put on a weapon or piece of armor from the pack that is clearly better than what is worn in its slot: at least as good in every ' +
     'stat and better in one. Gear with a tradeoff (more damage but less accuracy, say) is left for the player to decide.',
   parse: noParams,
-  resolve({ state, actor }): Resolved | null {
+  resolve({ state, actor }): ResolveResult {
     const up = bestUpgrade(state, actor);
-    if (up === null) return null;
+    if (up === null) {
+      const held = heldUpgradeNotes(state, actor);
+      return held.length === 0 ? null : { skipped: held.join('; ') };
+    }
     const name = itemName(state, up.item, actor);
     const stats = gearStatsText(state, actor, up.item, true);
     const what = stats === null ? `the ${name}` : `the ${name} (${stats})`;
+    const risk = up.gate === undefined ? '' : `; ${up.gate}`;
     const instead = up.replaces === null ? `, nothing worn there yet` : ` in place of the ${itemName(state, up.replaces, actor)}`;
     const where = gearSlotsCount(up.item) > 1 ? ` (${EQUIP_SLOT_INFO[up.slot].label.toLowerCase()})` : '';
-    return { request: { id: 'equip', index: up.index, slot: up.slot }, detail: `equipping ${what}${where}${instead}` };
+    const held = heldUpgradeNotes(state, actor);
+    return {
+      request: { id: 'equip', index: up.index, slot: up.slot },
+      detail: `equipping ${what}${where}${instead}${risk}`,
+      ...(held.length === 0 ? {} : { skipped: held.join('; ') }),
+    };
   },
   describe: () => 'equip clear upgrades',
 });
@@ -286,12 +322,32 @@ export const ACT_USE_IDENTIFY = defineRuleAction({
   describe: () => 'read a scroll of identify',
 });
 
+/**
+ * Read a scroll whose type is still unknown, at a safe moment (ETH-142). Every scroll is harmless
+ * to read, so this is how Identify and Uncursing get learned; the effect is as seeded and logged
+ * as any other reading.
+ */
+export const ACT_READ_UNKNOWN_SCROLL = defineRuleAction({
+  id: 'act.read_unknown_scroll',
+  name: 'Test an unknown scroll',
+  description:
+    'Read a scroll whose type is still unknown while it is safe (no enemy in sight, healthy, stairs within reach), so Identify and Uncursing scrolls are learned instead of carried unread.',
+  parse: noParams,
+  resolve({ state, actor }): Resolved | null {
+    const pack = inventoryOf(actor);
+    const index = pack.findIndex((item) => itemDef(item).category === 'scroll' && !isInstanceTypeKnown(state, item));
+    if (index < 0) return null;
+    return { request: { id: 'use', index }, detail: `reading the unknown ${itemName(state, pack[index] as ItemInstance, actor)} to learn what it does` };
+  },
+  describe: () => 'read an unknown scroll when safe',
+});
+
 function gearSlotsCount(item: ItemInstance): number {
   return gearSlots(itemDef(item)).length;
 }
 
 /** The items domain's conditions, in registration order. */
-export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED, COND_WEARING_CURSED];
+export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED, COND_WEARING_CURSED, COND_SAFE_TO_TEST];
 
 /** The items domain's rule actions, in registration order. */
 export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [
@@ -301,6 +357,7 @@ export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [
   ACT_EQUIP_UPGRADE,
   ACT_USE_UNCURSE,
   ACT_USE_IDENTIFY,
+  ACT_READ_UNKNOWN_SCROLL,
 ];
 
 /**
@@ -323,6 +380,7 @@ export const ITEMS_BASELINE_URGENT: readonly Rule[] = [
  */
 export const ITEMS_BASELINE_LOOT: readonly Rule[] = [
   { condition: { id: 'cond.always' }, action: { id: 'act.use_identify' }, enabled: true },
+  { condition: { id: 'cond.safe_to_test' }, action: { id: 'act.read_unknown_scroll' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.equip_upgrade' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.pick_up', params: { maxDetour: PICKUP_DETOUR } }, enabled: true },
 ];

@@ -13,6 +13,7 @@ import {
   currencyRows,
   discoveriesOf,
   epitaph,
+  cursedGearTurnsOf,
   fallenOf,
   lossNote,
   momentsOf,
@@ -67,6 +68,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const openPrepare = useRunStore((s) => s.openPrepare);
   const look = OUTCOME_LOOK[report.end.outcome];
   const fallen = fallenOf(report);
+  const cursedTurns = cursedGearTurnsOf(report);
   const found = discoveriesOf(report);
   const contracts = contractsOf(report);
   const moments = momentsOf(report);
@@ -110,6 +112,10 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
         <p className={styles.facts}>
           Floor {report.end.depth} reached · {TURN_FORMAT.format(report.result.turns)} turns
         </p>
+
+        {cursedTurns > 0 && (
+          <p className={styles.facts}>Cursed gear was worn for {TURN_FORMAT.format(cursedTurns)} {cursedTurns === 1 ? 'turn' : 'turns'}.</p>
+        )}
 
         {party !== undefined && party.length > 0 && (
           <section aria-label="The party">

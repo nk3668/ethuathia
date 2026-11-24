@@ -22,7 +22,7 @@ import type { Pos } from '../../core';
 import { ENCHANTMENTS, gearSlots, isEquipSlot, isUsable, ITEMS } from '../../content';
 import type { EquipSlot } from '../../content';
 import type { CommandRecord } from '../commands';
-import type { SimDomain, SnapshotCtx, TurnCtx } from '../domain';
+import type { RunTracker, SimDomain, SnapshotCtx, TurnCtx } from '../domain';
 import { getFloor } from '../entities';
 import { registerInvariant } from '../invariants';
 import { defineChronicleKind, momentAt } from '../run/chronicle';
@@ -31,6 +31,7 @@ import { partyVisible } from '../perception';
 import type { Entity, EntityId, FloorId, RunConfig } from '../state';
 import { ITEMS_ACTIONS } from './actions';
 import type { ItemsRequest } from './actions';
+import { CURSED_GEAR_TRACKER, lockedReason } from './cursedGear';
 import { ITEMS_EFFECT_HANDLERS } from './effects';
 import { isCursed, itemStateNote } from './enchant';
 import { SOURCE_EQUIPPED, wornItems } from './equipment';
@@ -58,6 +59,7 @@ export * from './inventory';
 export * from './effects';
 export * from './actions';
 export * from './loot';
+export * from './cursedGear';
 export * from './rules';
 
 /** A picked-up item worth at least this much is a highlight. */
@@ -105,6 +107,8 @@ export type ItemsEvent =
       method: 'wits' | 'use' | 'equip' | 'effect';
       enchantments?: string[];
       cursed?: true;
+      /** Gear that turned out to carry no enchantment, blessing or curse (ETH-142). */
+      plain?: true;
       floor: FloorId;
       pos: Pos;
     }
@@ -157,6 +161,8 @@ export interface WornView {
   scaling?: string;
   /** Present when the worn item is cursed and cannot be unequipped until uncursed (ETH-044). */
   cursed?: true;
+  /** Why the slot is locked, when it is (ETH-142). */
+  locked?: string;
   /** Tooltip note explaining this item's enchantment or blessing/curse state (ETH-044). */
   stateNote?: string;
 }
@@ -260,6 +266,7 @@ export function itemsSnapshot({ state, floor }: SnapshotCtx): ItemsSnapshot {
           value: itemValue(state, item),
           ...scalingField(e, item),
           ...(isCursed(item) ? { cursed: true as const } : {}),
+          ...(isCursed(item) ? { locked: lockedReason(e, slot) as string } : {}),
           ...(note === null ? {} : { stateNote: note }),
         };
       }),
@@ -425,6 +432,7 @@ export const ITEMS_DOMAIN: SimDomain<ItemsTypes> = {
   genSteps: [GEN_LOOT],
   bundleSources: [SOURCE_EQUIPPED],
   effectHandlers: ITEMS_EFFECT_HANDLERS,
+  trackers: [CURSED_GEAR_TRACKER as RunTracker<unknown>],
   turnStart: itemsTurnStart,
   discoveries: {
     itemSighted: (e) => (e.identified !== false && ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),

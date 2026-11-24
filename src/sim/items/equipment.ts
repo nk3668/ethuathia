@@ -21,17 +21,19 @@
  * scaling depends on the wielder, `compareGear` weighs a sword higher for a deft wielder than for
  * a strong one.
  */
-import { EQUIP_SLOTS, gearSlots } from '../../content';
+import { baseEnchantmentFor, EQUIP_SLOT_INFO, EQUIP_SLOTS, gearSlots, hasEffectKind } from '../../content';
 import type { Bundle, EquipSlot, Modifier } from '../../content';
 import type { Entity, RunState } from '../state';
 import { scaleModifier } from '../stats/getStat';
 import type { BundleSource } from '../stats/types';
 import { isStatId, STAT_INFO } from '../stats/statIds';
 import { isCursed, isKnownCursed } from './enchant';
-import { isInstanceTypeKnown } from './identify';
+import { isInstanceTypeKnown, isItemIdentified } from './identify';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
 import { inventoryOf } from './inventory';
+import { hiddenGearMargin } from './loot';
+import { itemName } from './name';
 import { propertyBundleParts } from './properties';
 import type { ItemBundle } from './properties';
 
@@ -175,15 +177,101 @@ export function slotFor(entity: Entity, item: ItemInstance): EquipSlot | null {
  * the AI compares only known stats.
  */
 export function upgradeSlot(state: RunState, entity: Entity, item: ItemInstance): EquipSlot | null {
-  if (isKnownCursed(state, item)) return null;
-  const slots = gearSlots(itemDef(item)).filter((s) => !isCursed(equippedIn(entity, s)));
-  if (slots.length === 0) return null;
+  return evaluateUpgrade(state, entity, item).slot;
+}
+
+/** What the baseline decided about putting `item` on (ETH-142): where, and why it did or didn't. */
+export interface UpgradeVerdict {
+  /** The slot it would go in, or `null` if it won't be put on. */
+  slot: EquipSlot | null;
+  /** Why an item that looks better was held back (a locked slot, an unidentified item not worth the risk, a pending identify). Stable while nothing changes. */
+  held?: string;
+  /** For an unidentified item put on anyway: the numbers it beat. */
+  gate?: string;
+}
+
+/** `1.04`, `0.9`, `2`: a number to at most two decimals, without trailing zeros. */
+function fmt(n: number): string {
+  return String(Number(n.toFixed(2)));
+}
+
+/** True if `entity` carries a Scroll of Identify whose type is known: it can identify before it equips. */
+function canIdentifyFirst(state: RunState, entity: Entity): boolean {
+  return inventoryOf(entity).some((it) => isInstanceTypeKnown(state, it) && hasEffectKind(itemDef(it), 'identify'));
+}
+
+/**
+ * Total change in known `add` stats from swapping `worn` for `item`, in enhancement points of the def's
+ * base enchantment (one point is what one level of it adds), so a gain of +2 Damage on a weapon is 2 points.
+ * Only stats the party can see count; a better item only gains, so the changes just add up.
+ */
+function knownGainPoints(state: RunState, entity: Entity, item: ItemInstance, worn: ItemInstance | null): number {
+  const mod = baseEnchantmentFor(itemDef(item))?.bundle.modifiers?.[0];
+  if (mod === undefined || mod.op !== 'add' || mod.value === 0) return 0;
+  const now = statTotals(state, entity, worn, true);
+  const next = statTotals(state, entity, item, true);
+  if (now === null || next === null) return 0;
+  let sum = 0;
+  for (const key of new Set([...now.keys(), ...next.keys()])) {
+    if (key.startsWith('add:')) sum += (next.get(key) ?? 0) - (now.get(key) ?? 0);
+  }
+  return sum / Math.abs(mod.value);
+}
+
+/**
+ * `upgradeSlot` with its reasons (ETH-142). Known-cursed items and cursed slots are skipped as
+ * before. An item that is not identified yet is put on only if the party cannot identify it first
+ * and its gain in base stats beats `hiddenGearMargin` for the floor's depth: the expected value of
+ * what it may be hiding plus a premium for the cursed slot lock. Everything here reads known stats
+ * and the def and depth only, never the hidden properties.
+ */
+export function evaluateUpgrade(state: RunState, entity: Entity, item: ItemInstance): UpgradeVerdict {
+  if (isKnownCursed(state, item)) return { slot: null };
+  const def = itemDef(item);
   const cmp = (a: ItemInstance | null, b: ItemInstance | null) => compareGear(state, entity, a, b, true);
+  const all = gearSlots(def);
+  const slots = all.filter((s) => !isCursed(equippedIn(entity, s)));
+  if (slots.length === 0) {
+    const locked = all.find((s) => cmp(item, equippedIn(entity, s)) === 'better');
+    if (locked === undefined) return { slot: null };
+    const worn = equippedIn(entity, locked) as ItemInstance;
+    return {
+      slot: null,
+      held: `the ${itemName(state, item, entity)} would be better, but the ${EQUIP_SLOT_INFO[locked].label.toLowerCase()} slot is locked by the cursed ${itemName(state, worn, entity)} (a Scroll of Uncursing frees it)`,
+    };
+  }
   const empty = slots.find((s) => equippedIn(entity, s) === null);
-  if (empty !== undefined) return cmp(item, null) === 'better' ? empty : null;
-  const beaten = slots.filter((s) => cmp(item, equippedIn(entity, s)) === 'better');
-  const weaker = beaten.find((s) => beaten.some((o) => o !== s && cmp(equippedIn(entity, o), equippedIn(entity, s)) === 'better'));
-  return weaker ?? beaten[0] ?? null;
+  let slot: EquipSlot | null;
+  if (empty !== undefined) {
+    slot = cmp(item, null) === 'better' ? empty : null;
+  } else {
+    const beaten = slots.filter((s) => cmp(item, equippedIn(entity, s)) === 'better');
+    slot = beaten.find((s) => beaten.some((o) => o !== s && cmp(equippedIn(entity, o), equippedIn(entity, s)) === 'better')) ?? beaten[0] ?? null;
+  }
+  if (slot === null || isItemIdentified(state, item)) return { slot };
+
+  const name = itemName(state, item, entity);
+  if (canIdentifyFirst(state, entity)) return { slot: null, held: `the ${name} can wait: a Scroll of identify will name it first` };
+  const gain = knownGainPoints(state, entity, item, equippedIn(entity, slot));
+  const { expected, curseRisk, margin } = hiddenGearMargin(def, floorDepth(state, entity));
+  const numbers = `gain +${fmt(gain)} vs margin ${fmt(margin)} (expected hidden ${expected < 0 ? '' : '+'}${fmt(expected)}, curse lock risk +${fmt(curseRisk)})`;
+  if (gain <= margin) return { slot: null, held: `the unidentified ${name} isn't worth the risk: ${numbers}` };
+  return { slot, gate: `unidentified, but ${numbers}` };
+}
+
+/** The depth number of the floor `entity` is on (1 is the first floor): what the party can count, not the hidden dungeon depth. */
+function floorDepth(state: RunState, entity: Entity): number {
+  return state.dungeon.nodes[entity.floor]?.depth ?? 1;
+}
+
+/** The reasons items in `entity`'s pack that look like upgrades are being held back, without repeats (ETH-142). */
+export function heldUpgradeNotes(state: RunState, entity: Entity): string[] {
+  const notes: string[] = [];
+  for (const item of inventoryOf(entity)) {
+    const held = evaluateUpgrade(state, entity, item).held;
+    if (held !== undefined && !notes.includes(held)) notes.push(held);
+  }
+  return notes;
 }
 
 /** A clear upgrade found in a pack: the pack index, its slot and what it would replace. */
@@ -192,6 +280,8 @@ export interface GearUpgrade {
   slot: EquipSlot;
   item: ItemInstance;
   replaces: ItemInstance | null;
+  /** For an unidentified item put on anyway: the numbers it beat (ETH-142). */
+  gate?: string;
 }
 
 /**
@@ -211,7 +301,11 @@ export function bestUpgrade(state: RunState, entity: Entity): GearUpgrade | null
       if (target === slot) candidates.push(index);
     });
     const best = candidates.find((i) => !candidates.some((j) => compareGear(state, entity, pack[j] as ItemInstance, pack[i] as ItemInstance, true) === 'better'));
-    if (best !== undefined) return { index: best, slot, item: pack[best] as ItemInstance, replaces: worn };
+    if (best !== undefined) {
+      const item = pack[best] as ItemInstance;
+      const gate = evaluateUpgrade(state, entity, item).gate;
+      return { index: best, slot, item, replaces: worn, ...(gate === undefined ? {} : { gate }) };
+    }
   }
   return null;
 }

@@ -40,6 +40,12 @@ export interface ItemInstance {
    * known (ETH-044). Absent means known; loot generation sets `false` on items that start unidentified.
    */
   identified?: false;
+  /**
+   * Set once the Wits `identify` roll on pickup has been made for this instance (ETH-142), so
+   * dropping and picking it up again can't reroll. Only present while `identified: false`; it
+   * never affects stacking.
+   */
+  identifyTried?: true;
   /** Heirloom history and flavor (ETH-118 `prop.origin`; ETH-069, ETH-109). Never stacks. */
   origin?: ItemOrigin;
 }
@@ -104,7 +110,9 @@ export function canStack(a: ItemInstance, b: ItemInstance): boolean {
     const va = fa[field];
     const vb = fb[field];
     if (va === undefined && vb === undefined) continue;
-    if (propertyKindFor(field)?.stacks === 'never') return false;
+    const kind = propertyKindFor(field);
+    if (kind?.stacks === 'ignore') continue;
+    if (kind?.stacks === 'never') return false;
     if (va === undefined || vb === undefined || stableText(va) !== stableText(vb)) return false;
   }
   return true;
@@ -128,6 +136,10 @@ export function addToStacks(stacks: ItemInstance[], item: ItemInstance): void {
     const moved = Math.min(left, size - stack.qty);
     stack.qty += moved;
     left -= moved;
+    // A flag only some of the merged items carry (`stacks: 'ignore'`) can't be claimed for all of them.
+    for (const field of Object.keys(stack)) {
+      if (propertyKindFor(field)?.stacks === 'ignore' && !Object.hasOwn(item, field)) Reflect.deleteProperty(stack, field);
+    }
   }
   while (left > 0) {
     const qty = Math.min(left, size);

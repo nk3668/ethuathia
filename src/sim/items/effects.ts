@@ -17,7 +17,7 @@ import { statValue } from '../stats/getStat';
 import type { EffectHandler } from '../stats/types';
 import { isCursed, itemEnchantmentIds } from './enchant';
 import { wornItems } from './equipment';
-import { hasHiddenProperties, identifyInstance, isItemIdentified } from './identify';
+import { hasHiddenProperties, identifyInstance, isGearDef, isItemIdentified } from './identify';
 import { addToStacks } from './instance';
 import type { ItemInstance } from './instance';
 import { inventoryOf } from './inventory';
@@ -39,8 +39,9 @@ export function clearPlainTypeFlags(state: RunState, defId: string, consolidate 
     if (member?.inventory === undefined) continue;
     let touched = false;
     for (const entry of member.inventory.items) {
-      if (entry.def === defId && entry.identified === false && !hasHiddenProperties(entry)) {
+      if (entry.def === defId && entry.identified === false && !isGearDef(entry.def) && !hasHiddenProperties(entry)) {
         Reflect.deleteProperty(entry, 'identified');
+        Reflect.deleteProperty(entry, 'identifyTried');
         touched = true;
       }
     }
@@ -68,6 +69,7 @@ export function emitIdentified(
     method,
     ...(enchantments.length > 0 ? { enchantments } : {}),
     ...(isCursed(item) ? { cursed: true } : {}),
+    ...(isGearDef(item.def) && !hasHiddenProperties(item) ? { plain: true as const } : {}),
     floor: actor.floor,
     pos: { x: actor.pos.x, y: actor.pos.y },
   });
@@ -100,7 +102,9 @@ export function identifyItemFor(
  * unidentified item. Returns true if the item was identified.
  */
 export function tryIdentifyOnPickup(state: RunState, actor: ActorEntity, item: ItemInstance, emit: Emit): boolean {
-  if (isItemIdentified(state, item)) return false;
+  if (isItemIdentified(state, item) || item.identifyTried === true) return false;
+  // One roll per item instance: picking it up again can't farm identification (ETH-142).
+  item.identifyTried = true;
   const chance = statValue(state, actor, 'identify') / 100;
   if (chance <= 0) return false;
   const rng = new Rng(state.rng.loot);

@@ -89,6 +89,7 @@ describe('the property registry', () => {
       'prop.blessing',
       'prop.enchantments',
       'prop.identified',
+      'prop.identify_tried',
       'prop.origin',
       'prop.test_edge',
       'prop.test_veiled',
@@ -211,6 +212,7 @@ describe('canonical property value invariant (ETH-131)', () => {
     'prop.blessing': ['uncursed', ''],
     'prop.enchantments': [[]],
     'prop.identified': [true],
+    'prop.identify_tried': [false],
     'prop.origin': [{}],
   };
 
