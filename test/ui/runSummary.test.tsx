@@ -7,7 +7,9 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { applyRunResult, newProfile, runRecord } from '../../src/meta';
+import { applyRunResult, masteryGainBanked, newProfile, runRecord } from '../../src/meta';
+import type { ClassMasteryGain } from '../../src/meta';
+import { masteryBreakdown, masteryLine } from '../../src/ui/shell/masteryText';
 import { createRun, depthRenown, emptyRunResult, favorKey, InlineHost, renownForFloor, turnsRenown } from '../../src/sim';
 import type { RunConfig, RunReport } from '../../src/sim';
 import { App } from '../../src/ui/App';
@@ -136,6 +138,43 @@ describe('run summary text', () => {
       end: { outcome: 'victory', turn: 3000, cause: 'Won.', depth: 10 },
     };
     expect(renownBreakdown(legacyPast)).toBeNull();
+  });
+});
+
+describe('Class Mastery on the summary (ETH-087)', () => {
+  const MIRA_RUN: RunReport = {
+    result: {
+      ...emptyRunResult('wipe'),
+      deepestDepth: 3,
+      extras: {
+        'run.party': [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }],
+        'track.xp': { byActor: { 1: { classId: 'class.vanguard', xp: 600, level: 3 } }, byClass: {} },
+      },
+    },
+    end: { outcome: 'wipe', turn: 100, cause: 'Mira fell.', depth: 3 },
+  };
+
+  it('shows a line per class with the level before and after', () => {
+    useProfileStore.setState({ profile: applyRunResult(newProfile(), MIRA_RUN.result) });
+    render(<RunSummary />);
+    act(() => useRunStore.getState().runEnded(MIRA_RUN));
+    const section = screen.getByRole('region', { name: 'Class Mastery' });
+    const gain = masteryGainBanked(useProfileStore.getState().profile, MIRA_RUN.result)[0] as ClassMasteryGain;
+    expect(gain.levelBefore).toBe(0);
+    expect(section.textContent).toBe(`Class MasteryVanguard Mastery +${gain.xp} XP · level 0 → ${gain.levelAfter}`);
+    expect(masteryBreakdown(gain)[0]).toBe('Mira: 600 XP × 100% = 600');
+  });
+
+  it('words an unchanged level without an arrow', () => {
+    const gain = {
+      classId: 'class.vanguard',
+      xp: 5,
+      members: [],
+      bonus: { depth: 0, objectives: 0, depthXp: 0, objectiveXp: 0, total: 5 },
+      levelBefore: 2,
+      levelAfter: 2,
+    };
+    expect(masteryLine(gain)).toBe('Vanguard Mastery +5 XP · level 2');
   });
 });
 
