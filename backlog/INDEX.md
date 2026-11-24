@@ -129,7 +129,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-120](sim-core/ETH-120-run-chronicle.md) | Run chronicle: a durable list of a run's notable events, kept apart from the event buffer | sim-core | M2 | P1 | done | M |
 | [ETH-121](behavior-rules/ETH-121-shared-conditions-requirements.md) | Shared conditions: run-scope conditions and a Requirement type usable outside rules | behavior-rules | M2 | P1 | done | M |
 | [ETH-159](town-meta/ETH-159-smithy-tree.md) | Smithy upgrade tree spent in Trophies | town-meta | M2 | P1 | idea | M |
-| [ETH-160](characters/ETH-160-starter-classes-and-races.md) | Starter set of unlockable classes and races | characters | M2 | P1 | idea | M |
+| [ETH-160](characters/ETH-160-starter-classes-and-races.md) | Starter set of unlockable classes and races | characters | M2 | P1 | ready | M |
 | [ETH-161](tools-balance/ETH-161-meta-loop-economy-balance.md) | Meta-loop economy balance pass (M2 capstone) | tools-balance | M2 | P1 | idea | M |
 | [ETH-172](town-meta/ETH-172-upgrade-ranks-and-tiers.md) | Upgrade engine supports ranked nodes and quest-locked tiers | town-meta | M2 | P1 | done | M |
 | [ETH-047](ui-shell/ETH-047-highlights-auto-pause.md) | Highlights feed and optional auto-pause | ui-shell | M2 | P2 | done | M |
@@ -147,7 +147,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-170](town-meta/ETH-170-building-tier-quests.md) | Building-tier quests open each building's next tier | town-meta | M2 | P2 | idea | M |
 | [ETH-171](town-meta/ETH-171-sell-carried-items.md) | Items carried out of the dungeon sell for Trophies | town-meta | M2 | P2 | idea | S |
 | [ETH-175](ui-shell/ETH-175-disabled-button-tooltips.md) | Kit button that explains why it is disabled, with a tooltip | ui-shell | M2 | P2 | ready | S |
-| [ETH-176](characters/ETH-176-class-starting-kits.md) | Classes start each run with a kit of gear | characters | M2 | P1 | idea | S |
+| [ETH-176](characters/ETH-176-class-starting-kits.md) | Classes start each run with a kit of gear | characters | M2 | P1 | ready | S |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |
 | [ETH-077](ui-shell/ETH-077-prepare-attribute-previews.md) | Show attribute previews in the Prepare screen's class and race selects | ui-shell | M2 | P3 | done | S |
