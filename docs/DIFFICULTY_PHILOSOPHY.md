@@ -224,14 +224,49 @@ Apply these shifts relative to the Danger-band baseline `brute` above:
 
 ## 9. Measuring balance
 
-Every change to monsters, items, XP, recovery, generation, or return-trip rules must be checked with the headless harness rather than tuned by feel:
+Balance is checked with the headless harness (`npm run sim`), never tuned by feel. Sweeps are slow, though, so run one only when the change can move the numbers, and only at the size the question needs.
+
+### When a change needs the harness
+
+Decide by what the change can affect, not by its size.
+
+| Kind of change | Harness? | Tier |
+|---|---|---|
+| **Balance-affecting:** monster, item, loot or enchantment numbers; XP and leveling; recovery and healing; combat formulas; encounter generation, spawn budgets, templates and patrols; baseline AI decisions (rules, conditions, actions, their order); run-end and return-trip rules; rewards and currency formulas; anything party size or upgrades change inside a run | **Yes** | T2 gate, or T3 if the item has to hit a §2 band |
+| **Behavior-neutral sim changes:** refactors, performance work, serialization and state-shape changes that don't alter decisions, new events, trace or log text | **Identity check only** | T0 |
+| **Not sim-related:** anything only in `src/ui/` (it can't change the sim; layer rule, `CLAUDE.md` §9), Codex and tooltip text, content names, descriptions and glyphs, docs, backlog, tests only, tooling that doesn't touch the sim | **No** | `npm run check` (+ a look at the running app for UI) |
+
+If a "neutral" change fails the T0 identity check, it isn't neutral: find out why, then treat it as balance-affecting.
+
+### Seed tiers
+
+All comparisons run the **same seeds** on both commits (`--compare REF`, or `--baseline FILE`). Most seeds end the same way on both sides, and only the seeds that flip carry information. That makes a paired before/after far less noisy than comparing two independent win rates.
+
+| Tier | Seeds | Use it for | Passes when |
+|---|---|---|---|
+| **T0 Identity** | 20, paired | Behavior-neutral sim changes | 0 seeds end in a different state hash |
+| **T1 Direction** | 50 | Iterating while tuning; interim numbers mid-item | No pass mark: it only shows which way a lever moves things |
+| **T2 Gate** | 100, paired against the item's base | Finishing a balance-affecting item that isn't aiming at a §2 band | Every delta is explained as intended; no new stalls, stuck runs or unattributed deaths |
+| **T3 Acceptance** | 200 per configuration | Checking a §2 band, the Principle 6 party-size ordering, and a milestone baseline (§9.1–9.2) | Each target band or ordering holds |
+
+Why 200 for acceptance: at 100 seeds the 95% interval on a ~20% win rate is about ±8 points, as wide as the bands in §2. At 200 it is about ±5.5. The party-size ordering compares two noisy rates (e.g. 20% vs 40%), so it needs T3 as well. Below 200 a true 2× can fail by chance.
+
+### Pieces of a larger deliverable
+
+When an item is one piece of a larger initiative that ends in its own balance check (each milestone's capstone, §9.1, such as `ETH-080` for M1.5), the piece doesn't run T3. Absolute bands are the capstone's job, and tuning a piece toward them is wasted once the next piece moves them again. A piece runs **T2** (T1 is enough if the capstone follows straight after). It records its numbers with the commit hash in its item Log, so the capstone can tell which piece moved what. It must still show no catastrophic regression: no new stalls, stuck runs or crashes, and no collapse in win rate or depth.
+
+### Measure on a clean tree
+
+Run balance numbers on committed code, or with `--compare` against a named ref, and record the commit hash next to every number you report.
 
 ```sh
-npm run sim -- --seeds 100
-npm run sim -- --seeds 100 --party 2
-npm run sim -- --seeds 100 --party 4
-npm run sim -- --seeds 100 --compare origin/main
+npm run sim -- --seeds 20 --compare origin/main                          # T0: expect 0 hash diffs
+npm run sim -- --seeds 50 --preset fresh                                 # T1 while tuning
+npm run sim -- --seeds 100 --compare <item base>                         # T2 gate
+npm run sim -- --seeds 200 --preset progressed --party 4                 # T3, one configuration
 ```
+
+### Metrics
 
 Track these metrics together:
 
@@ -245,19 +280,11 @@ Track these metrics together:
 - **Composition spread** (from M3 on): mixed-class parties against same-size Vanguard parties (Principle 8).
 - **Risk pricing** (from M4 on): win-rate drop against reward multiplier for each Omen rank (Principle 14).
 
-## 10. Open questions
-
-- **Does every threat need a counter the player already has?** One candidate principle: whenever a threat first appears, a counter to it (a rule, an item or an upgrade) is already available, so every death teaches "I could have done X". It is undecided because the player may be hands-off and possession may come later as an unlock, so any counter would have to come from the built-in AI, rule presets or upgrades. Revisit once the rules editor lands (M3).
-
-**Sample size.** Use **200 seeds** when checking acceptance against a target band. At 100 seeds the 95% interval on a ~20% rate is about ±8 points, as wide as the bands in §2. 50 seeds is fine for direction while tuning.
-
-**Measure on a clean tree.** Run balance numbers on committed code, or with `--compare` against a named ref, and record the commit hash next to every number you report.
-
 ### 9.1 Milestone balance checks
 
 Per Principle 7, every milestone ends with a balance check, and so does any major content addition within a milestone. Each check is a backlog item in `tools-balance` that:
 
-1. Runs the full §9 sweep (presets × party sizes 1–4, 200 seeds) on the milestone's integration branch.
+1. Runs the full §9 sweep at T3 (presets × party sizes 1–4, 200 seeds each) on the milestone's integration branch.
 2. Compares against the previous baseline in §9.2 and explains every target that moved.
 3. Retunes with data in `src/content/` and shared balance constants, or updates the §2 targets here with the reason.
 4. Records the new baseline in §9.2.
@@ -269,3 +296,7 @@ Lever order when retuning (fix the earliest one that's off first, since each dis
 | Milestone | Commit | Fresh solo win | Progressed ×4 win | Floor 3+ (fresh) | Return-trip lethality | Mean end level (solo / ×4) |
 |---|---|---|---|---|---|---|
 | M1.5 (`ETH-080`) | *pending* | | | | | |
+
+## 10. Open questions
+
+- **Does every threat need a counter the player already has?** One candidate principle: whenever a threat first appears, a counter to it (a rule, an item or an upgrade) is already available, so every death teaches "I could have done X". It is undecided because the player may be hands-off and possession may come later as an unlock, so any counter would have to come from the built-in AI, rule presets or upgrades. Revisit once the rules editor lands (M3).

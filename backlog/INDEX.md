@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-152**
+**Next ID: ETH-153**
 
 **Assigned to Antigravity** (low risk; pick any whose dependencies are done): ETH-090, ETH-077, ETH-019, then ETH-094, ETH-085, ETH-084.
 
@@ -94,6 +94,7 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-147](combat-items/ETH-147-consumable-hidden-property-leak.md) | Known-type potions and scrolls stop giving away a hidden blessing or curse | combat-items | M1.6 | P2 | idea | S |
 | [ETH-148](adventurer-ai/ETH-148-flee-hysteresis.md) | Flee with hysteresis so a hurt adventurer doesn't return to exploring while chased | adventurer-ai | M1.6 | P2 | idea | S |
 | [ETH-149](tools-balance/ETH-149-tooling-hygiene.md) | Tooling hygiene: formatter policy, line endings and worktree-safe tests | tools-balance | M1.6 | P3 | idea | S |
+| [ETH-152](tools-balance/ETH-152-parallel-sim-harness.md) | Run harness seeds in parallel across CPU cores | tools-balance | M1.6 | P2 | idea | S |
 | [ETH-059](saves-platform/ETH-059-profile-saves.md) | Profile, banked currencies and versioned local saves | saves-platform | M2 | P0 | done | M |
 | [ETH-023](town-meta/ETH-023-at-risk-run-currency.md) | Track run earnings as at-risk currency and lose 25% on a wipe | town-meta | M2 | P1 | done | M |
 | [ETH-063](town-meta/ETH-063-upgrade-engine-town.md) | Upgrade engine and the Town screen with a Guild Hall | town-meta | M2 | P1 | done | M |

@@ -34,3 +34,4 @@ Confidence that the sim is deterministic and that balance changes are measured, 
 - [ ] [ETH-145 Fix the party-size inversion so solo is the hardest way to play](ETH-145-party-size-ordering.md)
 - [ ] [ETH-146 Composition and rules balance pass (M3 milestone balance check)](ETH-146-composition-balance-pass.md)
 - [ ] [ETH-149 Tooling hygiene: formatter policy, line endings and worktree-safe tests](ETH-149-tooling-hygiene.md)
+- [ ] [ETH-152 Run harness seeds in parallel across CPU cores](ETH-152-parallel-sim-harness.md)

@@ -253,7 +253,7 @@ A desktop app (§9) with a dark theme. The dungeon uses colored monospace ASCII 
   - The UI reads snapshots and events from the sim and sends commands back. It never mutates sim state directly.
 - **Content is data:** classes, races, monsters, items, Omens, deities and upgrade nodes are typed definitions in `src/content/`, validated at load time.
 - **Saves:** local only, written to a save file in the app data folder through Tauri (IndexedDB when running in a dev browser tab). Saves are versioned with migrations, with export/import to a file or string and a hard reset. Autosave regularly and on close.
-- **Balance harness:** a script that runs N seeded headless runs and reports depth, death causes and currency per hour. Use it to check any balance change. It starts as `npm run sim` (M0: turns and explored share per floor).
+- **Balance harness:** a script that runs N seeded headless runs and reports depth, death causes and currency per hour. Use it to check any balance change. It starts as `npm run sim` (M0: turns and explored share per floor). Which changes need it, and how many seeds (T0 identity 20, T1 direction 50, T2 gate 100, T3 acceptance 200), is set in `docs/DIFFICULTY_PHILOSOPHY.md` §9. UI-only, docs and test-only changes don't run it, and a piece of a larger initiative leaves T3 to that initiative's capstone.
 
 ### Proposed layout
 ```

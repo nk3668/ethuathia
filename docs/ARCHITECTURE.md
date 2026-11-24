@@ -2533,7 +2533,8 @@ cards show every member, and the top bar and log show the run.
 
 Listed for contributors in [`../backlog/README.md`](../backlog/README.md#gates): `npm run
 check` (typecheck, lint and every test, which includes the invariants, soak, determinism and
-app-boot tests), the sim compare table against `origin/main` in the PR body, a look at the
+app-boot tests), the sim compare table in the PR body when the change warrants one (which changes
+do, and at what seed tier: [`DIFFICULTY_PHILOSOPHY.md`](DIFFICULTY_PHILOSOPHY.md) §9), a look at the
 running app for UI changes, and extending the contract/property guards in §11.6 whenever a new
 critical service or extension seam is added.
 
