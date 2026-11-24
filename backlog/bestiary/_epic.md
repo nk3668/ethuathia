@@ -2,7 +2,7 @@
 epic: bestiary
 title: Bestiary: monsters, uniques and elites
 status: active
-milestones: [M1, M1.5, M2, M4, M5, later]
+milestones: [M1, M1.5, M2, M5, M7, later]
 ---
 
 ## Goal

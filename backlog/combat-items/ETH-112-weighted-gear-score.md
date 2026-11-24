@@ -4,12 +4,12 @@ title: Weighted gear score so auto-equip can take trade-offs
 type: feature
 status: idea
 priority: P3
-milestone: M3
+milestone: M5
 epic: combat-items
 size: M
 depends_on: [ETH-043]
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ ETH-043 auto-equips only Pareto upgrades (`compareGear` / `bestUpgrade`), so a p
 ## Log
 - 2026-11-18: Created from Nate's answer to the ETH-043 auto-equip question (tabled; keep Pareto-only for now).
 - 2026-11-24: Added a note from the M1.5/M1.6 fan-out (Nate approved).
+- 2026-11-24: Moved from M3 to M5 in the backlog reorganization by theme.

@@ -1672,7 +1672,7 @@ features, place stairs, populate, place graves. Caves swap the layout step for c
 automata; a big room skips connection. Most steps are shared.
 
 The dungeon itself is a small graph of floor nodes (`DungeonGraph`). M0 and M1 use a straight
-line; route forks in M6 add branches with no change to the floor code.
+line; route forks in M8 add branches with no change to the floor code.
 
 As built in `src/sim/gen/` (ETH-006):
 
@@ -1694,7 +1694,7 @@ As built in `src/sim/gen/` (ETH-006):
   `new Rng(floorRngState(seed, floorId))`, a state derived from the seed and the floor id alone,
   so the order in which floors are first reached never changes one; generation draws from none
   of the run's streams. Every generated floor is `DEFAULT_FLOOR_TYPE` (Hewn Halls) until floor
-  variety (M6), and the bottom floor's stairs down are left out.
+  variety (M8), and the bottom floor's stairs down are left out.
 - **Stairs (ETH-058):** the `stairs` action (`{ id: 'stairs', dir }`) on matching stairs moves
   the actor to the linked stairs of the floor above or below (the up stairs when going down),
   or the nearest free tile if someone stands there. The first floor's up stairs lead out of the

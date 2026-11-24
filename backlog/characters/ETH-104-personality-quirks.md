@@ -4,12 +4,12 @@ title: Personality quirks
 type: feature
 status: idea
 priority: P3
-milestone: M5
+milestone: M7
 epic: characters
 size: M
 depends_on: [ETH-068, ETH-119, ETH-121]
 created: 2026-11-18
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -25,3 +25,4 @@ Idea accepted in Nate's interview answers (2026-11-18).
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
 - 2026-11-19: Added ETH-119 (adventurer records), ETH-121 (shared conditions) to `depends_on`: build on the shared system instead of a parallel version.
+- 2026-11-24: Moved from M5 to M7 in the backlog reorganization by theme.

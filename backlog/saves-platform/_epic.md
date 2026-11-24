@@ -2,7 +2,7 @@
 epic: saves-platform
 title: Saves, desktop packaging and time-away
 status: active
-milestones: [M2, M6]
+milestones: [M2, M8]
 ---
 
 ## Goal

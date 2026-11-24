@@ -289,12 +289,16 @@ The milestones are broken down into work items in the backlog (§11). Every mile
 2. **M1 – A full run:** multiple floors, stairs, combat, items, death, run summary, auto-restart; the Recover-relic contract and the return trip; attributes, leveling, monster roles, equipment slots, enchantment and identification.
 3. **M1.5 – Living Dungeon & Balance:** extensible Danger scale and hidden variable dungeon depth, expanded starter bestiary and templates across Danger bands, threat-budget room encounters with group engagement and corridor patrols, return-trip deep surge, and the systemic balance pass (`ETH-080`, see `docs/DIFFICULTY_PHILOSOPHY.md`).
 4. **M1.6 – Review follow-ups:** fixes found while reviewing merged items. Identification secrecy and curse safety for the idle player (`ETH-142`), a content check that every discoverable def can appear in a run (`ETH-143`), and per-monster Codex kill tiers (`ETH-144`).
-5. **M2 – Meta layer:** currencies, Town with Guild Hall and Smithy, saves, Codex; more contract types, contract slots, the bounty board; proficiencies and aptitudes, class unlocks, uniques, monster families, elites and mini-bosses, affixes and artifacts, food buffs; highlights feed, run history.
-6. **M3 – Behavior rules:** rules editor, Library, presets, AI trace in the log; quest rule conditions, class abilities and class-aware AI roles.
-7. **M4 – Risk:** Omens, conducts, reward multiplier; bounty encounters, traps and searching.
-8. **M5 – Lineage:** roster, gravestones and grave interactions, heirlooms, retirement, Ossuary and Tavern; the Rescue contract.
-9. **M6 – Depth:** deities, altars, floor types, route forks, offline progress, dungeon merchants.
-10. **Later:** tileset, more content, achievements, cosmetics, balance passes.
+From M2 on, each milestone is one theme, so a milestone delivers one capability the player can feel. Work is ordered by that capability, not by which epic it touches. (The shared foundations, such as the objective engine, run-wide modifiers, monster templates, the chronicle and the Codex, were built early and are already done.)
+
+5. **M2 – Meta loop:** a run's earnings buy choices in town that change the next run. Guild Hall and Smithy trees, Foundations vs. Tactics, a starter set of classes and races to unlock, building unlock quests, gold to Trophies, persistent adventurer records, desktop packaging with file saves; economy pacing capstone.
+6. **M3 – Behavior rules and AI:** the rules editor, Library, presets, doctrines (clear vs. stairs, formation), smarter baseline escapes; rules balance capstone.
+7. **M4 – Classes and roles:** proficiencies and aptitudes, signature abilities, class-aware AI roles, Class Mastery levels and trees; composition balance capstone.
+8. **M5 – Foes and loot:** uniques, monster families, elites and mini-bosses, sleeping monsters, affixes and artifacts, more enchantments, food buffs, gear score, identify polish, party-scaled return surge; danger and loot capstone.
+9. **M6 – Quests and risk:** everything the player opts into on the Prepare screen: more contract types and contract slots, the bounty board and bounty encounters, dungeon encounters, Omens, conducts and the reward multiplier, traps; risk/reward capstone.
+10. **M7 – Lineage:** roster and graveyard, gravestones and heirlooms, retirement and the Tavern, allied creatures and ghosts, descendants, dungeon recruits, the Rescue contract; campaign capstone.
+11. **M8 – Gods and world:** deities and altars, grave boons, themed dungeons, merchants, vaults, floor events, time-away catch-up; capstone.
+12. **Later:** tileset, more content, achievements, cosmetics, pets, balance passes.
 
 ---
 

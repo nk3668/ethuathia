@@ -4,7 +4,7 @@ title: Scale the return-trip surge with party size
 type: chore
 status: idea
 priority: P2
-milestone: M2
+milestone: M5
 epic: tools-balance
 size: M
 depends_on: [ETH-080]
@@ -50,3 +50,4 @@ adventurer.
 
 ## Log
 - 2026-11-24: Created from the ETH-080 review (Nate approved). It also carries the 2× follow-up.
+- 2026-11-24: Moved from M2 to M5 in the backlog reorganization by theme.

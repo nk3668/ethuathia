@@ -2,7 +2,7 @@
 epic: adventurer-ai
 title: Decision engine and baseline AI
 status: active
-milestones: [M0, M1, M1.6, M4]
+milestones: [M0, M1, M1.6, M3, M6]
 ---
 
 ## Goal

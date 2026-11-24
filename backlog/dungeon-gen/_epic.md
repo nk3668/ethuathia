@@ -2,7 +2,7 @@
 epic: dungeon-gen
 title: Dungeon generation
 status: active
-milestones: [M0, M1, M1.5, M4, M5, M6, later]
+milestones: [M0, M1.5, M2, M6, M8, later]
 ---
 
 ## Goal

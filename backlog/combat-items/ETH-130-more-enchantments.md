@@ -4,12 +4,12 @@ title: Expand the enchantment pool with additional effects and triggers
 type: content
 status: idea
 priority: P3
-milestone: M2
+milestone: M5
 epic: combat-items
 size: M
 depends_on: [ETH-044]
 created: 2026-11-22
-updated: 2026-11-22
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -29,3 +29,4 @@ ETH-044 established the data-driven `ENCHANTMENTS` registry and domain `effectHa
 
 ## Log
 - 2026-11-22: Created alongside ETH-044 per Nate's request to expand the enchantment pool later.
+- 2026-11-24: Moved from M2 to M5 in the backlog reorganization by theme.

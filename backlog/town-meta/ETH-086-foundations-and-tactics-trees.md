@@ -3,13 +3,13 @@ id: ETH-086
 title: Split upgrade trees into permanent Foundations and free Tactics
 type: feature
 status: ready
-priority: P2
+priority: P1
 milestone: M2
 epic: town-meta
 size: M
 depends_on: [ETH-063]
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ ETH-071 doctrine becomes a Tactics choice.
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-24: Priority P2 to P1 in the backlog reorganization by theme.

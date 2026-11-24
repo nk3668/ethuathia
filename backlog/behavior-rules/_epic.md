@@ -27,3 +27,6 @@ The player shapes how adventurers act by ordering if-then rules, and can see whi
 ## Items
 - [x] [ETH-121 Shared conditions: run-scope conditions and a Requirement type usable outside rules](ETH-121-shared-conditions-requirements.md)
 - [ ] [ETH-151 Formation doctrine: stick together or spread out](ETH-151-formation-doctrine.md)
+- [ ] [ETH-162 Rules editor and the rule data model](ETH-162-rules-editor.md)
+- [ ] [ETH-163 Library tree unlocks rule conditions, actions and slots](ETH-163-library-tree.md)
+- [ ] [ETH-164 Shipped rule presets, plus saving and loading your own](ETH-164-rule-presets.md)

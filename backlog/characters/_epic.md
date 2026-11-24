@@ -2,7 +2,7 @@
 epic: characters
 title: Characters: attributes, classes and races
 status: active
-milestones: [M1, M2, M3, M5]
+milestones: [M1, M2, M4, M7]
 ---
 
 ## Goal
@@ -39,3 +39,4 @@ Adventurers have attributes, grow by class when they level, have race aptitudes 
 - [ ] [ETH-088 Class Mastery trees with class-specific nodes](ETH-088-class-mastery-trees.md)
 - [ ] [ETH-104 Personality quirks](ETH-104-personality-quirks.md)
 - [x] [ETH-110 Rolled growth, shared kill XP and uncapped levels](ETH-110-leveling-followup.md)
+- [ ] [ETH-160 Starter set of unlockable classes and races](ETH-160-starter-classes-and-races.md)

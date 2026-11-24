@@ -4,12 +4,12 @@ title: Sleeping monsters and stealth
 type: feature
 status: idea
 priority: P3
-milestone: M4
+milestone: M5
 epic: bestiary
 size: M
 depends_on: [ETH-040]
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -25,3 +25,4 @@ Idea accepted in Nate's interview answers (2026-11-18).
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-24: Moved from M4 to M5 in the backlog reorganization by theme.

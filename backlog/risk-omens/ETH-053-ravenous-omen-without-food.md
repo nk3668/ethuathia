@@ -4,12 +4,12 @@ title: Redefine the Ravenous Omen for food buffs (no hunger)
 type: chore
 status: idea
 priority: P3
-milestone: M4
+milestone: M6
 epic: risk-omens
 size: S
 depends_on: [ETH-054, ETH-067]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -30,3 +30,4 @@ Keeps the Omen list consistent with the systems we build. See `CLAUDE.md` §6 (O
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
 - 2026-11-17: The player ruled out hunger and starvation; food gives short-term buffs only. Retitled from "Decide the fate of the Ravenous Omen without food".
 - 2026-11-17: Wired `depends_on` to the foundation items added in the fan-out plan.
+- 2026-11-24: Moved from M4 to M6 in the backlog reorganization by theme.

@@ -4,12 +4,12 @@ title: Dungeon encounters: placed interactive features with an interact action, 
 type: feature
 status: ready
 priority: P1
-milestone: M4
+milestone: M6
 epic: dungeon-gen
 size: M
 depends_on: [ETH-058, ETH-061, ETH-072]
 created: 2026-11-19
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -133,3 +133,4 @@ To ensure encounters support altars (ETH-070), gravestones (ETH-069/051), mercha
 - 2026-11-19: (spec gate) awaiting Nate's review of this spec
 - 2026-11-19: Spec approved by Nate with all defaults as written. Status ready.
 - 2026-11-19: Implementation instructions drafted by Antigravity; reviewed and amended by Claude (bugs fixed, open either/or choices decided, missing cases added). Ready to build.
+- 2026-11-24: Moved from M4 to M6 in the backlog reorganization by theme.

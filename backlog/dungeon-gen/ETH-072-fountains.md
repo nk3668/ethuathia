@@ -4,12 +4,12 @@ title: Fountains with a documented effect table and a drink action
 type: feature
 status: done
 priority: P2
-milestone: M4
+milestone: M6
 epic: dungeon-gen
 size: M
 depends_on: [ETH-057, ETH-058]
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -45,3 +45,4 @@ The Dry Wells Omen and the "drink from a fountain" bounty both assume fountains 
   count.
 - (default) "Has a healing potion" is `carriesHealingPotion`, returning false until ETH-061
   (TODO in `src/sim/floors/fountains.ts`).
+- 2026-11-24: Moved from M4 to M6 in the backlog reorganization by theme.

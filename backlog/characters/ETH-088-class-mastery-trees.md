@@ -4,12 +4,12 @@ title: Class Mastery trees with class-specific nodes
 type: feature
 status: idea
 priority: P2
-milestone: M3
+milestone: M4
 epic: characters
 size: M
 depends_on: [ETH-087, ETH-037]
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -29,3 +29,4 @@ Spec gate as for ETH-087.
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-24: Moved from M3 to M4 in the backlog reorganization by theme.

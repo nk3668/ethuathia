@@ -4,7 +4,7 @@ title: Smarter escape direction: flee toward allies, stairs or home instead of j
 type: feature
 status: idea
 priority: P2
-milestone: M2
+milestone: M3
 epic: adventurer-ai
 size: M
 depends_on: [ETH-148]
@@ -54,3 +54,4 @@ help, wastes it.
 
 ## Log
 - 2026-11-24: Created (Nate approved filing).
+- 2026-11-24: Moved from M2 to M3 in the backlog reorganization by theme.

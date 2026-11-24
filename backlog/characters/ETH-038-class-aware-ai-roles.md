@@ -4,12 +4,12 @@ title: Class-aware AI roles
 type: feature
 status: idea
 priority: P2
-milestone: M3
+milestone: M4
 epic: characters
 size: M
 depends_on: [ETH-037]
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -28,3 +28,4 @@ Without this the AI wastes class depth. See `CLAUDE.md` §5.3.
 
 ## Log
 - 2026-11-17: Created from a design discussion on quests, depth and extra features.
+- 2026-11-24: Moved from M3 to M4 in the backlog reorganization by theme.

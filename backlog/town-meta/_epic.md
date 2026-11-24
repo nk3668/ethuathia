@@ -2,7 +2,7 @@
 epic: town-meta
 title: Town, currencies and upgrades
 status: active
-milestones: [M2, M3, M5, later]
+milestones: [M2, M3, M7, later]
 ---
 
 ## Goal
@@ -44,3 +44,4 @@ More items are added when M2 becomes the current milestone.
 - [ ] [ETH-127 Achievements tracked with the objective engine](ETH-127-achievements.md)
 - [ ] [ETH-129 Guild Hall upgrade: constant floor respawns on revisit](ETH-129-guild-hall-constant-respawn.md)
 - [ ] [ETH-132 Rescale Guild Hall Renown costs for depth-weighted rewards](ETH-132-rescale-guild-hall-renown-costs.md)
+- [ ] [ETH-159 Smithy upgrade tree spent in Trophies](ETH-159-smithy-tree.md)

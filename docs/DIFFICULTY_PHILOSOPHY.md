@@ -39,7 +39,7 @@ Targets are measured with the headless balance harness (`npm run sim -- --seeds 
 
 ### Later dungeons and opt-in escalation
 
-- **Themed dungeons (Cartographer / M6+):** Each new dungeon shifts its starting Danger curve upward (for example, starting at Danger 3+ or Danger 6+) and swaps in harsher monster tags and denser encounter budgets. Late dungeons remain dangerous to upgraded 4-person parties while *The Old Delve* naturally becomes a reliable training ground for fresh recruits or heirloom recovery.
+- **Themed dungeons (Cartographer / M8+):** Each new dungeon shifts its starting Danger curve upward (for example, starting at Danger 3+ or Danger 6+) and swaps in harsher monster tags and denser encounter budgets. Late dungeons remain dangerous to upgraded 4-person parties while *The Old Delve* naturally becomes a reliable training ground for fresh recruits or heirloom recovery.
 - **Opt-in risk:** Once a player reliably clears a dungeon above ~65%, **Omens** (`ETH-067`) and **extra Contract slots** (`ETH-028`) raise difficulty voluntarily in exchange for higher reward multipliers and payouts.
 
 ---
@@ -278,7 +278,7 @@ Track these metrics together:
 - **Party-size ordering:** sweep party sizes 1–4 on each preset (Principle 6).
 - **Runs to next unlock** (from M2 on): how many fresh-profile runs it takes to afford the first Guild Hall and Smithy nodes (Principle 13).
 - **Composition spread** (from M3 on): mixed-class parties against same-size Vanguard parties (Principle 8).
-- **Risk pricing** (from M4 on): win-rate drop against reward multiplier for each Omen rank (Principle 14).
+- **Risk pricing** (from M6 on): win-rate drop against reward multiplier for each Omen rank (Principle 14).
 
 ### 9.1 Milestone balance checks
 

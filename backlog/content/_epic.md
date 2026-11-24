@@ -2,7 +2,7 @@
 epic: content
 title: Content definitions
 status: active
-milestones: [M0, M1, M2, M3, M4, M5, M6]
+milestones: [M0, M7]
 ---
 
 ## Goal

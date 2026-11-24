@@ -2,7 +2,7 @@
 epic: lineage
 title: Lineage
 status: active
-milestones: [M2, M5]
+milestones: [M2, M7, M8]
 ---
 
 ## Goal
