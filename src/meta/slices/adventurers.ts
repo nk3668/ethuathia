@@ -191,7 +191,9 @@ export function recordRun(slice: Adventurers, result: RunResult, run: number): A
   let next = slice;
   for (const member of party.data) {
     let record = member.recordId === undefined ? undefined : next.records[member.recordId];
-    if (record === undefined) {
+    // Only an active record can go on a run. A fallen or retired one named here is a stale id (e.g. a
+    // rematch config reused after a wipe), so the member is a new recruit rather than a second life.
+    if (record === undefined || record.status !== 'active') {
       const made = newRecord(next, { name: member.name, classId: member.classId, raceId: member.raceId, born: run });
       next = made.slice;
       record = made.record;

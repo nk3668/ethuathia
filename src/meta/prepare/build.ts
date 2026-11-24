@@ -70,7 +70,7 @@ export function buildRunConfig(profile: Profile, choices: RunChoices, seed: numb
  * one place ids are issued, so every way of launching a run (Descend, Start next run, Rematch,
  * auto-restart, time-away catch-up) calls it and stores the returned profile. `previous` is the
  * last run's config, for a Rematch: a member who matches one of its party (same name, class and
- * race, whose record still exists) keeps that record, so the same adventurers carry on. Anyone else
+ * race, whose record is still active: not fallen, retired or trimmed) keeps that record, so the same adventurers carry on. Anyone else
  * is a new recruit and gets a new record, born in this run. Pure: the profile is not changed in
  * place, and `buildRunConfig` stays free of records.
  */
@@ -89,7 +89,7 @@ export function startRun(
       (p) =>
         p.recordId !== undefined &&
         !taken.has(p.recordId) &&
-        Object.hasOwn(adventurers.records, p.recordId) &&
+        adventurers.records[p.recordId]?.status === 'active' &&
         p.name === member.name &&
         p.classId === member.classId &&
         p.raceId === member.raceId,

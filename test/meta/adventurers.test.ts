@@ -250,7 +250,32 @@ describe('startRun', () => {
     expect(checkProfile(started.profile)).toEqual([]);
   });
 
-  it('a rematch keeps the previous run\'s adventurers, a fresh seed recruits new ones', () => {
+  it('a rematch after a wipe recruits new adventurers and leaves the fallen untouched', () => {
+    const first = startRun(newProfile(), choices, 7);
+    const wiped = applyRunResult(first.profile, run(two(first.config), { outcome: 'wipe', fell: [1] }));
+    const rematch = startRun(wiped, choices, 7, first.config);
+    expect(rematch.config.party[0]?.name).toBe(first.config.party[0]?.name);
+    expect(rematch.config.party[0]?.recordId).toBe('adv.2');
+    expect(rematch.profile.adventurers.records['adv.1']).toEqual(wiped.adventurers.records['adv.1']);
+    expect(recordOf(rematch.profile, 'adv.1')?.status).toBe('fallen');
+  });
+
+  it('a rematch after a victory keeps the same records', () => {
+    const first = startRun(newProfile(), choices, 7);
+    const won = applyRunResult(first.profile, run(two(first.config), { outcome: 'victory' }));
+    const rematch = startRun(won, choices, 7, first.config);
+    expect(rematch.config.party[0]?.recordId).toBe('adv.1');
+    expect(rematch.profile.adventurers.nextId).toBe(won.adventurers.nextId);
+  });
+
+  it('onRunResult treats a fallen recordId as a new recruit', () => {
+    const wiped = applyRunResult(newProfile(), run([{ actor: 1, name: 'A' }], { outcome: 'wipe', fell: [1] }));
+    const again = applyRunResult(wiped, run([{ actor: 1, name: 'A', recordId: 'adv.1' }]));
+    expect(again.adventurers.records['adv.1']).toEqual(wiped.adventurers.records['adv.1']);
+    expect(recordOf(again, 'adv.2')).toMatchObject({ name: 'A', status: 'active', born: 2 });
+  });
+
+    it('a rematch keeps the previous run\'s adventurers, a fresh seed recruits new ones', () => {
     const first = startRun(newProfile(), choices, 7);
     const rematch = startRun(first.profile, choices, 7, first.config);
     expect(rematch.config).toEqual(first.config);
