@@ -35,3 +35,4 @@ Confidence that the sim is deterministic and that balance changes are measured, 
 - [ ] [ETH-146 Composition and rules balance pass (M3 milestone balance check)](ETH-146-composition-balance-pass.md)
 - [x] [ETH-149 Tooling hygiene: formatter policy, line endings and worktree-safe tests](ETH-149-tooling-hygiene.md)
 - [x] [ETH-152 Run harness seeds in parallel across CPU cores](ETH-152-parallel-sim-harness.md)
+- [ ] [ETH-153 Scale the return-trip surge with party size](ETH-153-party-scaled-return-surge.md)

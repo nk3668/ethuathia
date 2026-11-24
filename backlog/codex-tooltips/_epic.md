@@ -30,3 +30,4 @@ Every number, glyph and name in the game explains itself on hover, and the Codex
 - [x] [ETH-092 Codex as a wide two-pane modal](ETH-092-codex-two-pane-modal.md)
 - [x] [ETH-144 Per-monster Codex kill-tier thresholds for rare monsters](ETH-144-per-monster-kill-tiers.md)
 - [ ] [ETH-150 Codex polish for rare monsters: a faster-reveal hint and a lore-tier content warning](ETH-150-rare-monster-codex-polish.md)
+- [ ] [ETH-156 Codex help text: hidden blessings and mixed stacks of potions and scrolls](ETH-156-hidden-blessing-codex-help.md)

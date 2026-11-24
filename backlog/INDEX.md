@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-153**
+**Next ID: ETH-157**
 
 **Assigned to Antigravity** (low risk; pick any whose dependencies are done): ETH-090, ETH-077, ETH-019, then ETH-094, ETH-085, ETH-084.
 
@@ -138,6 +138,10 @@ Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 | [ETH-130](combat-items/ETH-130-more-enchantments.md) | Expand the enchantment pool with additional effects and triggers | combat-items | M2 | P3 | idea | M |
 | [ETH-141](quests/ETH-141-scale-contract-rewards-by-depth.md) | Scale contract rewards by completion depth and balance M2 payouts | quests | M2 | P3 | idea | S |
 | [ETH-150](codex-tooltips/ETH-150-rare-monster-codex-polish.md) | Codex polish for rare monsters: a faster-reveal hint and a lore-tier content warning | codex-tooltips | M2 | P3 | idea | S |
+| [ETH-153](tools-balance/ETH-153-party-scaled-return-surge.md) | Scale the return-trip surge with party size | tools-balance | M2 | P2 | idea | M |
+| [ETH-154](adventurer-ai/ETH-154-smarter-escape-direction.md) | Smarter escape direction: flee toward allies, stairs or home instead of just away | adventurer-ai | M2 | P2 | idea | M |
+| [ETH-155](combat-items/ETH-155-smarter-identify-scrolls.md) | Smarter Scroll of Identify use: better targets, optionally skip consumables | combat-items | M2 | P2 | idea | S |
+| [ETH-156](codex-tooltips/ETH-156-hidden-blessing-codex-help.md) | Codex help text: hidden blessings and mixed stacks of potions and scrolls | codex-tooltips | M2 | P3 | idea | S |
 | [ETH-110](characters/ETH-110-leveling-followup.md) | Rolled growth, shared kill XP and uncapped levels | characters | M1 | P1 | done | M |
 | [ETH-031](quests/ETH-031-quest-rule-conditions-ai.md) | Quest rule conditions and objective weighting in the AI | quests | M3 | P2 | idea | M |
 | [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M3 | P2 | idea | M |
