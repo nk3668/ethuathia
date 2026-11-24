@@ -9,6 +9,8 @@ import {
   checkInvariants,
   chooseRule,
   createRun,
+  DROP_TURNS,
+  explored,
   getEntity,
   getFloor,
   getMemory,
@@ -22,6 +24,7 @@ import type { ActorEntity, AiActor, EntityId, Rule, RunState, SimEvent } from '.
 const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
 const ALLY = { name: 'Isolde', classId: 'class.vanguard', raceId: 'race.human' };
 const THIRD = { name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' };
+const FOURTH = { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human' };
 
 /** A fresh own-rule list per member: the state must not share objects between entities. */
 const hold = (): Rule[] => [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
@@ -152,5 +155,73 @@ describe('party cohesion baseline', () => {
       expect(checkInvariants(state)).toEqual([]);
     }
     expect(dist(lead, far)).toBeLessThanOrEqual(PARTY_CLOSE);
+  });
+
+  it('shares the lead frontier goal so followers follow instead of splitting to opposite wings', () => {
+    const FORK = [
+      '###################',
+      '#...+..@...@..+...#',
+      '#...#.........#...#',
+      '#...###########...#',
+      '###################',
+    ];
+    const state = createRun({ party: [HERO, ALLY], floorText: FORK, depth: 1, monsters: false }, 1);
+    const [lead, follower] = state.party.map((id) => getEntity(state, id) as AiActor) as [AiActor, AiActor];
+    expect(dist(lead, follower)).toBeLessThanOrEqual(PARTY_LEASH);
+
+    // On turn 1, lead (x=7) picks the closer west door (4,1), and follower (x=11) shares that
+    // west goal rather than splitting east toward (14,1).
+    const startX = follower.pos.x;
+    const events = step(state, []);
+    const leadFire = fired(events).find((e) => e.actor === lead.id);
+    const followerFire = fired(events).find((e) => e.actor === follower.id);
+    expect(leadFire?.action).toBe('act.explore');
+    expect(lead.ai.memory.intent?.goal).toEqual({ x: 4, y: 1 });
+    expect(followerFire?.action).toBe('act.explore');
+    expect(follower.ai.memory.intent?.goal).toEqual({ x: 4, y: 1 });
+    expect(follower.pos.x).toBeLessThan(startX);
+    expect(checkInvariants(state)).toEqual([]);
+  });
+
+  it('waits out a dropped explore goal on the bottom floor instead of triggering premature retreat', () => {
+    const state = createRun({ party: [HERO], floorText: ['########', '#@<+...#', '########'], depth: 1, monsters: false }, 1);
+    const hero = getEntity(state, state.party[0] as EntityId) as AiActor;
+    hero.ai.memory.dropped = {
+      rule: { set: 'baseline', index: BASELINE_RULES.findIndex((r) => r.action.id === 'act.explore') },
+      action: 'act.explore',
+      floor: 'd1',
+      pos: { x: 2, y: 1 },
+      since: 0,
+      until: DROP_TURNS,
+    };
+    // Backed into (1,1) relative to dropped.pos (2,1), so act.back_off returns null; stairs up at
+    // (2,1) are known and unseen ground lies past the door at (3,1).
+    const choice = chooseRule({ state, actor: hero });
+    expect(choice?.action).toBe('act.wait');
+    step(state, []);
+    expect(state.domains.run.leaving).toBeNull();
+    expect(checkInvariants(state)).toEqual([]);
+  });
+
+  it('finishes exploring a four-member two-corridor fork without ping-ponging or getting stuck', () => {
+    const TWO_CORRIDOR_FORK = [
+      '#################################',
+      '#...+........@.@.@.@........+...#',
+      '#.###.......................###.#',
+      '#.#.#########################.#.#',
+      '#...............#...............#',
+      '#################################',
+    ];
+    const state = createRun(
+      { party: [HERO, ALLY, THIRD, FOURTH], floorText: TWO_CORRIDOR_FORK, depth: 1, monsters: false },
+      1,
+    );
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 150 && explored(state, 'd1').fraction < 1; i++) {
+      events.push(...step(state, []));
+      expect(checkInvariants(state)).toEqual([]);
+    }
+    expect(explored(state, 'd1').fraction).toBe(1);
+    expect(events.filter((e) => e.type === 'stuck')).toEqual([]);
   });
 });

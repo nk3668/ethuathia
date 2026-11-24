@@ -13,16 +13,24 @@ import type { Entity } from '../state';
 import type { AiCtx, Resolved } from './types';
 
 /**
- * Extra cost to step onto a tile another actor stands on, so a route around them wins when there
- * is one that isn't much longer. They usually move on, so the tile is not blocked outright.
+ * Extra cost to step onto a tile an adjacent non-party actor stands on, so a route around them
+ * wins when there is one that isn't much longer. They usually move on, so the tile is not blocked
+ * outright.
  */
 export const OCCUPIED_COST = 8;
 
 /**
+ * Extra cost to step onto an adjacent ally's tile: enough to step around them in an open room
+ * (a diagonal bypass adds 1) without distorting corridor path costs (ETH-145).
+ */
+export const ALLY_OCCUPIED_COST = 2;
+
+/**
  * The grid the actor plans on: the party's memory of its floor, with closed doors costing the
- * turn it takes to open them, and tiles where it knows another actor stands costing
- * `OCCUPIED_COST` more, or blocked outright if `occupied` is `'blocked'`. It knows where its
- * party is, and feels anyone right next to it.
+ * turn it takes to open them, and tiles where an adjacent actor stands costing extra
+ * (`ALLY_OCCUPIED_COST` for party members, `OCCUPIED_COST` for others), or blocked outright if
+ * `occupied` is `'blocked'`. Distant party members are not penalized so allies in another corridor
+ * don't flip route choices.
  */
 export function aiPathGrid({ state, actor }: AiCtx, occupied: 'costly' | 'blocked' = 'costly'): PathGrid {
   const paths = memoryPathGrid(state, actor.floor, { closedDoorCost: OPEN_DOOR_COST });
@@ -32,10 +40,11 @@ export function aiPathGrid({ state, actor }: AiCtx, occupied: 'costly' | 'blocke
     const other = getEntity(state, id);
     if (other.actor === undefined) continue;
     const near = Math.abs(other.pos.x - actor.pos.x) <= 1 && Math.abs(other.pos.y - actor.pos.y) <= 1;
-    if (!near && !state.party.includes(id)) continue;
+    if (!near) continue;
     const i = other.pos.y * width + other.pos.x;
     const cost = paths.cost[i] as number;
-    if (cost !== 0) paths.cost[i] = occupied === 'blocked' ? 0 : Math.min(0xffff, cost + OCCUPIED_COST);
+    const extra = state.party.includes(id) ? ALLY_OCCUPIED_COST : OCCUPIED_COST;
+    if (cost !== 0) paths.cost[i] = occupied === 'blocked' ? 0 : Math.min(0xffff, cost + extra);
   }
   return paths;
 }

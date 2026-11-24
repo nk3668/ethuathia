@@ -8,10 +8,28 @@
  * The baseline behaviors are ordinary entries here, so the Library can hand any of them to the
  * player's own rules.
  */
+import type { Pos } from '../../core';
 import { buildFleeMap, buildGoalMap, UNREACHABLE } from '../goalMap';
 import { aiPathGrid, followMap, frontier } from './navigate';
 import { defineRuleAction, noParams } from './types';
-import type { RuleActionDef } from './types';
+import type { AiCtx, RuleActionDef } from './types';
+
+/**
+ * If `ctx.actor` is a party follower whose lead on the same floor is currently exploring a
+ * frontier tile that is still in `goals`, share that single goal so followers push the same
+ * corridor instead of splitting across opposite branches (ETH-145).
+ */
+function leadExploreGoal(ctx: AiCtx, goals: readonly Pos[]): Pos[] | null {
+  if (ctx.actor.actor.faction !== 'party') return null;
+  const lead = ctx.state.party
+    .map((id) => ctx.state.entities[id])
+    .find((e) => e?.actor !== undefined && e.actor.hp > 0 && e.floor === ctx.actor.floor);
+  if (lead === undefined || lead.id === ctx.actor.id) return null;
+  const intent = lead.ai?.memory.intent;
+  const goal = intent?.action === 'act.explore' ? intent.goal : undefined;
+  if (goal === undefined) return null;
+  return goals.some((g) => g.x === goal.x && g.y === goal.y) ? [goal] : null;
+}
 
 /**
  * Walk toward the nearest ground the party hasn't seen, opening doors on the way. Frontier-based
@@ -30,8 +48,13 @@ export const ACT_EXPLORE = defineRuleAction({
     const paths = aiPathGrid(ctx);
     const goals = frontier(ctx, paths);
     if (goals.length === 0) return null;
-    const map = buildGoalMap(paths, goals);
-    const cost = map.get(ctx.actor.pos.x, ctx.actor.pos.y);
+    const shared = leadExploreGoal(ctx, goals);
+    let map = buildGoalMap(paths, shared ?? goals);
+    let cost = map.get(ctx.actor.pos.x, ctx.actor.pos.y);
+    if (cost === UNREACHABLE && shared !== null) {
+      map = buildGoalMap(paths, goals);
+      cost = map.get(ctx.actor.pos.x, ctx.actor.pos.y);
+    }
     if (cost === UNREACHABLE) return null;
     return followMap(ctx, paths, map, `heading for unexplored ground ${cost} ${cost === 1 ? 'turn' : 'turns'} away`);
   },

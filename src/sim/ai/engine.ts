@@ -92,6 +92,9 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.always' }, action: { id: 'act.explore' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.descend' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.gather' }, enabled: true },
+  // Don't treat a temporarily dropped Explore as "bottom floor complete, abort the run": wait out
+  // the drop instead (ETH-145).
+  { condition: { id: 'cond.stuck' }, action: { id: 'act.wait' }, enabled: true },
   { condition: { id: 'cond.bottom_floor' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true },
 ];

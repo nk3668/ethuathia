@@ -1840,19 +1840,24 @@ As built in `src/sim/ai/` (ETH-009):
   - `cond.bottom_floor` holds while a living party member is on the bottom floor (run-scope since
     ETH-121; see "Shared conditions"), where the baseline, with nothing left to
     explore, fires `act.retreat_run`: the party turns back, climbs out and the run ends as a
-    retreat (ETH-062; a victory once contracts add victory checks).
+    retreat (ETH-062; a victory once contracts add victory checks). Right before it,
+    `cond.stuck → act.wait` (ETH-145) holds while `act.explore` is temporarily dropped so a stuck
+    member waits out `DROP_TURNS` instead of aborting the whole run.
   - `act.explore` is frontier-based: the goals are tiles the actor could enter (on the party
     memory's path grid, closed doors at `OPEN_DOOR_COST`) with an unseen neighbor. Standing on one
     always reveals its neighbors, so each goal reached shrinks the frontier, and explored dead
-    ends are never goals nor on a shortest route to one. A closed door next on the route becomes
+    ends are never goals nor on a shortest route to one. Party followers share the floor lead's
+    current `act.explore` `goal` when it is still on the frontier and reachable (ETH-145), so the
+    party explores one corridor together instead of splitting and ping-ponging. A closed door next on the route becomes
     `openDoor`; another actor on the next tile becomes a wait ("waiting for X to get out of the
     way"), recorded as `memory.waitingFor`, unless it is a party member willing to swap
     (`willingToSwap`, ETH-017): one whose own last decision waited on this actor, or one with no
     decision yet or an `idle` one. Then it becomes a `swap` ("squeezing past X"). A member busy
     heading elsewhere is waited behind, never pushed back the way it came. This lives in
     `followMap`, so every map-following rule action gets it. It returns `null` once no frontier tile is reachable, and the actor settles on
-    `act.wait`. Tiles where the actor knows another actor stands (party members, anyone adjacent)
-    cost `OCCUPIED_COST` (8) more, so it routes round them when it reasonably can.
+    `act.wait`. Tiles where an adjacent actor stands cost extra in `aiPathGrid` (`ALLY_OCCUPIED_COST`
+    (2) for party members, `OCCUPIED_COST` (8) for others), while distant party members are not
+    penalized so allies in another corridor don't flip route choices.
   - `act.back_off` follows a flee map away from where the actor got stuck, with occupied tiles
     blocked.
   - `act.wait` is marked `idle`.
