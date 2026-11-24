@@ -60,6 +60,8 @@ export {
   statValue,
 } from './getStat';
 export { combatValue, exactText, roundedText } from './combatValue';
+export { baseSourceId, groupLabel, groupStatParts } from './groupParts';
+export type { StatPartGroup } from './groupParts';
 export { applyStatus, ensureStats, removeStatus, resistedTurns, tickStatuses } from './statuses';
 export type { StatusApplyMode } from './statuses';
 export { fireTrigger, MAX_TRIGGER_DEPTH, runEffect, runEffects } from './effects';

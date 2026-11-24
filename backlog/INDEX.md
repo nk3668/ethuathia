@@ -150,7 +150,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-176](characters/ETH-176-class-starting-kits.md) | Classes start each run with a kit of gear | characters | M2 | P1 | done | S |
 | [ETH-177](characters/ETH-177-reprice-finesse.md) | Reprice Finesse so classes can share one point budget | characters | M2 | P1 | done | M |
 | [ETH-178](tools-balance/ETH-178-sim-mixed-party.md) | Sim harness option for a random mixed party, as players get it | tools-balance | M2 | P2 | done | S |
-| [ETH-180](town-meta/ETH-180-ranked-tooltip-stacking.md) | Stat tooltips name a ranked upgrade once, with its rank count | town-meta | M2 | P3 | ready | S |
+| [ETH-180](town-meta/ETH-180-ranked-tooltip-stacking.md) | Stat tooltips name a ranked upgrade once, with its rank count | town-meta | M2 | P3 | done | S |
 | [ETH-181](ui-shell/ETH-181-whole-number-stats.md) | Show derived stats the way combat uses them, as whole numbers | ui-shell | M2 | P3 | done | S |
 | [ETH-183](ui-shell/ETH-183-trophies-tooltip-single-source.md) | One source for the Trophies tooltip text | ui-shell | M2 | P3 | done | S |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
