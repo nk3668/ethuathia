@@ -51,7 +51,7 @@ describe('possess and release', () => {
     const turn = state.turn;
     const pos = { ...hero.pos };
     // Nothing happens however many steps run: the run waits for the player.
-    for (let i = 0; i < 5; i++) expect(step(state, []).filter((e) => e.type !== 'runStarted')).toEqual([]);
+    for (let i = 0; i < 5; i++) expect(step(state, []).filter((e) => e.type !== 'runStarted' && e.type !== 'kitIssued')).toEqual([]);
     expect(state.turn).toBe(turn);
     expect(hero.pos).toEqual(pos);
   });
@@ -172,7 +172,7 @@ describe('player actions while possessed', () => {
     step(state, [possess(hero.id)]);
     const events = step(state, [act(hero.id, { id: 'bump', dir: { x: 0, y: -1 } })]);
     expect(ofType(events, 'actionFailed')).toMatchObject([{ actor: hero.id, action: 'bump', reason: 'A wall is in the way' }]);
-    expect(step(state, []).filter((e) => e.type !== 'runStarted')).toEqual([]);
+    expect(step(state, []).filter((e) => e.type !== 'runStarted' && e.type !== 'kitIssued')).toEqual([]);
   });
 
   it('shows who is possessed and who is waiting for a command in the snapshot', () => {

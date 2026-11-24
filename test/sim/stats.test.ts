@@ -83,6 +83,8 @@ const CONFIG: RunConfig = { party: [{ name: 'Mira', classId: 'class.vanguard', r
 function setup(config: RunConfig = CONFIG): { state: RunState; hero: ActorEntity; events: SimEventBody[]; emit: (e: SimEventBody) => void } {
   const state = createRun(config, 1);
   const hero = getEntity(state, state.party[0] as EntityId) as ActorEntity;
+  // Start bare-handed: the Vanguard's class kit (ETH-176) is covered by classKit.test.ts.
+  Reflect.deleteProperty(hero, 'inventory');
   const events: SimEventBody[] = [];
   return { state, hero, events, emit: (e) => events.push(e) };
 }
@@ -310,7 +312,7 @@ describe('effects and triggers', () => {
     expect(hero.actor.hp).toBe(0);
     expect(hero.actor.queued).toBeUndefined();
     // The run domain notices the fall (ETH-062): the lone hero's death ends the run as a wipe.
-    expect(stepped.filter((e) => 'actor' in e && e.actor === hero.id).map((e) => e.type)).toEqual(['damaged', 'fell']);
+    expect(stepped.filter((e) => 'actor' in e && e.actor === hero.id && e.type !== 'kitIssued').map((e) => e.type)).toEqual(['damaged', 'fell']);
     expect(stepped.at(-1)).toMatchObject({ type: 'runEnded', outcome: 'wipe' });
     expect(checkInvariants(state)).toEqual([]);
   });

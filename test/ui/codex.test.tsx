@@ -105,10 +105,10 @@ describe('CodexPanel', () => {
   it('shows undiscovered entries as ??? with their glyph and riddle hint, and always-known terrain by name', () => {
     render(<CodexPanel />);
     const classes = section('Classes');
-    expect(within(classes).getByText('???')).toBeTruthy();
+    expect(within(classes).getAllByText('???')).toHaveLength(CLASSES.size);
     expect(within(classes).getByText(CLASS_VANGUARD.hint ?? '')).toBeTruthy();
     expect(within(classes).queryByText(CLASS_VANGUARD.name)).toBeNull();
-    expect(within(classes).getByText('0 / 1')).toBeTruthy();
+    expect(within(classes).getByText('0 / ' + CLASSES.size)).toBeTruthy();
 
     // Undiscovered entries with a glyph (such as Door or Gloam rat) show their glyph and riddle hint.
     const features = section('Dungeon features');
@@ -125,7 +125,7 @@ describe('CodexPanel', () => {
     const classes = section('Classes');
     expect(within(classes).getByText(CLASS_VANGUARD.name)).toBeTruthy();
     expect(within(classes).getByText('Seen')).toBeTruthy();
-    expect(within(classes).getByText('1 / 1')).toBeTruthy();
+    expect(within(classes).getByText('1 / ' + CLASSES.size)).toBeTruthy();
 
     await user.click(within(classes).getByRole('button', { name: new RegExp(CLASS_VANGUARD.name) }));
     const detail = detailPane();

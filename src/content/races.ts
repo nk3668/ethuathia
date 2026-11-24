@@ -45,3 +45,26 @@ export const RACE_HUMAN = defineRace({
   attributes: { brawn: 1, finesse: 1, wits: 1, grit: 1 },
   speed: 100,
 });
+
+export const RACE_STONEKIN = defineRace({
+  id: 'race.stonekin',
+  name: 'Stonekin',
+  description:
+    'Hill-dwellers who quarry their homes from the mountain and seem half quarried themselves. Slow to move ' +
+    'and slower to fall.',
+  hint: 'Stone-boned folk who take a long time to fall over.',
+  tags: [],
+  // +7 points where the Human has +4: the 90 speed costs a tenth of its turns (ETH-160 balance).
+  attributes: { brawn: 3, grit: 4 },
+  speed: 90,
+});
+
+export const RACE_FENLING = defineRace({
+  id: 'race.fenling',
+  name: 'Fenling',
+  description: 'Small, sharp-eyed folk of the reed marshes, quick on their feet and quicker to notice.',
+  hint: 'Marsh folk who see the snare before they step in it.',
+  tags: [],
+  attributes: { brawn: -2, finesse: 2, wits: 2, grit: -1 },
+  speed: 110,
+});

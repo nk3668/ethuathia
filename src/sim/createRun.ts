@@ -6,6 +6,7 @@ import type { Pos } from '../core';
 import { CLASSES, RACES } from '../content';
 import { newAiPart } from './ai/types';
 import { initDomains } from './domains';
+import { giveKit } from './items/kit';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { buildDungeon, DEFAULT_FLOOR_TYPE, planFloor, resolveRunDepth } from './floors';
 import type { FloorPlan } from './floorText';
@@ -38,7 +39,8 @@ export function adventurerActor(member: AdventurerConfig): ActorPart {
  * starts with what they can see. Each adventurer's HP, MP and speed come from its class and race
  * (the `stats.class_race` and `stats.attributes` providers), plus the config's `partyBundles`
  * and `partyStatuses`, so an unknown class, race, bundle or status id throws. Each domain's
- * state slice comes from `initDomains(config)`. `config` is copied, not kept.
+ * state slice comes from `initDomains(config)`. Each adventurer wears their class's kit
+ * (`ClassDef.kit`, ETH-176). `config` is copied, not kept.
  */
 export function createRun(config: RunConfig, seed: number): RunState {
   if (config.party.length === 0) throw new Error('A run needs at least one adventurer');
@@ -78,6 +80,7 @@ export function createRun(config: RunConfig, seed: number): RunState {
       stats: newStatsPart(),
       ai: newAiPart(),
     });
+    giveKit(entity, member.classId);
     state.party.push(entity.id);
   });
   // The run starts before turn 0's step, so events from setting up are not reported.

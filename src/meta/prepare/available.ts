@@ -23,6 +23,11 @@ export function availableClasses(profile: Profile): ClassDef[] {
   return CLASSES.all().filter((def) => isAvailable(profile, def.id));
 }
 
+/** The classes the Guild Hall's Mastery list shows (ETH-087): the available ones, plus any with Mastery XP (so a class that was once open never vanishes). */
+export function masteryClasses(profile: Profile): ClassDef[] {
+  return CLASSES.all().filter((def) => isAvailable(profile, def.id) || (profile.mastery.classes[def.id]?.xp ?? 0) > 0);
+}
+
 export function availableRaces(profile: Profile): RaceDef[] {
   return RACES.all().filter((def) => isAvailable(profile, def.id));
 }

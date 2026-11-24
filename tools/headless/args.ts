@@ -2,6 +2,7 @@
  * Command-line argument parsing and usage help for `tools/sim.ts` (and `int` helper shared with `tools/run-soak.ts`).
  */
 import { parseArgs } from 'node:util';
+import { CLASSES, RACES } from '../../src/content';
 import { partySize } from '../../src/meta';
 import {
   buildHeadlessProfile,
@@ -27,6 +28,10 @@ export interface SimArgs {
   preset: HeadlessPreset;
   upgrades: string[];
   rules: HeadlessRulesPreset;
+  /** Class of every adventurer (`--class`, ETH-160); null is the Vanguard. */
+  classId: string | null;
+  /** Race of every adventurer (`--race`, ETH-160); null is the Human. */
+  raceId: string | null;
   /** Worker threads to run seeds on (`--jobs`); 1 is a serial run. Doesn't change the results. */
   jobs: number;
   /** Write the report as JSON to this file (`--json`). */
@@ -40,6 +45,7 @@ export interface SimArgs {
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
                       [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious]
+                      [--class ID] [--race ID]
                       [--party-sweep] [--jobs N] [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
@@ -54,6 +60,8 @@ above the bottom or trigger stuck detection are listed at the end.
   --preset NAME           profile preset: fresh (default) or progressed
   --upgrades ID1,ID2,...  comma-separated upgrade node ids to apply (e.g. upgrade.hardy_recruits,upgrade.drill_yard)
   --rules NAME            behavior rule preset: baseline (default) or cautious
+  --class ID              class of every adventurer, e.g. outrider or class.outrider (default vanguard)
+  --race ID               race of every adventurer, e.g. fenling or race.fenling (default human)
   --party-sweep           run party sizes 1 to ${MAX_PARTY} on the same seeds and preset, print win rate and
                           level per size, and warn when win rate does not rise with party size or party
                           ${MAX_PARTY} wins less than ${PARTY_SWEEP_MIN_RATIO}x as often as solo (--party is ignored; not with
@@ -79,6 +87,15 @@ function parseRulesPreset(raw: string | undefined): HeadlessRulesPreset {
   throw new Error(`--rules must be one of ${HEADLESS_RULES_PRESETS.join(', ')}, got "${raw}"`);
 }
 
+/** Resolves `--class` / `--race`: a full id or the part after the dot. Throws a readable `Error` listing the choices. */
+function parseContentId(flag: string, kind: 'class' | 'race', raw: string | undefined): string | null {
+  if (raw === undefined) return null;
+  const registry = kind === 'class' ? CLASSES : RACES;
+  const id = raw.includes('.') ? raw : `${kind}.${raw}`;
+  if (registry.has(id)) return id;
+  throw new Error(`${flag} "${raw}" is not a ${kind}. Available: ${registry.all().map((d) => d.id).join(', ')}`);
+}
+
 function parseUpgradeList(raw: string | undefined): string[] {
   if (raw === undefined) return [];
   if (raw.trim() === '') throw new Error('--upgrades must be a comma-separated list of upgrade ids');
@@ -99,6 +116,8 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       preset: { type: 'string' },
       upgrades: { type: 'string' },
       rules: { type: 'string' },
+      class: { type: 'string' },
+      race: { type: 'string' },
       'party-sweep': { type: 'boolean' },
       jobs: { type: 'string' },
       json: { type: 'string' },
@@ -124,6 +143,8 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     preset,
     upgrades,
     rules,
+    classId: parseContentId('--class', 'class', values.class),
+    raceId: parseContentId('--race', 'race', values.race),
     partySweep: values['party-sweep'] ?? false,
     jobs: int('--jobs', values.jobs, defaultJobs(), 1, MAX_JOBS),
     json: values.json ?? null,

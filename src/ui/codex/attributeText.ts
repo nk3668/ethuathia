@@ -2,7 +2,7 @@
  * Attributes in words (ETH-033), for the Codex renderers and the party card: what each one
  * raises, read from the sim's formula table so the text never drifts from the numbers.
  */
-import { ATTRIBUTE_IDS, attributeDef, expectedGrowth } from '../../content';
+import { ATTRIBUTE_IDS, attributeDef, expectedGrowth, ITEMS } from '../../content';
 import type { AttributeGrowth, AttributeId } from '../../content';
 import { formulasFor, KILL_SHARE_RADIUS, STAT_INFO, XP_PER_DEPTH, XP_PER_THREAT } from '../../sim';
 /** "Max HP +1 per point; Damage +0.5 per point above 10", for the core stats (`skills` false) or the skills. */
@@ -68,4 +68,14 @@ export function attributeLine(values: Readonly<Partial<Record<AttributeId, numbe
     return `${attributeDef(a).abbr} ${signed && v > 0 ? '+' : ''}${signed && v < 0 ? '−' : ''}${signed ? Math.abs(v) : v}`;
   });
   return parts.length > 0 ? parts.join(' · ') : 'None';
+}
+
+/** What a class's starting kit is, for its Codex entry's tooltip (ETH-176). */
+export const KIT_HINT =
+  'Gear every adventurer of the class wears from the first turn of each run, identified. It can be dropped or swapped for ' +
+  'an upgrade like any other gear, but it is issued, not found, so it is never sold for Trophies.';
+
+/** A class kit as a list: "Oak cudgel, Round shield". Unknown ids show as their id. */
+export function kitLine(kit: readonly string[]): string {
+  return kit.map((id) => (ITEMS.has(id) ? ITEMS.get(id).name : id)).join(', ');
 }
