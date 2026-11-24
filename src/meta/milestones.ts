@@ -10,7 +10,7 @@
  * asks the sim to watch its requirement (`milestoneRequirements`), and `unlockMilestones` reads
  * which ones the run met from its `RunResult.extras['track.requirements']`.
  */
-import { BUILDINGS, milestoneMet, requirementKey, tierBand, tierGateId } from '../content';
+import { BUILDINGS, milestoneMet, requirementKey, tierBand, tierGateId, UPGRADES } from '../content';
 import type { Milestone, MilestoneProgress, Requirement } from '../content';
 import { completedObjectives, metRequirements } from '../sim';
 import type { RunResult } from '../sim';
@@ -26,7 +26,8 @@ export interface MilestoneTarget {
 
 /**
  * Every def with an unlock milestone: Town buildings, and each building's tier gates (ETH-172),
- * which come right after their building under the id `tierGateId(building, fromTier)`.
+ * which come right after their building under the id `tierGateId(building, fromTier)`; then every
+ * upgrade node with a `reveal` (ETH-036), under the node's own id.
  */
 export function milestoneTargets(): MilestoneTarget[] {
   const targets: MilestoneTarget[] = [];
@@ -36,6 +37,9 @@ export function milestoneTargets(): MilestoneTarget[] {
       const band = tierBand(building, gate.fromTier);
       targets.push({ id: tierGateId(building.id, gate.fromTier), name: gate.name ?? `${building.name}, tier ${band}`, unlock: gate.unlock });
     }
+  }
+  for (const node of UPGRADES.all()) {
+    if (node.reveal !== undefined) targets.push({ id: node.id, name: node.name, unlock: node.reveal });
   }
   return targets;
 }

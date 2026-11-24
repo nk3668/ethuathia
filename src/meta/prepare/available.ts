@@ -6,6 +6,7 @@
  */
 import { CLASSES, DUNGEONS, RACES, UPGRADES } from '../../content';
 import type { ClassDef, DungeonDef, RaceDef } from '../../content';
+import { isMilestoneOpen } from '../milestones';
 import type { Profile } from '../profile';
 import { isUnlocked } from '../upgrades';
 
@@ -34,4 +35,22 @@ export function availableRaces(profile: Profile): RaceDef[] {
 
 export function availableDungeons(profile: Profile): DungeonDef[] {
   return DUNGEONS.all().filter((def) => isAvailable(profile, def.id));
+}
+
+/**
+ * Revealed but not bought (ETH-036): some upgrade node unlocks `id`, a run has met that node's
+ * reveal (or it has none) and the player hasn't bought it yet. These are the classes and races a
+ * random recruit may be as a teaser; they play normally and earn their Mastery.
+ */
+export function isTeaser(profile: Profile, id: string): boolean {
+  if (isUnlocked(profile, id)) return false;
+  return UPGRADES.all().some((node) => node.reveal !== undefined && node.grants.some((g) => g.kind === 'unlock' && g.id === id) && isMilestoneOpen(profile, node.id));
+}
+
+export function teaserClasses(profile: Profile): ClassDef[] {
+  return CLASSES.all().filter((def) => isTeaser(profile, def.id));
+}
+
+export function teaserRaces(profile: Profile): RaceDef[] {
+  return RACES.all().filter((def) => isTeaser(profile, def.id));
 }

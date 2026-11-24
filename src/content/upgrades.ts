@@ -201,6 +201,13 @@ export interface UpgradeNodeDef extends Def {
    * `bundle` grants may be on a ranked node. Without it the node has one rank.
    */
   readonly ranks?: NodeRanks;
+  /**
+   * A milestone that reveals the node (ETH-036). Until a run meets it the node is sealed: the tree
+   * shows it with its milestone and price, but it can't be bought. Like a building unlock, a met
+   * reveal is recorded in the `milestones` slice under the node's id (`src/meta/milestones.ts`),
+   * and the run summary says so.
+   */
+  readonly reveal?: Milestone;
 }
 
 export interface NodeRanks {
@@ -307,6 +314,7 @@ const upgradeSchema = z.strictObject({
       costGrowth: z.number().min(1, 'must be 1 or more'),
     })
     .optional(),
+  reveal: milestoneSchema.optional(),
 });
 
 /**
@@ -326,6 +334,7 @@ function unlockKind(id: string): string {
 
 function upgradeRefs(def: UpgradeNodeDef): ContentRef[] {
   const refs: ContentRef[] = [{ path: 'building', kind: 'building', id: def.building }];
+  if (def.reveal !== undefined) refs.push(...milestoneRefs('reveal', def.reveal));
   def.requires.forEach((id, i) => refs.push({ path: `requires[${i}]`, kind: 'upgrade', id }));
   for (const key of Object.keys(def.cost)) {
     if (key.startsWith('favor:')) refs.push({ path: `cost.${key}`, kind: 'deity', id: key.slice('favor:'.length) });

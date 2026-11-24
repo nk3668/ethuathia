@@ -168,7 +168,8 @@ export function buildHeadlessProfile(preset: HeadlessPreset = 'fresh', upgrades:
     const check = canPurchase(profile, id);
     if (check.ok) {
       profile = purchase(profile, id);
-    } else if (check.status === 'locked' && (check.missing?.length ?? 0) > 0) {
+    } else if (check.status === 'locked' && ((check.missing?.length ?? 0) > 0 || node.reveal !== undefined)) {
+      // Missing prerequisites, or a node a run must reveal first (ETH-036): a sweep attaches it directly.
       profile = { ...profile, upgrades: { ...profile.upgrades, owned: [...profile.upgrades.owned, id] } };
     } else {
       throw new Error(`Cannot apply upgrade "${id}": ${check.reason}`);

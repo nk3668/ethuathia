@@ -4,7 +4,7 @@
  */
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets, RUN_RECORD_MOMENTS } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
-import { BUILDINGS, CONTRACTS, defName, DEITIES, describeMilestoneMet, GOLD_PER_TROPHY, tierBand, tierGateId, VALUE_PER_TROPHY } from '../../content';
+import { BUILDINGS, CONTRACTS, defName, DEITIES, describeMilestoneMet, GOLD_PER_TROPHY, tierBand, tierGateId, UPGRADES, VALUE_PER_TROPHY } from '../../content';
 import type { Milestone } from '../../content';
 import {
   CHRONICLE_TRACKER,
@@ -196,6 +196,8 @@ export interface UnlockLine {
   why: string;
   /** For a building tier (ETH-170): the building and the band that opened, which is 2 or more. */
   tier?: { building: string; band: number };
+  /** For an upgrade node a milestone revealed (ETH-036): the building that sells it. The line says it can now be bought. */
+  reveals?: { building: string };
 }
 
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
@@ -223,7 +225,9 @@ export function unlockLines(profile: Profile, run?: number): UnlockLine[] {
     const target = targets.find((t) => t.id === u.id);
     if (target === undefined) return [];
     const tier = tierOfTarget(u.id);
-    return [{ id: u.id, name: target.name, why: unlockWhy(target.unlock), ...(tier === undefined ? {} : { tier }) }];
+    const node = UPGRADES.has(u.id) ? UPGRADES.get(u.id) : undefined;
+    const reveals = node === undefined ? undefined : { building: BUILDINGS.has(node.building) ? BUILDINGS.get(node.building).name : node.building };
+    return [{ id: u.id, name: target.name, why: unlockWhy(target.unlock), ...(tier === undefined ? {} : { tier }), ...(reveals === undefined ? {} : { reveals }) }];
   });
 }
 

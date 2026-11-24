@@ -1,6 +1,7 @@
 import { useShallow } from 'zustand/react/shallow';
 import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, EQUIP_SLOT_INFO, gearSlots, ITEM_CATEGORY_INFO, ITEMS, STATUSES } from '../../content';
 import type { AttributeId } from '../../content';
+import { isAvailable } from '../../meta';
 import { STAT_IDS, STAT_INFO } from '../../sim';
 import type { ActionRequest, EntityId, InventoryView, LevelView, MemberStatsView } from '../../sim';
 import { Explain } from '../codex/Explain';
@@ -8,6 +9,7 @@ import { attributeEffectText, growthLine, xpSourcesText } from '../codex/attribu
 import { keyHint } from '../input/keymap';
 import { runKeyAction, togglePossession } from '../input/useKeymap';
 import { Bar, Button, Card, Panel, Tooltip } from '../kit';
+import { useProfileStore } from '../stores/profileStore';
 import { useSimStore } from '../stores/simStore';
 import { useUiStore } from '../stores/uiStore';
 import styles from './PartyColumn.module.css';
@@ -495,6 +497,8 @@ function PossessButton({ id, name, possessed }: { id: EntityId; name: string; po
 
 function PartyCard({ id, slot, compact }: PartyCardProps) {
   const member = useMember(id);
+  // A class or race the guild hasn't bought yet came as a teaser recruit (ETH-036).
+  const untrained = useProfileStore((s) => member !== null && !(isAvailable(s.profile, member.classId) && isAvailable(s.profile, member.raceId)));
   const selected = useUiStore((s) => s.selected === id);
   const select = useUiStore((s) => s.select);
   if (!member) return null;
@@ -552,6 +556,13 @@ function PartyCard({ id, slot, compact }: PartyCardProps) {
       <p className={styles.kind}>
         <Explain id={member.raceId}>{contentName(member.raceId)}</Explain> <Explain id={member.classId}>{contentName(member.classId)}</Explain>
       </p>
+      {untrained && (
+        <Tooltip content="A teaser recruit: a class or race a run has revealed but the town hasn't bought yet. It plays normally and earns Mastery for its class.">
+          <p className={styles.untrained} tabIndex={0}>
+            Not yet trained by the guild
+          </p>
+        </Tooltip>
+      )}
       {hp}
       {member.maxMp > 0 && (
         <Bar label="MP" tone="mp" value={member.mp} max={member.maxMp} ariaLabel={`${member.name}'s MP`} />
