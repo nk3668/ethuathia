@@ -2,7 +2,7 @@
 id: ETH-158
 title: Split tools/headless.ts into focused modules
 type: chore
-status: ready
+status: done
 priority: P2
 milestone: M2
 epic: tools-balance
@@ -23,12 +23,12 @@ Files should stay small and single-purpose so they are easy to read and change
 (`docs/ARCHITECTURE.md` §10.1). Found when the `max-lines` warning was added.
 
 ## Acceptance criteria
-- [ ] The file is split along its concerns (for example running a seed, aggregating results,
+- [x] The file is split along its concerns (for example running a seed, aggregating results,
       report formatting, compare and baseline I/O), with the public API re-exported from the
       original path; **or** it keeps an `eslint-disable max-lines` comment with a stated reason.
-- [ ] `npm run sim` output (including the state hash column) and `test/tools/headless.test.ts`
+- [x] `npm run sim` output (including the state hash column) and `test/tools/headless.test.ts`
       are unchanged.
-- [ ] `npm run lint` shows no `max-lines` warning for this file.
+- [x] `npm run lint` shows no `max-lines` warning for this file.
 
 ## Notes
 Refactor on green, in its own commit (§10.1).
@@ -36,3 +36,5 @@ Refactor on green, in its own commit (§10.1).
 ## Log
 - 2026-11-24: Created.
 - 2026-11-24: Assigned to Gemini (Antigravity); Claude reviews the PR.
+- 2026-11-24: Split `tools/headless.ts` into `tools/headless/{config,runner,summary,format,args}.ts`, preserved the full public API from `tools/headless.ts` (including `--jobs` in JSDoc), and updated `jobsFlagSupported` in `tools/compare.ts` to inspect both `tools/headless/args.ts` and `tools/headless.ts` (commit `60a7b5a`, rebased onto `origin/main` `0e8a55a`). Verified with `npm run check` (0 lint errors, 0 `max-lines` warnings on `tools/headless.ts` / `tools/headless/*.ts`, 108 test files / 1323 tests passing), `npm run sim -- --seeds 5 --jobs 1`, and `npm run sim -- --seeds 20 --compare origin/main` (0 hash diffs across all 20 shared seeds, all deltas 0). Set to `pending-review`.
+- 2026-11-24: Reviewed by Claude (npm run check green merged with main; sim state hashes identical to main). Merged; status done.

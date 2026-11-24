@@ -2,7 +2,7 @@
 id: ETH-157
 title: Split src/sim/combat/encounters.ts into focused modules
 type: chore
-status: pending-review
+status: done
 priority: P2
 milestone: M2
 epic: dungeon-gen
@@ -37,3 +37,4 @@ Refactor on green, in its own commit (§10.1).
 - 2026-11-24: Created.
 - 2026-11-24: Assigned to Gemini (Antigravity); Claude reviews the PR.
 - 2026-11-24: Split `src/sim/combat/encounters.ts` into `encounterShared.ts`, `encounterPatrols.ts`, `encounterSurge.ts`, and `encounters.ts` preserving the exact public API (commit `8b5b235`); `npm run check` passed (0 errors, 0 `max-lines` warnings on `src/sim/combat/encounter*.ts`, 108 test files / 1323 tests), and both 20-seed T0 `npm run sim -- --compare origin/main` checks (default fresh party-1 and `--preset progressed --party 4`) produced 0 state-hash diffs. Marked `pending-review`.
+- 2026-11-24: Reviewed by Claude (npm run check green merged with main; sim state hashes identical to main). Merged; status done.
