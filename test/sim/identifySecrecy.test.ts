@@ -137,15 +137,20 @@ describe('baseline gear gate (ETH-142)', () => {
     expect(choice?.detail).toContain('curse lock risk');
   });
 
-  it('leaves unidentified gear in the pack when its gain does not beat the margin, with a stable note', () => {
+  it('leaves unidentified gear in the pack when its gain does not beat the margin, saying so once', () => {
     const { state, hero } = setup();
     hero.inventory = { items: [{ def: JERKIN, qty: 1, identified: false }] };
     const first = choose(state, hero);
     expect(first?.action).not.toBe('act.equip_upgrade');
-    expect(first?.skipped?.join(' ')).toContain("isn't worth the risk");
-    // The same text a turn later (nothing changed), so repeated trace lines collapse.
-    state.turn += 5;
-    expect(choose(state, hero)?.skipped).toEqual(first?.skipped);
+    // An unrelated decision's trace carries no gear text, whatever the pack holds.
+    expect(first?.skipped).toBeUndefined();
+    expect(first?.detail).not.toMatch(/worth the risk|locked/);
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 8; i++) events.push(...step(state, []));
+    const held = ofType(events, 'gearHeld');
+    expect(held).toHaveLength(1);
+    expect(held[0]?.note).toContain("isn't worth the risk");
+    for (const fired of ofType(events, 'ruleFired')) expect(fired.detail + (fired.skipped ?? []).join(' ')).not.toMatch(/worth the risk/);
     // A plain identified jerkin of the same gain is simply put on.
     hero.inventory = { items: [{ def: JERKIN, qty: 1 }] };
     expect(choose(state, hero)?.action).toBe('act.equip_upgrade');
@@ -186,7 +191,11 @@ describe('locked slots (ETH-142)', () => {
       equipped: { mainHand: { def: HATCHET, qty: 1, enchant: -2, blessing: 'cursed' } },
     };
     const choice = choose(state, hero);
-    expect(choice?.skipped?.join(' ')).toMatch(/main hand slot is locked by the cursed .*Hatchet.*Scroll of Uncursing/i);
+    expect(choice?.skipped).toBeUndefined();
+    const events = step(state, [], { decide: waitDecide });
+    expect(ofType(events, 'gearHeld')[0]?.note).toMatch(/main hand slot is locked by the cursed .*Hatchet.*Scroll of Uncursing/i);
+    // Said once: nothing changes, so nothing more is said.
+    expect(ofType(step(state, [], { decide: waitDecide }), 'gearHeld')).toEqual([]);
 
     const worn = snapshot(state).domains.items.members[hero.id]?.equipped[0];
     expect(worn?.locked).toContain('slot is locked');

@@ -624,7 +624,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`).
 
 ### Contracts in the run (ETH-024)
 
@@ -832,8 +832,8 @@ Content in `src/content/items.ts`, sim in `src/sim/items/equipment.ts` and `acti
   its chances, specials converted by `valuePerLevel`) plus `CURSE_LOCK_PREMIUM × P(cursed) × expected
   curse penalty`, the price of the rest-of-run slot lock. The trace shows the numbers ("gain +2 vs margin
   1.04 (expected hidden +0.14, curse lock risk +0.9)"). Items held back, and gear that would beat a cursed
-  worn piece (a locked slot), come through the rule action's `skipped` text, which does not change from
-  turn to turn while nothing changes. `WornView.locked` explains a locked slot on the party card, and
+  worn piece (a locked slot), are said once in a `gearHeld` event (AI log) when the set of reasons for a party
+  member changes (`ItemsState.heldNotes`), not as a note on whichever rule fires next. `WornView.locked` explains a locked slot on the party card, and
   `track.cursedGear` counts the turns a living party member wore cursed gear for the run summary.
   The Wits roll on pickup happens once per item instance (`prop.identify_tried`, `stacks: 'ignore'`,
   cleared when the item is identified).

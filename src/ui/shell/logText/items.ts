@@ -69,6 +69,10 @@ export const ITEMS_LOG_TEXT: LogTextRecord<ItemsEvent> = {
       e.cursed === true ? ' — it is cursed!' : e.plain === true ? ': no enchantment or curse.' : '.',
     ],
   },
+  gearHeld: {
+    category: 'ai',
+    text: (e, nameOf) => `${nameOf(e.actor)} holds back: ${e.note}.`,
+  },
   itemUncursed: {
     category: 'loot',
     text: (e, nameOf) => [

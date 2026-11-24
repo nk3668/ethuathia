@@ -23,18 +23,19 @@ import { ENCHANTMENTS, gearSlots, isEquipSlot, isUsable, ITEMS } from '../../con
 import type { EquipSlot } from '../../content';
 import type { CommandRecord } from '../commands';
 import type { RunTracker, SimDomain, SnapshotCtx, TurnCtx } from '../domain';
+import type { Emit } from '../events';
 import { getFloor } from '../entities';
 import { registerInvariant } from '../invariants';
 import { defineChronicleKind, momentAt } from '../run/chronicle';
 import type { ChronicleRules } from '../run/chronicle';
 import { partyVisible } from '../perception';
-import type { Entity, EntityId, FloorId, RunConfig } from '../state';
+import type { ActorEntity, Entity, EntityId, FloorId, RunConfig, RunState } from '../state';
 import { ITEMS_ACTIONS } from './actions';
 import type { ItemsRequest } from './actions';
 import { CURSED_GEAR_TRACKER, lockedReason } from './cursedGear';
 import { ITEMS_EFFECT_HANDLERS } from './effects';
 import { isCursed, itemStateNote } from './enchant';
-import { SOURCE_EQUIPPED, wornItems } from './equipment';
+import { heldUpgradeNotes, SOURCE_EQUIPPED, wornItems } from './equipment';
 import { appearanceName, isInstanceTypeKnown, isItemIdentified, isTypeIdentified } from './identify';
 import { instanceProblem, itemDef, itemWeight } from './instance';
 import { itemName } from './name';
@@ -113,6 +114,12 @@ export type ItemsEvent =
       floor: FloorId;
       pos: Pos;
     }
+  /**
+   * The baseline is holding back gear that looks like an upgrade (ETH-142): an unidentified piece
+   * not worth the risk, one waiting for a Scroll of Identify, or a slot locked by cursed gear.
+   * Emitted once when the set of reasons changes, not every turn.
+   */
+  | { type: 'gearHeld'; actor: EntityId; note: string; floor: FloorId; pos: Pos }
   /** A curse was lifted from `item` (ETH-044); `slot` is set when it was worn. */
   | { type: 'itemUncursed'; actor: EntityId; item: string; name: string; slot: EquipSlot | null; floor: FloorId; pos: Pos };
 
@@ -127,6 +134,8 @@ export interface ItemsState {
   known: KnownItems;
   /** Item def ids whose true identity has been learned this run (potions, scrolls, jewelry; ETH-044). Sorted, unique. */
   identifiedTypes: string[];
+  /** The reasons last announced (`gearHeld`) for each party member's held-back gear, joined, so they are said once (ETH-142). */
+  heldNotes: Record<EntityId, string>;
 }
 
 /** One carried item, for the UI. */
@@ -224,7 +233,7 @@ export const ITEMS_COMMANDS: CommandRecord<ItemsCommand> = {};
 
 /** The state slice for a new run: an empty purse, no items seen, and no types identified yet. */
 export function initItems(_config: RunConfig): ItemsState {
-  return { gold: 0, known: {}, identifiedTypes: [] };
+  return { gold: 0, known: {}, identifiedTypes: [], heldNotes: {} };
 }
 
 /** `{ scaling }` for a view, when the weapon's attribute changes `member`'s damage (ETH-082). */
@@ -324,7 +333,23 @@ export function itemsSnapshot({ state, floor }: SnapshotCtx): ItemsSnapshot {
 
 /** Turn start: a party member notes the items it can see, before it decides. */
 function itemsTurnStart({ state, actor, emit }: TurnCtx): void {
-  if (state.party.includes(actor.id)) noticeItems(state, actor, emit);
+  if (!state.party.includes(actor.id)) return;
+  noticeItems(state, actor, emit);
+  announceHeldGear(state, actor, emit);
+}
+
+/**
+ * Says once why the baseline is holding back gear that looks like an upgrade, and again only when
+ * the reasons change (ETH-142). It is its own event, not a note on whichever rule fires next, so
+ * an unrelated decision's trace carries no gear text.
+ */
+function announceHeldGear(state: RunState, actor: ActorEntity, emit: Emit): void {
+  const held = state.domains.items.heldNotes;
+  const notes = inventoryOf(actor).length === 0 ? '' : heldUpgradeNotes(state, actor).join('; ');
+  if (notes === (held[actor.id] ?? '')) return;
+  if (notes === '') Reflect.deleteProperty(held, actor.id);
+  else held[actor.id] = notes;
+  if (notes !== '') emit({ type: 'gearHeld', actor: actor.id, note: notes, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
 }
 
 // ---------------------------------------------------------------------------------------------
