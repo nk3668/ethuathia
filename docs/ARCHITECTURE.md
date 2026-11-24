@@ -314,7 +314,7 @@ All in `src/sim/run/`:
   a caster that has it in bolt range (`cond.in_bolt_range` → `act.rush_caster`, after
   `act.attack_adjacent`). No new state: roles add no parts or slices.
 - **Encounters, Squads & Group AI (ETH-135, `src/content/squads.ts`, `combat/encounters.ts`, `combat/groupAi.ts`):**
-  `gen.monsters` delegates to `populateEncounters`, allocating a Danger-scaled floor threat budget (`floorThreatBudget`, scaled by `DungeonDef.encounters?.budgetMul`) across non-arrival rooms while keeping `stairsDistance` clear and preserving OOD + depth-ramped templates (`rollOodDanger`, `templateChanceFor`). `SQUAD_BLUEPRINTS` define role/tag archetypes (`minDanger`, `weight`, `slots`, `preferSameTag`, `patrolEligible`) with zero hardcoded monster ids. Placed squads and deterministic multi-room corridor patrols carry optional `MonsterPart` state (`groupId`, `homeRoom`, `alert { pos, untilTurn }`, `patrol { waypoints, next }`), with pure rule conditions/actions (`cond.has_alert`, `act.pursue_alert`, `act.tether_wander`, `act.patrol`) spliced by `withGroupAiRules` and hook-driven alert/patrol updates (`PURSUIT_MEMORY_TURNS = 8`) in `combatTurnStart` and `strike`. Invariants `combat.groups` and `combat.patrols` verify group/room/alert/waypoint validity.
+  `gen.monsters` delegates to `populateEncounters`, allocating a Danger-scaled floor threat budget (`floorThreatBudget`, scaled by `DungeonDef.encounters?.budgetMul`) across non-arrival rooms while keeping `stairsDistance` clear and preserving OOD + depth-ramped templates (`rollOodDanger`, `templateChanceFor`). For party-size scaling (ETH-145), `populateEncounters` multiplies `floorThreatBudget` by `partySizeBudgetMul(draft.partySize, draft.partyBudgetStep)` using `PARTY_SIZE_BUDGET_STEP` (currently `0`; `ETH-080` tunes it upward toward `~0.1`) from the starting party size (`state.config.party.length`), adding headcount and packs only (never changing monster stats or templates) and surfaced in `TopBar` and the dungeon Codex renderer. `SQUAD_BLUEPRINTS` define role/tag archetypes (`minDanger`, `weight`, `slots`, `preferSameTag`, `patrolEligible`) with zero hardcoded monster ids. Placed squads and deterministic multi-room corridor patrols carry optional `MonsterPart` state (`groupId`, `homeRoom`, `alert { pos, untilTurn }`, `patrol { waypoints, next }`), with pure rule conditions/actions (`cond.has_alert`, `act.pursue_alert`, `act.tether_wander`, `act.patrol`) spliced by `withGroupAiRules` and hook-driven alert/patrol updates (`PURSUIT_MEMORY_TURNS = 8`) in `combatTurnStart` and `strike`. Invariants `combat.groups` and `combat.patrols` verify group/room/alert/waypoint validity.
 
 ### Codex discoveries
 
@@ -1816,9 +1816,15 @@ As built in `src/sim/ai/` (ETH-009):
   `act.drink_fountain` (ETH-072, ETH-094, `src/sim/floors/fountains.ts`) walks to the nearest
   remembered fountain that isn't dry and whose last observed draught in `floors.observedFountains`
   is not harmful (`outcome === 'bane'`), without peeking at untouched fountains' hidden draughts,
-  explaining any skipped harmful fountain in the trace, and drinks. The heading-out ones (ETH-062)
+  explaining any skipped harmful fountain in the trace, and drinks. Between `ITEMS_BASELINE_LOOT`
+  and `act.explore`, `cond.party_scattered → act.regroup` (ETH-145) keeps followers grouped with
+  the party lead while ground remains to explore. The heading-out ones (ETH-062)
   are in
   `src/sim/run/rules.ts`; the floors ones (ETH-058) in `src/sim/floors/rules.ts`:
+  - `cond.party_scattered → act.regroup` (ETH-145): walks a straggler back to `partyLead` (the
+    first living party member on the floor, who regroups on no one) when more than `PARTY_LEASH`
+    (8) tiles away, continuing until within `PARTY_CLOSE` (3) tiles, and only while `act.explore`
+    still resolves so it never fights the descent.
   - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
     default) a member on the stairs takes them only when every living member on that floor is
     gathered (`gatheringAt`: within `GATHER_RADIUS`, 2, of the stairs or of a gathered member,
@@ -2530,6 +2536,11 @@ cards show every member, and the top bar and log show the run.
   ended, `early` that it ended above the bottom. `SeedResult` adds `end` (the outcome), `runTurns`
   (return trip included; `turns` stays the turn the party turned back) and `atRisk`. `METRICS`
   adds ended above bottom, one row per outcome, run turns and Renown and Trophies at risk.
+- ETH-145 adds `--party-sweep` (`partySweepRow`, `partySweepWarnings`, `formatPartySweep`,
+  `PARTY_SWEEP_MIN_RATIO`), `meanLevel` / member-mean level reporting, and `fell`-based death
+  attribution (`e.killer?.def`, avoiding unattributed `other` deaths). `simArgv` forwards `--preset`,
+  `--upgrades` and `--rules` (omitting defaults so older refs still run), and `formatComparison`
+  throws when two reports ran with different arguments.
 
 ### 11.5 PR gates
 
