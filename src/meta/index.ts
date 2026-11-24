@@ -25,7 +25,7 @@ export {
 } from './milestones';
 export type { MilestoneTarget } from './milestones';
 export type { Milestones, MilestoneUnlock } from './slices/milestones';
-export { checkRunResult, currenciesFromRewards } from './runResult';
+export { bankedFromRunResult, checkRunResult, currenciesFromRewards } from './runResult';
 export { decodeSave, decodeSaveWith, encodeSave, MAX_SAVE_LENGTH, SAVE_FORMAT, SAVE_VERSION } from './save';
 export type { DecodeResult, StoredSlice } from './save';
 export { defineSlice } from './slice';
@@ -33,7 +33,7 @@ export type { ProfileBefore, ProfileSlice, SliceMigration, SliceState } from './
 export { discoveriesSchema, mergeMonsterKills, monsterKillsSchema } from './slices/codex';
 export type { Codex, MonsterKills } from './slices/codex';
 export { HISTORY_LIMIT, recordMoments, RUN_RECORD_MOMENTS, runRecord } from './slices/history';
-export type { History, RunRecord, RunRecordContract, RunRecordMember } from './slices/history';
+export type { History, RunRecord, RunRecordContract, RunRecordGold, RunRecordMember } from './slices/history';
 export {
   activeRecords,
   addTrait,
@@ -47,6 +47,25 @@ export {
 } from './adventurers';
 export type { NewRecordInit } from './adventurers';
 export { FALLEN_RECORD_CAP } from './slices/adventurers';
+export {
+  classMastery,
+  MASTERY_BONUS_PER_DEPTH,
+  MASTERY_BONUS_PER_OBJECTIVE,
+  MASTERY_COMPANION_SHARE,
+  MASTERY_CURVE,
+  MASTERY_SHARES,
+  masteryGain,
+  masteryGainBanked,
+  masteryLevel,
+  masteryOf,
+  masteryPoints,
+  masteryProgress,
+  masteryShares,
+  masteryStepCost,
+  masteryXpForLevel,
+} from './mastery';
+export type { ClassMasteryGain, MasteryBonus, MasteryMemberGain, MasteryProgress, MasteryShare, MasteryView } from './mastery';
+export type { ClassMastery, Mastery } from './slices/mastery';
 export type {
   AdventurerDeath,
   AdventurerHistory,
@@ -77,24 +96,34 @@ export {
   canPurchase,
   capacity,
   chosenInGroup,
-  describeGrant,
+  closedGates,
+  describeGate,
   formatCurrencies,
+  gateGoal,
   isUnlocked,
+  nextRankCost,
   nodeCost,
   nodeStatus,
   ownedNodes,
   owns,
   profileGrants,
   purchase,
+  rankCost,
+  rankOf,
+  shortfall,
+  tierGate,
+} from './upgrades';
+export type { ActiveGrant, ClosedGate, NodeStatus, PurchaseCheck } from './upgrades';
+export { describeGrant } from './grantText';
+export {
   FOUNDATIONS_RESPEC_FEE_RATE,
   respec,
-  respecFee,
   respecBlock,
+  respecFee,
   respecPlan,
   resetPlan,
   resetTree,
   RUN_ACTIVE_REASON,
   treeKind,
-  shortfall,
-} from './upgrades';
-export type { ActiveGrant, NodeStatus, PurchaseCheck, RespecOptions, RespecPlan, ResetPlan } from './upgrades';
+} from './respec';
+export type { RespecOptions, RespecPlan, ResetPlan } from './respec';

@@ -4,6 +4,7 @@
  * command head out; the hosts report the end. Fixed seeds and hand-built floors.
  */
 import { describe, expect, it } from 'vitest';
+import { GOLD_PER_TROPHY } from '../../src/content';
 import {
   checkInvariants,
   createRun,
@@ -110,11 +111,12 @@ describe('run end', () => {
     const renown = depthRenown(3) + turnsRenown(state.turn);
     expect(result).toMatchObject({ outcome: 'retreat', atRisk: { renown }, lost: {}, turns: state.turn, deepestDepth: 3 });
     expect(result.atRisk[TROPHIES]).toBeUndefined();
-    expect(Object.keys(result.extras)).toEqual([...RUN_TRACKERS.map((t) => t.id), 'run.end', 'run.party']);
+    expect(Object.keys(result.extras)).toEqual([...RUN_TRACKERS.map((t) => t.id), 'run.end', 'run.party', 'run.gold']);
     expect(result.extras['track.depth']).toEqual({ deepest: 3 });
     expect(result.extras['track.deaths']).toEqual({ fallen: [] });
     expect(result.extras['track.codex']).toMatchObject({ 'class.vanguard': ['seen'], 'race.human': ['seen'] });
     expect(result.extras['run.end']).toEqual(state.domains.run.end);
+    expect(result.extras['run.gold']).toEqual({ gold: 0, trophies: 0, rate: GOLD_PER_TROPHY });
     // Who set out, for the run summary and the run history (ETH-048).
     expect(result.extras['run.party']).toEqual(
       state.party.map((id) => ({ actor: id, name: state.entities[id]?.adventurer?.name, classId: 'class.vanguard', raceId: 'race.human' })),

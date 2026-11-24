@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { GOLD_PER_TROPHY } from '../../src/content';
 import { InlineHost } from '../../src/sim';
 import type { EntityId, SimEvent, Snapshot } from '../../src/sim';
 import { App } from '../../src/ui/App';
@@ -171,6 +172,10 @@ describe('AppShell at desktop width', () => {
     const renownPill = within(list).getByText('Renown').closest('[tabindex="0"]') as HTMLElement;
     act(() => renownPill.focus());
     expect((await screen.findByRole('tooltip')).textContent).toContain(RENOWN_FORMULA_TEXT);
+
+    const trophiesPill = within(list).getByText('Trophies').closest('[tabindex="0"]') as HTMLElement;
+    act(() => trophiesPill.focus());
+    expect((await screen.findByRole('tooltip')).textContent).toContain(`${GOLD_PER_TROPHY} gold = 1 Trophy`);
 
     // Once rolled depth is revealed (snapshot.domains.floors.depth !== null), TopBar shows Floor N/M.
     const domains = SNAPSHOT.domains;

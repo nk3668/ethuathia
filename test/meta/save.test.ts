@@ -9,13 +9,18 @@ function envelope(slices: Record<string, unknown>, version = 1): string {
 }
 
 describe('encodeSave / decodeSave', () => {
-  it('round-trips a profile', () => {
+  it('round-trips a profile, including converted trophies and record.gold (ETH-083)', () => {
     const profile = applyRunResult(newProfile(), {
       ...emptyRunResult('victory'),
       atRisk: { renown: 1234, trophies: 5, [favorKey('deity.dawn')]: 3 },
+      converted: { trophies: 2 },
       turns: 300,
       deepestDepth: 4,
+      extras: { 'run.gold': { gold: 25, trophies: 2, rate: 10 } },
     });
+    expect(profile.currencies.trophies).toBe(7);
+    expect(profile.history.recent[0]?.banked.trophies).toBe(7);
+    expect(profile.history.recent[0]?.gold).toEqual({ gold: 25, trophies: 2, rate: 10 });
     const decoded = decodeSave(encodeSave(profile, 42));
     expect(decoded).toEqual({ ok: true, profile, savedAt: 42, notes: [] });
   });
@@ -23,7 +28,35 @@ describe('encodeSave / decodeSave', () => {
   it('writes the format, version and each slice with its version', () => {
     const raw = JSON.parse(encodeSave(newProfile(), 7)) as Record<string, unknown>;
     expect(raw).toMatchObject({ format: SAVE_FORMAT, version: SAVE_VERSION, savedAt: 7 });
-    expect(raw.slices).toMatchObject({ currencies: { version: 1 }, history: { version: 4 } });
+    expect(raw.slices).toMatchObject({ currencies: { version: 1 }, history: { version: 5 } });
+  });
+
+  it('migrates a v4 history slice without gold records cleanly to v5 (ETH-083)', () => {
+    const v4Record = {
+      run: 1,
+      outcome: 'retreat',
+      turns: 90,
+      deepestDepth: 2,
+      banked: { renown: 12, trophies: 1, favor: {} },
+      lost: { renown: 0, trophies: 0, favor: {} },
+      cause: 'Retreated.',
+      party: [],
+      met: [],
+      contracts: [],
+      moments: [],
+    };
+    const decoded = decodeSave(
+      envelope({
+        currencies: { version: 1, data: { renown: 12, trophies: 1, favor: {} } },
+        history: {
+          version: 4,
+          data: { totals: { runs: 1, victories: 0, retreats: 1, wipes: 0, turns: 90, deepestDepth: 2 }, recent: [v4Record] },
+        },
+      }),
+    );
+    if (!decoded.ok) throw new Error(decoded.error);
+    expect(decoded.profile.history.recent).toEqual([v4Record]);
+    expect(decoded.profile.history.recent[0]?.gold).toBeUndefined();
   });
 
   it('loads a hand-written v1 save of the current slices', () => {

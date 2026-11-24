@@ -1,11 +1,14 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { GOLD_PER_TROPHY } from '../../content';
 import { formatNumber } from '../../core';
-import { RENOWN } from '../../sim';
-import type { RunReport } from '../../sim';
+import { masteryGainBanked } from '../../meta';
+import { RENOWN, TROPHIES } from '../../sim';
+import type { GoldConversionRecord, RunOutcome, RunReport } from '../../sim';
 import { Button, Tooltip } from '../kit';
 import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
 import { useSimStore } from '../stores/simStore';
+import { masteryBreakdown, masteryLine, MASTERY_HELP } from './masteryText';
 import styles from './RunSummary.module.css';
 import {
   contractsOf,
@@ -15,6 +18,8 @@ import {
   epitaph,
   cursedGearTurnsOf,
   fallenOf,
+  GOLD_CONVERSION_TOOLTIP,
+  goldConversionOf,
   lossNote,
   momentsOf,
   OUTCOME_LOOK,
@@ -73,6 +78,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const contracts = contractsOf(report);
   const moments = momentsOf(report);
   const renown = renownBreakdown(report);
+  const goldInfo = goldConversionOf(report);
   const renownSources =
     renown === null
       ? []
@@ -182,6 +188,10 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
                   <th scope="row">
                     {row.key === RENOWN ? (
                       <Tooltip content={<RenownFormulaContent />}>{currencyName(row.key)}</Tooltip>
+                    ) : row.key === TROPHIES ? (
+                      <Tooltip content={<TrophiesFormulaContent gold={goldInfo} outcome={report.end.outcome} />}>
+                        {currencyName(row.key)}
+                      </Tooltip>
                     ) : (
                       currencyName(row.key)
                     )}
@@ -193,6 +203,24 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
               ))}
             </tbody>
           </table>
+          {goldInfo !== null && (
+            <p className={styles.goldLine}>
+              <Tooltip content={GOLD_CONVERSION_TOOLTIP(goldInfo.rate)}>
+                {report.end.outcome === 'wipe' ? 'Gold lost' : 'Gold converted'}
+              </Tooltip>
+              {': '}
+              {report.end.outcome === 'wipe' ? (
+                <span className={styles.goldLost}>{formatNumber(goldInfo.gold)} gold</span>
+              ) : (
+                <span>
+                  {formatNumber(goldInfo.gold)} gold →{' '}
+                  <span className={styles.goldTrophies}>
+                    +{formatNumber(goldInfo.trophies)} {goldInfo.trophies === 1 ? 'Trophy' : 'Trophies'}
+                  </span>
+                </span>
+              )}
+            </p>
+          )}
           {showRenownBreakdown && renown !== null && (
             <div className={styles.renownBreakdown}>
               <div className={styles.breakdownHead}>
@@ -221,6 +249,8 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
             <p className={styles.found}>{found.map(contentName).join(', ')}</p>
           </section>
         )}
+
+        {!past && <Mastery report={report} />}
 
         <Unlocked run={run} />
 
@@ -267,6 +297,67 @@ function RenownFormulaContent() {
       <br />
       {RENOWN_FORMULA_EXAMPLES}
     </>
+  );
+}
+
+/** Tooltip body explaining Trophies from kills and leftover gold conversion (ETH-083). */
+function TrophiesFormulaContent({ gold, outcome }: { gold: GoldConversionRecord | null; outcome: RunOutcome }) {
+  const rate = gold?.rate ?? GOLD_PER_TROPHY;
+  return (
+    <>
+      <strong>Trophies formula</strong>
+      <br />
+      Earned from kills (weighted by monster threat, multiplied by Omens) plus leftover gold converted on exit (
+      {rate} gold = 1 Trophy, rounded down, not multiplied by Omens).
+      {gold !== null && outcome !== 'wipe' && gold.trophies > 0 && (
+        <>
+          <br />
+          Leftover gold: {formatNumber(gold.gold)} gold → +{formatNumber(gold.trophies)}{' '}
+          {gold.trophies === 1 ? 'Trophy' : 'Trophies'}.
+        </>
+      )}
+      {gold !== null && outcome === 'wipe' && gold.gold > 0 && (
+        <>
+          <br />
+          On a wipe all {formatNumber(gold.gold)} leftover gold is lost.
+        </>
+      )}
+    </>
+  );
+}
+
+/**
+ * What the run added to each class's Mastery (ETH-087): one line per class in the party, with a
+ * tooltip of the breakdown. The profile has already banked the run, so the "before" level is the
+ * banked XP minus the run's gain (`masteryGainBanked`). Only for the run that just ended.
+ */
+function Mastery({ report }: { report: RunReport }) {
+  const mastery = useProfileStore((s) => s.profile.mastery);
+  const gains = masteryGainBanked({ mastery }, report.result);
+  if (gains.length === 0) return null;
+  return (
+    <section aria-label="Class Mastery">
+      <h3 className={styles.heading}>Class Mastery</h3>
+      <ul className={styles.list}>
+        {gains.map((gain) => (
+          <li key={gain.classId}>
+            <Tooltip
+              content={
+                <>
+                  {masteryBreakdown(gain).map((line) => (
+                    <div key={line}>{line}</div>
+                  ))}
+                  <br />
+                  {MASTERY_HELP}
+                </>
+              }
+            >
+              <span tabIndex={0}>{masteryLine(gain)}</span>
+            </Tooltip>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

@@ -39,7 +39,7 @@ defineUpgrade({
   grants: [{ kind: 'unlock', id: 'dungeon.test_pit' }],
 });
 
-const own = (profile: Profile, ...ids: string[]): Profile => ({ ...profile, upgrades: { owned: [...profile.upgrades.owned, ...ids] } });
+const own = (profile: Profile, ...ids: string[]): Profile => ({ ...profile, upgrades: { ...profile.upgrades, owned: [...profile.upgrades.owned, ...ids] } });
 
 describe('buildRunConfig', () => {
   it('fills the party with seeded random recruits from the available classes and races', () => {

@@ -2,14 +2,14 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { newProfile } from '../../src/meta';
+import { masteryStepCost, masteryXpForLevel, newProfile } from '../../src/meta';
 import { resetProfileStore, useProfileStore } from '../../src/ui/stores/profileStore';
 import { useRunStore } from '../../src/ui/stores/runStore';
 import { TownPanel } from '../../src/ui/town/TownPanel';
 
 function setRenown(renown: number, owned: string[] = []) {
   const p = newProfile();
-  useProfileStore.setState({ profile: { ...p, currencies: { ...p.currencies, renown }, upgrades: { owned } } });
+  useProfileStore.setState({ profile: { ...p, currencies: { ...p.currencies, renown }, upgrades: { owned, ranks: {} } } });
 }
 
 /** The node button for an upgrade, by its visible name. */
@@ -24,6 +24,22 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   resetProfileStore();
+});
+
+describe('Guild Hall Class Mastery list (ETH-087)', () => {
+  it('lists each class with its level, XP, progress as text and banked points', () => {
+    const p = newProfile();
+    const xp = masteryXpForLevel(3) + 10;
+    useProfileStore.setState({ profile: { ...p, mastery: { classes: { 'class.vanguard': { xp, runs: 2 } } } } });
+    render(<TownPanel />);
+    const list = screen.getByRole('region', { name: 'Class Mastery' });
+    const row = within(list).getByText('Vanguard').closest('li') as HTMLElement;
+    expect(row.textContent).toContain('Level 3');
+    expect(row.textContent).toContain(`${xp} XP`);
+    expect(row.textContent).toContain(`10 / ${masteryStepCost(3)}`);
+    expect(row.textContent).toContain('3 points');
+    expect(within(row).getByRole('meter').getAttribute('aria-valuetext')).toBe(`10 of ${masteryStepCost(3)}`);
+  });
 });
 
 describe('Town tab', () => {

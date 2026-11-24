@@ -542,12 +542,15 @@ The reward flow, end to end. The sim never touches banked currency.
 
 ```
 sim events ──► RunTrackers ──► state.domains.run.rewards.atRisk ──► RunResult ──► meta applyRunResult
-(step)         (reduce)        (currency id → amount, this run;     (run end:     (banks atRisk − lost)
-                                ×Omen multiplier, ETH-067)           lost = wipe
-                                                                     share)
+(step)         (reduce)        (currency id → amount, this run;     (run end:     (banks (atRisk − lost)
+                                ×Omen multiplier, ETH-067)           lost = wipe   + (converted ?? {}))
+                                                                     share;
+                                                                     converted =
+                                                                     gold → Trophies
+                                                                     on exit, ETH-083)
 ```
 
-**Order: base → ×Omen → −25%.** The reward multiplier (`rewardMultiplier(state)`, ETH-115: 1 +
+**Order: base → ×Omen → −25%, then post-exit gold conversion.** The reward multiplier (`rewardMultiplier(state)`, ETH-115: 1 +
 the sum of the run modifiers' `rewardBonus`, never below 0) is applied inside `rewards.atRisk`:
 `trackerRewards` and `projectedRewards` sum the trackers, then multiply each currency and round
 down (`applyRewardMultiplier`). So `RunResult.atRisk` is already multiplied and the wipe loss is
@@ -555,15 +558,26 @@ taken from the multiplied amount. With no bonuses it is exactly 1 and nothing ch
 the modifiers in force now, over the whole run's total: a bonus added mid-run counts for earlier
 earnings too, and one that ends stops counting.
 
+**Leftover gold conversion (ETH-083, `src/content/economy.ts`, `src/sim/run/end.ts`).** In-run gold (`state.domains.items.gold`)
+is NOT at-risk currency: it never enters `rewards.atRisk`, is never multiplied by Omens, and is never
+subject to the 25% wipe loss. Instead, when the run ends:
+
+- On `victory` or `retreat`, leftover gold converts into Trophies at `GOLD_PER_TROPHY` (`10` gold = `1` Trophy,
+  rounded down via `goldToTrophies(gold)`), applied **after** the Omen multiplier and recorded in
+  `RunResult.converted` (`{ trophies }`, omitted when 0).
+- On a `wipe`, all leftover gold is lost (`converted` is omitted).
+- Whenever `gold > 0`, `end` emits `goldSettled { gold, trophies, lost }` right before `runEnded` (and
+  after `earningsLost` on a wipe).
+- `runResult` always writes `extras['run.gold']` (`GoldConversionRecord`: `{ gold, trophies, rate }`).
+
 **The wipe loss (ETH-023, `src/sim/run/wipeLoss.ts`).** `WIPE_LOSS_SHARE` (0.25, final per
 Nate) is the one constant. `wipeLoss(atRisk, outcome)` is empty for a victory or a retreat; on a
 wipe each currency keeps `keptAfterWipe(n)` = ⌊0.75 n⌋ and loses the rest (so the loss rounds
 up, and a lone point is lost). `runResult` sets `RunResult.lost` from it. On a wipe the run end
-also emits `earningsLost { lost, atRisk, share }` just before `runEnded` (only if something is
-lost): since the step's trackers haven't run yet, `end.ts` uses `projectedRewards(state,
+also emits `earningsLost { lost, atRisk, share }` just before `runEnded` (and before `goldSettled`,
+only if something is lost): since the step's trackers haven't run yet, `end.ts` uses `projectedRewards(state,
 stepEvents + runEnded)` (`trackers.ts`), which folds the step's events into copies of the tracker
-states, so the event's figures equal the `RunResult`'s. No new run state. In-run gold is not
-at-risk currency (ETH-083 converts it).
+states, so the event's figures equal the `RunResult`'s. No new run state.
 
 - Trackers turn events (kills, depth reached, conducts kept) into at-risk amounts. Nothing else
   writes `rewards.atRisk`.
@@ -572,16 +586,18 @@ at-risk currency (ETH-083 converts it).
   `src/sim/run/result.ts`). Absent means 0.
 - At run end the run domain puts the at-risk totals in the `RunResult` (ETH-062). The type is in
   `src/sim/run/result.ts` and is plain data:
-  `{ outcome: 'victory' | 'retreat' | 'wipe', atRisk, lost, turns, deepestDepth, extras }`.
-  `atRisk` and `lost` are `RewardAmounts` (currency id → amount); `lost` is what a wipe took
-  (`wipeLoss`; empty otherwise) and is never more than `atRisk`. `extras` is an open
-  record that later trackers write under their own id (`'track.kills'`).
+  `{ outcome: 'victory' | 'retreat' | 'wipe', atRisk, lost, converted?, turns, deepestDepth, extras }`.
+  `atRisk`, `lost`, and optional `converted` are `RewardAmounts` (currency id → amount); `lost` is
+  what a wipe took (`wipeLoss`; empty otherwise) and is never more than `atRisk`, while `converted`
+  holds post-exit converted amounts (absent on wipe or when 0). `extras` is an open
+  record that later trackers write under their own id (`'track.kills'`), plus `'run.end'`, `'run.party'`,
+  and `'run.gold'`.
 - `applyRunResult` in meta (§6.4) checks the result (it throws a `RangeError` on a malformed
-  one), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
-  `atRisk - lost`, the `history` slice records the run, and the `adventurers` slice (ETH-119) folds it
-  into each party member's record. A step gets a third argument, `before` (a `ProfileBefore`: the
+  one, including non-finite/negative `converted` or positive `converted` on a `wipe`), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
+  `(atRisk - lost) + (converted ?? {})`, the `history` slice (v5, `RunRecord.gold`) records the run, the `adventurers` slice (ETH-119) folds it
+  into each party member's record, and the `mastery` slice (ETH-087) adds each class's Mastery XP. A step gets a third argument, `before` (a `ProfileBefore`: the
   history as it was before banking), so it can read the run number without depending on slice order. The reward multiplier is already in
-  `atRisk` (see the order above), so the loss follows it.
+  `atRisk` (see the order above), so the loss follows it, and `converted` is added after both.
 - **Run end to profile (ETH-062):** the host calls `onRunEnded(report)` once, right after the
   update with the run's last events (`HostMessage` `runEnded` from the worker). `App` then calls
   `profileStore.applyRunResult(report.result)`, saves, and opens the run summary through
@@ -1214,6 +1230,7 @@ the features that use it.
 | Monster templates | ETH-117 | built | `MonsterOverlay` (templates, name, title, stats, bundles, threat, loot tier, carried items) layered on a `MonsterDef` at `spawnMonster`: uniques, elites, mini-bosses, nemeses, heirloom carriers, families, hostile ghosts. See "Monster templates (ETH-117)" above |
 | Item properties | ETH-118 | built | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling. See "Item properties (ETH-118)" |
 | Adventurer records | ETH-119 | built | The `adventurers` profile slice (`src/meta/slices/adventurers.ts`, API in `src/meta/adventurers.ts`): a stable id (`adv.<n>`, issued only by `startRun`) carried through the run as `AdventurerConfig.recordId`, then peak level, traits, status, lifetime history and the death of the fallen. Levels reset every run. Fallen records are capped at 200 (kin are never trimmed): roster, graveyard, recruits, quirks, Mastery, lineage |
+| Class Mastery | ETH-087 | built | The `mastery` profile slice (`src/meta/slices/mastery.ts`, curve and helpers in `src/meta/mastery.ts`): per class only `{ xp, runs }` is stored; level and talent points (one per level, spent from M4) come from `MASTERY_CURVE`. A run gives each class in the party its members' `track.xp` (highest earner 100% / 75% / 50% / 25%, a `companion` flag 50%) plus a run-end bonus per floor reached and per completed contract or bounty, paid in full on a wipe. `masteryGain` (profile before) and `masteryGainBanked` (profile after, for the run summary) are pure; `npm run sim` reports the XP per run |
 | Run chronicle | ETH-120 | built | `track.chronicle`: the run's notable moments, durable for the whole run (unlike `simStore`'s `EVENT_BUFFER_SIZE` buffer): Highlights, run summary, epitaphs, ballads, history, time-away. API in "Run chronicle (ETH-120)" above |
 | Shared conditions | ETH-121 | built | Run-scope `CONDITIONS` and a data `Requirement` (all / any / not) checked outside rules, plus the `metInRun` milestone: unlocks, taboos, quirk triggers, building quests. See "Shared conditions (ETH-121)" above |
 | Seeded text generator | ETH-122 | planned | Grammar content expanded with a per-purpose seeded RNG that never touches sim streams: names, titles, epitaphs, ballads, backstories |
@@ -2107,8 +2124,34 @@ As built (ETH-063):
 - **A new building** is a file in `src/content/town/` (its `defineBuilding` and
   `defineUpgrade`s) and one line in `town/index.ts`, plus, only if the generic tree isn't
   enough, a component and one line in `BUILDING_PANELS` (`src/ui/town/panels.ts`).
-- **State:** the `upgrades` profile slice, `{ owned: string[] }` in purchase order. Ids no
-  longer in content are kept and ignored.
+- **State:** the `upgrades` profile slice (version 2), `{ owned: string[], ranks: Record<string, number> }`:
+  `owned` is every node bought, in purchase order, each once; `ranks` is sparse and holds only
+  nodes bought past rank 1 (absent means rank 1; values are whole numbers from 2; every key is in
+  `owned`). The v1 to v2 migration adds `ranks: {}`. Ids no longer in content are kept and
+  ignored, and a stored rank above a node's current top rank is read as the top rank.
+- **Ranks (ETH-172):** a node may have `ranks: { max, costGrowth }` (`max` 2 to 10, `costGrowth`
+  1 or more). Rank `r` costs `cost × costGrowth^(r−1)` per currency (`rankPrice`, rounded by
+  `roundCost`: whole numbers under 100, else two significant figures, never below the rank
+  before); rank 1 is `cost` as written. Each rank adds the node's `grants` once more, so a ranked
+  node may only have `capacity` and `bundle` grants (`UPGRADE_KIND.check`). `rankOf`, `rankCost`
+  and `nextRankCost` read them; `purchase` buys the next rank; `canPurchase` returns `owned` only
+  at the top rank, and a partly bought node is `available` or `expensive` for its next rank.
+  `profileGrants` repeats a node's grants `rankOf` times, so `capacity` and `isUnlocked` need no
+  change. `buildRunConfig` lists a ranked node's id in `partyBundles` once per rank and gives its
+  run-scope bundle one run modifier per rank (keys `id`, `id#2`, …), since the sim reads a bundle
+  from the node by id and knows nothing of ranks.
+- **Building tiers (ETH-172):** `BuildingDef.tierGates: { fromTier, unlock: Milestone, name? }[]`
+  keeps every node row from `fromTier` down locked until `unlock` is met (`fromTier` 2 or more,
+  strictly increasing; the rule that no `requires` points up a band follows from the existing
+  rule that prerequisites sit on earlier rows). Each gate is a milestone target with the id
+  `<building id>_t<fromTier>` (`tierGateId`, e.g. `building.smithy_t4`), listed by
+  `milestoneTargets()` after its building, so `unlockMilestones`, `milestoneRequirements` and the
+  run summary's unlock lines handle it with no special case, and the unlock is recorded in the
+  `milestones` slice and never closes again. `tierGate(profile, building, tier)` returns the
+  closed gate over a row (or `null`), `closedGates` lists them, and `canPurchase` refuses such a
+  node as `locked` with `describeGate` ("Tier 4 and up open when you reach floor 6."). A node's
+  `tier` stays its row; the UI numbers bands I, II, III from the gates (`tierBand`). No shipped
+  building has gates or ranks yet (ETH-132, ETH-159, ETH-170 add content).
 - **Engine** (`src/meta/upgrades.ts`, pure): `canPurchase(profile, id)` (`{ ok }` or a
   `status` of `owned` / `excluded` / `locked` / `expensive` / `unknown` with a `reason` for the
   tooltip), `nodeStatus`, `purchase` (throws a `RangeError` with the reason),
@@ -2124,10 +2167,17 @@ As built (ETH-063):
   the run screen until the run ends) and throw `RUN_ACTIVE_REASON`. The fee is
   `FOUNDATIONS_RESPEC_FEE_RATE` (0) of what a Foundations respec gives up (the chosen node for
   `respec`, the whole refund for `resetTree`), rounded up; Tactics never pay. Tests override the
-  rate with `{ foundationsFeeRate }`. ETH-172 ranks plug in by pricing a node's ranks in
-  `nodeCost`/`priceOf`, so refunds cover every rank. `profileGrants(profile)` returns `{ source, grant }[]` for `buildRunConfig`
-  (ETH-064); `capacity(profile, key, base)` and `isUnlocked(profile, id)` derive from it.
-  `describeGrant` words a grant for tooltips and the Codex.
+  rate with `{ foundationsFeeRate }`. Respec and reset live in `src/meta/respec.ts`; they refund
+  every rank bought (the sum of `rankCost` for ranks 1 to n), and the fee is charged on that
+  total (for a group respec, on all ranks of the chosen node). `profileGrants(profile)` returns
+  `{ source, grant }[]` for `buildRunConfig` (ETH-064); `capacity(profile, key, base)` and
+  `isUnlocked(profile, id)` derive from it. `describeGrant(grant, times)` (`src/meta/grantText.ts`)
+  words a grant for tooltips and the Codex, with `times` ranks stacked.
+- **Town UI for ranks and tiers:** a ranked node shows `2/5` (the Roman numeral only in the
+  tooltip name, "Hardy Recruits III"); its tooltip lists the effect now, the next rank's effect
+  and price, and every rank's price, plus the `UPGRADE_HELP.ranks` text. A closed gate draws a
+  labeled divider above its first row ("Tier II — locked: …", lock glyph and words, never
+  color alone) whose tooltip has the full requirement and `UPGRADE_HELP.tiers`.
 
 ### 6.3 From profile to run
 

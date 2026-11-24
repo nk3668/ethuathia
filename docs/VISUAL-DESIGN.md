@@ -205,7 +205,8 @@ goes on, this run's at-risk earnings beside it in `--text-muted` with a `+` (`�
 never rests on color; screen readers hear ", at risk: +111". It disappears once the run ends (the
 profile has banked it). The tooltip reads "Renown: 156 banked, +111 at risk", the currency's
 blurb, then what banked and at-risk mean, including that a wipe loses 25% (rounded in the
-player's disfavor). Run position in the centre. Pause and speed on the right as a
+player's disfavor), with the Renown formula on Renown and the exit gold conversion rate on
+Trophies (ETH-083). Run position in the centre. Pause and speed on the right as a
 segmented control; the active speed is filled with `--accent` and also marked `aria-pressed`.
 
 As built (ETH-014): `SpeedControls`, a `group` named "Sim speed" of kit `Button`s with shared
@@ -546,7 +547,9 @@ the party with each member's fate, the contracts, **Moments** (ETH-120: the run'
 notable chronicle moments in turn order, each "Turn N" in faint tabular figures then its
 sentence; a past run shows the five its record kept), a currency table (Earned, Lost in the wipe, Banked; the Omen
 multiplier column arrives with ETH-067, between Earned and Lost, so it reads base → ×Omen → −25%)
-with a formula tooltip on Renown and a compact per-floor Renown breakdown beneath the table
+with formula tooltips on Renown and Trophies, a `"Gold converted: X gold → +Y Trophies"` (on victory or
+retreat) or `"Gold lost: X gold"` (on wipe) line beneath the table with a conversion-rate tooltip
+(ETH-083, preserved in Run History v5), a compact per-floor Renown breakdown beneath it
 (ETH-085, omitted for older saved runs whose totals predate the formula), a muted line under it
 saying how the outcome treated the earnings (ETH-023), "Met this run" (the Codex discoveries), a placeholder epitaph in
 italics, the Auto-restart checkbox with "Next run in N s" and Cancel while counting down, and

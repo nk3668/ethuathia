@@ -83,6 +83,13 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
         Object.entries(e.lost).map(([key, n]) => `${formatNumber(n)} ${currencyName(key)}`),
       )} lost. The rest is banked.`,
   },
+  goldSettled: {
+    category: 'system',
+    text: (e) =>
+      e.lost
+        ? `All ${formatNumber(e.gold)} leftover gold is lost in the wipe.`
+        : `${formatNumber(e.gold)} leftover gold converts to ${formatNumber(e.trophies)} ${e.trophies === 1 ? 'Trophy' : 'Trophies'}.`,
+  },
   runEnded: {
     category: 'system',
     text: (e) => `${OUTCOME_TEXT[e.outcome]} ${e.cause}`,
