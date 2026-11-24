@@ -8,7 +8,7 @@ import type { AttributeId } from '../../src/content';
 import { checkInvariants, createRun, getAttribute, getEntity, getStat } from '../../src/sim';
 import type { ActorEntity, EntityId } from '../../src/sim';
 import { buildHeadlessConfig, headlessParty, parseSimArgs } from '../../tools/headless';
-import { availableClasses, availableRaces, masteryClasses, newProfile } from '../../src/meta';
+import { availableClasses, availableRaces, isAvailable, lockedByUpgrade, masteryClasses, newProfile } from '../../src/meta';
 
 const ROOM = ['#########', '#@......#', '#.......#', '#########'];
 
@@ -88,12 +88,15 @@ describe('the starter races', () => {
   }
 });
 
-describe('opening the starter content', () => {
-  it('leaves every class and race available until ETH-036 gates them', () => {
+describe('the starter content', () => {
+  it('opens only the Vanguard and Human; the rest are sold in the town (ETH-036)', () => {
     const profile = newProfile();
-    expect(availableClasses(profile).map((c) => c.id)).toEqual(CLASSES.all().map((c) => c.id));
-    expect(availableRaces(profile).map((r) => r.id)).toEqual(RACES.all().map((r) => r.id));
-    expect(masteryClasses(profile).map((c) => c.id)).toEqual(CLASSES.all().map((c) => c.id));
+    expect(availableClasses(profile).map((c) => c.id)).toEqual(['class.vanguard']);
+    expect(availableRaces(profile).map((r) => r.id)).toEqual(['race.human']);
+    expect(masteryClasses(profile).map((c) => c.id)).toEqual(['class.vanguard']);
+    // Every other class and race has a node that sells it.
+    expect(CLASSES.all().filter((c) => !isAvailable(profile, c.id) && !lockedByUpgrade(c.id))).toEqual([]);
+    expect(RACES.all().filter((r) => !isAvailable(profile, r.id) && !lockedByUpgrade(r.id))).toEqual([]);
   });
 });
 

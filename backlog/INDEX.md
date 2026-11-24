@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-180**
+**Next ID: ETH-184**
 
 **Current milestone: M2 (Meta loop).**
 
@@ -115,7 +115,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-149](tools-balance/ETH-149-tooling-hygiene.md) | Tooling hygiene: formatter policy, line endings and worktree-safe tests | tools-balance | M1.6 | P3 | done | S |
 | [ETH-059](saves-platform/ETH-059-profile-saves.md) | Profile, banked currencies and versioned local saves | saves-platform | M2 | P0 | done | M |
 | [ETH-023](town-meta/ETH-023-at-risk-run-currency.md) | Track run earnings as at-risk currency and lose 25% on a wipe | town-meta | M2 | P1 | done | M |
-| [ETH-036](characters/ETH-036-milestone-unlocks-guild-hall.md) | Milestone-gated class and race unlocks bought at the Guild Hall | characters | M2 | P1 | idea | M |
+| [ETH-036](characters/ETH-036-milestone-unlocks-guild-hall.md) | Milestone-gated class and race unlocks bought at the Guild Hall | characters | M2 | P1 | done | M |
 | [ETH-063](town-meta/ETH-063-upgrade-engine-town.md) | Upgrade engine and the Town screen with a Guild Hall | town-meta | M2 | P1 | done | M |
 | [ETH-064](ui-shell/ETH-064-prepare-screen.md) | Prepare screen and building a run config from the profile | ui-shell | M2 | P1 | done | M |
 | [ETH-065](codex-tooltips/ETH-065-codex-framework.md) | Codex tab, discovery tracking and Explain tooltips from content | codex-tooltips | M2 | P1 | done | M |
@@ -150,6 +150,9 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-176](characters/ETH-176-class-starting-kits.md) | Classes start each run with a kit of gear | characters | M2 | P1 | done | S |
 | [ETH-177](characters/ETH-177-reprice-finesse.md) | Reprice Finesse so classes can share one point budget | characters | M2 | P1 | done | M |
 | [ETH-178](tools-balance/ETH-178-sim-mixed-party.md) | Sim harness option for a random mixed party, as players get it | tools-balance | M2 | P2 | done | S |
+| [ETH-180](town-meta/ETH-180-ranked-tooltip-stacking.md) | Stat tooltips name a ranked upgrade once, with its rank count | town-meta | M2 | P3 | ready | S |
+| [ETH-181](ui-shell/ETH-181-whole-number-stats.md) | Show derived stats the way combat uses them, as whole numbers | ui-shell | M2 | P3 | done | S |
+| [ETH-183](ui-shell/ETH-183-trophies-tooltip-single-source.md) | One source for the Trophies tooltip text | ui-shell | M2 | P3 | ready | S |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |
 | [ETH-077](ui-shell/ETH-077-prepare-attribute-previews.md) | Show attribute previews in the Prepare screen's class and race selects | ui-shell | M2 | P3 | done | S |
@@ -167,6 +170,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-146](tools-balance/ETH-146-composition-balance-pass.md) | Composition and rules balance pass (M4 capstone) | tools-balance | M4 | P2 | idea | M |
 | [ETH-173](characters/ETH-173-resurrection-class.md) | A class that can resurrect a fallen party member during a run | characters | M4 | P3 | idea | M |
 | [ETH-179](characters/ETH-179-corpse-eating-race.md) | A woodland race that heals by consuming the fallen but can't drink healing potions | characters | M4 | P3 | idea | M |
+| [ETH-182](characters/ETH-182-attribute-stat-revisit.md) | Revisit attributes and derived stats, starting with Grit | characters | M4 | P2 | idea | M |
 | [ETH-041](bestiary/ETH-041-named-uniques.md) | Named uniques and bosses | bestiary | M5 | P2 | idea | M |
 | [ETH-042](bestiary/ETH-042-monster-families-floor-themes.md) | Monster families and floor themes | bestiary | M5 | P2 | idea | M |
 | [ETH-045](combat-items/ETH-045-affixes-artifacts.md) | Light affixes and named artifacts | combat-items | M5 | P2 | idea | M |

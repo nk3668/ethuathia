@@ -1,13 +1,15 @@
 import { useShallow } from 'zustand/react/shallow';
 import { ATTRIBUTE_IDS, attributeDef, attributeDefId, CLASSES, EQUIP_SLOT_INFO, gearSlots, ITEM_CATEGORY_INFO, ITEMS, STATUSES } from '../../content';
 import type { AttributeId } from '../../content';
-import { STAT_IDS, STAT_INFO } from '../../sim';
+import { isAvailable } from '../../meta';
+import { roundedText, STAT_IDS, STAT_INFO } from '../../sim';
 import type { ActionRequest, EntityId, InventoryView, LevelView, MemberStatsView } from '../../sim';
 import { Explain } from '../codex/Explain';
 import { attributeEffectText, growthLine, xpSourcesText } from '../codex/attributeText';
 import { keyHint } from '../input/keymap';
 import { runKeyAction, togglePossession } from '../input/useKeymap';
 import { Bar, Button, Card, Panel, Tooltip } from '../kit';
+import { useProfileStore } from '../stores/profileStore';
 import { useSimStore } from '../stores/simStore';
 import { useUiStore } from '../stores/uiStore';
 import styles from './PartyColumn.module.css';
@@ -184,6 +186,8 @@ interface AttributeChip {
   from: string[];
   /** Stats it adds to: "Max HP +6". */
   adds: string[];
+  /** The whole totals combat uses where they aren't whole already: "Damage 2.4, rounded to 2 in combat" (ETH-181). */
+  totals: string[];
 }
 
 function attributeChips(view: MemberStatsView | undefined): AttributeChip[] {
@@ -192,6 +196,7 @@ function attributeChips(view: MemberStatsView | undefined): AttributeChip[] {
     const result = view.attributes[attribute];
     const source = attributeDefId(attribute);
     const adds: string[] = [];
+    const totals: string[] = [];
     for (const stat of STAT_IDS) {
       // Summed per stat: a wielded weapon's scaling (ETH-082) credits its attribute's damage to it
       // and takes the unarmed attribute's back off, which nets to nothing on that chip.
@@ -200,13 +205,18 @@ function attributeChips(view: MemberStatsView | undefined): AttributeChip[] {
         if (part.source.id === source && part.op === 'add') total += part.value;
       }
       // Fractional formulas (ETH-177) leave float dust where the two scaling parts cancel.
-      if (Math.round(total * 100) !== 0) adds.push(`${STAT_INFO[stat].label} ${signed(total)}${STAT_INFO[stat].percent === true ? '%' : ''}`);
+      if (Math.round(total * 100) !== 0) {
+        adds.push(`${STAT_INFO[stat].label} ${signed(total)}${STAT_INFO[stat].percent === true ? '%' : ''}`);
+        const text = roundedText(stat, view.stats[stat].raw);
+        if (text.includes('rounded')) totals.push(`${STAT_INFO[stat].label} ${text}`);
+      }
     }
     return {
       attribute,
       value: result.value,
       from: result.parts.map((p, i) => `${p.source.label} ${i === 0 ? p.value : signed(p.value)}`),
       adds,
+      totals,
     };
   });
 }
@@ -242,6 +252,12 @@ function AttributeChips({ id }: { id: EntityId }) {
                   )}
                   <br />
                   {chip.adds.length > 0 ? <>Adds: {chip.adds.join(', ')}.</> : <>Adds nothing at this value.</>}
+                  {chip.totals.length > 0 && (
+                    <>
+                      <br />
+                      Totals: {chip.totals.join('; ')}.
+                    </>
+                  )}
                   <br />
                   <span className={styles.attributeRule}>{attributeEffectText(chip.attribute)}.</span>
                 </>
@@ -325,7 +341,9 @@ function act(action: ActionRequest): void {
 
 /** Joins an item's state note (ETH-044) and weapon scaling note (ETH-082) for `Explain`. */
 function itemNote(stateNote?: string, scaling?: string, locked?: string): string | undefined {
-  const parts = [stateNote, scaling, locked].filter((s): s is string => s !== undefined && s !== '');
+  // Scaling changes are exact (+1.4); the damage total they feed is rounded in combat (ETH-181).
+  const scalingNote = scaling === undefined ? undefined : `${scaling} (the total is rounded to a whole number in combat).`;
+  const parts = [stateNote, scalingNote, locked].filter((s): s is string => s !== undefined && s !== '');
   return parts.length === 0 ? undefined : parts.join(' ');
 }
 
@@ -495,6 +513,8 @@ function PossessButton({ id, name, possessed }: { id: EntityId; name: string; po
 
 function PartyCard({ id, slot, compact }: PartyCardProps) {
   const member = useMember(id);
+  // A class or race the guild hasn't bought yet came as a teaser recruit (ETH-036).
+  const untrained = useProfileStore((s) => member !== null && !(isAvailable(s.profile, member.classId) && isAvailable(s.profile, member.raceId)));
   const selected = useUiStore((s) => s.selected === id);
   const select = useUiStore((s) => s.select);
   if (!member) return null;
@@ -552,6 +572,13 @@ function PartyCard({ id, slot, compact }: PartyCardProps) {
       <p className={styles.kind}>
         <Explain id={member.raceId}>{contentName(member.raceId)}</Explain> <Explain id={member.classId}>{contentName(member.classId)}</Explain>
       </p>
+      {untrained && (
+        <Tooltip content="A teaser recruit: a class or race a run has revealed but the town hasn't bought yet. It plays normally and earns Mastery for its class.">
+          <p className={styles.untrained} tabIndex={0}>
+            Not yet trained by the guild
+          </p>
+        </Tooltip>
+      )}
       {hp}
       {member.maxMp > 0 && (
         <Bar label="MP" tone="mp" value={member.mp} max={member.maxMp} ariaLabel={`${member.name}'s MP`} />

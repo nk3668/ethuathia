@@ -334,7 +334,7 @@ describe('tier gates', () => {
     p = buy(p, 'tr_c', 'tr_d');
     expect(canPurchase(p, 'upgrade.tr_e')).toMatchObject({ status: 'locked', reason: 'Tier 5 and up open when you reach floor 6.' });
     p = asDepth(p, 6);
-    expect(latestUnlocks(p).map((u) => u.id)).toEqual(['building.test_tiers_t5']);
+    expect(latestUnlocks(p).filter((u) => u.id.startsWith(GATED)).map((u) => u.id)).toEqual(['building.test_tiers_t5']);
     expect(canPurchase(p, 'upgrade.tr_e')).toEqual({ ok: true });
     // A shallower run later does not close it again.
     expect(tierGate(asDepth(p, 1), GATED, 5)).toBeNull();

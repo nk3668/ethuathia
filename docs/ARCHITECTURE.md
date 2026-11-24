@@ -408,12 +408,13 @@ Consumers read them with `statValue` and roll `chance(value / 100)` on their own
 only current `hp` and `mp` (plus energy, faction, queued).
 
 - `statValue(state, entity, stat): number` for hot paths (scheduler, AI, combat rolls).
-- `getStat(state, entity, stat): StatResult` = `{ stat, value, parts }`, each part
+- `getStat(state, entity, stat): StatResult` = `{ stat, value, raw, parts }` (`raw` is the exact total; `value` is `combatValue(stat, raw)`, the whole number combat reads, ETH-181), each part
   `{ op: 'add' | 'mul', value, source: { id, label } }` (content id and display name, e.g.
   `{ id: 'race.human', label: 'Human' }`), ready for a tooltip. `getStats` returns all nine.
   Parts that change nothing are left out. Both give the same number.
-- **Formula:** value = (sum of `add` parts) × (product of `mul` parts), `Math.round`ed, clamped
-  to `STAT_INFO[stat].min`. Parts come from, in order:
+- **Formula:** raw = (sum of `add` parts) × (product of `mul` parts); value = `combatValue(stat, raw)`
+  (`Math.round`ed, clamped to `STAT_INFO[stat].min`). Every display of a total uses that helper
+  too, and `roundedText` words it for tooltips ("1.8, rounded to 2 in combat"). Parts come from, in order:
   1. **Stat providers** (`STAT_PROVIDERS`): `stats.base` (the entity's `stats.base[stat]`, or
      `STAT_INFO` base, labeled "Base"), then `stats.class_race` (the race's speed), then
      `stats.attributes` (ETH-033, below). Levels (ETH-034) need no provider of their own: they
@@ -2076,6 +2077,7 @@ interface UpgradeNode extends Def {
   cost: Partial<Record<CurrencyId, number>>
   requires: string[]               // node ids
   exclusiveGroup?: string          // pick one of the nodes sharing this group
+  reveal?: Milestone               // ETH-036: sealed until a run meets it; recorded in `milestones` under the node id
   grants: Grant[]
 }
 

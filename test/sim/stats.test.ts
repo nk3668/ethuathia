@@ -12,7 +12,9 @@ import {
   BUNDLE_SOURCES,
   checkGame,
   checkInvariants,
+  combatValue,
   createRun,
+  exactText,
   detachBundles,
   discoveriesOf,
   fieldOfView,
@@ -21,9 +23,11 @@ import {
   getStat,
   newStatsPart,
   removeStatus,
+  roundedText,
   runEffect,
   snapshot,
   STAT_IDS,
+  STAT_INFO,
   STAT_PROVIDERS,
   statValue,
   step,
@@ -109,6 +113,7 @@ describe('getStat', () => {
     expect(getStat(state, hero, 'hp')).toEqual({
       stat: 'hp',
       value: 33,
+      raw: 33,
       parts: [
         { op: 'add', value: 27, source: { id: 'attribute.grit', label: 'Grit 14' } },
         { op: 'add', value: 6, source: { id: 'attribute.brawn', label: 'Brawn 12' } },
@@ -133,6 +138,32 @@ describe('getStat', () => {
     ]);
     // Brawn 12: (12 − 3) × 0.2 = 1.8, then the bundle's +3, rounded.
     expect(statValue(state, hero, 'damage')).toBe(5);
+  });
+
+  it('keeps the exact total beside the whole number combat uses (ETH-181)', () => {
+    const { state, hero } = setup();
+    // Brawn 12: (12 − 3) × 0.2 = 1.8 damage exactly, 2 in combat.
+    const damage = getStat(state, hero, 'damage');
+    expect(damage.raw).toBeCloseTo(1.8, 10);
+    expect(damage.value).toBe(2);
+    expect(statValue(state, hero, 'damage')).toBe(combatValue('damage', damage.raw));
+    expect(roundedText('damage', damage.raw)).toBe('1.8, rounded to 2 in combat');
+    // A whole total says nothing about rounding.
+    expect(roundedText('hp', getStat(state, hero, 'hp').raw)).toBe('33');
+    // Every stat's value is its raw total through the one helper.
+    for (const stat of STAT_IDS) {
+      const result = getStat(state, hero, stat);
+      expect(result.value).toBe(combatValue(stat, result.raw));
+      expect(Number.isInteger(result.value)).toBe(true);
+    }
+  });
+
+  it('combatValue rounds half up and clamps to the stat range', () => {
+    expect(combatValue('damage', 2.5)).toBe(3);
+    expect(combatValue('damage', 2.4)).toBe(2);
+    expect(combatValue('damage', -3)).toBe(0);
+    expect(combatValue('hp', 0.2)).toBe(STAT_INFO.hp.min);
+    expect(exactText(2.4000000000000004)).toBe('2.4');
   });
 
   it('agrees with statValue for every stat', () => {

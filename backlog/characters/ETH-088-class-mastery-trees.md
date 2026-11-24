@@ -26,6 +26,7 @@ Lets two adventurers of the same class play differently (e.g. a damage Vanguard 
 - [ ] Named builds can be saved and applied on the Prepare screen; rebuilding is free between runs and never possible during one
 - [ ] Points beyond the full trees go into small repeatable bonuses
 - [ ] Every node has Codex and tooltip text
+- [ ] Talent trees are opened through the town (Nate, 2026-11-24: they belong in the building trees too): a Guild Hall Tier III node, *Training Grounds*, opens them. Mastery XP banks before then, and the points wait.
 
 ## Notes
 Open, settle in the spec: about 40 points per tree or 40 across all three (Nate, 2026-11-24). Simple classes may have fewer, bigger nodes; complex classes more, smaller ones.
