@@ -8,11 +8,11 @@
  * overwritten; importing a save or a hard reset recovers from a failed load.
  */
 import { create } from 'zustand';
-import { applyRunResult, canPurchase, decodeSave, encodeSave, newProfile, purchase, respec, respecPlan } from '../../meta';
+import { applyRunResult, canPurchase, decodeSave, encodeSave, newProfile, purchase, respec, respecPlan, startRun } from '../../meta';
 import type { Profile, RunChoices, Settings } from '../../meta';
 import { startAutosave } from '../../platform';
 import type { AutosaveOptions, SaveStore } from '../../platform';
-import type { RunResult } from '../../sim';
+import type { RunConfig, RunResult } from '../../sim';
 
 export { totalFavor } from '../../meta';
 
@@ -35,6 +35,12 @@ export interface ProfileStoreState {
 
   /** Banks a finished run's rewards (meta `applyRunResult`). */
   applyRunResult(result: RunResult): void;
+  /**
+   * Builds the next run's config from the remembered Prepare choices and issues its adventurers' record
+   * ids (meta `startRun`, ETH-119), keeping the profile it returns. Every run launch goes through it.
+   * `previous` is the last run's config, for a Rematch. Throws if the config is invalid.
+   */
+  startRun(seed: number, previous?: RunConfig): RunConfig;
   /** Changes some of the player's settings (the profile's `settings` slice), e.g. `{ autoRestart: true }`. */
   updateSettings(changes: Partial<Settings>): void;
   /** Changes some of the remembered Prepare choices (the profile's `prepare` slice), e.g. `{ dungeon }`. */
@@ -73,6 +79,12 @@ export const useProfileStore = create<ProfileStoreState>()((set, get) => ({
 
   applyRunResult: (result) => {
     set((s) => ({ profile: applyRunResult(s.profile, result), dirty: true }));
+  },
+
+  startRun: (seed, previous) => {
+    const started = startRun(get().profile, get().profile.prepare.choices, seed, previous);
+    set({ profile: started.profile, dirty: true });
+    return started.config;
   },
 
   updateSettings: (changes) => {

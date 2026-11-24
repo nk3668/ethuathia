@@ -29,11 +29,34 @@ export { checkRunResult, currenciesFromRewards } from './runResult';
 export { decodeSave, decodeSaveWith, encodeSave, MAX_SAVE_LENGTH, SAVE_FORMAT, SAVE_VERSION } from './save';
 export type { DecodeResult, StoredSlice } from './save';
 export { defineSlice } from './slice';
-export type { ProfileSlice, SliceMigration, SliceState } from './slice';
+export type { ProfileBefore, ProfileSlice, SliceMigration, SliceState } from './slice';
 export { discoveriesSchema, mergeMonsterKills, monsterKillsSchema } from './slices/codex';
 export type { Codex, MonsterKills } from './slices/codex';
 export { HISTORY_LIMIT, recordMoments, RUN_RECORD_MOMENTS, runRecord } from './slices/history';
 export type { History, RunRecord, RunRecordContract, RunRecordMember } from './slices/history';
+export {
+  activeRecords,
+  addTrait,
+  adventurerId,
+  ADVENTURER_ID_PATTERN,
+  fallenRecords,
+  newRecord,
+  recordOf,
+  retiredRecords,
+  setStatus,
+} from './adventurers';
+export type { NewRecordInit } from './adventurers';
+export { FALLEN_RECORD_CAP } from './slices/adventurers';
+export type {
+  AdventurerDeath,
+  AdventurerHistory,
+  AdventurerId,
+  AdventurerKiller,
+  AdventurerOrigin,
+  AdventurerRecord,
+  AdventurerStatus,
+  Adventurers,
+} from './slices/adventurers';
 export type { Upgrades } from './slices/upgrades';
 export type { Settings } from './slices/settings';
 export type { Prepare } from './slices/prepare';
@@ -48,7 +71,7 @@ export { chosenDungeon } from './prepare/dungeon';
 export type { DungeonChoice } from './prepare/dungeon';
 export { availableContracts, BASE_CONTRACT_SLOTS, chosenContracts, contractSlots } from './prepare/contracts';
 export type { ContractsChoice } from './prepare/contracts';
-export { buildRunConfig, checkRunConfig, PREPARE_STREAM, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
+export { buildRunConfig, checkRunConfig, PREPARE_STREAM, startRun, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
 export {
   canAfford,
   canPurchase,

@@ -69,7 +69,12 @@ export function createRun(config: RunConfig, seed: number): RunState {
       floor: entry,
       pos: starts[i] as Pos,
       actor: actors[i] as ActorPart,
-      adventurer: { name: member.name, classId: member.classId, raceId: member.raceId },
+      adventurer: {
+        name: member.name,
+        classId: member.classId,
+        raceId: member.raceId,
+        ...(member.recordId === undefined ? {} : { recordId: member.recordId }),
+      },
       stats: newStatsPart(),
       ai: newAiPart(),
     });

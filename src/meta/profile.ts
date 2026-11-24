@@ -37,7 +37,7 @@ export function applyRunResult(profile: Profile, result: RunResult): Profile {
   if (problems.length > 0) throw new RangeError(`Malformed RunResult: ${problems.join('; ')}`);
   const next: Record<string, unknown> = { ...profile };
   for (const [key, slice] of SLICE_ENTRIES) {
-    if (slice.onRunResult) next[key] = slice.onRunResult(profile[key], result);
+    if (slice.onRunResult) next[key] = slice.onRunResult(profile[key], result, profile);
   }
   return unlockMilestones(next as Profile, result);
 }

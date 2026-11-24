@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { buildRunConfig } from '../meta';
 import { createSaveStore } from '../platform';
 import type { SaveStore } from '../platform';
 import type { EntityId, RunConfig, SimHost } from '../sim';
@@ -27,7 +26,7 @@ function createWorkerHost(): SimHost {
 
 /**
  * The app: opens on the Prepare screen, starts each run on a sim host from the profile's
- * remembered Prepare choices (`buildRunConfig`), feeds the host into `simStore` and shows the
+ * remembered Prepare choices (meta `startRun`), feeds the host into `simStore` and shows the
  * shell. The UI only reads snapshots and events from the store and talks to the run through the
  * host (the speed control sends through `simStore.setSpeed`, which `bindHost` connects to this
  * host).
@@ -63,6 +62,7 @@ export function App({ createHost = createWorkerHost, seed, createSaveStore: make
     // previous run's seed without advancing the counter. The seed also draws random recruits.
     let nextSeed = seed;
     let lastSeed: number | null = null;
+    let lastConfig: RunConfig | undefined;
     const freshSeed = (): number => {
       if (nextSeed !== undefined) return nextSeed;
       const now = Date.now() % 2 ** 31;
@@ -72,16 +72,18 @@ export function App({ createHost = createWorkerHost, seed, createSaveStore: make
       const rematchSeed = options?.sameSeed === true ? lastSeed : null;
       const runSeed = rematchSeed ?? freshSeed();
       const sameSeed = rematchSeed !== null;
-      const { profile } = useProfileStore.getState();
       let config: RunConfig;
       try {
-        config = buildRunConfig(profile, profile.prepare.choices, runSeed);
+        // The one place a run gets its adventurers' record ids (meta `startRun`, ETH-119); a Rematch
+        // keeps the previous run's adventurers.
+        config = useProfileStore.getState().startRun(runSeed, sameSeed ? lastConfig : undefined);
       } catch (error) {
         useRunStore.getState().startFailed(error instanceof Error ? error.message : String(error));
         return;
       }
       if (!sameSeed && nextSeed !== undefined) nextSeed = (nextSeed + 1) % 2 ** 31;
       lastSeed = runSeed;
+      lastConfig = config;
       useSimStore.getState().reset();
       useRunStore.getState().runStarted();
       host.start(config, runSeed);

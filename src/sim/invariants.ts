@@ -175,6 +175,8 @@ registerInvariant('core.party', (state) => {
     if (entity === undefined) problems.push(`party member ${id} does not exist`);
     else if (entity.actor === undefined || entity.adventurer === undefined) {
       problems.push(`party member ${id} is not an adventurer with an actor part`);
+    } else if (entity.adventurer.recordId !== undefined && entity.adventurer.recordId === '') {
+      problems.push(`party member ${id} has an empty recordId`);
     }
   }
   return problems;

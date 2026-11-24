@@ -22,7 +22,7 @@ import type { StatsConfig, StatsParts } from './stats';
  * A branch that changes the shape sets it to (the version on main) + 1 when it rebases, so two
  * branches never ship different shapes under one number (docs/ARCHITECTURE.md, Contracts).
  */
-export const STATE_VERSION = 37;
+export const STATE_VERSION = 38;
 
 /**
  * Entity ids are positive integers handed out in order from `RunState.nextEntityId` and never
@@ -73,6 +73,12 @@ export interface AdventurerConfig {
   classId: string;
   /** Content id, e.g. `race.human`. */
   raceId: string;
+  /**
+   * The id of this adventurer's profile record (`adv.<n>`, ETH-119), which meta's `startRun`
+   * issues. Left out for adventurers with no record (tests, bare configs): `applyRunResult` then
+   * makes one.
+   */
+  recordId?: string;
 }
 
 /**
@@ -173,6 +179,8 @@ export interface AdventurerPart {
   name: string;
   classId: string;
   raceId: string;
+  /** The profile record's id (`AdventurerConfig.recordId`), when the adventurer has one (ETH-119). */
+  recordId?: string;
 }
 
 /**

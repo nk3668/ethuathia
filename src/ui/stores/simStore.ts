@@ -109,7 +109,7 @@ export const useSimStore = create<SimStoreState>()((set, get) => ({
       const events = [...state.events, ...added].slice(-EVENT_BUFFER_SIZE);
       const discoveries = incoming.reduce(CODEX_TRACKER.reduce, state.discoveries);
       const chronicle = incoming.reduce(CHRONICLE_TRACKER.reduce, state.chronicle);
-      const killsState = incoming.reduce(KILLS_TRACKER.reduce, { kills: 0, trophies: 0, byMonster: state.monsterKills });
+      const killsState = incoming.reduce(KILLS_TRACKER.reduce, { kills: 0, trophies: 0, byMonster: state.monsterKills, byActor: {} });
       return { events, nextSeq: state.nextSeq + incoming.length, discoveries, chronicle, monsterKills: killsState.byMonster };
     }),
   setSpeed: (speed) => {

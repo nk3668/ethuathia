@@ -132,6 +132,7 @@ describe('attacks', () => {
       kills: 1,
       trophies: trophiesForKill(MONSTERS.get('monster.gloam_rat').threat),
       byMonster: { 'monster.gloam_rat': 1 },
+      byActor: { [hero.id]: 1 },
     });
     expect(state.domains.run.rewards.atRisk.trophies).toBe(trophiesForKill(MONSTERS.get('monster.gloam_rat').threat));
     void hero;
