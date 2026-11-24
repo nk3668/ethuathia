@@ -126,7 +126,8 @@ describe('Danger-scaled threat-budget encounters', () => {
         const plan = generateFloor(FLOOR_HALLS, Rng.seeded(seed, `d-${danger}`), {
           depth: danger,
           danger,
-          dungeon: DUNGEON_OLD_DELVE,
+          // The curve at its reference budget; the shipped Old Delve runs hotter (ETH-176).
+          dungeon: { ...DUNGEON_OLD_DELVE, encounters: { ...DUNGEON_OLD_DELVE.encounters, budgetMul: 1 } },
         });
         total += plan.spawns?.length ?? 0;
       }

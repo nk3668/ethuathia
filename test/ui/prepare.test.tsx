@@ -80,7 +80,7 @@ describe('PrepareScreen', () => {
     expect(party.getByText('BRN 11 · FIN 9 · WIT 4 · GRT 13 · HP 19 · MP 4 · Kit: Oak cudgel, Round shield (before race)')).toBeTruthy();
 
     await user.selectOptions(raceSelect, 'race.human');
-    expect(party.getByText('BRN 12 · FIN 10 · WIT 5 · GRT 14 · HP 20 · MP 5')).toBeTruthy();
+    expect(party.getByText('BRN 12 · FIN 10 · WIT 5 · GRT 14 · HP 20 · MP 5 · Kit: Oak cudgel, Round shield')).toBeTruthy();
 
     await user.selectOptions(classSelect, '');
     expect(party.getByText('BRN +1 · FIN +1 · WIT +1 · GRT +1 (before class)')).toBeTruthy();
