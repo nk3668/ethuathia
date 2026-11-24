@@ -8,8 +8,9 @@ milestone: M2
 epic: town-meta
 size: S
 depends_on: [ETH-023, ETH-061]
+assignee: antigravity
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -26,3 +27,4 @@ Makes spending versus saving gold at merchants a choice. Decided in Nate's inter
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-24: Assigned to Gemini (Antigravity); Claude reviews the PR.

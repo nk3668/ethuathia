@@ -2,12 +2,13 @@
 id: ETH-157
 title: Split src/sim/combat/encounters.ts into focused modules
 type: chore
-status: idea
-priority: P3
+status: ready
+priority: P2
 milestone: M2
 epic: dungeon-gen
 size: M
 depends_on: []
+assignee: antigravity
 created: 2026-11-24
 updated: 2026-11-24
 ---
@@ -34,3 +35,4 @@ Refactor on green, in its own commit (§10.1).
 
 ## Log
 - 2026-11-24: Created.
+- 2026-11-24: Assigned to Gemini (Antigravity); Claude reviews the PR.

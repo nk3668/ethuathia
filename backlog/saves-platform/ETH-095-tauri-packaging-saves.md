@@ -8,8 +8,9 @@ milestone: M2
 epic: saves-platform
 size: M
 depends_on: [ETH-059]
+assignee: antigravity
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -30,3 +31,4 @@ Electron is the fallback if Tauri causes trouble.
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).
+- 2026-11-24: Assigned to Gemini (Antigravity); Claude reviews the PR.

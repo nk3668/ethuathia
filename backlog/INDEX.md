@@ -4,6 +4,8 @@
 
 **Current milestone: M2 (Meta loop).**
 
+**Assigned to Gemini (Antigravity)**, all with dependencies done; Claude reviews each PR: ETH-083, ETH-095, ETH-157, ETH-158. Likely conflicts with Claude's parallel work: ETH-083 and ETH-119 both touch the run-end path (run summary, applyRunResult), so whichever merges second rebases.
+
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
 ## Milestones
@@ -140,13 +142,13 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-129](town-meta/ETH-129-guild-hall-constant-respawn.md) | Guild Hall upgrade: constant floor respawns on revisit | town-meta | M2 | P2 | idea | S |
 | [ETH-131](tools-balance/ETH-131-contract-and-property-guards.md) | Cross-domain contract and property-based test guards (honesty, secrecy, potency, discoverability) | tools-balance | M2 | P2 | done | S |
 | [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs | town-meta | M2 | P2 | idea | M |
+| [ETH-157](dungeon-gen/ETH-157-split-encounters-module.md) | Split src/sim/combat/encounters.ts into focused modules | dungeon-gen | M2 | P2 | ready | M |
+| [ETH-158](tools-balance/ETH-158-split-headless-tool.md) | Split tools/headless.ts into focused modules | tools-balance | M2 | P2 | ready | M |
 | [ETH-170](town-meta/ETH-170-building-tier-quests.md) | Building-tier quests open each building's next tier | town-meta | M2 | P2 | idea | M |
 | [ETH-171](town-meta/ETH-171-sell-carried-items.md) | Items carried out of the dungeon sell for Trophies | town-meta | M2 | P2 | idea | S |
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |
 | [ETH-077](ui-shell/ETH-077-prepare-attribute-previews.md) | Show attribute previews in the Prepare screen's class and race selects | ui-shell | M2 | P3 | done | S |
-| [ETH-157](dungeon-gen/ETH-157-split-encounters-module.md) | Split src/sim/combat/encounters.ts into focused modules | dungeon-gen | M2 | P3 | idea | M |
-| [ETH-158](tools-balance/ETH-158-split-headless-tool.md) | Split tools/headless.ts into focused modules | tools-balance | M2 | P3 | idea | M |
 | [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Rules editor and the rule data model | behavior-rules | M3 | P1 | idea | M |
 | [ETH-163](behavior-rules/ETH-163-library-tree.md) | Library tree unlocks rule conditions, actions and slots | behavior-rules | M3 | P1 | idea | M |
 | [ETH-164](behavior-rules/ETH-164-rule-presets.md) | Shipped rule presets, plus saving and loading your own | behavior-rules | M3 | P1 | idea | S |
