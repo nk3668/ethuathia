@@ -1,8 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const ROOT = join(import.meta.dirname, '..', '..');
+// Resolved the way Node does, so it also works in a git worktree whose node_modules is in a parent checkout.
+const nodeRequire = createRequire(join(ROOT, 'package.json'));
 const CSS = readFileSync(join(ROOT, 'src/ui/fonts.css'), 'utf8');
 
 /** Every @font-face rule in fonts.css as { family, weight, url }. */
@@ -18,7 +21,7 @@ describe('bundled fonts (ETH-018)', () => {
     expect(urls.length).toBeGreaterThan(0);
     for (const url of urls) {
       expect(url).toMatch(/^@fontsource\/[\w-]+\/files\/[\w-]+\.woff2$/);
-      expect(existsSync(join(ROOT, 'node_modules', url)), url).toBe(true);
+      expect(existsSync(join(dirname(nodeRequire.resolve(`${url.split('/').slice(0, 2).join('/')}/package.json`)), url.split('/').slice(2).join('/'))), url).toBe(true);
     }
     expect(CSS).not.toMatch(/@import/);
   });
