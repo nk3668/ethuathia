@@ -2387,10 +2387,12 @@ carry game-wide behavior:
 - **`NodeGraph`:** draws an upgrade tree as SVG from each node's `tier` and `column`.
 
 `Panel`, `Card`, `Button`, `Tabs`, `Tooltip` and `Bar` exist (ETH-011) and are exported from
-`ui/kit/index.ts`; the others arrive with the features that first need them. Kit stylesheets
-use tokens only, which `test/ui/tokens.test.ts` enforces. In dev mode, `?kit` on the dev server
-URL opens `ui/dev/KitGallery`, which shows every component and state; production builds drop
-it.
+`ui/kit/index.ts`; the others arrive with the features that first need them. `Button` also accepts
+`disabledReason` (with optional `tooltipPlacement`) to keep a button visible and natively
+disabled inside a focusable `Tooltip` trigger with an `aria-describedby` reason for screen readers
+(ETH-175). Kit stylesheets use tokens only, which `test/ui/tokens.test.ts` enforces. In dev mode,
+`?kit` on the dev server URL opens `ui/dev/KitGallery`, which shows every component and state;
+production builds drop it.
 
 ### 8.5 Codex and `Explain` (`ui/codex/`, ETH-065)
 

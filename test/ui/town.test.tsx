@@ -96,8 +96,11 @@ describe('Town tab', () => {
     render(<TownPanel />);
     await user.click(nodeButton('Second Berth'));
     const detail = screen.getByRole('region', { name: 'Second Berth details' });
-    expect(within(detail).getByRole('button', { name: /Buy/ })).toHaveProperty('disabled', true);
+    const buy = within(detail).getByRole('button', { name: /Buy/ });
+    expect(buy).toHaveProperty('disabled', true);
     expect(detail.textContent).toContain('Needs 40 Renown more.');
+    await act(async () => (buy.parentElement as HTMLElement).focus());
+    expect((await screen.findByRole('tooltip')).textContent).toContain('Needs 40 Renown more.');
   });
 
   it('shows the pick-one choice and respecs it', async () => {
@@ -144,9 +147,16 @@ describe('Town tab', () => {
     const reset = screen.getByRole('button', { name: /Reset tree/ });
     expect(reset).toHaveProperty('disabled', true);
     expect(reset.parentElement?.textContent).toContain('between runs, not during one');
+    await act(async () => (reset.parentElement as HTMLElement).focus());
+    expect((await screen.findByRole('tooltip')).textContent).toContain('between runs, not during one');
+
     await user.click(nodeButton('Contract Board'));
     const detail = screen.getByRole('region', { name: 'Contract Board details' });
-    expect(within(detail).getByRole('button', { name: /Respec/ })).toHaveProperty('disabled', true);
+    const respec = within(detail).getByRole('button', { name: /Respec/ });
+    expect(respec).toHaveProperty('disabled', true);
+    await act(async () => (respec.parentElement as HTMLElement).focus());
+    expect((await screen.findByRole('tooltip')).textContent).toContain('between runs, not during one');
+
     expect(useProfileStore.getState().respec('guild_hall.tier2', true)).toBe(false);
     expect(useProfileStore.getState().resetTree('building.guild_hall', true)).toBe(false);
     expect(useProfileStore.getState().profile.upgrades.owned).toHaveLength(2);
