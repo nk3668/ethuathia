@@ -6,7 +6,7 @@
  * `--jobs N` give identical reports. `jobs <= 1` runs serially in this thread.
  */
 import { Worker } from 'node:worker_threads';
-import { formatPartySweep, headlessParty, MAX_PARTY, partySweepRow, runSeeds } from './headless';
+import { formatPartySweep, MAX_PARTY, partyOptions, partySweepRow, runSeeds } from './headless';
 import type { HeadlessOptions, SeedResult, SimArgs } from './headless';
 
 interface Reply {
@@ -62,14 +62,14 @@ export async function runSeedsParallel(
 
 /** `--party-sweep`: runs party sizes 1 to `MAX_PARTY` on the pool, one size after another, and returns the table text. */
 export async function runPartySweep(
-  args: Pick<SimArgs, 'from' | 'seeds' | 'cap' | 'preset' | 'upgrades' | 'rules' | 'jobs'> & Partial<Pick<SimArgs, 'classId' | 'raceId'>>,
+  args: Pick<SimArgs, 'from' | 'seeds' | 'cap' | 'preset' | 'upgrades' | 'rules' | 'jobs'> & Partial<Pick<SimArgs, 'classId' | 'raceId' | 'recruits'>>,
 ): Promise<string> {
   const rows = [];
   for (let size = 1; size <= MAX_PARTY; size++) {
     const results = await runSeedsParallel(
       args.from,
       args.seeds,
-      { cap: args.cap, party: headlessParty(size, args.classId ?? undefined, args.raceId ?? undefined), preset: args.preset, upgrades: args.upgrades, rules: args.rules },
+      { cap: args.cap, ...partyOptions(size, args), preset: args.preset, upgrades: args.upgrades, rules: args.rules },
       args.jobs,
     );
     rows.push(partySweepRow(size, results));

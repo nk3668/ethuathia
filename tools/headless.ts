@@ -19,13 +19,17 @@ export {
   headlessParty,
   MAX_JOBS,
   MAX_PARTY,
+  partyOptions,
   PROGRESSED_UPGRADES,
   resolveHeadlessRules,
 } from './headless/config';
 export type { HeadlessOptions, HeadlessPreset, HeadlessRulesPreset } from './headless/config';
 
 export { runSeed, runSeeds } from './headless/runner';
-export type { FloorResult, Outcome, SeedResult } from './headless/runner';
+export type { FloorResult, MemberResult, Outcome, SeedResult } from './headless/runner';
+
+export { formatMixed, summarizeMixed } from './headless/mixed';
+export type { MixedRow, MixedSummary } from './headless/mixed';
 
 export {
   bankedRenown,

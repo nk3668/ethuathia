@@ -90,7 +90,7 @@ export { chosenDungeon } from './prepare/dungeon';
 export type { DungeonChoice } from './prepare/dungeon';
 export { availableContracts, BASE_CONTRACT_SLOTS, chosenContracts, contractSlots } from './prepare/contracts';
 export type { ContractsChoice } from './prepare/contracts';
-export { buildRunConfig, checkRunConfig, PREPARE_STREAM, startRun, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
+export { buildRunConfig, checkRunConfig, PREPARE_STREAM, recruitParty, startRun, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
 export {
   canAfford,
   canPurchase,

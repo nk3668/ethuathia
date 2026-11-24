@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { formatComparison, makeReport, parseReport, resolveCompareRef, runRef } from './compare';
 import type { SimReport } from './compare';
-import { formatReport, headlessParty, parseSimArgs, USAGE } from './headless';
+import { formatReport, parseSimArgs, partyOptions, USAGE } from './headless';
 import type { SimArgs } from './headless';
 import { runPartySweep, runSeedsParallel } from './parallel';
 
@@ -72,6 +72,7 @@ ${USAGE}`);
     `cap ${args.cap} party turns per run`,
     `preset ${args.preset}`,
     `rules ${args.rules}`,
+    ...(args.recruits ? ['random recruits'] : []),
     ...(args.classId === null ? [] : [`class ${args.classId}`]),
     ...(args.raceId === null ? [] : [`race ${args.raceId}`]),
     ...(args.upgrades.length === 0 ? [] : [`upgrades ${args.upgrades.join(',')}`]),
@@ -83,7 +84,7 @@ ${USAGE}`);
     args.seeds,
     {
       cap: args.cap,
-      party: headlessParty(args.party, args.classId ?? undefined, args.raceId ?? undefined),
+      ...partyOptions(args.party, args),
       preset: args.preset,
       upgrades: args.upgrades,
       rules: args.rules,

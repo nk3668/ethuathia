@@ -26,6 +26,7 @@ import {
   owns,
   partySize,
   purchase,
+  recruitParty,
   upgradePartyBundles,
   upgradeRunModifiers,
 } from '../../src/meta';
@@ -55,6 +56,18 @@ const NAMES = ['Brannoc', 'Mira', 'Oren', 'Tamsin'] as const;
 /** A party of `size` adventurers who all share one class and race (the Vanguard and Human unless given, ETH-160). */
 export function headlessParty(size: number, classId: string = CLASS_VANGUARD.id, raceId: string = RACE_HUMAN.id): AdventurerConfig[] {
   return NAMES.slice(0, size).map((name) => ({ name, classId, raceId }));
+}
+
+/**
+ * The party options for `size` adventurers: the Prepare screen's random recruits with `recruits`
+ * (ETH-178), else one shared class and race (`headlessParty`). Shared by `--party-sweep` and a plain run.
+ */
+export function partyOptions(
+  size: number,
+  who: { classId?: string | null; raceId?: string | null; recruits?: boolean },
+): Pick<HeadlessOptions, 'party' | 'recruits' | 'partySize'> {
+  if (who.recruits === true) return { recruits: true, partySize: size };
+  return { party: headlessParty(size, who.classId ?? undefined, who.raceId ?? undefined) };
 }
 
 export type HeadlessPreset = 'fresh' | 'progressed';
@@ -109,6 +122,14 @@ export interface HeadlessOptions {
   upgrades?: readonly string[];
   /** Behavior rule preset (`baseline` or `cautious`) or explicit rules ahead of `BASELINE_RULES`. */
   rules?: HeadlessRulesPreset | readonly Rule[];
+  /**
+   * Field the party the Prepare screen's random fill gives the seed (`--recruits`, ETH-178):
+   * random classes and races from the profile's available ones, from the seed. Needs the seed
+   * (`buildHeadlessConfig(options, seed)`) and excludes `party`.
+   */
+  recruits?: boolean;
+  /** The party size for `recruits`. Default: the profile's party size. */
+  partySize?: number;
 }
 
 /** The contracts a headless run takes on by default (ETH-024): Recover the relic, the Prepare default. */
@@ -165,7 +186,10 @@ export function buildHeadlessProfile(preset: HeadlessPreset = 'fresh', upgrades:
  * (`partySize`, `upgradePartyBundles`, `upgradeRunModifiers`, `chosenContracts`, `checkRunConfig`).
  * Keeps the default (`fresh`, no upgrades) byte-identical to `{ party, contracts, depth? }`.
  */
-export function buildHeadlessConfig(options: HeadlessOptions = {}): RunConfig {
+export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): RunConfig {
+  if (options.recruits === true && options.party !== undefined) {
+    throw new Error('recruits fields a random party, so it can not be combined with an explicit party (--class, --race)');
+  }
   const preset = options.preset ?? 'fresh';
   const upgrades = options.upgrades ?? [];
   const profile = buildHeadlessProfile(preset, upgrades);
@@ -178,7 +202,9 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}): RunConfig {
     (hasUpgrades ? chosenContracts(profile, defaultRunChoices().contracts).map((d) => d.id) : HEADLESS_CONTRACTS);
 
   const config: RunConfig = {
-    party: options.party ?? headlessParty(partySize(profile)),
+    party:
+      options.party ??
+      (options.recruits === true ? recruitParty(profile, seed, options.partySize) : headlessParty(partySize(profile))),
     contracts: [...contracts],
     ...(options.depth === undefined ? {} : { depth: options.depth }),
     ...(partyBundles.length === 0 ? {} : { partyBundles }),
