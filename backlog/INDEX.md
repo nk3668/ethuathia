@@ -4,7 +4,7 @@
 
 **Current milestone: M2 (Meta loop).**
 
-**Assigned to Gemini (Antigravity)**, all with dependencies done; Claude reviews each PR: ETH-083, ETH-095, ETH-157, ETH-158. Likely conflicts with Claude's parallel work: ETH-083 and ETH-119 both touch the run-end path (run summary, applyRunResult), so whichever merges second rebases.
+**Assigned to Gemini (Antigravity)**; Claude reviews each PR: ETH-083, ETH-095, ETH-157, ETH-158 (dependencies done), and ETH-175 (start only once ETH-172 is `done`: both edit `src/ui/town/UpgradeTree.tsx`). Likely conflicts: ETH-083 touches the run-end path that ETH-119 (merged) and ETH-087 (in progress) also change, so merge `main` in before opening the PR.
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
