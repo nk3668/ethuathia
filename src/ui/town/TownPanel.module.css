@@ -48,3 +48,13 @@
 .progress {
   font-variant-numeric: tabular-nums;
 }
+
+/* "New": a building the latest run opened (ETH-093). Text, not color alone. */
+.fresh {
+  padding: 0 var(--space-1);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-card);
+  font-size: 0.75em;
+  font-weight: var(--font-weight-heading);
+  text-transform: uppercase;
+}

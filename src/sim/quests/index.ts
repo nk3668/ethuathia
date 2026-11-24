@@ -24,7 +24,6 @@ import type { RewardAmounts } from '../run/result';
 import type { EntityId, FloorId, RunConfig } from '../state';
 import {
   announceContracts,
-  bottomFloorId,
   configContracts,
   contractDef,
   contractReward,
@@ -34,6 +33,7 @@ import {
   initContracts,
   RELIC_PLAN_HOOK,
   relicCount,
+  relicFloorId,
   syncContracts,
 } from './contracts';
 import type { ContractState } from './contracts';
@@ -177,15 +177,15 @@ registerInvariant('quests.objectives', objectiveProblems);
 
 registerInvariant('quests.relics', (state) => {
   const problems: string[] = [];
-  const bottomBuilt = state.floors[bottomFloorId(state)] !== undefined;
   for (const c of state.domains.quests.contracts) {
     if (!CONTRACTS.has(c.contract)) continue;
     const { objective } = contractDef(c.contract);
     if (objective.kind !== 'recover') continue;
+    const built = state.floors[relicFloorId(state, objective)] !== undefined;
     const { carried, lying } = relicCount(state, objective.item);
     const total = carried.length + lying;
-    // One relic, once the bottom floor exists; none before.
-    if (total !== (bottomBuilt ? 1 : 0)) problems.push(`there are ${total} of "${objective.item}", expected ${bottomBuilt ? 1 : 0}`);
+    // One relic, once its floor exists; none before.
+    if (total !== (built ? 1 : 0)) problems.push(`there are ${total} of "${objective.item}", expected ${built ? 1 : 0}`);
     for (const id of carried) if (!state.party.includes(id)) problems.push(`"${objective.item}" is carried by ${id}, who is not in the party`);
   }
   return problems;

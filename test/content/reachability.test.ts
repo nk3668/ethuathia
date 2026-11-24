@@ -53,7 +53,10 @@ describe('content reachability (ETH-143)', () => {
 
   it('names an item with no loot entry and no contract naming it', () => {
     const problems = reachabilityProblems({ contracts: [], monsters: [], templates: [], enchantments: [] });
-    expect(problems).toEqual([expect.stringContaining('item "item.ember_reliquary": has no loot entry')]);
+    expect(problems).toEqual([
+      expect.stringContaining('item "item.ember_reliquary": has no loot entry'),
+      expect.stringContaining('item "item.guild_anvil": has no loot entry'),
+    ]);
   });
 
   it('names a special enchantment out of reach and an unused base enchantment', () => {

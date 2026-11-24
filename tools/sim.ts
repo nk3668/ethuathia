@@ -75,6 +75,7 @@ ${USAGE}`);
     ...(args.recruits ? ['random recruits'] : []),
     ...(args.classId === null ? [] : [`class ${args.classId}`]),
     ...(args.raceId === null ? [] : [`race ${args.raceId}`]),
+    ...(args.contract === null ? [] : [`contract ${args.contract}`]),
     ...(args.upgrades.length === 0 ? [] : [`upgrades ${args.upgrades.join(',')}`]),
   ].join(', ');
   console.log(`Headless run: ${details}\n`);
@@ -88,6 +89,7 @@ ${USAGE}`);
       preset: args.preset,
       upgrades: args.upgrades,
       rules: args.rules,
+      ...(args.contract === null ? {} : { contracts: [args.contract] }),
     },
     args.jobs,
   );

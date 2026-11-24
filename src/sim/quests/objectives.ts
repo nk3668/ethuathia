@@ -130,7 +130,7 @@ export const OBJECTIVE_KINDS: KindTable = {
       const by = carrierOf(state, spec.item);
       return by === undefined ? { current: 0 } : { current: 1, by };
     },
-    describe: (spec) => `Find the ${defName(spec.item)} on the bottom floor and carry it out`,
+    describe: (spec) => `Find the ${defName(spec.item)} on ${spec.depth === undefined ? 'the bottom floor' : `floor ${spec.depth}`} and carry it out`,
   },
   count: {
     kind: 'count',

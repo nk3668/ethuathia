@@ -171,7 +171,8 @@ export function canPurchase(profile: Profile, nodeId: string): PurchaseCheck {
   const shut = lockingMilestone(profile, node.building);
   if (shut !== null) {
     const building = BUILDINGS.get(node.building).name;
-    return { ok: false, status: 'locked', missing: [], reason: `The ${building} opens when you ${describeMilestone(shut, describeRequirement, defName).toLowerCase()}.` };
+    const goal = describeMilestone(shut, describeRequirement, defName);
+    return { ok: false, status: 'locked', missing: [], reason: `The ${building} opens when you ${goal.charAt(0).toLowerCase()}${goal.slice(1)}.` };
   }
 
   const gate = tierGate(profile, node.building, node.tier);

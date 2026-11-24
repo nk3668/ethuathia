@@ -514,7 +514,8 @@ describe('run history (ETH-048)', () => {
   });
 
   it("shows a past run's own unlocks, not the latest run's", () => {
-    let profile = applyRunResult(newProfile(), PARTY_WIPE.result);
+    const anvil = [{ key: 'contract:contract.cold_anvil', owner: { kind: 'contract', id: 'contract.cold_anvil' }, status: 'complete' }];
+    let profile = applyRunResult(newProfile(), { ...emptyRunResult('retreat'), turns: 10, deepestDepth: 3, extras: { 'quests.objectives': anvil } });
     profile = applyRunResult(profile, { ...emptyRunResult('retreat'), turns: 10, deepestDepth: 1 });
     expect(unlockLines(profile, 1).map((l) => l.id)).toContain('building.smithy');
     expect(unlockLines(profile)).toEqual([]);

@@ -4,7 +4,8 @@
  */
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets, RUN_RECORD_MOMENTS } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
-import { defName, DEITIES, describeMilestoneMet, GOLD_PER_TROPHY } from '../../content';
+import { CONTRACTS, defName, DEITIES, describeMilestoneMet, GOLD_PER_TROPHY } from '../../content';
+import type { Milestone } from '../../content';
 import {
   CHRONICLE_TRACKER,
   depthRenown,
@@ -172,8 +173,17 @@ export function unlockLines(profile: Profile, run?: number): UnlockLine[] {
   const unlocks = run === undefined ? latestUnlocks(profile) : profile.milestones.unlocked.filter((u) => u.run === run);
   return unlocks.flatMap((u) => {
     const target = targets.find((t) => t.id === u.id);
-    return target === undefined ? [] : [{ id: u.id, name: target.name, why: describeMilestoneMet(target.unlock, describeRequirement, defName) }];
+    return target === undefined ? [] : [{ id: u.id, name: target.name, why: unlockWhy(target.unlock) }];
   });
+}
+
+/** The milestone met as a clause; a building quest says its own ("you brought the anvil home", ETH-093). */
+function unlockWhy(unlock: Milestone): string {
+  if (unlock.kind === 'objectiveDone' && unlock.owner.kind === 'contract' && CONTRACTS.has(unlock.owner.id)) {
+    const text = CONTRACTS.get(unlock.owner.id).openedText;
+    if (text !== undefined) return text;
+  }
+  return describeMilestoneMet(unlock, describeRequirement, defName);
 }
 
 /** Who set out (`extras['run.party']`, ETH-048), or an empty list if the result doesn't say. */
