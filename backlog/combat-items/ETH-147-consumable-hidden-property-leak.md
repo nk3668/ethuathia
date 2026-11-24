@@ -2,7 +2,7 @@
 id: ETH-147
 title: Known-type potions and scrolls stop giving away a hidden blessing or curse
 type: bug
-status: ready
+status: in-progress
 priority: P2
 milestone: M1.6
 epic: combat-items
@@ -25,25 +25,25 @@ ETH-131 secrecy guards were meant to rule out. `CLAUDE.md` §1 ("Readable") and 
 criteria in `docs/ARCHITECTURE.md`.
 
 ## Acceptance criteria
-- [ ] Whether a potion or scroll instance reads as identified never depends on its blessed or cursed
+- [x] Whether a potion or scroll instance reads as identified never depends on its blessed or cursed
       state, only on what the party has learned (type known, instance identified).
-- [ ] **Display (Nate, 2026-11-24: option 1, same as gear):** every copy of a known type looks the
+- [x] **Display (Nate, 2026-11-24: option 1, same as gear):** every copy of a known type looks the
       same until that copy is identified. It shows the type's real name (e.g. "Mending Draught") plus
       one shared "blessing unknown" note, whether it is plain, blessed or cursed. Using or reading it,
       an Identify scroll, or the once-per-instance Wits roll on pickup (ETH-142) reveals the blessing.
       Identifying a plain copy logs "no blessing or curse".
-- [ ] `clearPlainTypeFlags` no longer clears plain copies when a type becomes known; learning a type
+- [x] `clearPlainTypeFlags` no longer clears plain copies when a type becomes known; learning a type
       reveals what it is, never which copies are special.
-- [ ] The ETH-142 secrecy property guard is extended to consumables (plain and blessed/cursed variants
+- [x] The ETH-142 secrecy property guard is extended to consumables (plain and blessed/cursed variants
       give an identical snapshot flag, name and note).
-- [ ] **Stacking:** copies of a known type whose blessing is still unknown stack together regardless of
+- [x] **Stacking:** copies of a known type whose blessing is still unknown stack together regardless of
       their hidden blessing, so separate stacks can't give it away (check `canStack` and `addToStacks`).
       They split into separate stacks only once identified. Define what happens when one copy from a
       mixed stack is used or identified: which copy is taken, and how the rest stay secret. It must be
       deterministic and seeded.
-- [ ] The baseline AI stays blind to hidden blessings: quaff and read choices may not prefer a copy
+- [x] The baseline AI stays blind to hidden blessings: quaff and read choices may not prefer a copy
       because it is secretly blessed.
-- [ ] Codex, tooltip and log text updated; `STATE_VERSION` bumped if state changes. `npm run check` passes.
+- [x] Codex, tooltip and log text updated; `STATE_VERSION` bumped if state changes. `npm run check` passes.
 
 ## Notes
 - ETH-044 documented the old behavior as intended; Nate chose option 1 on 2026-11-24, so update the

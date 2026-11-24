@@ -7,15 +7,16 @@
  *   `identified: false` (e.g. hand-built tests) count as already known.
  * - **Instance-level identification:** all gear (ETH-142) and enchanted, blessed, or cursed consumables keep `identified: false`
  *   until identified by a Wits `identify` check on pickup, equipping, using, or a Scroll of Identify.
- *   Once a potion/scroll/jewelry type is in `identifiedTypes`, plain uncursed instances of that type
- *   are immediately known while blessed/cursed/enchanted ones reveal their base type and keep their
- *   extra properties hidden until instance-identified.
+ *   Learning a potion/scroll/jewelry type reveals what it is, never which copies are special: every
+ *   `identified: false` copy keeps its blessing hidden until that copy is identified (ETH-147), and
+ *   unidentified potions and scrolls of one type stack together whatever they hold (`mix.ts`).
  */
 import { APPEARANCE_POOLS, isAppearanceCategory, ITEMS } from '../../content';
 import type { AppearanceCategory, ItemDef } from '../../content';
 import { Rng } from '../../core';
 import type { RunState } from '../state';
 import type { ItemInstance } from './instance';
+import { groupBlessing, hiddenCounts, isSecretConsumable, MIX_GROUPS, setHiddenCounts } from './mix';
 
 /** True if `def`'s base type is hidden behind a per-run generic appearance while unidentified. */
 export function needsTypeId(def: ItemDef): boolean {
@@ -24,7 +25,7 @@ export function needsTypeId(def: ItemDef): boolean {
 
 /** True if `item` carries instance properties (`enchant`, `blessing`, `enchantments`) hidden until identified. */
 export function hasHiddenProperties(item: ItemInstance): boolean {
-  return item.enchant !== undefined || item.blessing !== undefined || (item.enchantments?.length ?? 0) > 0;
+  return item.enchant !== undefined || item.blessing !== undefined || item.mix !== undefined || (item.enchantments?.length ?? 0) > 0;
 }
 
 /** True if the party has identified item type `defId` this run (always true for weapons, armor, food, gold, relics, junk). */
@@ -43,15 +44,12 @@ export function isInstanceTypeKnown(state: RunState, item: ItemInstance): boolea
 
 /**
  * True if `item` is fully known to the party (both its base type and any hidden properties).
- * Plain items (`identified !== false`) are always known; an unidentified instance with no hidden
- * properties becomes fully known as soon as its type is identified.
+ * Items without the flag are always known. An `identified: false` item stays unknown until that
+ * instance is identified, whether or not it rolled anything and whether or not its type is known:
+ * the flag never depends on what the item is hiding (ETH-142 gear, ETH-147 potions and scrolls).
  */
-export function isItemIdentified(state: RunState, item: ItemInstance): boolean {
-  if (item.identified !== false) return true;
-  if (!isTypeIdentified(state, item.def)) return false;
-  // Gear stays unidentified until identified, whether or not it rolled anything (ETH-142).
-  if (isGearDef(item.def)) return false;
-  return !hasHiddenProperties(item);
+export function isItemIdentified(_state: RunState, item: ItemInstance): boolean {
+  return item.identified !== false;
 }
 
 /** `item` as unidentified gear: gear without the flag gets `identified: false`, anything else is returned as it is (ETH-142). */
@@ -78,9 +76,31 @@ export function identifyType(state: RunState, defId: string): boolean {
  * Marks `item` identified in place (clearing `identified: false` and recording its def in
  * `identifiedTypes` when applicable). Returns whether anything changed.
  */
-export function identifyInstance(state: RunState, item: ItemInstance): { changed: boolean; typeNewlyKnown: boolean } {
+export function identifyInstance(
+  state: RunState,
+  item: ItemInstance,
+): { changed: boolean; typeNewlyKnown: boolean; extras: ItemInstance[] } {
   const wasKnown = isItemIdentified(state, item);
   const typeNewlyKnown = identifyType(state, item.def);
+  // A mixed stack splits by blessing: `item` keeps the first group, the rest come back as `extras`
+  // (identified too) for the caller to put in the pack (ETH-147).
+  const extras: ItemInstance[] = [];
+  if (isSecretConsumable(item) && item.mix !== undefined) {
+    const counts = hiddenCounts(item);
+    const groups = MIX_GROUPS.filter((g) => counts[g] > 0);
+    for (const g of groups.slice(1)) {
+      const extra: ItemInstance = { ...item, qty: counts[g] };
+      Reflect.deleteProperty(extra, 'mix');
+      Reflect.deleteProperty(extra, 'identified');
+      Reflect.deleteProperty(extra, 'identifyTried');
+      const blessing = groupBlessing(g);
+      if (blessing !== undefined) extra.blessing = blessing;
+      extras.push(extra);
+    }
+    const first = groups[0] ?? 'plain';
+    item.qty = counts[first];
+    setHiddenCounts(item, { plain: 0, blessed: 0, cursed: 0, [first]: item.qty });
+  }
   let cleared = false;
   if (item.identified !== undefined) {
     Reflect.deleteProperty(item, 'identified');
@@ -88,7 +108,7 @@ export function identifyInstance(state: RunState, item: ItemInstance): { changed
   }
   // The once-per-instance Wits roll only matters while unidentified (ETH-142).
   Reflect.deleteProperty(item, 'identifyTried');
-  return { changed: !wasKnown || typeNewlyKnown || cleared, typeNewlyKnown };
+  return { changed: !wasKnown || typeNewlyKnown || cleared, typeNewlyKnown, extras };
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -50,6 +50,7 @@ import { itemValue } from './value';
 
 export * from './instance';
 export * from './identify';
+export * from './mix';
 export * from './enchant';
 export * from './properties';
 export * from './scaling';

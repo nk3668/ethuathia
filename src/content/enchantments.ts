@@ -338,6 +338,8 @@ export const ITEM_STATE_INFO = {
   uncursed: 'Uncursed: acts normally with no blessing or curse.',
   cursed: BLESSING_INFO.cursed.description,
   enchanted: 'Enchanted (+N / −N): raises or lowers gear stats via its enhancement profile, and special enchantments add extra stats or on-hit triggers.',
+  blessingUnknown:
+    'Blessing unknown: every potion or scroll of a known type looks the same until it is identified, whether it is plain, blessed or cursed, so this note says nothing about this one. Using it, reading a Scroll of Identify or high Wits when picking it up reveals which it is.',
   unidentified:
     'Unidentified: its true nature or hidden properties are unknown. Every weapon, armor and jewelry piece starts this way, whether or not it is special, and may turn out plain, enchanted, blessed or cursed. High Wits can identify an item once when it is picked up; wearing, using or reading a Scroll of Identify reveals it. Cursed gear cannot be taken off until a Scroll of Uncursing frees it.',
 } as const;
