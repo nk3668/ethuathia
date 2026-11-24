@@ -7,7 +7,8 @@ priority: P2
 milestone: M2
 epic: ui-shell
 size: S
-depends_on: [ETH-086]
+depends_on: [ETH-086, ETH-172]
+assignee: antigravity
 created: 2026-11-24
 updated: 2026-11-24
 ---
@@ -29,3 +30,4 @@ Found while reviewing ETH-086 (PR #91).
 
 ## Log
 - 2026-11-24: Created from the ETH-086 review; Nate asked for it in M2.
+- 2026-11-24: Assigned to Antigravity (Gemini) by Nate. Added ETH-172 to depends_on: it adds rank labels and tier dividers to the same Town tree, so start after it is done and cover its buttons too.
