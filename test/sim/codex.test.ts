@@ -30,6 +30,7 @@ describe('discovery rules', () => {
         turn: 0,
         floorType: 'floor.halls',
         party: [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }],
+        items: ['item.oak_cudgel'],
         contracts: [{ contract: 'contract.recover_relic', reward: {} }],
         contract: 'contract.recover_relic',
         source: { id: 'status.hasted', label: 'Hasted' },
@@ -112,7 +113,14 @@ describe('CODEX_TRACKER', () => {
     let codex = CODEX_TRACKER.init();
     for (let i = 0; i < 30; i++) for (const event of step(state, [])) codex = CODEX_TRACKER.reduce(codex, event);
     // The party's class and race are met at the start (`runStarted`), the door when it is opened.
-    expect(codex).toEqual({ 'class.vanguard': ['seen'], 'race.human': ['seen'], 'feature.door': ['used'] });
+    // The Vanguard's kit (ETH-176) is worn from the start, so its items count as used.
+    expect(codex).toEqual({
+      'class.vanguard': ['seen'],
+      'race.human': ['seen'],
+      'item.oak_cudgel': ['used'],
+      'item.round_shield': ['used'],
+      'feature.door': ['used'],
+    });
   });
 
   it('discovers the first floor type on step 1 for a generated run (ETH-079)', () => {

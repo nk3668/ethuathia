@@ -2,14 +2,16 @@
  * Adventurer classes: what an adventurer was trained to do. A class sets the starting attributes
  * (ETH-033), which the race then adjusts; the stats domain derives max HP, MP, accuracy, damage
  * and the rest from them (`src/sim/stats/attributes.ts`). Its `growth` says how each attribute
- * may rise when the adventurer levels up (ETH-034, rolled since ETH-110). Skills and gear kits
- * join them as those systems arrive.
+ * may rise when the adventurer levels up (ETH-034, rolled since ETH-110). Its optional `kit` is the
+ * gear each adventurer of the class carries, equipped, from the first turn (ETH-176). Skills join
+ * them as those systems arrive.
  */
 import { z } from 'zod';
 import { Registry } from '../core';
 import type { Def } from '../core';
 import { ATTRIBUTE_IDS, attributesSchema } from './attributes';
 import type { AttributeId, Attributes } from './attributes';
+import { gearSlots, ITEMS } from './items';
 import type { ContentKind } from './kind';
 import { defShape } from './schema';
 
@@ -40,6 +42,12 @@ export interface ClassDef extends Def {
   readonly attributes: Attributes;
   /** How each attribute may rise per level (`AttributeGrowth`). */
   readonly growth: AttributeGrowth;
+  /**
+   * Item def ids every adventurer of the class starts each run wearing (ETH-176): identified, plain,
+   * and marked as kit so they are never sold for Trophies. Each must be gear, and no two may fit
+   * only the same slot. Left out, the class starts empty-handed.
+   */
+  readonly kit?: readonly string[];
 }
 
 export const CLASSES = new Registry<ClassDef>('class');
@@ -58,9 +66,39 @@ const growthSchema = z
   .partialRecord(z.enum(ATTRIBUTE_IDS), growthRollSchema)
   .refine((g) => Object.values(g).some((r) => r !== undefined && expectedGrowth(r) > 0), 'must raise at least one attribute');
 
+/**
+ * Why `kit` can't be worn at once, as problem lines: an item that is not gear, or two items that
+ * can't both be worn (more kit pieces than slots they share). Ids that don't exist are skipped:
+ * the ref check reports them.
+ */
+export function kitProblems(kit: readonly string[]): string[] {
+  const problems: string[] = [];
+  const used = new Set<string>();
+  for (const id of kit) {
+    if (!ITEMS.has(id)) continue;
+    const def = ITEMS.get(id);
+    const slots = gearSlots(def);
+    if (slots.length === 0) {
+      problems.push(`kit item "${id}" is not gear`);
+      continue;
+    }
+    const free = slots.find((s) => !used.has(s));
+    if (free === undefined) problems.push(`kit item "${id}" shares a slot (${slots.join(', ')}) with another kit item`);
+    else used.add(free);
+  }
+  return problems;
+}
+
 export const CLASS_KIND: ContentKind<ClassDef> = {
   registry: CLASSES,
-  schema: z.strictObject({ ...defShape('class'), attributes: attributesSchema, growth: growthSchema }),
+  schema: z.strictObject({
+    ...defShape('class'),
+    attributes: attributesSchema,
+    growth: growthSchema,
+    kit: z.array(z.string().min(1)).min(1, 'a kit lists at least one item (leave it out for none)').optional(),
+  }),
+  refs: (def) => (def.kit ?? []).map((id, i) => ({ path: `kit[${i}]`, kind: 'item', id })),
+  check: (defs) => defs.flatMap((d) => kitProblems(d.kit ?? []).map((p) => `class "${d.id}": ${p}`)),
 };
 
 /** Registers a class def and returns it. Its shape is checked by `validateContent`. */
@@ -84,4 +122,5 @@ export const CLASS_VANGUARD = defineClass({
     wits: { min: 1, max: 1, chance: 0.25 },
     grit: { min: 1, max: 2 },
   },
+  kit: ['item.oak_cudgel', 'item.round_shield'],
 });

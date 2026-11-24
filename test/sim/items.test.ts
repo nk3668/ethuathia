@@ -41,7 +41,10 @@ const ROOM = ['#########', '#@......#', '#.......#', '#########'];
 
 function setup(floorText = ROOM, seed = 1): { state: RunState; hero: ActorEntity } {
   const state = createRun({ party: [HERO], depth: 1, floorText }, seed);
-  return { state, hero: getEntity(state, state.party[0] as EntityId) as ActorEntity };
+  const hero = getEntity(state, state.party[0] as EntityId) as ActorEntity;
+  // Start bare-handed: the Vanguard's class kit (ETH-176) is covered by classKit.test.ts.
+  Reflect.deleteProperty(hero, 'inventory');
+  return { state, hero };
 }
 
 const act = (actor: EntityId, action: ActionRequest): Command => ({ type: 'playerAction', actor, action });

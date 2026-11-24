@@ -92,6 +92,7 @@ describe('the property registry', () => {
       'prop.identify_tried',
       'prop.mix',
       'prop.origin',
+      'prop.kit',
       'prop.test_edge',
       'prop.test_veiled',
     ]);
@@ -216,6 +217,7 @@ describe('canonical property value invariant (ETH-131)', () => {
     'prop.identify_tried': [false],
     'prop.mix': [{}, { plain: 3 }, { plain: 0, cursed: 2 }],
     'prop.origin': [{}],
+    'prop.kit': [false],
   };
 
   it('rejects default/no-op values on every built-in ItemPropertyKind schema', () => {

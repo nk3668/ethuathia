@@ -42,6 +42,8 @@ const one = (def: string) => ({ def, qty: 1 });
 function setup(finesse = 0, seed = 1): { state: RunState; hero: ActorEntity } {
   const state = createRun({ party: [HERO], depth: 1, floorText: ROOM, monsters: false }, seed);
   const hero = getEntity(state, state.party[0] as EntityId) as ActorEntity;
+  // Start bare-handed: the Vanguard's class kit (ETH-176) is covered by classKit.test.ts.
+  Reflect.deleteProperty(hero, 'inventory');
   if (finesse !== 0 && hero.stats !== undefined) hero.stats.attributes = { finesse };
   return { state, hero };
 }
