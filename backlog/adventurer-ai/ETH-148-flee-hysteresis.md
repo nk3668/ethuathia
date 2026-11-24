@@ -2,7 +2,7 @@
 id: ETH-148
 title: Smarter fleeing: hysteresis, only from real threats, and no walking back into danger
 type: bug
-status: idea
+status: in-progress
 priority: P2
 milestone: M1.6
 epic: adventurer-ai
@@ -71,3 +71,4 @@ Fix all three so fleeing actually gets the adventurer out of danger.
 - 2026-11-24: Widened per Nate: flee only from real threats (moss tenders, ETH-142 follow-up seed
   189), and no walking back into danger while wounded without healing (seeds 189/185). Size S → M;
   title updated.
+- 2026-11-24: Started (Sonnet agent). Interpretation of 'damage above 0': a blow always does at least 1 (rollDamage), and damage-0 swarms, rats and toads do chase and hurt, so a threat is an enemy that will come and hurt the party: damage stat above 0, a bolt, a rule that approaches/surrounds/bolts, or a damaging or harmful-status bundle or template effect. Moss tenders (support, never pursue) are not threats. Constants (FLEE_RELEASE_PERCENT 60, FLEE_CALM_TURNS 12, THREAT_MEMORY_TURNS 60, AVOID_RADIUS 6, AVOID_PENALTY 24) are exported from src/sim/combat/threat.ts for ETH-080 to tune. STATE_VERSION 36 (AiMemory.fleeing, AiMemory.threats).

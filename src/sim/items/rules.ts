@@ -15,7 +15,7 @@ import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { statValue } from '../stats/getStat';
 import type { Entity, RunState } from '../state';
 import { isCursed } from './enchant';
-import { visibleEnemies } from '../combat/rules';
+import { avoidThreats, visibleThreats } from '../combat/threat';
 import { knownStairs } from '../floors/rules';
 import { bestUpgrade, gearStatsText, wornItems } from './equipment';
 import { appearanceName, isInstanceTypeKnown, isItemIdentified, isTypeIdentified } from './identify';
@@ -94,12 +94,12 @@ export const COND_SAFE_TO_TEST = defineCondition({
   id: 'cond.safe_to_test',
   name: 'Safe to test a scroll',
   description:
-    'True while the adventurer carries a scroll of unknown type, no enemy is in sight, HP is above the healing threshold and stairs it remembers can be reached: a calm moment to try something unknown.',
+    'True while the adventurer carries a scroll of unknown type, no threat is in sight, HP is above the healing threshold and stairs it remembers can be reached: a calm moment to try something unknown.',
   parse: noParams,
   evaluate(ctx) {
     const { state, actor } = ctx;
     if (unknownScrollIndex(state, actor) === null) return { ok: false, detail: '' };
-    if (visibleEnemies(state, actor).length > 0) return { ok: false, detail: '' };
+    if (visibleThreats(state, actor).length > 0) return { ok: false, detail: '' };
     const max = statValue(state, actor, 'hp');
     if (actor.actor.hp * 100 < max * HEAL_BELOW_PERCENT) return { ok: false, detail: '' };
     const paths = aiPathGrid(ctx);
@@ -250,6 +250,8 @@ export const ACT_PICK_UP = defineRuleAction({
     }
     if (goals.length === 0) return null;
     const paths = aiPathGrid(ctx);
+    // Wounded with no healing: steer clear of where the last threat was seen (ETH-148).
+    const avoiding = avoidThreats(ctx, paths);
     // The nearest goal, measured from the actor; then the route to just that one.
     const fromActor = buildGoalMap(paths, [actor.pos]);
     let target: { pos: Pos; name: string; cost: number } | null = null;
@@ -261,7 +263,8 @@ export const ACT_PICK_UP = defineRuleAction({
     const map = buildGoalMap(paths, [target.pos]);
     const cost = map.get(actor.pos.x, actor.pos.y);
     if (cost === UNREACHABLE) return null;
-    return followMap(ctx, paths, map, `going for a ${target.name}, ${turns(cost)} away`);
+    const step = followMap(ctx, paths, map, `going for a ${target.name}, ${turns(cost)} away`);
+    return step === null || avoiding === null ? step : { ...step, skipped: avoiding };
   },
   describe: ({ maxDetour }) => `pick up items within ${maxDetour} steps`,
 });

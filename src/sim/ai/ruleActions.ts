@@ -10,6 +10,7 @@
  */
 import type { Pos } from '../../core';
 import { buildFleeMap, buildGoalMap, UNREACHABLE } from '../goalMap';
+import { avoidThreats } from '../combat/threat';
 import { aiPathGrid, followMap, frontier } from './navigate';
 import { defineRuleAction, noParams } from './types';
 import type { AiCtx, RuleActionDef } from './types';
@@ -47,6 +48,8 @@ export const ACT_EXPLORE = defineRuleAction({
   parse: noParams,
   resolve(ctx) {
     const paths = aiPathGrid(ctx);
+    // Wounded with no healing: steer clear of where the last threat was seen (ETH-148).
+    const avoiding = avoidThreats(ctx, paths);
     const goals = frontier(ctx, paths);
     if (goals.length === 0) return null;
     const shared = sharedExploreGoal(ctx, goals);
@@ -57,7 +60,8 @@ export const ACT_EXPLORE = defineRuleAction({
       cost = map.get(ctx.actor.pos.x, ctx.actor.pos.y);
     }
     if (cost === UNREACHABLE) return null;
-    return followMap(ctx, paths, map, `heading for unexplored ground ${cost} ${cost === 1 ? 'turn' : 'turns'} away`);
+    const step = followMap(ctx, paths, map, `heading for unexplored ground ${cost} ${cost === 1 ? 'turn' : 'turns'} away`);
+    return step === null || avoiding === null ? step : { ...step, skipped: avoiding };
   },
   describe: () => 'explore the nearest unexplored ground',
 });

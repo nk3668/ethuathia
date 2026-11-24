@@ -59,6 +59,7 @@ export * from './ood';
 export * from './overlay';
 export * from './roles';
 export * from './rules';
+export * from './threat';
 
 /**
  * How an event names the monsters in it whose overlay changes their name (ETH-117), keyed by

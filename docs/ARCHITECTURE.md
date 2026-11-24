@@ -624,7 +624,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`), and ETH-148 36 (`AiMemory.fleeing`, `AiMemory.threats`).
 
 ### Contracts in the run (ETH-024)
 
@@ -1801,7 +1801,7 @@ As built in `src/sim/ai/` (ETH-009):
   the target tile for adjacent/ranged rules; omitted when untargeted).
 - **Baseline rules**, in order (0-based indices, as of ETH-061):
   0 `cond.wounded { percent: 35 } → act.quaff_healing`, 1 `cond.overloaded → act.drop_lowest`,
-  2 `cond.stuck → act.back_off`, 3 `cond.heading_out → act.retreat_run`,
+  2 `cond.stuck → act.back_off` (and `cond.fleeing → act.flee` right after it, ETH-148), 3 `cond.heading_out → act.retreat_run`,
   4 `cond.heading_out → act.gather { dir: 'up' }`, 5 `cond.floor_overstayed → act.descend { regroup: false }`,
   6 `cond.hurt_no_healing { below: 50 } → act.drink_fountain`, 7 `cond.always → act.pick_up { maxDetour: 8 }`,
   8 `cond.always → act.explore`, 9 `cond.always → act.descend`, 10 `cond.always → act.gather`,
@@ -1873,6 +1873,22 @@ As built in `src/sim/ai/` (ETH-009):
   the core `bump { dir }` action, which comes to the first of attack, open door, swap or move
   that validates (`bumpTarget`); when none does, it fails with the move's reason. Snapshots carry
   `possessed` and `awaitingInput` on each `PartyMemberView`.
+- **Fleeing (ETH-148, `src/sim/combat/threat.ts`):** baseline rule 2 is `cond.fleeing → act.flee`.
+  `isThreat` decides who counts: an enemy that will come and hurt the party (damage stat above 0, a
+  bolt, a rule that approaches, surrounds or bolts, or a bundle or template that deals damage or
+  applies a harmful status; adventurers always). "Threat" means "will come after you", not "can
+  deal damage": a blow does at least 1 (`rollDamage`), so a moss tender still hits if cornered, but
+  it never pursues and flight ignores it (trace: "ignoring the moss tender: it can't hurt anyone").
+  `visibleThreats` is `visibleEnemies` through it; `cond.safe_to_test` uses it too. Before each party
+  decision `updateThreatMemory` records where threats were seen (`memory.threats`, dropped after
+  `THREAT_MEMORY_TURNS`) and runs the hysteresis (`memory.fleeing`): fleeing starts below
+  `BASELINE_FLEE_PERCENT` (35) with a threat in sight, and ends at `FLEE_RELEASE_PERCENT` (60) HP or
+  after `FLEE_CALM_TURNS` (12) without seeing one. While it lasts `act.flee` runs from visible
+  threats, or from remembered positions when none is in sight ("still fleeing: ... in pursuit").
+  Wounded (below the release HP) with no healing potion, `act.explore` and `act.pick_up` plan on a
+  grid where `avoidThreats` has added cost around each remembered position (`AVOID_PENALTY` at the
+  tile, fading to nothing at `AVOID_RADIUS` and over `THREAT_MEMORY_TURNS`), a soft weighting, so
+  the route goes round when another exists (trace note: "avoiding X's last position while wounded").
 - **Stuck detection** runs before the walk. Each decision records the actor's floor, position and
   the party's seen-tile count (`memory.last`). Staying within `LOITER_RADIUS` (1) tile of where the count
   began counts as not moving, so two rules that undo each other (flee, then walk back toward the
