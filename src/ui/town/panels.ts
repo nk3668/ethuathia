@@ -4,10 +4,13 @@
  * component and one line here.
  */
 import type { ComponentType } from 'react';
+import { GuildHallPanel } from './GuildHallPanel';
 
 export interface BuildingPanelProps {
   /** The building the panel is for (`building.guild_hall`). */
   buildingId: string;
 }
 
-export const BUILDING_PANELS: Readonly<Record<string, ComponentType<BuildingPanelProps>>> = {};
+export const BUILDING_PANELS: Readonly<Record<string, ComponentType<BuildingPanelProps>>> = {
+  'building.guild_hall': GuildHallPanel,
+};

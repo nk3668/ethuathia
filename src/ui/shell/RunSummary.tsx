@@ -1,12 +1,14 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { GOLD_PER_TROPHY } from '../../content';
 import { formatNumber } from '../../core';
+import { masteryGainBanked } from '../../meta';
 import { RENOWN, TROPHIES } from '../../sim';
 import type { GoldConversionRecord, RunOutcome, RunReport } from '../../sim';
 import { Button, Tooltip } from '../kit';
 import { useProfileStore } from '../stores/profileStore';
 import { AUTO_RESTART_MS, useRunStore } from '../stores/runStore';
 import { useSimStore } from '../stores/simStore';
+import { masteryBreakdown, masteryLine, MASTERY_HELP } from './masteryText';
 import styles from './RunSummary.module.css';
 import {
   contractsOf,
@@ -248,6 +250,8 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
           </section>
         )}
 
+        {!past && <Mastery report={report} />}
+
         <Unlocked run={run} />
 
         <p className={styles.epitaph}>{epitaph(report)}</p>
@@ -319,6 +323,41 @@ function TrophiesFormulaContent({ gold, outcome }: { gold: GoldConversionRecord 
         </>
       )}
     </>
+  );
+}
+
+/**
+ * What the run added to each class's Mastery (ETH-087): one line per class in the party, with a
+ * tooltip of the breakdown. The profile has already banked the run, so the "before" level is the
+ * banked XP minus the run's gain (`masteryGainBanked`). Only for the run that just ended.
+ */
+function Mastery({ report }: { report: RunReport }) {
+  const mastery = useProfileStore((s) => s.profile.mastery);
+  const gains = masteryGainBanked({ mastery }, report.result);
+  if (gains.length === 0) return null;
+  return (
+    <section aria-label="Class Mastery">
+      <h3 className={styles.heading}>Class Mastery</h3>
+      <ul className={styles.list}>
+        {gains.map((gain) => (
+          <li key={gain.classId}>
+            <Tooltip
+              content={
+                <>
+                  {masteryBreakdown(gain).map((line) => (
+                    <div key={line}>{line}</div>
+                  ))}
+                  <br />
+                  {MASTERY_HELP}
+                </>
+              }
+            >
+              <span tabIndex={0}>{masteryLine(gain)}</span>
+            </Tooltip>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

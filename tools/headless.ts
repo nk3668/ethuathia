@@ -33,6 +33,7 @@ import {
   purchase,
   upgradePartyBundles,
   upgradeRunModifiers,
+  masteryShares,
 } from '../src/meta';
 import type { Profile } from '../src/meta';
 import {
@@ -328,6 +329,8 @@ export interface SeedResult {
   equips?: number;
   /** Entries in the run chronicle where the run stopped (ETH-120). Missing from reports before it. */
   moments?: number;
+  /** Class Mastery XP the run banked, summed over its classes (ETH-087). Only for runs that ended. */
+  masteryXp?: number;
   /** `stateHash` of where the run stopped, to tell whether a change altered behavior. */
   hash: string;
 }
@@ -511,7 +514,13 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     ...(end === null ? {} : { end: end.outcome, runTurns: end.turn }),
     atRisk: { ...snap.domains.run.atRisk },
     lost: { ...(runner.report()?.result.lost ?? {}) },
+    ...masteryOf(runner.report()),
   };
+}
+
+/** The Mastery XP a finished run banks (ETH-087), for `SeedResult.masteryXp`. */
+function masteryOf(report: RunReport | null): { masteryXp?: number } {
+  return report === null ? {} : { masteryXp: masteryShares(report.result).reduce((n, c) => n + c.xp, 0) };
 }
 
 /** Runs `count` seeds in a row from `from`. */
@@ -627,6 +636,9 @@ export interface ReportSummary {
   goldMax: number | null;
   renownBankedMean: number | null;
   renownPerHour1x: number | null;
+  /** Median Class Mastery XP of a victory (ETH-087), the number its curve is calibrated on. */
+  masteryXpWinMedian: number | null;
+  masteryXpMean: number | null;
 }
 
 const avg = (xs: readonly number[]): number | null => (xs.length === 0 ? null : xs.reduce((a, b) => a + b, 0) / xs.length);
@@ -714,6 +726,8 @@ export function summarizeReport(results: readonly SeedResult[]): ReportSummary {
     goldMax: gold.length === 0 ? null : Math.max(0, ...gold),
     renownBankedMean: avg(banked),
     renownPerHour1x: renownPerHour(results),
+    masteryXpWinMedian: median(results.flatMap((r) => (r.end === 'victory' && r.masteryXp !== undefined ? [r.masteryXp] : []))),
+    masteryXpMean: avg(results.flatMap((r) => (r.masteryXp === undefined ? [] : [r.masteryXp]))),
   };
 }
 
@@ -787,6 +801,12 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
       : `Items picked up per run: mean ${s.itemsMean.toFixed(1)}, max ${s.itemsMax}. ` +
         `Gold per run: mean ${s.goldMean.toFixed(1)}, max ${s.goldMax}.`;
 
+  const masteryLine =
+    s.masteryXpMean === null
+      ? ''
+      : `Class Mastery XP per run: mean ${s.masteryXpMean.toFixed(0)}` +
+        (s.masteryXpWinMedian === null ? '.' : `, victory median ${fmtWholeOrOne(s.masteryXpWinMedian)}.`);
+
   const causeText = Object.entries(s.deathCauses)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([cause, n]) => `${cause} ${n}`)
@@ -821,6 +841,7 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
     ...(lootLine === '' ? [] : [lootLine]),
     ...(combatLine === '' ? [] : [combatLine]),
     ...(renownLine === '' ? [] : [renownLine]),
+    ...(masteryLine === '' ? [] : [masteryLine]),
     flagged.length === 0 ? 'Flagged seeds: none.' : `Flagged seeds:\n${flagged.join('\n')}`,
   ].join('\n');
 }
