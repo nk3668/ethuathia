@@ -280,3 +280,23 @@
   font-size: var(--font-size-label);
   line-height: var(--line-height-label);
 }
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.kind {
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: var(--font-size-label);
+  cursor: help;
+}
+
+.guarded {
+  display: inline-block;
+}

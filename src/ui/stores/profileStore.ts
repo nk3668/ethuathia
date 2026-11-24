@@ -8,7 +8,7 @@
  * overwritten; importing a save or a hard reset recovers from a failed load.
  */
 import { create } from 'zustand';
-import { applyRunResult, canPurchase, decodeSave, encodeSave, newProfile, purchase, respec, respecPlan } from '../../meta';
+import { applyRunResult, canPurchase, decodeSave, encodeSave, newProfile, purchase, respec, respecBlock, respecPlan, resetPlan, resetTree } from '../../meta';
 import type { Profile, RunChoices, Settings } from '../../meta';
 import { startAutosave } from '../../platform';
 import type { AutosaveOptions, SaveStore } from '../../platform';
@@ -41,8 +41,13 @@ export interface ProfileStoreState {
   updateRunChoices(changes: Partial<RunChoices>): void;
   /** Buys an upgrade node (meta `purchase`). Returns false, changing nothing, if it can't be bought. */
   purchase(nodeId: string): boolean;
-  /** Undoes the choice in a pick-one group (meta `respec`). Returns false if nothing in it is owned. */
-  respec(group: string): boolean;
+  /**
+   * Undoes the choice in a pick-one group (meta `respec`). Returns false, changing nothing, if nothing
+   * in it is owned or a run is going (`runActive`: see `useRunActive` in `runStore`).
+   */
+  respec(group: string, runActive: boolean): boolean;
+  /** Gives up a building's whole tree and refunds it (meta `resetTree`). Same refusals as `respec`. */
+  resetTree(buildingId: string, runActive: boolean): boolean;
   /** Writes the profile now if it changed (or always, with `force`). */
   save(force?: boolean): Promise<void>;
   /** The save string, for export. */
@@ -92,9 +97,15 @@ export const useProfileStore = create<ProfileStoreState>()((set, get) => ({
     return true;
   },
 
-  respec: (group) => {
-    if (respecPlan(get().profile, group) === null) return false;
-    set((s) => ({ profile: respec(s.profile, group), dirty: true }));
+  respec: (group, runActive) => {
+    if (respecBlock({ runActive }) !== null || respecPlan(get().profile, group) === null) return false;
+    set((s) => ({ profile: respec(s.profile, group, { runActive }), dirty: true }));
+    return true;
+  },
+
+  resetTree: (buildingId, runActive) => {
+    if (respecBlock({ runActive }) !== null || resetPlan(get().profile, buildingId) === null) return false;
+    set((s) => ({ profile: resetTree(s.profile, buildingId, { runActive }), dirty: true }));
     return true;
   },
 
