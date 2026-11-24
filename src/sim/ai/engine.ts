@@ -30,6 +30,9 @@ import type { AiActor, AiCtx, AiMemory, Rule, RuleRef } from './types';
 /** Decisions in a row without progress after which the current goal is dropped. */
 export const STUCK_TURNS = 10;
 
+/** How far (in tiles, either axis) an actor may stray from where it started counting and still count as not moving. */
+export const LOITER_RADIUS = 1;
+
 /**
  * Decisions in a row spent waiting (by an idle rule other than the plain `act.wait`) with nobody
  * in the party moving, after which that rule is dropped like a goal (ETH-113). Far above
@@ -218,9 +221,17 @@ function checkProgress(ctx: AiCtx, emit: Emit): boolean {
   const party = partyKey(state);
   const last = memory.last;
   const partyStill = last !== null && last.party === party;
+  // Staying within one tile of where the count began is "not moving": two rules that undo each
+  // other (flee from an enemy, then walk back toward the item behind it) swap the actor between
+  // neighbouring tiles forever, which an exact-position check never sees. The mark keeps its
+  // position (the anchor) while the actor stays near it, and moves on once it goes further.
   const same =
-    last !== null && last.floor === actor.floor && last.pos.x === actor.pos.x && last.pos.y === actor.pos.y && last.seen === seen;
-  memory.last = { floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y }, seen, party };
+    last !== null &&
+    last.floor === actor.floor &&
+    Math.abs(last.pos.x - actor.pos.x) <= LOITER_RADIUS &&
+    Math.abs(last.pos.y - actor.pos.y) <= LOITER_RADIUS &&
+    last.seen === seen;
+  memory.last = same ? { ...last, party } : { floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y }, seen, party };
 
   const intent = memory.intent;
   const idle = intent === null || !RULE_ACTIONS.has(intent.action) || RULE_ACTIONS.get(intent.action).idle;

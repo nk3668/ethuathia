@@ -9,7 +9,7 @@ import type { Pos } from '../../core';
 import { EQUIP_SLOT_INFO, gearSlots, hasEffectKind, healAmount, ITEMS } from '../../content';
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
-import type { AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, Rule, RuleActionDef } from '../ai/types';
+import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } from '../ai/types';
 import { getFloor } from '../entities';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { statValue } from '../stats/getStat';
@@ -17,7 +17,7 @@ import type { Entity, RunState } from '../state';
 import { isCursed } from './enchant';
 import { visibleEnemies } from '../combat/rules';
 import { knownStairs } from '../floors/rules';
-import { bestUpgrade, gearStatsText, heldUpgradeNotes, wornItems } from './equipment';
+import { bestUpgrade, gearStatsText, wornItems } from './equipment';
 import { appearanceName, isInstanceTypeKnown, isItemIdentified, isTypeIdentified } from './identify';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
@@ -277,24 +277,16 @@ export const ACT_EQUIP_UPGRADE = defineRuleAction({
     'Put on a weapon or piece of armor from the pack that is clearly better than what is worn in its slot: at least as good in every ' +
     'stat and better in one. Gear with a tradeoff (more damage but less accuracy, say) is left for the player to decide.',
   parse: noParams,
-  resolve({ state, actor }): ResolveResult {
+  resolve({ state, actor }): Resolved | null {
     const up = bestUpgrade(state, actor);
-    if (up === null) {
-      const held = heldUpgradeNotes(state, actor);
-      return held.length === 0 ? null : { skipped: held.join('; ') };
-    }
+    if (up === null) return null;
     const name = itemName(state, up.item, actor);
     const stats = gearStatsText(state, actor, up.item, true);
     const what = stats === null ? `the ${name}` : `the ${name} (${stats})`;
     const risk = up.gate === undefined ? '' : `; ${up.gate}`;
     const instead = up.replaces === null ? `, nothing worn there yet` : ` in place of the ${itemName(state, up.replaces, actor)}`;
     const where = gearSlotsCount(up.item) > 1 ? ` (${EQUIP_SLOT_INFO[up.slot].label.toLowerCase()})` : '';
-    const held = heldUpgradeNotes(state, actor);
-    return {
-      request: { id: 'equip', index: up.index, slot: up.slot },
-      detail: `equipping ${what}${where}${instead}${risk}`,
-      ...(held.length === 0 ? {} : { skipped: held.join('; ') }),
-    };
+    return { request: { id: 'equip', index: up.index, slot: up.slot }, detail: `equipping ${what}${where}${instead}${risk}` };
   },
   describe: () => 'equip clear upgrades',
 });
