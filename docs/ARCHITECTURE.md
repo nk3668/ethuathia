@@ -314,7 +314,7 @@ All in `src/sim/run/`:
   a caster that has it in bolt range (`cond.in_bolt_range` → `act.rush_caster`, after
   `act.attack_adjacent`). No new state: roles add no parts or slices.
 - **Encounters, Squads & Group AI (ETH-135, `src/content/squads.ts`, `combat/encounters.ts`, `combat/groupAi.ts`):**
-  `gen.monsters` delegates to `populateEncounters`, allocating a Danger-scaled floor threat budget (`floorThreatBudget`, scaled by `DungeonDef.encounters?.budgetMul`) across non-arrival rooms while keeping `stairsDistance` clear and preserving OOD + depth-ramped templates (`rollOodDanger`, `templateChanceFor`). `SQUAD_BLUEPRINTS` define role/tag archetypes (`minDanger`, `weight`, `slots`, `preferSameTag`, `patrolEligible`) with zero hardcoded monster ids. Placed squads and deterministic multi-room corridor patrols carry optional `MonsterPart` state (`groupId`, `homeRoom`, `alert { pos, untilTurn }`, `patrol { waypoints, next }`), with pure rule conditions/actions (`cond.has_alert`, `act.pursue_alert`, `act.tether_wander`, `act.patrol`) spliced by `withGroupAiRules` and hook-driven alert/patrol updates (`PURSUIT_MEMORY_TURNS = 8`) in `combatTurnStart` and `strike`. Invariants `combat.groups` and `combat.patrols` verify group/room/alert/waypoint validity.
+  `gen.monsters` delegates to `populateEncounters`, allocating a Danger-scaled floor threat budget (`floorThreatBudget`, scaled by `DungeonDef.encounters?.budgetMul`) across non-arrival rooms while keeping `stairsDistance` clear and preserving OOD + depth-ramped templates (`rollOodDanger`, `templateChanceFor`). For party-size scaling (ETH-145), `populateEncounters` multiplies `floorThreatBudget` by `partySizeBudgetMul(draft.partySize, draft.partyBudgetStep)` using `PARTY_SIZE_BUDGET_STEP` (currently `0`; `ETH-080` tunes it upward toward `~0.1`) from the starting party size (`state.config.party.length`), adding headcount and packs only (never changing monster stats or templates) and surfaced in `TopBar` and the dungeon Codex renderer. `SQUAD_BLUEPRINTS` define role/tag archetypes (`minDanger`, `weight`, `slots`, `preferSameTag`, `patrolEligible`) with zero hardcoded monster ids. Placed squads and deterministic multi-room corridor patrols carry optional `MonsterPart` state (`groupId`, `homeRoom`, `alert { pos, untilTurn }`, `patrol { waypoints, next }`), with pure rule conditions/actions (`cond.has_alert`, `act.pursue_alert`, `act.tether_wander`, `act.patrol`) spliced by `withGroupAiRules` and hook-driven alert/patrol updates (`PURSUIT_MEMORY_TURNS = 8`) in `combatTurnStart` and `strike`. Invariants `combat.groups` and `combat.patrols` verify group/room/alert/waypoint validity.
 
 ### Codex discoveries
 
@@ -1816,9 +1816,15 @@ As built in `src/sim/ai/` (ETH-009):
   `act.drink_fountain` (ETH-072, ETH-094, `src/sim/floors/fountains.ts`) walks to the nearest
   remembered fountain that isn't dry and whose last observed draught in `floors.observedFountains`
   is not harmful (`outcome === 'bane'`), without peeking at untouched fountains' hidden draughts,
-  explaining any skipped harmful fountain in the trace, and drinks. The heading-out ones (ETH-062)
+  explaining any skipped harmful fountain in the trace, and drinks. Between `ITEMS_BASELINE_LOOT`
+  and `act.explore`, `cond.party_scattered → act.regroup` (ETH-145) keeps followers grouped with
+  the party lead while ground remains to explore. The heading-out ones (ETH-062)
   are in
   `src/sim/run/rules.ts`; the floors ones (ETH-058) in `src/sim/floors/rules.ts`:
+  - `cond.party_scattered → act.regroup` (ETH-145): walks a straggler back to `partyLead` (the
+    first living party member on the floor, who regroups on no one) when more than `PARTY_LEASH`
+    (8) tiles away, continuing until within `PARTY_CLOSE` (3) tiles, and only while `act.explore`
+    still resolves so it never fights the descent.
   - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
     default) a member on the stairs takes them only when every living member on that floor is
     gathered (`gatheringAt`: within `GATHER_RADIUS`, 2, of the stairs or of a gathered member,
@@ -1834,19 +1840,25 @@ As built in `src/sim/ai/` (ETH-009):
   - `cond.bottom_floor` holds while a living party member is on the bottom floor (run-scope since
     ETH-121; see "Shared conditions"), where the baseline, with nothing left to
     explore, fires `act.retreat_run`: the party turns back, climbs out and the run ends as a
-    retreat (ETH-062; a victory once contracts add victory checks).
+    retreat (ETH-062; a victory once contracts add victory checks). Right before it,
+    `cond.stuck → act.wait` (ETH-145) holds while `act.explore` is temporarily dropped so a stuck
+    member waits out `DROP_TURNS` instead of aborting the whole run.
   - `act.explore` is frontier-based: the goals are tiles the actor could enter (on the party
     memory's path grid, closed doors at `OPEN_DOOR_COST`) with an unseen neighbor. Standing on one
     always reveals its neighbors, so each goal reached shrinks the frontier, and explored dead
-    ends are never goals nor on a shortest route to one. A closed door next on the route becomes
+    ends are never goals nor on a shortest route to one. Both the floor lead and party followers
+    stay committed to the lead's current `act.explore` `goal` until it leaves the frontier or
+    becomes unreachable (ETH-145), preventing adjacent ally costs from flipping branches and
+    keeping the party pushing one corridor together. A closed door next on the route becomes
     `openDoor`; another actor on the next tile becomes a wait ("waiting for X to get out of the
     way"), recorded as `memory.waitingFor`, unless it is a party member willing to swap
     (`willingToSwap`, ETH-017): one whose own last decision waited on this actor, or one with no
     decision yet or an `idle` one. Then it becomes a `swap` ("squeezing past X"). A member busy
     heading elsewhere is waited behind, never pushed back the way it came. This lives in
     `followMap`, so every map-following rule action gets it. It returns `null` once no frontier tile is reachable, and the actor settles on
-    `act.wait`. Tiles where the actor knows another actor stands (party members, anyone adjacent)
-    cost `OCCUPIED_COST` (8) more, so it routes round them when it reasonably can.
+    `act.wait`. Tiles where an adjacent actor stands cost extra in `aiPathGrid` (`ALLY_OCCUPIED_COST`
+    (2) for party members, `OCCUPIED_COST` (8) for others), while distant party members are not
+    penalized so allies in another corridor don't flip route choices.
   - `act.back_off` follows a flee map away from where the actor got stuck, with occupied tiles
     blocked.
   - `act.wait` is marked `idle`.
@@ -1868,6 +1880,9 @@ As built in `src/sim/ai/` (ETH-009):
   none of them changing while the last rule fired was not `idle`, that rule becomes
   `memory.dropped` and is skipped for `DROP_TURNS` (20) turns, a `stuck` event says why, and
   `cond.stuck` holds meanwhile, so the actor backs off and then waits until the goal comes back.
+  If `act.back_off` itself gets stuck while a goal is dropped, it sets `dropped.backedOff = true`
+  and stops backing off for the rest of `DROP_TURNS` without overwriting (and un-dropping) the
+  original dropped rule (ETH-145).
   Waiting counts too (ETH-113): `memory.last.party` keys where every living party member stands,
   and `memory.waited` counts decisions in a row that wait by an `idle` rule other than the plain
   `act.wait` (gathering at the stairs, say) while that key is unchanged. At `WAIT_STUCK_TURNS`
@@ -2533,6 +2548,11 @@ cards show every member, and the top bar and log show the run.
   ended, `early` that it ended above the bottom. `SeedResult` adds `end` (the outcome), `runTurns`
   (return trip included; `turns` stays the turn the party turned back) and `atRisk`. `METRICS`
   adds ended above bottom, one row per outcome, run turns and Renown and Trophies at risk.
+- ETH-145 adds `--party-sweep` (`partySweepRow`, `partySweepWarnings`, `formatPartySweep`,
+  `PARTY_SWEEP_MIN_RATIO`), `meanLevel` / member-mean level reporting, and `fell`-based death
+  attribution (`e.killer?.def`, avoiding unattributed `other` deaths). `simArgv` forwards `--preset`,
+  `--upgrades` and `--rules` (omitting defaults so older refs still run), and `formatComparison`
+  throws when two reports ran with different arguments.
 
 ### 11.5 PR gates
 

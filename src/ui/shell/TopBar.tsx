@@ -6,7 +6,7 @@ import { CURRENCY_INFO } from '../../meta';
 import type { CurrencyId } from '../../meta';
 import { keyHint } from '../input/keymap';
 import { Button, Tooltip } from '../kit';
-import { favorDeity, RENOWN, TROPHIES } from '../../sim';
+import { favorDeity, PARTY_SIZE_BUDGET_STEP, RENOWN, TROPHIES } from '../../sim';
 import type { RewardAmounts } from '../../sim';
 import { totalFavor, useProfileStore } from '../stores/profileStore';
 import { useSimStore } from '../stores/simStore';
@@ -231,6 +231,7 @@ function RunPosition() {
   const total = useSimStore((s) => s.snapshot?.domains.floors.depth);
   const deepest = useSimStore((s) => s.snapshot?.domains.floors.deepest);
   const turn = useSimStore((s) => s.snapshot?.turn);
+  const partySize = useSimStore((s) => s.snapshot?.party.length ?? 1);
   if (depth === undefined || total === undefined || deepest === undefined || turn === undefined) {
     return <p className={styles.position}>No run</p>;
   }
@@ -249,6 +250,14 @@ function RunPosition() {
           <br />
           {floorAbout}
           <br />
+          {partySize > 1 && PARTY_SIZE_BUDGET_STEP > 0 && (
+            <>
+              Bigger parties meet more monsters: +{Math.round(PARTY_SIZE_BUDGET_STEP * 100)}% for each adventurer after the first (+
+              {Math.round(PARTY_SIZE_BUDGET_STEP * 100 * (partySize - 1))}% for your party of {partySize}). Only the numbers and packs
+              grow; no monster gets stronger.
+              <br />
+            </>
+          )}
           Turn {TURN_FORMAT.format(turn)}: game time since the run began.
         </>
       }

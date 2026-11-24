@@ -33,6 +33,7 @@ All sweeps use **200 seeds** (at 100 seeds the 95% interval on a ~20% rate is ab
 - Run last in M1.5, after `ETH-145` has fixed the party-size inversion and the XP curve.
 - Harness prep landed in `2cdb89b` (`--preset`, `--upgrades`, `--rules` flags and §2 metrics); the tuning itself has not started.
 - Design reference: `docs/DIFFICULTY_PHILOSOPHY.md` (§1, §2, §7, §8, §9).
+- Handed over from `ETH-145` (owner decision 2026-11-23): this item must make party 4 win at least 2x as often as solo on both presets (`npm run sim -- --party-sweep` prints a warning until it does), and should re-tune `PARTY_SIZE_BUDGET_STEP` (shipped small) up toward ~10% as far as the 1<2<3<4 ordering allows.
 
 ## Log
 - 2026-11-18: Created from Nate's interview answers (2026-11-18).

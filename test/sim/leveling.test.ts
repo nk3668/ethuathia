@@ -138,11 +138,14 @@ describe('growth rolls', () => {
 describe('earning XP', () => {
   it('a fixed-seed fight levels the Vanguard with the expected stats', () => {
     const { state, hero } = setup({}, 7);
-    // A weakened cavern brute (threat 6) two steps away: 24 XP, exactly level 3.
+    // The Vanguard starts one kill short of level 3 (the level-2 growth is rolled getting there);
+    // a weakened cavern brute (threat 6) two steps away is worth exactly that kill.
     const brute = spawnMonster(state, 'monster.cavern_brute', 'd1', { x: 3, y: 1 }) as ActorEntity;
     brute.actor.hp = 2;
     expect(MONSTERS.get('monster.cavern_brute').threat).toBe(6);
     expect(statValue(state, hero, 'hp')).toBe(20);
+    grantXp(state, hero, xpForLevel(3) - 6 * XP_PER_THREAT, 'kill', 'x', collect(state).emit);
+    expect(levelOf(hero)).toBe(2);
     const events = runUntil(state, (es) => es.some((e) => e.type === 'killed'));
     expect(state.entities[brute.id]).toBeUndefined();
 
@@ -152,25 +155,23 @@ describe('earning XP', () => {
       actor: hero.id,
       classId: CLASS_VANGUARD.id,
       amount: 6 * XP_PER_THREAT,
-      xp: 24,
+      xp: xpForLevel(3),
       reason: 'kill',
       source: 'monster.cavern_brute',
     });
     const ups = ofType(events, 'leveledUp');
-    expect(ups.map((e) => e.level)).toEqual([2, 3]);
-    expect(ups.map((e) => e.gains)).toEqual([2, 3].map((l) => rollLevelGains(state, hero.id, CLASS_VANGUARD.id, l)));
+    expect(ups.map((e) => e.level)).toEqual([3]);
+    expect(ups.map((e) => e.gains)).toEqual([rollLevelGains(state, hero.id, CLASS_VANGUARD.id, 3)]);
     // Seed 7's rolls, pinned so a change to the roll shows up here.
-    expect(ups.map((e) => e.gains)).toEqual([
-      { brawn: 1, finesse: 1, grit: 2 },
-      { brawn: 2, grit: 1, wits: 1 },
-    ]);
+    expect(rollLevelGains(state, hero.id, CLASS_VANGUARD.id, 2)).toEqual({ brawn: 1, finesse: 1, grit: 2 });
+    expect(ups.map((e) => e.gains)).toEqual([{ brawn: 2, grit: 1, wits: 1 }]);
     const types = events.map((e) => e.type);
     expect(types.indexOf('killed')).toBeLessThan(types.indexOf('xpGained'));
     expect(types.indexOf('xpGained')).toBeLessThan(types.indexOf('leveledUp'));
 
     // Human Vanguard (Brawn 12, Finesse 10, Wits 5, Grit 14) plus the two rolls: Brawn 15,
     // Finesse 11, Wits 6, Grit 17 → max HP 17 + 7.5 = 24.5, rounded to 25; Carry 30.
-    const total = sumGains(ups.map((e) => e.gains));
+    const total = sumGains([2, 3].map((l) => rollLevelGains(state, hero.id, CLASS_VANGUARD.id, l)));
     expect(statValue(state, hero, 'hp')).toBe(25);
     expect(attributeValue(hero, 'finesse')).toBe(11);
     expect(attributeValue(hero, 'wits')).toBe(6);
@@ -288,24 +289,26 @@ describe('the record of it', () => {
     const { state, hero } = setup({}, 7);
     const brute = spawnMonster(state, 'monster.cavern_brute', 'd1', { x: 3, y: 1 }) as ActorEntity;
     brute.actor.hp = 2;
+    // One kill short of level 3, so the brute's XP is what levels the hero up.
+    hero.growth = { level: 2, xp: xpForLevel(3) - 6 * XP_PER_THREAT, gained: { ...rollLevelGains(state, hero.id, CLASS_VANGUARD.id, 2) } };
     const events = runUntil(state, (es) => es.some((e) => e.type === 'leveledUp'));
 
     // What `RunResult.extras['track.xp']` holds once the run ends.
     const tracked = state.domains.run.trackers['track.xp'] as XpTrackerState;
     expect(tracked).toEqual({
-      byActor: { [hero.id]: { classId: CLASS_VANGUARD.id, xp: 24, level: 3 } },
-      byClass: { [CLASS_VANGUARD.id]: 24 },
+      byActor: { [hero.id]: { classId: CLASS_VANGUARD.id, xp: xpForLevel(3), level: 3 } },
+      byClass: { [CLASS_VANGUARD.id]: 6 * XP_PER_THREAT },
     });
 
     const view = snapshot(state).domains.stats.members[hero.id];
-    expect(view?.level).toEqual({ level: 3, xp: 24, levelXp: 3 * XP_STEP, nextXp: 6 * XP_STEP });
+    expect(view?.level).toEqual({ level: 3, xp: xpForLevel(3), levelXp: 3 * XP_STEP, nextXp: 6 * XP_STEP });
 
     const logged = logLines(
       events.map((event, seq) => ({ seq, event })),
       () => 'Brannoc',
     );
     const levelLines = logged.filter((l) => l.text.includes('reaches level'));
-    expect(levelLines.map((l) => l.text.split(':')[0])).toEqual(['Brannoc reaches level 2', 'Brannoc reaches level 3']);
+    expect(levelLines.map((l) => l.text.split(':')[0])).toEqual(['Brannoc reaches level 3']);
     // A level-up is a highlight, placed where it happened.
     expect(levelLines[0]?.highlight?.kind.id).toBe('leveledUp');
     expect(logged.some((l) => l.text.includes('XP'))).toBe(false);

@@ -9,6 +9,7 @@ import {
   parseReport,
   parseReportText,
   resolveCompareRef,
+  simArgv,
   staleBaseWarning,
 } from '../../tools/compare';
 import { formatReport, headlessParty, runSeeds } from '../../tools/headless';
@@ -65,9 +66,20 @@ describe('tools/compare', () => {
     expect(text).toMatch(/turns, mean \(done\)\s+[\d.]+\s+[\d.]+\s+\+16\.7 \(\+\d+\.\d%\)/);
     expect(text).toContain('1 of 3 shared seeds end differently: 2.');
 
-    const other = formatComparison(before, makeReport({ ...ARGS, cap: 500 }, before.results), undefined, ['Warning: stale base']);
-    expect(other).toContain('Warning: the reports ran with different arguments');
-    expect(other).toContain('Warning: stale base');
+    // Reports from different arguments are not comparable: an error, not a note.
+    expect(() => formatComparison(before, makeReport({ ...ARGS, cap: 500 }, before.results))).toThrow(/different arguments/);
+    expect(() => formatComparison(before, makeReport({ ...ARGS, preset: 'progressed' }, before.results))).toThrow(/different arguments/);
+    const withWarning = formatComparison(before, before, undefined, ['Warning: stale base']);
+    expect(withWarning).toContain('Warning: stale base');
+  });
+
+  it('forwards every report argument to the ref, leaving out defaults', () => {
+    expect(simArgv(ARGS)).toEqual(['--seeds', '3', '--from', '1', '--cap', '1000', '--party', '4']);
+    expect(simArgv({ ...ARGS, preset: 'progressed', upgrades: ['upgrade.a', 'upgrade.b'], rules: 'cautious' })).toEqual([
+      '--seeds', '3', '--from', '1', '--cap', '1000', '--party', '4',
+      '--preset', 'progressed', '--upgrades', 'upgrade.a,upgrade.b', '--rules', 'cautious',
+    ]);
+    expect(simArgv({ ...ARGS, preset: 'fresh', upgrades: [], rules: 'baseline' })).toEqual(simArgv(ARGS));
   });
 
   it('compares banked Renown per hour before and after, and prints - for older reports without it (ETH-085)', () => {

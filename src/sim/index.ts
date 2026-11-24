@@ -59,6 +59,7 @@ export {
   ACT_EXPLORE,
   ACT_WAIT,
   aiPathGrid,
+  ALLY_OCCUPIED_COST,
   BASELINE_RULES,
   chooseRule,
   COND_ALWAYS,

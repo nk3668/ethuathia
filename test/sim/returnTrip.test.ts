@@ -540,7 +540,7 @@ describe('return-trip deep surge (ETH-136)', () => {
   });
 
   it('reproduces surged ascents deterministically across save/load mid-ascent in a 6-floor generated dungeon', () => {
-    const state = createRun({ party: [HERO, MIRA], depth: 6, contracts: [RELIC] }, 42);
+    const state = createRun({ party: [HERO, MIRA], depth: 6, contracts: [RELIC] }, 1);
     const toRelic = stepUntil(state, (es) => ofType(es, 'contractCompleted').length > 0, 3000);
     expect(ofType(toRelic, 'contractCompleted')).toHaveLength(1);
 

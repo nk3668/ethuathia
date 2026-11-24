@@ -41,10 +41,10 @@ describe('templateChanceFor and computeTemplateChance', () => {
     const d5 = templateChanceFor(DUNGEON_OLD_DELVE, 5);
     const d8 = templateChanceFor(DUNGEON_OLD_DELVE, 8);
     const d15 = templateChanceFor(DUNGEON_OLD_DELVE, 15);
-    expect(d3).toBeCloseTo(0.035);
+    expect(d3).toBeCloseTo(0.03);
     expect(d5).toBeGreaterThan(d3);
     expect(d8).toBeGreaterThan(d5);
-    expect(d15).toBeCloseTo(0.35);
+    expect(d15).toBeCloseTo(0.3);
 
     expect(computeTemplateChance(undefined, 4, 0.2)).toBe(0.2);
     expect(computeTemplateChance(undefined, 4, 2)).toBe(1);

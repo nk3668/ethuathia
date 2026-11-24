@@ -104,20 +104,18 @@ export const HEADLESS_RULES_PRESETS: readonly HeadlessRulesPreset[] = ['baseline
 
 /**
  * Cautious behavior rules overlaid ahead of `BASELINE_RULES` (`--rules cautious`):
- * quaff healing potions earlier (<60% HP), flee earlier (<50% HP), retreat out of the dungeon
- * when critically hurt with no healing potion (<35% HP), drink fountains earlier (<65% HP), and
- * wait at stairs up rather than detouring when heading out or once contracts are complete.
+ * quaff healing potions earlier (<65% HP), drink fountains earlier (<75% HP), retreat out of the
+ * dungeon when critically hurt with no healing potion (<15% HP), and wait at stairs up rather
+ * than detouring when heading out or once contracts are complete.
  */
 export const CAUTIOUS_RULES: readonly Rule[] = [
-  { condition: { id: 'cond.wounded', params: { percent: 60 } }, action: { id: 'act.quaff_healing' }, enabled: true },
+  { condition: { id: 'cond.wounded', params: { percent: 65 } }, action: { id: 'act.quaff_healing' }, enabled: true },
   { condition: { id: 'cond.stuck' }, action: { id: 'act.back_off' }, enabled: true },
-  { condition: { id: 'cond.hp_below', params: { percent: 50 } }, action: { id: 'act.flee' }, enabled: true },
-  { condition: { id: 'cond.enemy_adjacent' }, action: { id: 'act.attack_adjacent' }, enabled: true },
-  { condition: { id: 'cond.hurt_no_healing', params: { below: 35 } }, action: { id: 'act.retreat_run' }, enabled: true },
+  { condition: { id: 'cond.hurt_no_healing', params: { below: 15 } }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   { condition: { id: 'cond.contracts_complete' }, action: { id: 'act.retreat_run' }, enabled: true },
-  { condition: { id: 'cond.hurt_no_healing', params: { below: 65 } }, action: { id: 'act.drink_fountain' }, enabled: true },
+  { condition: { id: 'cond.hurt_no_healing', params: { below: 75 } }, action: { id: 'act.drink_fountain' }, enabled: true },
 ];
 
 export interface HeadlessOptions {
@@ -313,6 +311,8 @@ export interface SeedResult {
   resisted?: number;
   /** The party's highest level where the run stopped (ETH-034). Missing from older reports. */
   level?: number;
+  /** The mean level of the party's members where the run stopped (ETH-145): a fair size-to-size comparison. */
+  meanLevel?: number;
   /** Contracts complete when the run stopped (ETH-024). Missing from reports before it. */
   contracts?: number;
   /** Times a party member put on a piece of gear (ETH-043). */
@@ -377,6 +377,11 @@ function createRunner(config: RunConfig, seed: number, ownRules: readonly Rule[]
   };
 }
 
+/** The mean of the members' levels, `1` for an empty party. */
+function meanMemberLevel(levels: readonly number[]): number {
+  return levels.length === 0 ? 1 : levels.reduce((a, b) => a + b, 0) / levels.length;
+}
+
 /** Runs one seed until the party settles, the cap is hit or the run stalls. */
 export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult {
   const cap = options.cap ?? DEFAULT_TURN_CAP;
@@ -426,7 +431,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
       chronicle = CHRONICLE_TRACKER.reduce(chronicle, e);
       if (e.type === 'fell') {
         deaths++;
-        const cause = slain.get(e.actor) ?? 'other';
+        const cause = e.killer?.def ?? slain.get(e.actor) ?? 'unknown';
         deathCauses[cause] = (deathCauses[cause] ?? 0) + 1;
       }
       if (e.type !== 'stuck') continue;
@@ -487,6 +492,7 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     fleeFails,
     resisted,
     level: Math.max(1, ...Object.values(snap.domains.stats.members).map((m) => m.level.level)),
+    meanLevel: meanMemberLevel(Object.values(snap.domains.stats.members).map((m) => m.level.level)),
     contracts: snap.domains.quests.contracts.filter((c) => c.complete).length,
     equips,
     moments: chronicle.entries.length,
@@ -597,6 +603,8 @@ export interface ReportSummary {
   depthMin: number | null;
   depthMax: number | null;
   levelMean: number | null;
+  /** Mean over runs of the mean member level (ETH-145). */
+  memberLevelMean: number | null;
   levelMedian: number | null;
   levelMin: number | null;
   levelMax: number | null;
@@ -683,6 +691,7 @@ export function summarizeReport(results: readonly SeedResult[]): ReportSummary {
     depthMin: depths.length === 0 ? null : Math.min(...depths),
     depthMax: depths.length === 0 ? null : Math.max(...depths),
     levelMean: avg(levels),
+    memberLevelMean: avg(results.flatMap((r) => (r.meanLevel === undefined ? [] : [r.meanLevel]))),
     levelMedian: median(levels),
     levelMin: levels.length === 0 ? null : Math.min(...levels),
     levelMax: levels.length === 0 ? null : Math.max(...levels),
@@ -760,7 +769,8 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
   const levelLine =
     s.levelMean === null || s.levelMedian === null
       ? ''
-      : `Party level: mean ${s.levelMean.toFixed(2)}, median ${fmtWholeOrOne(s.levelMedian)} (min ${s.levelMin}, max ${s.levelMax}).`;
+      : `Party level (highest member): mean ${s.levelMean.toFixed(2)}, median ${fmtWholeOrOne(s.levelMedian)} (min ${s.levelMin}, max ${s.levelMax}).` +
+        (s.memberLevelMean === null ? '' : ` Member level (mean of members): mean ${s.memberLevelMean.toFixed(2)}.`);
 
   const lootLine =
     s.itemsMean === null || s.goldMean === null
@@ -806,7 +816,96 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
   ].join('\n');
 }
 
+/** One party size's row in a `--party-sweep` (ETH-145). */
+export interface PartySweepRow {
+  size: number;
+  runs: number;
+  winRatePct: number;
+  retreatRatePct: number;
+  wipeRatePct: number;
+  /** Mean over runs of the highest member level. */
+  levelHighest: number | null;
+  /** Mean over runs of the mean member level. */
+  levelMember: number | null;
+  deathsPerRun: number | null;
+}
+
+/** Summarizes one party size's runs as a sweep row. */
+export function partySweepRow(size: number, results: readonly SeedResult[]): PartySweepRow {
+  const s = summarizeReport(results);
+  return {
+    size,
+    runs: s.runs,
+    winRatePct: s.winRatePct,
+    retreatRatePct: s.retreatRatePct,
+    wipeRatePct: s.wipeRatePct,
+    levelHighest: s.levelMean,
+    levelMember: s.memberLevelMean,
+    deathsPerRun: s.deathsPerRun,
+  };
+}
+
+/** How many times the biggest party must win as often as a lone adventurer (a target ETH-080 owns). */
+export const PARTY_SWEEP_MIN_RATIO = 2;
+
+/**
+ * What is wrong with the party-size ordering (`docs/DIFFICULTY_PHILOSOPHY.md` Principle 6): win rate
+ * must rise with every extra adventurer ("ordering broken", which fails ETH-145), and a party of 4
+ * should win at least `PARTY_SWEEP_MIN_RATIO` times as often as a solo adventurer ("ratio not met",
+ * a standing warning that ETH-080 clears). Empty when both hold.
+ */
+export function partySweepWarnings(rows: readonly PartySweepRow[]): string[] {
+  const warnings: string[] = [];
+  const sorted = [...rows].sort((a, b) => a.size - b.size);
+  for (let i = 1; i < sorted.length; i++) {
+    const lo = sorted[i - 1] as PartySweepRow;
+    const hi = sorted[i] as PartySweepRow;
+    if (!(hi.winRatePct > lo.winRatePct)) {
+      warnings.push(
+        `ordering broken: party ${hi.size} wins ${hi.winRatePct.toFixed(1)}%, not more than party ${lo.size} at ${lo.winRatePct.toFixed(1)}%`,
+      );
+    }
+  }
+  const solo = sorted.find((r) => r.size === 1);
+  const four = sorted.find((r) => r.size === MAX_PARTY);
+  if (solo !== undefined && four !== undefined && four.winRatePct < PARTY_SWEEP_MIN_RATIO * solo.winRatePct) {
+    warnings.push(
+      `ratio not met: party ${MAX_PARTY} wins ${four.winRatePct.toFixed(1)}%, under ${PARTY_SWEEP_MIN_RATIO}x solo's ${solo.winRatePct.toFixed(1)}% (ETH-080 owns clearing this; it does not fail ETH-145)`,
+    );
+  }
+  return warnings;
+}
+
+/** The sweep as a table plus a warning line per broken rule (or "ordering holds"). */
+export function formatPartySweep(rows: readonly PartySweepRow[]): string {
+  const fmt = (n: number | null, digits = 1) => (n === null ? '-' : n.toFixed(digits));
+  const header = ['party', 'runs', 'win %', 'retreat %', 'wipe %', 'level (highest)', 'level (member mean)', 'deaths/run'];
+  const body = rows.map((r) => [
+    String(r.size),
+    String(r.runs),
+    fmt(r.winRatePct),
+    fmt(r.retreatRatePct),
+    fmt(r.wipeRatePct),
+    fmt(r.levelHighest, 2),
+    fmt(r.levelMember, 2),
+    fmt(r.deathsPerRun, 2),
+  ]);
+  const widths = header.map((h, i) => Math.max(h.length, ...body.map((row) => (row[i] as string).length)));
+  const line = (cells: string[]) => cells.map((c, i) => c.padStart(widths[i] as number)).join('  ');
+  const warnings = partySweepWarnings(rows);
+  return [
+    line(header),
+    ...body.map(line),
+    '',
+    ...(warnings.length === 0
+      ? [`Party-size ordering holds: win rate rises with every adventurer and party ${MAX_PARTY} wins at least ${PARTY_SWEEP_MIN_RATIO}x as often as solo.`]
+      : warnings.map((w) => `WARNING: ${w}`)),
+  ].join('\n');
+}
+
 export interface SimArgs {
+  /** Run party sizes 1 to `MAX_PARTY` and check the win-rate ordering (`--party-sweep`, ETH-145). */
+  partySweep: boolean;
   /** The first seed. */
   from: number;
   /** How many seeds (one run each) to run. */
@@ -827,7 +926,7 @@ export interface SimArgs {
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
                       [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious]
-                      [--json FILE] [--compare REF | --baseline FILE]
+                      [--party-sweep] [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
 hit, and reports per seed the turns taken, the depth reached, how much of the last floor was
@@ -841,6 +940,10 @@ above the bottom or trigger stuck detection are listed at the end.
   --preset NAME           profile preset: fresh (default) or progressed
   --upgrades ID1,ID2,...  comma-separated upgrade node ids to apply (e.g. upgrade.hardy_recruits,upgrade.drill_yard)
   --rules NAME            behavior rule preset: baseline (default) or cautious
+  --party-sweep           run party sizes 1 to ${MAX_PARTY} on the same seeds and preset, print win rate and
+                          level per size, and warn when win rate does not rise with party size or party
+                          ${MAX_PARTY} wins less than ${PARTY_SWEEP_MIN_RATIO}x as often as solo (--party is ignored; not with
+                          --compare, --baseline or --json)
   --json FILE             also write the report as JSON, to keep as a baseline
   --compare REF           run the same seeds on git ref REF (e.g. origin/main, or merge-base for the
                           merge base with origin/main) and print a before/after table of the report
@@ -880,6 +983,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       preset: { type: 'string' },
       upgrades: { type: 'string' },
       rules: { type: 'string' },
+      'party-sweep': { type: 'boolean' },
       json: { type: 'string' },
       compare: { type: 'string' },
       baseline: { type: 'string' },
@@ -903,6 +1007,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     preset,
     upgrades,
     rules,
+    partySweep: values['party-sweep'] ?? false,
     json: values.json ?? null,
     compare: values.compare ?? null,
     baseline: values.baseline ?? null,

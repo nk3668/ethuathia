@@ -199,6 +199,7 @@ export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
           depth: node.depth,
           danger: floorDanger(state, node.depth),
           dungeon: runDungeon(state),
+          partySize: state.config.party.length,
           loot: new Rng(lootRngState(state.seed, floorId)),
         });
   if (node.down.length === 0) {

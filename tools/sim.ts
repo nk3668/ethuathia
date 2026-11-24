@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { formatComparison, makeReport, parseReport, resolveCompareRef, runRef } from './compare';
 import type { SimReport } from './compare';
-import { formatReport, headlessParty, parseSimArgs, runSeeds, USAGE } from './headless';
+import { formatPartySweep, formatReport, headlessParty, MAX_PARTY, parseSimArgs, partySweepRow, runSeeds, USAGE } from './headless';
 import type { SimArgs } from './headless';
 
 function main(argv: readonly string[]): number {
@@ -21,6 +21,29 @@ function main(argv: readonly string[]): number {
   }
   if (args.help) {
     console.log(USAGE);
+    return 0;
+  }
+
+  if (args.partySweep && (args.compare !== null || args.baseline !== null || args.json !== null)) {
+    console.error(`--party-sweep prints its own table and can't be combined with --compare, --baseline or --json
+
+${USAGE}`);
+    return 2;
+  }
+  if (args.partySweep) {
+    const rows = [];
+    console.log(`Party sweep: seeds ${args.from}-${args.from + args.seeds - 1}, preset ${args.preset}, rules ${args.rules}, cap ${args.cap}\n`);
+    for (let size = 1; size <= MAX_PARTY; size++) {
+      const results = runSeeds(args.from, args.seeds, {
+        cap: args.cap,
+        party: headlessParty(size),
+        preset: args.preset,
+        upgrades: args.upgrades,
+        rules: args.rules,
+      });
+      rows.push(partySweepRow(size, results));
+    }
+    console.log(formatPartySweep(rows));
     return 0;
   }
 
@@ -78,8 +101,15 @@ function main(argv: readonly string[]): number {
     console.log(`Report written to ${args.json}.`);
   }
   if (before !== null) {
+    let table: string;
+    try {
+      table = formatComparison(before, report, { before: label, after: 'this' }, warnings);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 1;
+    }
     console.log(`\nComparison (${label} -> this checkout):\n`);
-    console.log(formatComparison(before, report, { before: label, after: 'this' }, warnings));
+    console.log(table);
   }
   return 0;
 }

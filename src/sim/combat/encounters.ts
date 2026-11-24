@@ -55,13 +55,35 @@ const BUDGET_ANCHORS: readonly [number, number][] = [
   [2, 9],
   [3, 18],
   [4, 26],
-  [5, 34],
-  [6, 54],
-  [7, 74],
-  [8, 102],
-  [9, 155],
-  [10, 190],
+  [5, 31],
+  [6, 44],
+  [7, 65],
+  [8, 86],
+  [9, 128],
+  [10, 155],
 ];
+
+/**
+ * How much the floor threat budget grows for each adventurer after the first (ETH-145, Principle 1
+ * of `docs/DIFFICULTY_PHILOSOPHY.md`): at 0.1 a party of 4 meets 30% more monsters than a lone
+ * adventurer. It adds headcount and packs only. Monster stats and templates never change with
+ * party size.
+ *
+ * Shipped at 0 (the mechanism is live and tested, the value is off): at 60 seeds 0.03 and above
+ * broke the 1 < 2 < 3 < 4 win-rate ordering on at least one preset, because a party of 4 still
+ * loses members one at a time and has no slack for extra monsters. ETH-080 tunes this upward
+ * (toward about 0.1) as parties get sturdier, for as long as `npm run sim -- --party-sweep` keeps
+ * the ordering.
+ */
+export const PARTY_SIZE_BUDGET_STEP = 0;
+
+/**
+ * The multiplier on a floor's threat budget for a party of `size`: 1 for one adventurer and
+ * `1 + step` more for each extra member. `step` defaults to `PARTY_SIZE_BUDGET_STEP`.
+ */
+export function partySizeBudgetMul(size: number, step = PARTY_SIZE_BUDGET_STEP): number {
+  return 1 + step * Math.max(0, Math.floor(size) - 1);
+}
 
 /** Smooth, monotonic Danger-to-threat-budget curve scaled by optional `budgetMul` (default `1`). */
 export function floorThreatBudget(danger: number, budgetMul = 1): number {
@@ -70,9 +92,9 @@ export function floorThreatBudget(danger: number, budgetMul = 1): number {
   if (danger < 1) {
     base = 7 * danger;
   } else if (danger >= 10) {
-    base = 190 + (danger - 10) * 35;
+    base = 155 + (danger - 10) * 32;
   } else {
-    base = 190;
+    base = 155;
     for (let i = 0; i < BUDGET_ANCHORS.length - 1; i++) {
       const [d0, b0] = BUDGET_ANCHORS[i] as [number, number];
       const [d1, b1] = BUDGET_ANCHORS[i + 1] as [number, number];
@@ -644,7 +666,8 @@ export function populateEncounters(draft: FloorDraft, params: EncounterGenParams
     );
   });
 
-  const totalBudget = floorThreatBudget(baseDanger, budgetMul);
+  const partyMul = partySizeBudgetMul(draft.partySize, draft.partyBudgetStep);
+  const totalBudget = Math.round(floorThreatBudget(baseDanger, budgetMul) * partyMul);
   let remainingBudget = totalBudget;
   let nextGroupId = 1;
 
@@ -704,7 +727,7 @@ export function populateEncounters(draft: FloorDraft, params: EncounterGenParams
     }
 
     // If budgetMul > 1 still has budget and every room already has a squad, reinforce rooms.
-    if (budgetMul > 1 && remainingBudget >= 2) {
+    if (budgetMul * partyMul > 1 && remainingBudget >= 2) {
       for (const room of chosenRooms) {
         if (remainingBudget < 2) break;
         const bp = pickBlueprint(baseDanger, basePool, remainingBudget, rng);
