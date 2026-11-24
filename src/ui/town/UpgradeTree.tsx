@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { BUILDINGS, buildingNodes, groupNodes, TREE_KIND_INFO, UPGRADES } from '../../content';
-import type { UpgradeNodeDef } from '../../content';
+import { BUILDINGS, buildingNodes, maxRank, tierBand, TREE_KIND_INFO, UPGRADE_HELP, UPGRADES } from '../../content';
+import type { TierGate, UpgradeNodeDef } from '../../content';
 import { formatNumber } from '../../core';
 import {
   canPurchase,
-  describeGrant,
+  closedGates,
+  describeGate,
   formatCurrencies,
+  gateGoal,
+  nextRankCost,
   nodeCost,
   nodeStatus,
   owns,
+  rankOf,
   respecBlock,
-  respecFee,
   respecPlan,
   resetPlan,
   shortfall,
@@ -21,24 +24,15 @@ import { Button, Card, Tooltip } from '../kit';
 import { cx } from '../kit/cx';
 import { useProfileStore } from '../stores/profileStore';
 import { useRunActive } from '../stores/runStore';
+import { NodeFacts, NodeTooltip } from './NodeFacts';
+import { feeText, roman, STATUS_TEXT } from './nodeText';
 import styles from './UpgradeTree.module.css';
 
 /** Row height and gap of the graph in px. Set here once and passed to CSS, so edges line up. */
 const ROW_HEIGHT = 60;
 const ROW_GAP = 24;
 
-/** How each status is named next to the node (never by color alone, VISUAL-DESIGN §5.2). */
-const STATUS_TEXT: Readonly<Record<NodeStatus, string>> = {
-  owned: 'Owned',
-  available: 'Available',
-  expensive: 'Too expensive',
-  locked: 'Locked',
-  excluded: 'Not chosen',
-};
-
 const STATUS_ICON: Readonly<Partial<Record<NodeStatus, string>>> = { owned: '✓', locked: '🔒' };
-
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
 export interface UpgradeTreeProps {
   /** The building whose tree to draw (`building.guild_hall`). */
@@ -71,7 +65,7 @@ export function UpgradeTree({ buildingId }: UpgradeTreeProps) {
         <ol className={styles.tiers} aria-hidden="true">
           {Array.from({ length: tiers }, (_, i) => (
             <li key={i} className={styles.tierLabel}>
-              {ROMAN[i] ?? i + 1}
+              {roman(i + 1)}
             </li>
           ))}
         </ol>
@@ -103,6 +97,11 @@ export function UpgradeTree({ buildingId }: UpgradeTreeProps) {
               or
             </span>
           ))}
+          {closedGates(profile, buildingId)
+            .filter((gate) => gate.fromTier <= tiers)
+            .map((gate) => (
+              <GateDivider key={gate.id} gate={gate} band={tierBand(BUILDINGS.get(buildingId), gate.fromTier)} y={top(gate.fromTier) - ROW_GAP / 2} />
+            ))}
           <ul className={styles.nodes} aria-label="Upgrades">
             {nodes.map((node) => (
               <li key={node.id} style={{ gridRow: node.tier, gridColumn: node.column + 1 }} className={styles.cell}>
@@ -124,12 +123,6 @@ export function UpgradeTree({ buildingId }: UpgradeTreeProps) {
       )}
     </div>
   );
-}
-
-/** A fee in words: "no fee" when it is zero. */
-function feeText(fee: Currencies): string {
-  const text = formatCurrencies(fee);
-  return text === 'nothing' ? 'no fee' : `a fee of ${text}`;
 }
 
 /** A button that stays visible but disabled with the reason in a tooltip (and read out) when `reason` is set. */
@@ -196,7 +189,11 @@ interface TreeNodeProps {
 
 function TreeNode({ node, profile, selected, onSelect }: TreeNodeProps) {
   const status = nodeStatus(profile, node.id);
-  const icon = STATUS_ICON[status];
+  const rank = rankOf(profile, node.id);
+  const max = maxRank(node);
+  // A partly bought ranked node is still "available" for its next rank; its check mark shows what is owned.
+  const icon = STATUS_ICON[status] ?? (rank > 0 ? '✓' : undefined);
+  const price = nextRankCost(profile, node.id) ?? nodeCost(node);
   return (
     <Tooltip placement="bottom" content={<NodeTooltip node={node} profile={profile} status={status} />}>
       <button
@@ -213,10 +210,50 @@ function TreeNode({ node, profile, selected, onSelect }: TreeNodeProps) {
             </span>
           )}
           <span className={styles.name}>{node.name}</span>
+          {max > 1 && (
+            <span className={cx(styles.rank, rank === max && styles.maxed)}>
+              <span aria-hidden="true">
+                {rank}/{max}
+              </span>
+              <span className="sr-only">
+                (rank {rank} of {max})
+              </span>
+            </span>
+          )}
         </span>
         <span className="sr-only">({STATUS_TEXT[status]})</span>
-        {status !== 'owned' && <Cost cost={nodeCost(node)} short={status === 'expensive' ? shortfall(profile.currencies, nodeCost(node)) : null} />}
+        {status !== 'owned' && <Cost cost={price} short={status === 'expensive' ? shortfall(profile.currencies, price) : null} />}
       </button>
+    </Tooltip>
+  );
+}
+
+/**
+ * The divider above the first row of a closed building tier: "Tier II, locked: <goal>", with the
+ * full requirement and what building tiers are in its tooltip. The lock glyph and the words
+ * carry the meaning, not color.
+ */
+function GateDivider({ gate, band, y }: { gate: TierGate; band: number; y: number }) {
+  return (
+    <Tooltip
+      content={
+        <div className={styles.tooltip}>
+          <p className={styles.tooltipTitle}>
+            <strong>Tier {roman(band)}</strong> · Locked
+          </p>
+          <p className={styles.reason}>{describeGate(gate)}</p>
+          <p className={styles.help}>
+            {UPGRADE_HELP.tiers.name}: {UPGRADE_HELP.tiers.about}
+          </p>
+        </div>
+      }
+    >
+      <div tabIndex={0} className={styles.gate} style={{ top: y }}>
+        <span className={styles.gateLabel}>
+          <span aria-hidden="true">🔒 </span>
+          Tier {roman(band)} — locked: {gateGoal(gate)}
+        </span>
+      </div>
     </Tooltip>
   );
 }
@@ -242,53 +279,6 @@ function Cost({ cost, short }: { cost: Currencies; short: Currencies | null }) {
   return <span className={styles.cost}>{parts}</span>;
 }
 
-/** The facts every node shows, in its tooltip and its detail card. */
-function NodeFacts({ node, profile }: { node: UpgradeNodeDef; profile: Profile }) {
-  const group = node.exclusiveGroup;
-  const rivals = group === undefined ? [] : groupNodes(group).filter((n) => n.id !== node.id);
-  return (
-    <dl className={styles.facts}>
-      <dt>Effect</dt>
-      <dd>{node.grants.map(describeGrant).join('; ')}</dd>
-      <dt>Cost</dt>
-      <dd>{formatCurrencies(nodeCost(node))}</dd>
-      <dt>Requires</dt>
-      <dd>
-        {node.requires.length === 0
-          ? 'Nothing'
-          : node.requires.map((id, i) => (
-              <span key={id}>
-                {i > 0 && ', '}
-                {UPGRADES.has(id) ? UPGRADES.get(id).name : id} {owns(profile, id) ? '(✓ owned)' : '(not owned)'}
-              </span>
-            ))}
-      </dd>
-      {rivals.length > 0 && (
-        <>
-          <dt>Pick one</dt>
-          <dd>
-            Instead of {rivals.map((n) => n.name).join(' or ')}. Switching later between runs has{' '}
-            {feeText(respecFee(node))}.
-          </dd>
-        </>
-      )}
-    </dl>
-  );
-}
-
-function NodeTooltip({ node, profile, status }: { node: UpgradeNodeDef; profile: Profile; status: NodeStatus }) {
-  const check = canPurchase(profile, node.id);
-  return (
-    <div className={styles.tooltip}>
-      <p className={styles.tooltipTitle}>
-        <strong>{node.name}</strong> · {STATUS_TEXT[status]}
-      </p>
-      <NodeFacts node={node} profile={profile} />
-      {!check.ok && status !== 'owned' && <p className={styles.reason}>{check.reason}</p>}
-    </div>
-  );
-}
-
 function NodeDetail({ node, profile }: { node: UpgradeNodeDef; profile: Profile }) {
   const buy = useProfileStore((s) => s.purchase);
   const doRespec = useProfileStore((s) => s.respec);
@@ -297,12 +287,18 @@ function NodeDetail({ node, profile }: { node: UpgradeNodeDef; profile: Profile 
   const check = canPurchase(profile, node.id);
   const group = node.exclusiveGroup;
   const plan = group !== undefined ? respecPlan(profile, group) : null;
-  const showRespec = plan !== null && (status === 'owned' || status === 'excluded');
+  const showRespec = plan !== null && (owns(profile, node.id) || status === 'excluded');
+  const rank = rankOf(profile, node.id);
+  const ranked = maxRank(node) > 1;
+  const price = nextRankCost(profile, node.id) ?? nodeCost(node);
 
   return (
     <Card className={styles.detail} aria-label={`${node.name} details`} role="region">
       <p className={styles.detailTitle}>
-        <strong>{node.name}</strong>
+        <strong>
+          {node.name}
+          {ranked && rank > 0 ? ` ${roman(rank)}` : ''}
+        </strong>
         <span className={styles.detailStatus}>
           {STATUS_ICON[status] !== undefined && <span aria-hidden="true">{STATUS_ICON[status]} </span>}
           {STATUS_TEXT[status]}
@@ -314,7 +310,7 @@ function NodeDetail({ node, profile }: { node: UpgradeNodeDef; profile: Profile 
       <div className={styles.actions}>
         {status !== 'owned' && status !== 'excluded' && (
           <Button variant="primary" disabled={!check.ok} onClick={() => buy(node.id)}>
-            Buy for {formatCurrencies(nodeCost(node))}
+            Buy {ranked ? `rank ${roman(rank + 1)} ` : ''}for {formatCurrencies(price)}
           </Button>
         )}
         {showRespec && (

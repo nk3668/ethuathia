@@ -9,7 +9,7 @@ import { TownPanel } from '../../src/ui/town/TownPanel';
 
 function setRenown(renown: number, owned: string[] = []) {
   const p = newProfile();
-  useProfileStore.setState({ profile: { ...p, currencies: { ...p.currencies, renown }, upgrades: { owned } } });
+  useProfileStore.setState({ profile: { ...p, currencies: { ...p.currencies, renown }, upgrades: { owned, ranks: {} } } });
 }
 
 /** The node button for an upgrade, by its visible name. */
