@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { newProfile } from '../../src/meta';
 import { resetProfileStore, useProfileStore } from '../../src/ui/stores/profileStore';
+import { useRunStore } from '../../src/ui/stores/runStore';
 import { TownPanel } from '../../src/ui/town/TownPanel';
 
 function setRenown(renown: number, owned: string[] = []) {
@@ -16,7 +17,10 @@ function nodeButton(name: string): HTMLElement {
   return within(screen.getByRole('list', { name: 'Upgrades' })).getByRole('button', { name: new RegExp(`^${name}\\b`) });
 }
 
-beforeEach(resetProfileStore);
+beforeEach(() => {
+  resetProfileStore();
+  useRunStore.getState().openPrepare(); // between runs; respec and reset are refused during one
+});
 afterEach(() => {
   cleanup();
   resetProfileStore();
@@ -88,12 +92,47 @@ describe('Town tab', () => {
     await user.click(nodeButton('Contract Board'));
     const detail = screen.getByRole('region', { name: 'Contract Board details' });
     expect(detail.textContent).toContain('Instead of Hardy Recruits');
-    expect(detail.textContent).toContain('respec fee of 60 Renown');
+    expect(detail.textContent).toContain('no fee');
     expect(within(detail).queryByRole('button', { name: /Buy/ })).toBeNull();
     await user.click(within(detail).getByRole('button', { name: 'Respec: give up Hardy Recruits' }));
     const { profile } = useProfileStore.getState();
     expect(profile.upgrades.owned).toEqual(['upgrade.second_berth']);
-    expect(profile.currencies.renown).toBe(160);
+    expect(profile.currencies.renown).toBe(220);
     expect(nodeButton('Contract Board').textContent).toContain('Available');
+  });
+
+  it('shows the tree kind with a tooltip saying what it means', async () => {
+    const user = userEvent.setup();
+    render(<TownPanel />);
+    const kind = screen.getByText(/Foundation tree/);
+    await user.hover(kind);
+    expect((await screen.findByRole('tooltip')).textContent).toContain('never during one');
+  });
+
+  it('resets the whole tree between runs and refunds it', async () => {
+    const user = userEvent.setup();
+    setRenown(100, ['upgrade.second_berth', 'upgrade.hardy_recruits']);
+    render(<TownPanel />);
+    await user.click(screen.getByRole('button', { name: 'Reset tree' }));
+    const { profile } = useProfileStore.getState();
+    expect(profile.upgrades.owned).toEqual([]);
+    expect(profile.currencies.renown).toBe(270);
+    expect(screen.getByRole('button', { name: 'Reset tree' })).toHaveProperty('disabled', true);
+  });
+
+  it('disables reset and respec during a run and says why', async () => {
+    const user = userEvent.setup();
+    setRenown(100, ['upgrade.second_berth', 'upgrade.hardy_recruits']);
+    act(() => useRunStore.getState().runStarted());
+    render(<TownPanel />);
+    const reset = screen.getByRole('button', { name: /Reset tree/ });
+    expect(reset).toHaveProperty('disabled', true);
+    expect(reset.parentElement?.textContent).toContain('between runs, not during one');
+    await user.click(nodeButton('Contract Board'));
+    const detail = screen.getByRole('region', { name: 'Contract Board details' });
+    expect(within(detail).getByRole('button', { name: /Respec/ })).toHaveProperty('disabled', true);
+    expect(useProfileStore.getState().respec('guild_hall.tier2', true)).toBe(false);
+    expect(useProfileStore.getState().resetTree('building.guild_hall', true)).toBe(false);
+    expect(useProfileStore.getState().profile.upgrades.owned).toHaveLength(2);
   });
 });

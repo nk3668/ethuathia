@@ -25,8 +25,35 @@ import { defShape, idSchema, positiveInt } from './schema';
 
 // --- Buildings -------------------------------------------------------------------------------
 
+/**
+ * The two kinds of upgrade tree (CLAUDE.md §4). Both can be reset or changed between runs, never
+ * during one. They differ only in the respec fee: Foundations may charge one (the constant in
+ * `src/meta/upgrades.ts`, 0 for now); Tactics are always free.
+ */
+export type TreeKind = 'foundations' | 'tactics';
+
+/** Names and tooltip text for each tree kind, for the Town tab. */
+export const TREE_KIND_INFO = {
+  foundations: {
+    name: 'Foundation',
+    about:
+      'A lasting investment in the guild: party, gear, maps and the town itself. It can be reset or ' +
+      'changed between runs, never during one. A respec fee may apply (currently none).',
+  },
+  tactics: {
+    name: 'Tactic',
+    about:
+      'A way of playing: rules, doctrine and class talents. It can be reset or changed between runs, ' +
+      'never during one, and is always free to redo.',
+  },
+} as const satisfies Record<TreeKind, { name: string; about: string }>;
+
+export const TREE_KINDS = Object.keys(TREE_KIND_INFO) as TreeKind[];
+
 /** A Town building. Its tree is every upgrade node naming it; the Town tab lists buildings in registration order. */
 export interface BuildingDef extends Def {
+  /** Whether its tree is a Foundation or a Tactic (`TreeKind`). Decides the respec fee. */
+  readonly kind: TreeKind;
   /**
    * The milestone that opens the building (`src/content/milestones.ts`). Without one it is open
    * from the start. Until it is met the Town tab shows the building locked, with this text, and
@@ -39,7 +66,11 @@ export const BUILDINGS = new Registry<BuildingDef>('building');
 
 export const BUILDING_KIND: ContentKind<BuildingDef> = {
   registry: BUILDINGS,
-  schema: z.strictObject({ ...defShape('building'), unlock: milestoneSchema.optional() }),
+  schema: z.strictObject({
+    ...defShape('building'),
+    kind: z.enum(TREE_KINDS as [TreeKind, ...TreeKind[]]),
+    unlock: milestoneSchema.optional(),
+  }),
   refs: (def) => (def.unlock === undefined ? [] : milestoneRefs('unlock', def.unlock)),
 };
 

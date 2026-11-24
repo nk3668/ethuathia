@@ -63,10 +63,15 @@ export {
   owns,
   profileGrants,
   purchase,
-  RESPEC_FEE_RATE,
+  FOUNDATIONS_RESPEC_FEE_RATE,
   respec,
   respecFee,
+  respecBlock,
   respecPlan,
+  resetPlan,
+  resetTree,
+  RUN_ACTIVE_REASON,
+  treeKind,
   shortfall,
 } from './upgrades';
-export type { ActiveGrant, NodeStatus, PurchaseCheck, RespecPlan } from './upgrades';
+export type { ActiveGrant, NodeStatus, PurchaseCheck, RespecOptions, RespecPlan, ResetPlan } from './upgrades';

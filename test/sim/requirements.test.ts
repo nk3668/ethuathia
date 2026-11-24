@@ -130,7 +130,7 @@ describe('requirements', () => {
     expect(CONDITION_TARGET.kind).toBe(CONDITIONS.kind);
     const registry = new Registry<BuildingDef>('building');
     const kind: ContentKind<BuildingDef> = { ...BUILDING_KIND, registry };
-    const base = { name: 'Hut', description: 'A hut.', tags: [] };
+    const base = { name: 'Hut', description: 'A hut.', tags: [], kind: 'foundations' as const };
     const unlock = (requirement: Requirement) => ({ kind: 'metInRun' as const, requirement });
     registry.register({ ...base, id: 'building.ok', unlock: unlock({ all: [AT_3, { cond: 'cond.heading_out' }] }) });
     registry.register({ ...base, id: 'building.unknown', unlock: unlock({ cond: 'cond.nope' }) });
@@ -170,6 +170,7 @@ describe('track.requirements and metInRun', () => {
       name: 'Deep Hall',
       description: 'Opens once a party stands on floor 3.',
       tags: [],
+      kind: 'foundations',
       unlock: { kind: 'metInRun', requirement: AT_3 },
     };
     vi.spyOn(BUILDINGS, 'all').mockReturnValue([...BUILDINGS.all(), hall]);

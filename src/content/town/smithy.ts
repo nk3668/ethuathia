@@ -15,5 +15,6 @@ export const BUILDING_SMITHY = defineBuilding({
     'A forge at the edge of town that works what the dungeon gives up. Its upgrades send ' +
     'adventurers down with better gear and teach them what they carry.',
   tags: ['town', 'placeholder'],
+  kind: 'foundations',
   unlock: { kind: 'reachDepth', depth: 3 },
 });
