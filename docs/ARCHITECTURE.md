@@ -1909,6 +1909,10 @@ As built in `src/sim/ai/` (ETH-009):
   `BASELINE_FLEE_PERCENT` (35) with a threat in sight, and ends at `FLEE_RELEASE_PERCENT` (60) HP or
   after `FLEE_CALM_TURNS` (12) without seeing one. While it lasts `act.flee` runs from visible
   threats, or from remembered positions when none is in sight ("still fleeing: ... in pursuit").
+  Once back above the start threshold (still running on hysteresis alone) it fights a threat that
+  is next to it rather than fail Flee checks. With no free step left, `act.hold_position` (baseline
+  rule after `act.rush_caster`, idle) stands still instead of letting exploring walk back toward the
+  threat, for at most `FLEE_HOLD_TURNS` (12) decisions, after which fleeing is dropped.
   Wounded (below the release HP) with no healing potion, `act.explore` and `act.pick_up` plan on a
   grid where `avoidThreats` has added cost around each remembered position (`AVOID_PENALTY` at the
   tile, fading to nothing at `AVOID_RADIUS` and over `THREAT_MEMORY_TURNS`), a soft weighting, so

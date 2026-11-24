@@ -13,6 +13,7 @@ import {
   createRun,
   deserialize,
   FLEE_CALM_TURNS,
+  FLEE_HOLD_TURNS,
   FLEE_RELEASE_PERCENT,
   getEntity,
   getFloor,
@@ -135,6 +136,24 @@ describe('flee hysteresis', () => {
       hpTo(hero, maxHp, BASELINE_FLEE_PERCENT + 10);
     }
     expect(hero.ai.memory.fleeing).toBeNull();
+  });
+
+  it('cornered while fleeing it holds still instead of walking back toward the threat, then gives up', () => {
+    const rows = ['##########', '#@.......#', '##########'];
+    const state = createRun({ party: [HERO], floorText: rows, depth: 1, monsters: false }, 1);
+    const hero = getEntity(state, state.party[0] as number) as AiActor;
+    const terrain = getFloor(state, 'd1').terrain.cells;
+    const memory = getMemory(state, 'd1').terrain.cells;
+    for (let i = 0; i < terrain.length; i++) memory[i] = (terrain[i] as number) + 1;
+    still(state, 'monster.pit_badger', 6, 1);
+    hpTo(hero, hero.actor.hp, BASELINE_FLEE_PERCENT + 10);
+    hero.ai.memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
+    const choice = chooseRule({ state, actor: hero });
+    expect(choice?.action).toBe('act.hold_position');
+    expect(choice?.detail).toMatch(/nowhere left to run/);
+    for (let i = 0; i < FLEE_HOLD_TURNS + 3; i++) step(state, []);
+    expect(hero.ai.memory.fleeing).toBeNull();
+    expect(checkInvariants(state)).toEqual([]);
   });
 
   it('never starts without a threat in sight', () => {

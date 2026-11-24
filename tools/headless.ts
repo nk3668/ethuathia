@@ -425,7 +425,6 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
     const { events, progressed } = runner.step();
     for (const e of events) {
       if (e.type === 'floorEntered' && !reached.has(e.depth)) reached.set(e.depth, e.turn);
-      if (process.env.DEBUG_TRACE && Number(process.env.DEBUG_TRACE) === seed && e.turn >= Number(process.env.DEBUG_FROM) && e.turn <= Number(process.env.DEBUG_TO) && (e.type === 'ruleFired' || e.type === 'moved' || e.type === 'fleeFailed')) console.error('EV', e.turn, JSON.stringify(e));
       if (e.type === 'turnedBack') turnedBack ??= e.turn;
       if (e.type === 'contractCompleted') relicTaken = true;
       if (e.type === 'runEnded') end = { outcome: e.outcome, turn: e.turn };
@@ -445,7 +444,6 @@ export function runSeed(seed: number, options: HeadlessOptions = {}): SeedResult
         deathCauses[cause] = (deathCauses[cause] ?? 0) + 1;
       }
       if (e.type !== 'stuck') continue;
-      if (process.env.DEBUG_STUCK) console.error('STUCK', seed, e.turn, e.detail, JSON.stringify(e.pos), e.floor);
       stuck.count++;
       stuck.firstTurn ??= e.turn;
     }
