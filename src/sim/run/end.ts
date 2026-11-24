@@ -50,6 +50,8 @@ export interface PartyMemberRecord {
   name: string;
   classId: string;
   raceId: string;
+  /** The adventurer's profile record id (ETH-119), when they have one. */
+  recordId?: string;
 }
 
 /** What the host hands the UI when a run ends: the result to bank and how it ended. */
@@ -226,7 +228,10 @@ export function runResult(state: RunState): RunResult {
 function partyRecords(state: RunState): PartyMemberRecord[] {
   return state.party.flatMap((id) => {
     const a = state.entities[id]?.adventurer;
-    return a === undefined ? [] : [{ actor: id, name: a.name, classId: a.classId, raceId: a.raceId }];
+    if (a === undefined) return [];
+    const record: PartyMemberRecord = { actor: id, name: a.name, classId: a.classId, raceId: a.raceId };
+    if (a.recordId !== undefined) record.recordId = a.recordId;
+    return [record];
   });
 }
 

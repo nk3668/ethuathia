@@ -6,6 +6,16 @@
  */
 import type { z } from 'zod';
 import type { RunResult } from '../sim';
+import type { History } from './slices/history';
+
+/**
+ * What a slice's `onRunResult` may read of the profile as it was before the run was banked. Written
+ * as the parts a step needs (not `Profile` itself, which would make the `Profile` type refer to
+ * itself through the slices); a `Profile` is assignable to it. Add a field when a step needs one.
+ */
+export interface ProfileBefore {
+  readonly history: History;
+}
 
 /** Upgrades a slice's stored data by one version: from `to - 1` to `to`. */
 export type SliceMigration = (old: unknown) => unknown;
@@ -25,9 +35,11 @@ export interface ProfileSlice<S> {
   readonly migrations?: Readonly<Record<number, SliceMigration>>;
   /**
    * This slice's step in the `applyRunResult` pipeline: the slice after the run. Pure, and must
-   * return plain data. Leave it out if runs don't change the slice.
+   * return plain data. Leave it out if runs don't change the slice. `before` is the profile
+   * as it was before `applyRunResult` began (no slice has run yet), for a step that needs another
+   * slice's old value, e.g. the run number (`before.history.totals.runs + 1`), whatever the order.
    */
-  onRunResult?(state: S, result: RunResult): S;
+  onRunResult?(state: S, result: RunResult, before: ProfileBefore): S;
 }
 
 /** The state type a slice holds. */

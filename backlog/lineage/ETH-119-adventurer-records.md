@@ -2,7 +2,7 @@
 id: ETH-119
 title: Persistent adventurer records: a profile slice with identity, history, traits, peak level and death
 type: feature
-status: ready
+status: done
 priority: P1
 milestone: M2
 epic: lineage
@@ -27,25 +27,25 @@ list in `history` (`RunRecord.party`) plus `extras['track.xp']`. See `CLAUDE.md`
 "Shared systems" list in `docs/ARCHITECTURE.md`.
 
 ## Acceptance criteria
-- [ ] Profile slice `adventurers` (`src/meta/slices/adventurers.ts`, `defineSlice`, one line in
+- [x] Profile slice `adventurers` (`src/meta/slices/adventurers.ts`, `defineSlice`, one line in
       `PROFILE_SLICES`): `{ nextId, records: Record<AdventurerId, AdventurerRecord> }` with
       `AdventurerRecord = { id, name, classId, raceId, peakLevel (highest level reached in any
       run), traits: string[], status: 'active' | 'fallen' | 'retired', born: run number, history:
       { runs, victories, deepest, kills, turns }, death?: { run, depth, turn, cause, killer? },
       origin?: { kind: 'recruit' | 'found' | 'kin', note?, kin? } }`. Zod schema, invariants via
       `checkProfile`.
-- [ ] The id travels through the run: `AdventurerConfig.recordId?` (optional, so tests and old
+- [x] The id travels through the run: `AdventurerConfig.recordId?` (optional, so tests and old
       configs need nothing), copied into `extras['run.party']` (`PartyMemberRecord.recordId`).
       `startRun` creates records for new recruits. **Every member starts the run at level 1**
       (Nate, 2026-11-24: levels reset each run; lasting power lives in Class Mastery), so no
       growth values are carried into the run.
-- [ ] `onRunResult` updates each member's record from `extras['run.party']`, `['track.xp']`,
+- [x] `onRunResult` updates each member's record from `extras['run.party']`, `['track.xp']`,
       `['track.deaths']` and `['track.kills']` (kills per member added to `track.kills` extras):
       peak level and history; a member who fell gets `status: 'fallen'` and `death` with the
       cause and killer from the run end. Pure, returns a new slice.
-- [ ] Read API (`src/meta/adventurers.ts`): `recordOf`, `activeRecords`, `fallenRecords`,
+- [x] Read API (`src/meta/adventurers.ts`): `recordOf`, `activeRecords`, `fallenRecords`,
       `addTrait`, `setStatus` (retire), `newRecord`. Nothing outside the slice mutates records.
-- [ ] Tests: a run with two members creates two records; a second run with the survivor keeps
+- [x] Tests: a run with two members creates two records; a second run with the survivor keeps
       its history and traits, starts at level 1, and raises `peakLevel` only when beaten; a wipe marks both fallen with causes; old saves without the slice
       load to an empty slice; profile round-trip.
 
@@ -99,3 +99,5 @@ To keep this foundation pure, extensible and zero-delta on existing runs:
 - 2026-11-19: Implementation instructions drafted by Antigravity; reviewed and amended by Claude (bugs fixed, open either/or choices decided, missing cases added). Ready to build.
 - 2026-11-19: Nate: full carry-over as a trial, to revisit when balancing; the carry-over share is one tunable constant.
 - 2026-11-24: Nate decided levels reset to 1 every run. Dropped level, XP and growth carry-over (records keep peakLevel); the spec shrinks. Still ready.
+- 2026-11-24: In progress (Claude).
+- 2026-11-24: Done. Slice `adventurers` (v1) with schema invariants and fallen cap 200 (kin protected); `startRun` in `prepare/build.ts` issues ids and App launches every run through `profileStore.startRun` (Rematch keeps the previous run's adventurers); `recordId` carried through `AdventurerConfig`, `AdventurerPart`, `run.party` and the history record (STATE_VERSION 38); `track.kills` gains `byActor`. `onRunResult` gets a third `before: ProfileBefore` argument (the history only, not `Profile`, to avoid a circular type). `npm run sim -- --seeds 20`: turns, floors, explore and outcomes identical to main (only the state hashes differ, from the new state version and tracker shape).

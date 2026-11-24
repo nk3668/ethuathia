@@ -187,6 +187,12 @@ export interface KillsTrackerState {
   readonly trophies: number;
   /** Kills by the party per monster content id (`monster.*`), for the Codex kill-count tiers (ETH-091). */
   readonly byMonster: Readonly<Record<string, number>>;
+  /**
+   * Kills per killer entity id (ETH-119), for every kill by the party's side. Meta keeps only the
+   * ids in the run's party (`run.party`), so an ally's kills still earn Trophies but count for
+   * no adventurer's record.
+   */
+  readonly byActor: Readonly<Record<EntityId, number>>;
 }
 
 /**
@@ -195,13 +201,14 @@ export interface KillsTrackerState {
  */
 export const KILLS_TRACKER: RunTracker<KillsTrackerState> = {
   id: 'track.kills',
-  init: () => ({ kills: 0, trophies: 0, byMonster: {} }),
+  init: () => ({ kills: 0, trophies: 0, byMonster: {}, byActor: {} }),
   reduce: (s, e) =>
     e.type === 'killed' && e.byParty && e.threat > 0
       ? {
           kills: s.kills + 1,
           trophies: s.trophies + trophiesForKill(e.threat),
           byMonster: { ...s.byMonster, [e.victimDef]: (s.byMonster[e.victimDef] ?? 0) + 1 },
+          byActor: { ...s.byActor, [e.killer]: (s.byActor[e.killer] ?? 0) + 1 },
         }
       : s,
   rewards: (s) => ({ [TROPHIES]: s.trophies }),

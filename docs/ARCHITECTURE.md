@@ -578,7 +578,9 @@ at-risk currency (ETH-083 converts it).
   record that later trackers write under their own id (`'track.kills'`).
 - `applyRunResult` in meta (§6.4) checks the result (it throws a `RangeError` on a malformed
   one), then runs each profile slice's `onRunResult` step: the `currencies` slice banks
-  `atRisk - lost`, the `history` slice records the run. The reward multiplier is already in
+  `atRisk - lost`, the `history` slice records the run, and the `adventurers` slice (ETH-119) folds it
+  into each party member's record. A step gets a third argument, `before` (a `ProfileBefore`: the
+  history as it was before banking), so it can read the run number without depending on slice order. The reward multiplier is already in
   `atRisk` (see the order above), so the loss follows it.
 - **Run end to profile (ETH-062):** the host calls `onRunEnded(report)` once, right after the
   update with the run's last events (`HostMessage` `runEnded` from the worker). `App` then calls
@@ -1211,7 +1213,7 @@ the features that use it.
 | Dungeon encounters | ETH-116 | planned | An `encounter` kind and feature part placed by a `FLOOR_PLAN_HOOKS` entry, one `interact { choice? }` action, data outcomes, log and Codex text; fountains folded in: altars, graves, merchants, bounty encounters, recruits, cursed wells, vaults |
 | Monster templates | ETH-117 | built | `MonsterOverlay` (templates, name, title, stats, bundles, threat, loot tier, carried items) layered on a `MonsterDef` at `spawnMonster`: uniques, elites, mini-bosses, nemeses, heirloom carriers, families, hostile ghosts. See "Monster templates (ETH-117)" above |
 | Item properties | ETH-118 | built | `ITEM_PROPERTIES`: per-instance `ItemInstance` fields that feed `gearBundles`, `ITEM_VALUE_HOOKS`, `canStack` and `itemName`: enchantment, curses, affixes, charges, origin, scaling. See "Item properties (ETH-118)" |
-| Adventurer records | ETH-119 | planned | The `adventurers` profile slice: a stable id carried through the run, level, XP, traits, history, status and cause of death: roster, graveyard, recruits, quirks, Mastery, lineage |
+| Adventurer records | ETH-119 | built | The `adventurers` profile slice (`src/meta/slices/adventurers.ts`, API in `src/meta/adventurers.ts`): a stable id (`adv.<n>`, issued only by `startRun`) carried through the run as `AdventurerConfig.recordId`, then peak level, traits, status, lifetime history and the death of the fallen. Levels reset every run. Fallen records are capped at 200 (kin are never trimmed): roster, graveyard, recruits, quirks, Mastery, lineage |
 | Run chronicle | ETH-120 | built | `track.chronicle`: the run's notable moments, durable for the whole run (unlike `simStore`'s `EVENT_BUFFER_SIZE` buffer): Highlights, run summary, epitaphs, ballads, history, time-away. API in "Run chronicle (ETH-120)" above |
 | Shared conditions | ETH-121 | built | Run-scope `CONDITIONS` and a data `Requirement` (all / any / not) checked outside rules, plus the `metInRun` milestone: unlocks, taboos, quirk triggers, building quests. See "Shared conditions (ETH-121)" above |
 | Seeded text generator | ETH-122 | planned | Grammar content expanded with a per-purpose seeded RNG that never touches sim streams: names, titles, epitaphs, ballads, backstories |

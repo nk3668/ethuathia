@@ -9,6 +9,7 @@ import { configDepth, hasBundle, requirementProblems, runModifierListProblems } 
 import type { RunConfig, RunModifierConfig } from '../../sim';
 import type { Profile } from '../profile';
 import { milestoneRequirements } from '../milestones';
+import { newRecord } from '../adventurers';
 import { ownedNodes } from '../upgrades';
 import { CHOICE_ENTRIES } from './index';
 import type { RunChoices } from './index';
@@ -62,6 +63,47 @@ export function buildRunConfig(profile: Profile, choices: RunChoices, seed: numb
   const problems = checkRunConfig(config);
   if (problems.length > 0) throw new RangeError(`Invalid run config: ${problems.join('; ')}`);
   return config;
+}
+
+/**
+ * Starts a run (ETH-119): `buildRunConfig`, then gives every party member a record id. This is the
+ * one place ids are issued, so every way of launching a run (Descend, Start next run, Rematch,
+ * auto-restart, time-away catch-up) calls it and stores the returned profile. `previous` is the
+ * last run's config, for a Rematch: a member who matches one of its party (same name, class and
+ * race, whose record is still active: not fallen, retired or trimmed) keeps that record, so the same adventurers carry on. Anyone else
+ * is a new recruit and gets a new record, born in this run. Pure: the profile is not changed in
+ * place, and `buildRunConfig` stays free of records.
+ */
+export function startRun(
+  profile: Profile,
+  choices: RunChoices,
+  seed: number,
+  previous?: RunConfig,
+): { profile: Profile; config: RunConfig } {
+  const built = buildRunConfig(profile, choices, seed);
+  const run = profile.history.totals.runs + 1;
+  let adventurers = profile.adventurers;
+  const taken = new Set<string>();
+  const party = built.party.map((member) => {
+    const same = previous?.party.find(
+      (p) =>
+        p.recordId !== undefined &&
+        !taken.has(p.recordId) &&
+        adventurers.records[p.recordId]?.status === 'active' &&
+        p.name === member.name &&
+        p.classId === member.classId &&
+        p.raceId === member.raceId,
+    );
+    if (same?.recordId !== undefined) {
+      taken.add(same.recordId);
+      return { ...member, recordId: same.recordId };
+    }
+    const made = newRecord(adventurers, { name: member.name, classId: member.classId, raceId: member.raceId, born: run });
+    adventurers = made.slice;
+    taken.add(made.record.id);
+    return { ...member, recordId: made.record.id };
+  });
+  return { profile: { ...profile, adventurers }, config: { ...built, party } };
 }
 
 /** Problems with a run config, one line each, or an empty list if the sim can start it. */
