@@ -78,7 +78,7 @@ Each currency rewards a different playstyle. No currency only buys "make it hard
 | **Trophies** | Kills, weighted by monster difficulty; items and gold carried out of the dungeon | Smithy (starting gear, enchantments), Bestiary unlocks |
 | **Favor** (per deity) | Victories, kept conducts, honoring your patron | Temple / devotion trees; the prestige layer |
 
-The Omen multiplier applies to all three.
+The Omen multiplier applies to all three as they are earned in the run. Trophies converted on the way out (leftover gold and sold items, below) are not multiplied, so hoarding loot can't inflate an Omen run.
 
 **Banked vs. at-risk currency.** Currency earned during a run is tracked separately, as the run's *at-risk* total, and moves into the player's *banked* total only when the run ends. Banked currency is never at risk. On a victory or a retreat the whole at-risk total is banked. On a wipe, **25%** of each currency's at-risk total is lost and the rest is banked. The HUD shows banked and at-risk amounts separately, and the run summary shows the amount lost as its own line.
 

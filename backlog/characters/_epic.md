@@ -26,6 +26,28 @@ Adventurers have attributes, grow by class when they level, have race aptitudes 
 - `docs/ARCHITECTURE.md` §2.2: Modifiers
 - `docs/ROGUELIKE-SURVEY.md`: clean-room ideas from other roguelikes
 
+## Class and race roster plan (placeholders)
+Nate (2026-11-24): leave room in the town trees for future classes and races; no reveal rules for the future ones yet. Each is trained or admitted by one building, picked by theme. Names and themes are placeholders.
+
+| Class or race | Kind | Building | Status |
+|---|---|---|---|
+| Vanguard | class | — (start) | built |
+| Outrider | class | Guild Hall | built (ETH-160), unlock ETH-036 |
+| Lorekeeper | class | Guild Hall | built (ETH-160), unlock ETH-036 |
+| Reaver | class | Smithy | built (ETH-160), unlock ETH-036 |
+| Tinker (traps and gadgets) | class | Smithy | placeholder |
+| Hexer (curses) | class | Library | placeholder |
+| Mender (healer, can raise the fallen) | class | Temple | placeholder (ETH-173) |
+| Wayfinder (ranged tracker) | class | Cartographer | placeholder |
+| Gravecaller (calls on the dead) | class | Ossuary | placeholder |
+| Chanter (party buffs) | class | Tavern | placeholder |
+| Human | race | — (start) | built |
+| Fenling | race | Guild Hall | built (ETH-160), unlock ETH-036 |
+| Stonekin | race | Smithy | built (ETH-160), unlock ETH-036 |
+| Ashborn (fire-touched) | race | Temple | placeholder |
+| Tidefolk (flooded floors) | race | Cartographer | placeholder |
+| Woodland race (consumes the fallen) | race | Ossuary | placeholder (ETH-179) |
+
 ## Items
 - [x] [ETH-033 Four attributes and the stats derived from them](ETH-033-attributes-derived-stats.md)
 - [x] [ETH-034 XP, leveling and per-class attribute growth](ETH-034-xp-leveling-class-growth.md)
@@ -43,4 +65,5 @@ Adventurers have attributes, grow by class when they level, have race aptitudes 
 - [x] [ETH-176 Classes start each run with a kit of gear](ETH-176-class-starting-kits.md)
 - [x] [ETH-177 Reprice Finesse so classes can share one point budget](ETH-177-reprice-finesse.md)
 - [ ] [ETH-179 A woodland race that heals by consuming the fallen but can't drink healing potions](ETH-179-corpse-eating-race.md)
+- [ ] [ETH-182 Revisit attributes and derived stats, starting with Grit](ETH-182-attribute-stat-revisit.md)
 - [ ] [ETH-173 A class that can resurrect a fallen party member during a run](ETH-173-resurrection-class.md)

@@ -22,6 +22,8 @@ The player starts with a few slots and a small vocabulary, and the Library grows
 - [ ] A starter vocabulary and slot count, with everything else locked behind Library nodes
 - [ ] The editor shows locked conditions and actions with what they need
 - [ ] The Library is a Tactics tree and can be redone for free between runs (ETH-086)
+- [ ] The tree follows the town-tree layout Nate reviewed (2026-11-24, artifact "Ethuathia town trees"): rule-slot ranks, new conditions and actions, the two doctrines (ETH-071 clear or stairs, ETH-151 formation), the fourth party berth if Nate keeps it here, and a placeholder for a future Library class
+- [ ] Rule slots from the Library stack with the Guild Hall's Rule Clerk (ETH-132)
 
 ## Log
 - 2026-11-24: Created in the backlog reorganization by theme.

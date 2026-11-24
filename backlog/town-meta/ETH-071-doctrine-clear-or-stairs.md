@@ -19,7 +19,7 @@ A pick-one Guild Hall tier lets the player choose how the party treats each floo
 The player asked (2026-11-18) that full exploration vs. stairs-first be the player's choice rather than fixed AI behavior. See `CLAUDE.md` §1 (Idle decisions matter), §5.2 (doctrine).
 
 ## Acceptance criteria
-- [ ] Doctrine defs `doctrine.clear_floors` and `doctrine.seek_stairs` (content kind from ETH-063), unlocked by a pick-one Guild Hall tier
+- [ ] Doctrine defs `doctrine.clear_floors` and `doctrine.seek_stairs` (content kind from ETH-063), unlocked by a Library node (ETH-163; Nate, 2026-11-24: doctrines are unlocked through the building trees, and the town-tree layout puts them in the Library)
 - [ ] The chosen doctrine reaches the run through `buildRunConfig` and the AI context; the baseline descend logic reads it (seek stairs: descend once the stairs are known and a minimum share of the floor is explored)
 - [ ] With neither unlocked, the current behavior (clear floors) is the default
 - [ ] The trace names the doctrine when it decides to descend; tooltips and Codex text
@@ -30,3 +30,4 @@ The player asked (2026-11-18) that full exploration vs. stairs-first be the play
 - 2026-11-18: Doctrine becomes a free-to-redo Tactics choice (ETH-086).
 - 2026-11-19: Added ETH-115 (run-wide modifiers) to `depends_on`: build on the shared system instead of a parallel version.
 - 2026-11-24: Moved from M2 to M3 in the backlog reorganization by theme.
+- 2026-11-24: Nate: doctrines are unlocked through building trees; the unlock moves from a Guild Hall tier to a Library node (ETH-163).
