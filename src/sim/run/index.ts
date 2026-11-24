@@ -71,6 +71,12 @@ export type RunDomainEvent =
    * reached (`RunEnd.depth`), for the run chronicle (ETH-120).
    */
   | { type: 'earningsLost'; lost: RewardAmounts; atRisk: RewardAmounts; share: number; depth: number }
+  /**
+   * Leftover in-run gold was settled when the run ended (ETH-083): converted into `trophies` on
+   * victory or retreat, or `lost` (`true`, `trophies: 0`) on a wipe. Emitted only when `gold > 0`,
+   * right before `runEnded` (and after `earningsLost` on a wipe).
+   */
+  | { type: 'goldSettled'; gold: number; trophies: number; lost: boolean }
   /** The run is over. Always the last event of a run. */
   | { type: 'runEnded'; outcome: RunOutcome; cause: string; depth: number };
 

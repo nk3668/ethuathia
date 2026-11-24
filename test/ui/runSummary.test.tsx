@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applyRunResult, masteryGainBanked, newProfile, runRecord } from '../../src/meta';
 import type { ClassMasteryGain } from '../../src/meta';
+import { GOLD_PER_TROPHY } from '../../src/content';
 import { masteryBreakdown, masteryLine } from '../../src/ui/shell/masteryText';
 import { createRun, depthRenown, emptyRunResult, favorKey, InlineHost, renownForFloor, turnsRenown } from '../../src/sim';
 import type { RunConfig, RunReport } from '../../src/sim';
@@ -19,6 +20,8 @@ import {
   currencyName,
   currencyRows,
   epitaph,
+  GOLD_CONVERSION_TOOLTIP,
+  goldConversionOf,
   lossNote,
   NO_CAUSE,
   RENOWN_FORMULA_TEXT,
@@ -138,6 +141,26 @@ describe('run summary text', () => {
       end: { outcome: 'victory', turn: 3000, cause: 'Won.', depth: 10 },
     };
     expect(renownBreakdown(legacyPast)).toBeNull();
+  });
+
+  it('adds converted currencies into earned/banked rows and reads extras[run.gold] (ETH-083)', () => {
+    const victoryWithGold: RunReport = {
+      result: {
+        ...emptyRunResult('victory'),
+        atRisk: { renown: 50, trophies: 6 },
+        converted: { trophies: 3 },
+        turns: 200,
+        deepestDepth: 2,
+        extras: { 'run.gold': { gold: 35, trophies: 3, rate: GOLD_PER_TROPHY } },
+      },
+      end: { outcome: 'victory', turn: 200, cause: 'Won.', depth: 2 },
+    };
+    expect(currencyRows(victoryWithGold)).toEqual([
+      { key: 'renown', atRisk: 50, lost: 0, banked: 50 },
+      { key: 'trophies', atRisk: 9, lost: 0, banked: 9 },
+    ]);
+    expect(goldConversionOf(victoryWithGold)).toEqual({ gold: 35, trophies: 3, rate: GOLD_PER_TROPHY });
+    expect(goldConversionOf(WIPE)).toBeNull();
   });
 });
 
@@ -309,6 +332,65 @@ describe('RunSummary', () => {
     expect((toggles[0] as HTMLInputElement).checked).toBe(true);
     expect(useProfileStore.getState().dirty).toBe(true);
   });
+
+  it('shows Gold converted on victory/retreat and Gold lost on wipe with conversion-rate tooltips (ETH-083)', async () => {
+    render(<RunSummary />);
+    const victoryReport: RunReport = {
+      result: {
+        ...emptyRunResult('victory'),
+        atRisk: { renown: 40, trophies: 6 },
+        converted: { trophies: 3 },
+        turns: 200,
+        deepestDepth: 2,
+        extras: { 'run.gold': { gold: 35, trophies: 3, rate: GOLD_PER_TROPHY } },
+      },
+      end: { outcome: 'victory', turn: 200, cause: 'Contract complete.', depth: 2 },
+    };
+    act(() => useRunStore.getState().runEnded(victoryReport));
+    let dialog = screen.getByRole('dialog', { name: /Victory/ });
+    expect(dialog.textContent).toContain('Gold converted: 35 gold → +3 Trophies');
+    const rows = within(dialog).getAllByRole('row').map((r) => r.textContent);
+    expect(rows).toContain('Trophies9–9');
+
+    // Focusing Gold converted and Trophies reveals the conversion rate tooltip.
+    act(() => within(dialog).getByText('Gold converted').focus());
+    expect((await screen.findByRole('tooltip')).textContent).toBe(GOLD_CONVERSION_TOOLTIP(GOLD_PER_TROPHY));
+
+    act(() => within(dialog).getByText('Trophies').focus());
+    const trophyTip = (await screen.findByRole('tooltip')).textContent ?? '';
+    expect(trophyTip).toContain(`${GOLD_PER_TROPHY} gold = 1 Trophy`);
+    expect(trophyTip).toContain('35 gold → +3 Trophies');
+
+    // Retreat with singular Trophy.
+    const retreatReport: RunReport = {
+      result: {
+        ...emptyRunResult('retreat'),
+        atRisk: { renown: 20 },
+        converted: { trophies: 1 },
+        turns: 120,
+        deepestDepth: 2,
+        extras: { 'run.gold': { gold: 15, trophies: 1, rate: GOLD_PER_TROPHY } },
+      },
+      end: { outcome: 'retreat', turn: 120, cause: 'Retreated.', depth: 2 },
+    };
+    act(() => useRunStore.getState().runEnded(retreatReport));
+    dialog = screen.getByRole('dialog', { name: /Retreat/ });
+    expect(dialog.textContent).toContain('Gold converted: 15 gold → +1 Trophy');
+
+    // Wipe loses all gold and shows Gold lost.
+    const wipeWithGold: RunReport = {
+      ...WIPE,
+      result: {
+        ...WIPE.result,
+        extras: { ...WIPE.result.extras, 'run.gold': { gold: 28, trophies: 0, rate: GOLD_PER_TROPHY } },
+      },
+    };
+    act(() => useRunStore.getState().runEnded(wipeWithGold));
+    dialog = screen.getByRole('dialog', { name: /Wipe/ });
+    expect(dialog.textContent).toContain('Gold lost: 28 gold');
+    act(() => within(dialog).getByText('Gold lost').focus());
+    expect((await screen.findByRole('tooltip')).textContent).toBe(GOLD_CONVERSION_TOOLTIP(GOLD_PER_TROPHY));
+  });
 });
 
 describe('run history (ETH-048)', () => {
@@ -334,6 +416,56 @@ describe('run history (ETH-048)', () => {
     expect(currencyRows(report)).toEqual(currencyRows(WIPE));
     expect(epitaph(report)).toBe(epitaph(WIPE));
     expect(reportFromRecord({ ...record, cause: '' }).end.cause).toBe(NO_CAUSE);
+
+    // Preserves leftover gold conversion and splits converted trophies from atRisk (ETH-083).
+    const victoryReport: RunReport = {
+      result: {
+        ...emptyRunResult('victory'),
+        atRisk: { renown: 80, trophies: 4 },
+        converted: { trophies: 3 },
+        turns: 250,
+        deepestDepth: 3,
+        extras: {
+          'run.end': { outcome: 'victory', turn: 250, cause: 'Won.', depth: 3 },
+          'run.party': [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }],
+          'run.gold': { gold: 35, trophies: 3, rate: GOLD_PER_TROPHY },
+        },
+      },
+      end: { outcome: 'victory', turn: 250, cause: 'Won.', depth: 3 },
+    };
+    const rebuiltVictory = reportFromRecord(runRecord(5, victoryReport.result));
+    expect(rebuiltVictory.result.atRisk).toEqual({ renown: 80, trophies: 4 });
+    expect(rebuiltVictory.result.converted).toEqual({ trophies: 3 });
+    expect(goldConversionOf(rebuiltVictory)).toEqual({ gold: 35, trophies: 3, rate: GOLD_PER_TROPHY });
+    expect(currencyRows(rebuiltVictory)).toEqual(currencyRows(victoryReport));
+  });
+
+  it('reopens past runs from StatsPanel with identical gold conversion lines (ETH-083)', async () => {
+    const user = userEvent.setup();
+    act(() => {
+      useProfileStore.getState().applyRunResult({
+        ...emptyRunResult('victory'),
+        atRisk: { renown: 80, trophies: 4 },
+        converted: { trophies: 3 },
+        turns: 250,
+        deepestDepth: 3,
+        extras: {
+          'run.end': { outcome: 'victory', turn: 250, cause: 'Won.', depth: 3 },
+          'run.party': [{ actor: 1, name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' }],
+          'run.gold': { gold: 35, trophies: 3, rate: GOLD_PER_TROPHY },
+        },
+      });
+    });
+    render(
+      <>
+        <StatsPanel />
+        <RunSummary />
+      </>,
+    );
+    await user.click(screen.getByRole('button', { name: /Run 1 · Victory/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Run 1 · Victory' });
+    expect(dialog.textContent).toContain('Gold converted: 35 gold → +3 Trophies');
+    expect(within(dialog).getAllByRole('row').map((r) => r.textContent)).toContain('Trophies7–7');
   });
 
   it('lists past runs newest first in the Stats tab, and each reopens its summary', async () => {

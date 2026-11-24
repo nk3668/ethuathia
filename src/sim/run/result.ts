@@ -34,9 +34,15 @@ export interface RunResult {
   readonly atRisk: Readonly<RewardAmounts>;
   /**
    * What the wipe took, per currency (ETH-023); empty for a victory or a retreat. Never more
-   * than `atRisk`. Meta banks `atRisk - lost`.
+   * than `atRisk`. Meta banks `(atRisk - lost) + (converted ?? {})`.
    */
   readonly lost: Readonly<RewardAmounts>;
+  /**
+   * Post-exit converted currencies (ETH-083), such as leftover gold converted into Trophies on
+   * victory or retreat. Applied after Omen multipliers (not multiplied itself) and never subject
+   * to wipe loss. Omitted when empty.
+   */
+  readonly converted?: Readonly<RewardAmounts>;
   /** Game turns the run took. */
   readonly turns: number;
   /** The deepest floor any party member reached (1 is the first floor). */

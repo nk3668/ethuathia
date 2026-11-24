@@ -4,7 +4,7 @@
  */
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets, RUN_RECORD_MOMENTS } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
-import { defName, DEITIES, describeMilestoneMet } from '../../content';
+import { defName, DEITIES, describeMilestoneMet, GOLD_PER_TROPHY } from '../../content';
 import {
   CHRONICLE_TRACKER,
   depthRenown,
@@ -22,7 +22,7 @@ import {
   turnsRenown,
   WIPE_LOSS_SHARE,
 } from '../../sim';
-import type { ChronicleEntry, ContractRecord, FallenRecord, FloorRenown, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
+import type { ChronicleEntry, ContractRecord, FallenRecord, FloorRenown, GoldConversionRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
 
 /** Each outcome's heading and icon, so it never rests on color alone. */
 export const OUTCOME_LOOK: Readonly<Record<RunOutcome, { title: string; icon: string }>> = {
@@ -52,13 +52,39 @@ export interface CurrencyRow {
 
 /** One row per currency earned or lost. Renown and Trophies always show. */
 export function currencyRows(report: RunReport): CurrencyRow[] {
-  const { atRisk, lost } = report.result;
-  const keys = [...new Set([RENOWN, TROPHIES, ...Object.keys(atRisk), ...Object.keys(lost)])];
+  const { atRisk, lost, converted } = report.result;
+  const keys = [...new Set([RENOWN, TROPHIES, ...Object.keys(atRisk), ...Object.keys(lost), ...Object.keys(converted ?? {})])];
   return keys.map((key) => {
-    const earned = atRisk[key] ?? 0;
+    const earned = (atRisk[key] ?? 0) + (converted?.[key] ?? 0);
     const gone = lost[key] ?? 0;
     return { key, atRisk: earned, lost: gone, banked: earned - gone };
   });
+}
+
+/** Tooltip text explaining the leftover gold to Trophies conversion rule (ETH-083). */
+export function GOLD_CONVERSION_TOOLTIP(rate = GOLD_PER_TROPHY): string {
+  return `Leftover gold converts at ${rate} gold = 1 Trophy (rounded down), applied after the Omen multiplier (gold is not multiplied); on a wipe all gold is lost.`;
+}
+
+/** Leftover gold conversion record (`extras['run.gold']`, ETH-083), or `null` when absent or malformed. */
+export function goldConversionOf(report: RunReport): GoldConversionRecord | null {
+  const raw = report.result.extras['run.gold'];
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { gold, trophies, rate } = raw as Partial<GoldConversionRecord>;
+  if (
+    typeof gold !== 'number' ||
+    !Number.isFinite(gold) ||
+    gold < 0 ||
+    typeof trophies !== 'number' ||
+    !Number.isInteger(trophies) ||
+    trophies < 0 ||
+    typeof rate !== 'number' ||
+    !Number.isFinite(rate) ||
+    rate <= 0
+  ) {
+    return null;
+  }
+  return { gold, trophies, rate };
 }
 
 /** The wipe loss as a whole percentage: "25%". */
@@ -186,6 +212,13 @@ export const NO_CAUSE = 'No details were kept for this run.';
  */
 export function reportFromRecord(record: RunRecord): RunReport {
   const earned = addCurrencies(record.banked, record.lost);
+  const convertedTrophies =
+    record.outcome !== 'wipe' && record.gold !== undefined && record.gold.trophies > 0
+      ? Math.min(earned.trophies, record.gold.trophies)
+      : 0;
+  const atRiskCurrencies =
+    convertedTrophies > 0 ? { ...earned, trophies: earned.trophies - convertedTrophies } : earned;
+  const converted = convertedTrophies > 0 ? { [TROPHIES]: convertedTrophies } : undefined;
   const party: PartyMemberRecord[] = record.party.map((m, i) => ({ actor: i, name: m.name, classId: m.classId, raceId: m.raceId }));
   // The record keeps how they died as words only (`how`); runs recorded before ETH-075 just fell.
   const fallen: FallenRecord[] = record.party.flatMap((m, i) =>
@@ -195,13 +228,15 @@ export function reportFromRecord(record: RunRecord): RunReport {
   return {
     result: {
       outcome: record.outcome,
-      atRisk: rewardsFromCurrencies(earned),
+      atRisk: rewardsFromCurrencies(atRiskCurrencies),
       lost: rewardsFromCurrencies(record.lost),
+      ...(converted !== undefined ? { converted } : {}),
       turns: record.turns,
       deepestDepth: record.deepestDepth,
       extras: {
         'run.end': end,
         'run.party': party,
+        ...(record.gold !== undefined ? { 'run.gold': { ...record.gold } } : {}),
         'track.deaths': { fallen },
         'track.codex': Object.fromEntries(record.met.map((id) => [id, []])),
         // Party members in the kept moments are numbered by party place, like `party` above.

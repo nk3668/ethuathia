@@ -8,6 +8,7 @@
  * `runEnded`. Once `state.domains.run.end` is set, `step` does nothing.
  */
 import { clonePlain } from '../../core';
+import { GOLD_PER_TROPHY, goldToTrophies } from '../../content';
 import { deathPredicate, killerOf } from '../combat/death';
 import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
@@ -15,6 +16,7 @@ import { depthRevealed, dungeonDepth, floorNode, floorTypeOf } from '../floors/d
 import { kitOf } from '../items/kit';
 import { VICTORY_CHECKS } from '../registries';
 import type { EntityId, RunState } from '../state';
+import { TROPHIES } from './result';
 import type { RunOutcome, RunResult } from './result';
 import { ACT_RETREAT_RUN } from './rules';
 import { projectedRewards, trackerExtras } from './trackers';
@@ -64,6 +66,13 @@ export interface PartyMemberRecord {
 export interface RunReport {
   result: RunResult;
   end: RunEnd;
+}
+
+/** Leftover in-run gold settlement recorded in `RunResult.extras['run.gold']` (ETH-083). */
+export interface GoldConversionRecord {
+  readonly gold: number;
+  readonly trophies: number;
+  readonly rate: number;
 }
 
 /**
@@ -175,6 +184,15 @@ function end(state: RunState, stepEvents: readonly SimEvent[], emit: Emit, outco
     const lost = wipeLoss(atRisk, outcome);
     if (Object.keys(lost).length > 0) emit({ type: 'earningsLost', lost, atRisk, share: WIPE_LOSS_SHARE, depth });
   }
+  const gold = state.domains.items.gold;
+  if (gold > 0) {
+    emit({
+      type: 'goldSettled',
+      gold,
+      trophies: outcome === 'wipe' ? 0 : goldToTrophies(gold),
+      lost: outcome === 'wipe',
+    });
+  }
   emit(ended);
 }
 
@@ -215,22 +233,27 @@ export function deathLine(name: string, killer: Killer | null, depth: number, te
 }
 
 /**
- * The finished run's `RunResult`, for meta's `applyRunResult`: the at-risk totals, the turns,
- * the deepest floor and every tracker's extras (plus `extras['run.end']`, the `RunEnd`, and
- * `extras['run.party']`, the party's `PartyMemberRecord`s). `lost` is what a wipe takes
- * (`wipeLoss`, ETH-023), empty for a victory or a retreat. Throws if the run hasn't ended.
+ * The finished run's `RunResult`, for meta's `applyRunResult`: the at-risk totals, any post-exit
+ * `converted` currencies (ETH-083), the turns, the deepest floor and every tracker's extras (plus
+ * `extras['run.end']`, the `RunEnd`, `extras['run.party']`, the party's `PartyMemberRecord`s, and
+ * `extras['run.gold']`, the `GoldConversionRecord`). `lost` is what a wipe takes (`wipeLoss`,
+ * ETH-023), empty for a victory or a retreat. Throws if the run hasn't ended.
  */
 export function runResult(state: RunState): RunResult {
   const runEnd = state.domains.run.end;
   if (runEnd === null) throw new Error('The run has not ended');
   const atRisk = state.domains.run.rewards.atRisk;
+  const gold = state.domains.items.gold;
+  const trophies = runEnd.outcome === 'wipe' ? 0 : goldToTrophies(gold);
+  const goldRecord: GoldConversionRecord = { gold, trophies, rate: GOLD_PER_TROPHY };
   return clonePlain({
     outcome: runEnd.outcome,
     atRisk,
     lost: wipeLoss(atRisk, runEnd.outcome),
+    ...(trophies > 0 ? { converted: { [TROPHIES]: trophies } } : {}),
     turns: state.turn,
     deepestDepth: state.domains.floors.deepest,
-    extras: { ...trackerExtras(state), 'run.end': runEnd, 'run.party': partyRecords(state) },
+    extras: { ...trackerExtras(state), 'run.end': runEnd, 'run.party': partyRecords(state), 'run.gold': goldRecord },
   });
 }
 

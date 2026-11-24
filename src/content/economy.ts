@@ -1,0 +1,19 @@
+/**
+ * Economy conversion constants and helpers (ETH-083).
+ *
+ * Leftover in-run gold is not at-risk currency: on victory or retreat it converts into Trophies at
+ * `GOLD_PER_TROPHY` gold per Trophy (rounded down), applied after the Omen multiplier. On a wipe
+ * all gold is lost.
+ */
+
+/** Number of leftover gold coins required per Trophy when the party exits the dungeon. */
+export const GOLD_PER_TROPHY = 10;
+
+/**
+ * Converts leftover in-run `gold` into Trophies at `rate` gold per Trophy (rounded down).
+ * Returns `0` for non-finite or non-positive `gold` (or invalid `rate`).
+ */
+export function goldToTrophies(gold: number, rate = GOLD_PER_TROPHY): number {
+  if (!Number.isFinite(gold) || gold <= 0 || !Number.isFinite(rate) || rate <= 0) return 0;
+  return Math.floor(gold / rate);
+}

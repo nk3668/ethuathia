@@ -21,6 +21,7 @@ import type { Def } from '../core';
 import type { AttributeId } from './attributes';
 import type { Bundle, EffectKind } from './bundles';
 import { bundleRefs, bundleSchema } from './bundles';
+import { GOLD_PER_TROPHY } from './economy';
 import type { ContentKind } from './kind';
 import { defShape, glyphSchema, positiveInt } from './schema';
 import type { Glyph } from './schema';
@@ -646,7 +647,7 @@ export const ITEM_HEARTHSTONE_AMULET = defineItem({
 export const ITEM_GOLD = defineItem({
   id: 'item.gold',
   name: 'Gold coins',
-  description: 'Coins of many old mints, dropped and forgotten. They go into the party’s purse for the rest of the run.',
+  description: `Coins of many old mints, dropped and forgotten. They go into the party’s purse for the rest of the run; leftover gold converts to Trophies at ${GOLD_PER_TROPHY} gold = 1 Trophy on exit, and is lost on a wipe.`,
   hint: 'The dull glint of old coinage scattered on the flags.',
   tags: [],
   glyph: { ch: '$', color: '#f2c14e', bold: true },
