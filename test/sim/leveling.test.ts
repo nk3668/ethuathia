@@ -248,9 +248,10 @@ describe('shared kill XP', () => {
 
   it('splits with a group bonus: a lone killer gets it all, a group a little more in total', () => {
     expect(killShare(24, 1)).toBe(24);
-    expect(killShare(24, 2)).toBe(15);
-    expect(killShare(24, 3)).toBe(12);
-    expect(killShare(4, 4)).toBe(2);
+    // ceil(base * (1 + KILL_GROUP_BONUS * (n - 1)) / n) with KILL_GROUP_BONUS = 0.55 (ETH-080).
+    expect(killShare(24, 2)).toBe(19);
+    expect(killShare(24, 3)).toBe(17);
+    expect(killShare(4, 4)).toBe(3);
     expect(killShare(0, 2)).toBe(0);
   });
 

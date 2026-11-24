@@ -74,6 +74,10 @@ const BUDGET_ANCHORS: readonly [number, number][] = [
  * loses members one at a time and has no slack for extra monsters. ETH-080 tunes this upward
  * (toward about 0.1) as parties get sturdier, for as long as `npm run sim -- --party-sweep` keeps
  * the ordering.
+ *
+ * ETH-080 re-tested 0.03 (200 seeds, after the recovery and surge retune): party 4 won 33.0% on
+ * the fresh preset (below party 3 at 34.5%) and 39.5% on the progressed one, so the ordering and
+ * the 2x-solo ratio both failed. It stays 0.
  */
 export const PARTY_SIZE_BUDGET_STEP = 0;
 
