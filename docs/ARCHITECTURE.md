@@ -1880,6 +1880,9 @@ As built in `src/sim/ai/` (ETH-009):
   none of them changing while the last rule fired was not `idle`, that rule becomes
   `memory.dropped` and is skipped for `DROP_TURNS` (20) turns, a `stuck` event says why, and
   `cond.stuck` holds meanwhile, so the actor backs off and then waits until the goal comes back.
+  If `act.back_off` itself gets stuck while a goal is dropped, it sets `dropped.backedOff = true`
+  and stops backing off for the rest of `DROP_TURNS` without overwriting (and un-dropping) the
+  original dropped rule (ETH-145).
   Waiting counts too (ETH-113): `memory.last.party` keys where every living party member stands,
   and `memory.waited` counts decisions in a row that wait by an `idle` rule other than the plain
   `act.wait` (gathering at the stairs, say) while that key is unchanged. At `WAIT_STUCK_TURNS`

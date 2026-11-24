@@ -76,6 +76,8 @@ export interface DroppedGoal {
   since: number;
   /** The first turn (`RunState.turn`) on which the rule is checked again. */
   until: number;
+  /** Set when `act.back_off` itself gets stuck during this drop, stopping further backing off without overwriting `rule` (ETH-145). */
+  backedOff?: true;
 }
 
 /** What the decision engine remembers about one actor between decisions. */

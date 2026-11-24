@@ -76,7 +76,7 @@ export const ACT_BACK_OFF = defineRuleAction({
   parse: noParams,
   resolve(ctx) {
     const dropped = ctx.actor.ai.memory.dropped;
-    if (dropped?.floor !== ctx.actor.floor) return null;
+    if (dropped === null || dropped.backedOff === true || dropped.floor !== ctx.actor.floor) return null;
     // Whoever was in the way may still be: route around them, never through.
     const paths = aiPathGrid(ctx, 'blocked');
     const flee = buildFleeMap(paths, buildGoalMap(paths, [dropped.pos]));

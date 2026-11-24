@@ -14,6 +14,7 @@ import {
   explored,
   floorPathGrid,
   getEntity,
+  getFloor,
   getMemory,
   isStep,
   newAiPart,
@@ -429,6 +430,75 @@ describe('stuck detection', () => {
     const events: SimEvent[] = [];
     for (let i = 0; i < 4 * STUCK_TURNS; i++) events.push(...step(state, []));
     expect(events.filter((e) => e.type === 'stuck')).toEqual([]);
+  });
+
+  it('stops a stuck act.back_off without overwriting the underlying dropped rule (seed 128 stuck-storm fix)', () => {
+    // 24-tile corridor: x=1..24, dropped.pos=(11,1), neutral blocker at (13,1), monster at (16,1).
+    // At (11,1) east is open (dist 13 > west dist 10), so act.back_off steps east to (12,1).
+    // At (12,1) the blocker at (13,1) is adjacent (blocked), so west's deeper flee gradient
+    // (-12 + 10 = -2 < -1) pulls act.back_off back west to (11,1).
+    const corridor = [`#${'.'.repeat(4)}@${'.'.repeat(19)}#`];
+    const map = ['#'.repeat(26), ...corridor, '#'.repeat(26)];
+    const { state, hero } = setup(map, 1, 1);
+    const floor = getFloor(state, 'd1').terrain.cells;
+    const seen = getMemory(state, 'd1').terrain.cells;
+    for (let i = 0; i < floor.length; i++) seen[i] = (floor[i] as number) + 1;
+
+    hero.pos = { x: 11, y: 1 };
+    hero.actor.hp = 1;
+    addEntity(state, {
+      def: 'monster.test',
+      floor: 'd1',
+      pos: { x: 13, y: 1 },
+      actor: { energy: 0, hp: 5, mp: 0, faction: 'neutral' },
+      stats: newStatsPart({ hp: 5, speed: 0 }),
+    });
+    addEntity(state, {
+      def: 'monster.cave_rat',
+      floor: 'd1',
+      pos: { x: 16, y: 1 },
+      actor: { energy: 0, hp: 10, mp: 0, faction: 'monster' },
+      stats: newStatsPart({ hp: 10, speed: 0 }),
+    });
+    const fleeRule = { set: 'baseline' as const, index: baselineIndex('act.flee') };
+    hero.ai = newAiPart();
+    hero.ai.memory.dropped = {
+      rule: fleeRule,
+      action: 'act.flee',
+      floor: 'd1',
+      pos: { x: 11, y: 1 },
+      since: 0,
+      until: DROP_TURNS,
+    };
+
+    const firstPhase: SimEvent[] = [];
+    for (let i = 0; i <= STUCK_TURNS; i++) firstPhase.push(...step(state, []));
+    const stuckEvents = firstPhase.filter((e): e is Stuck => e.type === 'stuck');
+    expect(stuckEvents).toHaveLength(1);
+    expect(stuckEvents[0]?.action).toBe('act.back_off');
+    expect(hero.ai.memory.dropped).toMatchObject({
+      rule: fleeRule,
+      action: 'act.flee',
+      until: DROP_TURNS,
+      backedOff: true,
+    });
+    expect(checkInvariants(state)).toEqual([]);
+    const restored = deserialize(serialize(state));
+    expect((getEntity(restored, hero.id) as ActorEntity).ai?.memory.dropped?.backedOff).toBe(true);
+
+    // Remaining turns of the drop: neither act.back_off nor act.flee fires, and no second stuck fires.
+    const restOfDrop: SimEvent[] = [];
+    for (let i = STUCK_TURNS + 1; i < DROP_TURNS - 1; i++) restOfDrop.push(...step(state, []));
+    expect(restOfDrop.filter((e) => e.type === 'stuck')).toEqual([]);
+    expect(fired(restOfDrop).map((e) => e.action)).not.toContain('act.back_off');
+    expect(fired(restOfDrop).map((e) => e.action)).not.toContain('act.flee');
+    expect(checkInvariants(state)).toEqual([]);
+
+    // Once the original drop expires at turn DROP_TURNS, dropped clears and act.flee resumes cleanly.
+    const expiryEvents = step(state, []);
+    expect(hero.ai.memory.dropped).toBeNull();
+    expect(fired(expiryEvents).map((e) => e.action)).toContain('act.flee');
+    expect(checkInvariants(state)).toEqual([]);
   });
 });
 

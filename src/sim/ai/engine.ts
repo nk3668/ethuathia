@@ -251,7 +251,11 @@ function checkProgress(ctx: AiCtx, emit: Emit): boolean {
 
   memory.still = 0;
   const goal = RULE_ACTIONS.get(intent.action).name;
-  const detail = `No progress in ${STUCK_TURNS} turns (${intent.detail}). Giving up on ${goal} for ${DROP_TURNS} turns.`;
+  const remaining =
+    intent.action === 'act.back_off' && memory.dropped !== null && state.turn < memory.dropped.until
+      ? memory.dropped.until - state.turn
+      : DROP_TURNS;
+  const detail = `No progress in ${STUCK_TURNS} turns (${intent.detail}). Giving up on ${goal} for ${remaining} ${remaining === 1 ? 'turn' : 'turns'}.`;
   dropGoal(ctx, intent.rule, intent.action, STUCK_TURNS, detail, emit);
   return partyStill;
 }
@@ -280,7 +284,13 @@ function countWaiting(ctx: AiCtx, choice: Choice, partyStill: boolean, emit: Emi
 /** Drops `rule` for `DROP_TURNS` turns at the actor's spot and emits the `stuck` event. */
 function dropGoal({ state, actor }: AiCtx, rule: RuleRef, action: string, turns: number, detail: string, emit: Emit): void {
   const pos = { x: actor.pos.x, y: actor.pos.y };
-  actor.ai.memory.dropped = { rule: { ...rule }, action, floor: actor.floor, pos, since: state.turn, until: state.turn + DROP_TURNS };
+  const existing = actor.ai.memory.dropped;
+  // Backing off runs only because a goal is already dropped; mark it stopped without overwriting `existing.rule`.
+  if (action === 'act.back_off' && existing !== null && state.turn < existing.until) {
+    existing.backedOff = true;
+  } else {
+    actor.ai.memory.dropped = { rule: { ...rule }, action, floor: actor.floor, pos, since: state.turn, until: state.turn + DROP_TURNS };
+  }
   emit({ type: 'stuck', actor: actor.id, rule: { ...rule }, action, turns, detail, floor: actor.floor, pos: { ...pos } });
 }
 
@@ -319,6 +329,9 @@ registerInvariant('core.aiMemory', (state) => {
     if (!Number.isSafeInteger(memory.still) || memory.still < 0) problems.push(`actor ${entity.id} has still ${memory.still}`);
     if (!Number.isSafeInteger(memory.waited) || memory.waited < 0 || memory.waited >= WAIT_STUCK_TURNS) {
       problems.push(`actor ${entity.id} has waited ${memory.waited}`);
+    }
+    if (memory.dropped !== null && memory.dropped.backedOff !== undefined && memory.dropped.backedOff !== true) {
+      problems.push(`actor ${entity.id} has invalid dropped.backedOff`);
     }
     const waitingFor = memory.waitingFor;
     if (waitingFor === null) continue;
