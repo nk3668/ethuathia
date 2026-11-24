@@ -172,9 +172,9 @@ export const CLASS_REAVER = defineClass({
   description: 'A hireling from the border holds who settles every argument with an axe. Hits hard, thinks later.',
   hint: 'Clears a room by making it smaller.',
   tags: ['martial'],
-  // 35 starting points and +3.25 a level: two under the Vanguard's 37, since the hatchet's +2 damage
+  // 33 starting points and +3.25 a level: four under the Vanguard's 37, since the hatchet's +2 damage
   // is the rest of its edge (ETH-177; on 37 it won twice as often as the Vanguard).
-  attributes: { brawn: 13, finesse: 9, wits: 4, grit: 9 },
+  attributes: { brawn: 11, finesse: 9, wits: 4, grit: 9 },
   // Each level, on average: Brawn +1.5, Grit +1, Finesse +0.5, Wits +0.25.
   growth: {
     brawn: { min: 1, max: 2 },

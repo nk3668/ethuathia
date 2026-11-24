@@ -21,9 +21,9 @@ Tuning the starter classes (ETH-160) showed the Outrider winning 100% of runs on
 ## Acceptance criteria
 - [x] A short written comparison (in the PR) of what one point of each attribute adds in combat today, measured with the harness (`--class`, ETH-160), not just read off the formulas
 - [x] `ATTRIBUTE_FORMULAS` (and the weapon-scaling rows if needed) changed so a point of Finesse, Brawn or Grit is worth about the same; Wits stays light until M4 spells (the Lorekeeper may trail)
-- [x] The Outrider and Reaver go back to the shared budget (37 starting points, about +3.25 per level) or as close as the band allows; record any remaining deviation in `ETH-160`'s Notes (Outrider on 37, Reaver on 35, recorded)
+- [x] The Outrider and Reaver go back to the shared budget (37 starting points, about +3.25 per level) or as close as the band allows; record any remaining deviation in `ETH-160`'s Notes (Outrider on 37, Reaver on 33, recorded)
 - [x] The attribute tooltips and Codex text still match the formulas (they're generated from them; check)
-- [x] Balance: a T2 run (100 seeds per class with Human) keeps every class but the Lorekeeper in the `docs/DIFFICULTY_PHILOSOPHY.md` §2 band; update §2 and the class notes there (200 seeds: Vanguard 14%, Outrider 22%, Reaver 29%, Stonekin 14%, Fenling 22%; the Reaver above and the Vanguard just under the 15-25% band, reported rather than tuned further)
+- [x] Balance: a T2 run (100 seeds per class with Human) keeps every class but the Lorekeeper in the `docs/DIFFICULTY_PHILOSOPHY.md` §2 band; update §2 and the class notes there (200 seeds, with `budgetMul` 1.4: Vanguard 18.5%, Outrider 26.5%, Reaver 23%, Stonekin 16.5%, Fenling 22%, Lorekeeper 13%)
 - [x] Tests that pin derived stats (e.g. the "starting Human Vanguard" example in `src/sim/stats/attributes.ts`) updated
 
 ## Notes
@@ -33,4 +33,4 @@ Tuning the starter classes (ETH-160) showed the Outrider winning 100% of runs on
 ## Log
 - 2026-11-24: Created from the ETH-160 findings; Nate asked for it in M2.
 - 2026-11-24: Started. Measured one point of each attribute with the harness before changing anything (see the PR).
-- 2026-11-24: Built. Formulas: Grit 1 HP a point from 0 became 4.5 from 8; damage 0.5 above 10 became 0.2 above 3; accuracy and evasion 1 above 10 became 0.3 above 5. Outrider back on 37 and +3.25; Reaver 35 and +3.25; Stonekin +1 Finesse. The fresh Vanguard moved from 21% to 14% wins (mean depth 6.1 to 6.5). Fractional gear and scaling text is rounded to two places and gear comparison ignores float dust. Tests that pin derived numbers updated. Status done.
+- 2026-11-24: Built. Formulas: Grit 1 HP a point from 0 became 4.5 from 8; damage 0.5 above 10 became 0.2 above 3; accuracy and evasion 1 above 10 became 0.3 above 5. Outrider back on 37 and +3.25; Reaver 33 and +3.25; Stonekin +1 Finesse. The fresh Vanguard moved from 21% to 14% wins, so the Old Delve `budgetMul` went from 1.5 to 1.4 (18.5%, mean depth 6.5). Fractional gear and scaling text is rounded to two places and gear comparison ignores float dust. Tests that pin derived numbers updated. Status done.

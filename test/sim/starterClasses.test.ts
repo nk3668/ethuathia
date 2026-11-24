@@ -24,7 +24,7 @@ const CLASS_TABLE: Record<string, { attrs: Row; growth: Row; kit: string[] }> = 
   'class.vanguard': { attrs: [11, 9, 4, 13], growth: [1, 0.5, 0.25, 1.5], kit: ['item.oak_cudgel', 'item.round_shield'] },
   'class.outrider': { attrs: [8, 14, 7, 8], growth: [0.75, 1.5, 0.5, 0.5], kit: ['item.skinning_knife', 'item.soft_boots'] },
   'class.lorekeeper': { attrs: [5, 8, 12, 8], growth: [0.5, 0.5, 1.5, 0.75], kit: ['item.ashwood_staff', 'item.quilted_jerkin'] },
-  'class.reaver': { attrs: [13, 9, 4, 9], growth: [1.5, 0.5, 0.25, 1], kit: ['item.iron_hatchet', 'item.iron_cap'] },
+  'class.reaver': { attrs: [11, 9, 4, 9], growth: [1.5, 0.5, 0.25, 1], kit: ['item.iron_hatchet', 'item.iron_cap'] },
 };
 
 const RACE_TABLE: Record<string, { attrs: Row; speed: number }> = {
