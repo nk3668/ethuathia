@@ -297,10 +297,6 @@
   cursor: help;
 }
 
-.guarded {
-  display: inline-block;
-}
-
 /* Ranked nodes: "2/5" beside the name, and the divider above a closed building tier. */
 
 .rank {

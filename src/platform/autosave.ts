@@ -1,8 +1,9 @@
 /**
- * Autosave triggers (docs/ARCHITECTURE.md §6.5): on an interval, and when the window is closed
- * or hidden. `beforeunload` alone is unreliable for asynchronous storage, so `pagehide` and the
- * page becoming hidden also save; the save function should skip the write when nothing changed.
+ * Autosave triggers (docs/ARCHITECTURE.md §6.5): on an interval, when the window is hidden or
+ * unloaded, and on Tauri's `onCloseRequested` so desktop closes wait for the disk write.
  */
+import { isTauriRuntime, subscribeTauriClose } from './tauri';
+import type { CloseRequestSubscriber } from './tauri';
 
 /** Default autosave interval. */
 export const AUTOSAVE_INTERVAL_MS = 30_000;
@@ -19,21 +20,56 @@ export interface AutosaveTarget {
 export interface AutosaveOptions {
   intervalMs?: number;
   target?: AutosaveTarget;
+  onCloseRequested?: CloseRequestSubscriber;
 }
 
 /** Starts autosaving with `save` and returns a function that stops it. */
-export function startAutosave(save: () => void, { intervalMs = AUTOSAVE_INTERVAL_MS, target = window }: AutosaveOptions = {}): () => void {
-  const timer = target.setInterval(save, intervalMs);
-  const onHide = () => {
-    if (target.document?.visibilityState === 'hidden') save();
+export function startAutosave(
+  save: () => void | Promise<void>,
+  {
+    intervalMs = AUTOSAVE_INTERVAL_MS,
+    target = window,
+    onCloseRequested = isTauriRuntime() ? subscribeTauriClose : undefined,
+  }: AutosaveOptions = {},
+): () => void {
+  const fire = () => {
+    void save();
   };
-  target.addEventListener('beforeunload', save);
-  target.addEventListener('pagehide', save);
+  const timer = target.setInterval(fire, intervalMs);
+  const onHide = () => {
+    if (target.document?.visibilityState === 'hidden') fire();
+  };
+  target.addEventListener('beforeunload', fire);
+  target.addEventListener('pagehide', fire);
   target.addEventListener('visibilitychange', onHide);
+
+  let disposed = false;
+  let unlistenClose: (() => void) | null = null;
+  if (onCloseRequested) {
+    try {
+      const subscription = onCloseRequested(() => (disposed ? undefined : save()));
+      if (typeof subscription === 'function') {
+        unlistenClose = subscription;
+      } else {
+        void subscription
+          .then((unlisten) => {
+            if (disposed) unlisten();
+            else unlistenClose = unlisten;
+          })
+          .catch(() => undefined);
+      }
+    } catch {
+      // Keep interval and page-hide triggers active if close registration fails.
+    }
+  }
+
   return () => {
+    disposed = true;
     target.clearInterval(timer);
-    target.removeEventListener('beforeunload', save);
-    target.removeEventListener('pagehide', save);
+    target.removeEventListener('beforeunload', fire);
+    target.removeEventListener('pagehide', fire);
     target.removeEventListener('visibilitychange', onHide);
+    unlistenClose?.();
+    unlistenClose = null;
   };
 }

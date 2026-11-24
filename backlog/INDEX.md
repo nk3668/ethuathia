@@ -4,7 +4,7 @@
 
 **Current milestone: M2 (Meta loop).**
 
-**Assigned to Gemini (Antigravity)**; Claude reviews each PR: ETH-095 and ETH-175 (ETH-172 is done, so it can start). ETH-083, ETH-157 and ETH-158 are merged.
+**Assigned to Gemini (Antigravity)**; All assigned items (ETH-083, ETH-095, ETH-157, ETH-158, ETH-175) are reviewed and merged.
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
@@ -121,7 +121,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-065](codex-tooltips/ETH-065-codex-framework.md) | Codex tab, discovery tracking and Explain tooltips from content | codex-tooltips | M2 | P1 | done | M |
 | [ETH-086](town-meta/ETH-086-foundations-and-tactics-trees.md) | Split upgrade trees into permanent Foundations and free Tactics | town-meta | M2 | P1 | done | M |
 | [ETH-087](characters/ETH-087-class-mastery-levels.md) | Class Mastery XP: every run banks XP toward a guild-wide level per class | characters | M2 | P1 | done | M |
-| [ETH-095](saves-platform/ETH-095-tauri-packaging-saves.md) | Tauri desktop packaging and save backend | saves-platform | M2 | P1 | ready | M |
+| [ETH-095](saves-platform/ETH-095-tauri-packaging-saves.md) | Tauri desktop packaging and save backend | saves-platform | M2 | P1 | done | M |
 | [ETH-114](quests/ETH-114-objective-engine.md) | Objective engine: reusable objectives with progress, generalized from contracts | quests | M2 | P1 | done | M |
 | [ETH-115](risk-omens/ETH-115-run-wide-modifiers.md) | Run-wide modifiers: a run-level BundleSource with sources, scopes, flags and tooltips | risk-omens | M2 | P1 | done | M |
 | [ETH-117](bestiary/ETH-117-monster-templates.md) | Monster templates: prefixes, traits and named overrides layered on a base MonsterDef | bestiary | M2 | P1 | done | M |
@@ -146,7 +146,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-158](tools-balance/ETH-158-split-headless-tool.md) | Split tools/headless.ts into focused modules | tools-balance | M2 | P2 | done | M |
 | [ETH-170](town-meta/ETH-170-building-tier-quests.md) | Building-tier quests open each building's next tier | town-meta | M2 | P2 | ready | M |
 | [ETH-171](town-meta/ETH-171-sell-carried-items.md) | Items carried out of the dungeon sell for Trophies | town-meta | M2 | P2 | idea | S |
-| [ETH-175](ui-shell/ETH-175-disabled-button-tooltips.md) | Kit button that explains why it is disabled, with a tooltip | ui-shell | M2 | P2 | ready | S |
+| [ETH-175](ui-shell/ETH-175-disabled-button-tooltips.md) | Kit button that explains why it is disabled, with a tooltip | ui-shell | M2 | P2 | done | S |
 | [ETH-176](characters/ETH-176-class-starting-kits.md) | Classes start each run with a kit of gear | characters | M2 | P1 | done | S |
 | [ETH-177](characters/ETH-177-reprice-finesse.md) | Reprice Finesse so classes can share one point budget | characters | M2 | P1 | ready | M |
 | [ETH-178](tools-balance/ETH-178-sim-mixed-party.md) | Sim harness option for a random mixed party, as players get it | tools-balance | M2 | P2 | done | S |

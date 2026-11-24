@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { decodeSave, encodeSave, newProfile } from '../../src/meta';
@@ -21,7 +21,10 @@ const quiet: AutosaveTarget = {
 const run = (renown: number) => ({ ...emptyRunResult('victory' as const), atRisk: { renown, [favorKey('deity.dawn')]: 2 } });
 
 beforeEach(resetProfileStore);
-afterEach(resetProfileStore);
+afterEach(() => {
+  cleanup();
+  resetProfileStore();
+});
 
 describe('profileStore', () => {
   it('starts a new profile when there is no save, banks runs and autosaves only when changed', async () => {
@@ -39,6 +42,26 @@ describe('profileStore', () => {
     await useProfileStore.getState().save();
     const saved = decodeSave(store.data ?? '');
     expect(saved.ok && saved.profile.currencies.renown).toBe(1500);
+    expect(useProfileStore.getState().dirty).toBe(false);
+    unbind();
+  });
+
+  it('awaits writing dirty changes when the close hook fires', async () => {
+    const store = new MemorySaveStore();
+    const hook: { fn: (() => void | Promise<void>) | null } = { fn: null };
+    const { loaded, unbind } = bindSaveStore(store, {
+      target: quiet,
+      onCloseRequested: (cb) => {
+        hook.fn = cb;
+        return () => undefined;
+      },
+    });
+    await loaded;
+
+    useProfileStore.getState().applyRunResult(run(42));
+    await hook.fn?.();
+    const saved = decodeSave(store.data ?? '');
+    expect(saved.ok && saved.profile.currencies.renown).toBe(42);
     expect(useProfileStore.getState().dirty).toBe(false);
     unbind();
   });
@@ -117,5 +140,27 @@ describe('top bar and Options', () => {
     await user.type(box, 'garbage');
     await user.click(screen.getByRole('button', { name: 'Import text' }));
     expect(screen.getAllByRole('status').some((el) => el.textContent?.includes('Import failed'))).toBe(true);
+  });
+
+  it('explains why Save now and Import text are disabled via tooltips on focus', async () => {
+    render(<SaveOptions />);
+
+    const saveNow = screen.getByRole('button', { name: 'Save now' });
+    expect(saveNow).toHaveProperty('disabled', true);
+    await act(async () => (saveNow.parentElement as HTMLElement).focus());
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Saving is not set up.');
+
+    const importText = screen.getByRole('button', { name: 'Import text' });
+    expect(importText).toHaveProperty('disabled', true);
+    await act(async () => (importText.parentElement as HTMLElement).focus());
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Paste save text above first.');
+
+    act(() => useProfileStore.setState({ status: 'loading' }));
+    await act(async () => (saveNow.parentElement as HTMLElement).focus());
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Still loading your save.');
+
+    act(() => useProfileStore.setState({ status: 'failed' }));
+    await act(async () => (saveNow.parentElement as HTMLElement).focus());
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Saving is paused until the save is imported or reset.');
   });
 });

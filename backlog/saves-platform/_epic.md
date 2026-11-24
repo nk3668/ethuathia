@@ -27,5 +27,5 @@ Progress is saved locally and safely, the game installs as a desktop app, and ti
 ## Items
 - None yet. Items are added when M2 becomes the current milestone.
 - [x] [ETH-059 Profile, banked currencies and versioned local saves](ETH-059-profile-saves.md)
-- [ ] [ETH-095 Tauri desktop packaging and save backend](ETH-095-tauri-packaging-saves.md)
+- [x] [ETH-095 Tauri desktop packaging and save backend](ETH-095-tauri-packaging-saves.md)
 - [ ] [ETH-128 Time-away catch-up simulation and summary](ETH-128-time-away-catch-up.md)

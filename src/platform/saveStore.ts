@@ -3,9 +3,11 @@
  * offline only, so nothing here may reach the network.
  *
  * - `MemorySaveStore`: in memory, for tests and as a fallback when no storage is available.
- * - `IndexedDbSaveStore`: the browser's IndexedDB, for the dev tab (and the webview).
- * - `TauriSaveStore`: a file in the app data folder. A stub until desktop packaging lands.
+ * - `IndexedDbSaveStore`: the browser's IndexedDB, for the dev browser tab.
+ * - `TauriSaveStore`: `save.json` in the desktop app data folder via Tauri backend commands.
  */
+import { invokeTauri, isTauriRuntime } from './tauri';
+import type { TauriInvoker } from './tauri';
 
 export interface SaveStore {
   /** A short name for the Options screen, e.g. "browser storage". */
@@ -96,36 +98,32 @@ export class IndexedDbSaveStore implements SaveStore {
   }
 }
 
-/**
- * Saves to a file in the app data folder through Tauri. A stub: Tauri isn't set up yet, so
- * every call fails. Replace the bodies when packaging lands (docs/ARCHITECTURE.md §8.4).
- */
+/** Saves to `save.json` in the app data folder through Tauri backend commands (docs/ARCHITECTURE.md §8.4). */
 export class TauriSaveStore implements SaveStore {
   readonly label = 'app data folder';
 
-  load(): Promise<string | null> {
-    return Promise.reject(notYet());
+  constructor(private readonly invoke: TauriInvoker = invokeTauri) {}
+
+  async load(): Promise<string | null> {
+    const value = await this.invoke<string | null>('load_save');
+    return typeof value === 'string' ? value : null;
   }
 
-  save(_data: string): Promise<void> {
-    return Promise.reject(notYet());
+  async save(data: string): Promise<void> {
+    await this.invoke('write_save', { data });
   }
 
-  clear(): Promise<void> {
-    return Promise.reject(notYet());
+  async clear(): Promise<void> {
+    await this.invoke('clear_save');
   }
-}
-
-function notYet(): Error {
-  return new Error('Saving to the app data folder is not available yet: desktop packaging is not set up.');
 }
 
 /**
- * The backend for this environment: IndexedDB when the browser has it, otherwise memory.
- * Under Tauri this will pick `TauriSaveStore` once it is implemented; until then the webview's
- * IndexedDB is used there too.
+ * The backend for this environment: `TauriSaveStore` inside Tauri, `IndexedDbSaveStore` when the
+ * browser has IndexedDB, otherwise `MemorySaveStore`.
  */
 export function createSaveStore(): SaveStore {
+  if (isTauriRuntime()) return new TauriSaveStore();
   if (typeof indexedDB !== 'undefined') return new IndexedDbSaveStore(indexedDB);
   return new MemorySaveStore();
 }
