@@ -58,14 +58,18 @@ describe('Town tab', () => {
       'Hardy Recruits0/5',
       'Contract Bounty0/3',
       "Scout's Charter",
+      'Field Rations0/3',
       'Contract Board',
+      'Extraction Drills0/3',
       'Marsh Envoy',
       'Library Ties',
       "Medic's Satchel",
       'Guild Chronicles0/3',
+      'Waymark Lanterns',
       'Seasoned Constitution0/3',
       'Second Contract Board',
       'Rule Clerk',
+      "Quartermaster's Mystery Crate",
     ]);
     // Status is in words, not color alone.
     expect(nodeButton('Second Berth').textContent).toContain('Too expensive');

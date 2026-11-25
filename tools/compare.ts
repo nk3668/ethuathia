@@ -30,6 +30,8 @@ export interface ReportArgs {
   party: number;
   preset?: HeadlessPreset;
   upgrades?: string[];
+  /** False when `--opt-ins off` (ETH-187); absent otherwise. */
+  optIns?: boolean;
   rules?: HeadlessRulesPreset;
   classId?: string | null;
   raceId?: string | null;
@@ -56,6 +58,7 @@ export function makeReport(args: ReportArgs, results: SeedResult[]): SimReport {
     ...(args.preset !== undefined && args.preset !== 'fresh' ? { preset: args.preset } : {}),
     ...(args.upgrades !== undefined && args.upgrades.length > 0 ? { upgrades: [...args.upgrades] } : {}),
     ...(args.rules !== undefined && args.rules !== 'baseline' ? { rules: args.rules } : {}),
+    ...(args.optIns === false ? { optIns: false } : {}),
     ...(args.classId != null ? { classId: args.classId } : {}),
     ...(args.raceId != null ? { raceId: args.raceId } : {}),
     ...(args.recruits === true ? { recruits: true } : {}),
@@ -336,6 +339,7 @@ export function simArgv(args: ReportArgs): string[] {
     ...(args.preset !== undefined && args.preset !== 'fresh' ? ['--preset', args.preset] : []),
     ...(args.upgrades !== undefined && args.upgrades.length > 0 ? ['--upgrades', args.upgrades.join(',')] : []),
     ...(args.rules !== undefined && args.rules !== 'baseline' ? ['--rules', args.rules] : []),
+    ...(args.optIns === false ? ['--opt-ins', 'off'] : []),
     ...(args.classId != null ? ['--class', args.classId] : []),
     ...(args.raceId != null ? ['--race', args.raceId] : []),
     ...(args.recruits === true ? ['--recruits'] : []),

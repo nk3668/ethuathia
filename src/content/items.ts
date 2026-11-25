@@ -349,6 +349,23 @@ export const ITEM_TRAIL_BISCUIT = defineItem({
   loot: { weight: 6, qty: { min: 1, max: 3 } },
 });
 
+/** Issued only by the Guild Hall's Field Rations (ETH-187): never found as loot. */
+export const ITEM_FIELD_RATION = defineItem({
+  id: 'item.field_ration',
+  name: 'Field ration',
+  description:
+    'Salted meat and a heel of hard bread, wrapped by the hall’s cooks for the trip down. Eaten, it starts Regenerating: 1 HP a turn for ' +
+    '10 turns, and a second ration while it lasts only renews the time. Adventurers eat one when hurt with nothing in sight.',
+  hint: 'A cloth-wrapped parcel of salted meat and bread, tied with the guild’s green cord.',
+  tags: ['healing'],
+  glyph: { ch: '%', color: '#b9d68a' },
+  category: 'food',
+  weight: 1,
+  value: 4,
+  stack: 10,
+  bundle: { effects: [{ kind: 'applyStatus', status: 'status.regenerating', turns: 10 }] },
+});
+
 export const ITEM_IRON_HATCHET = defineItem({
   id: 'item.iron_hatchet',
   name: 'Iron hatchet',

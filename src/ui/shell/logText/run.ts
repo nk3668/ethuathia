@@ -86,6 +86,11 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
       return parts;
     },
   },
+  // "Mira carries the Quartermaster's crate." It never names the contents (ETH-187).
+  crateIssued: {
+    category: 'system',
+    text: (e) => `${e.name} carries the Quartermaster’s crate: sealed, and not to be opened until it is identified.`,
+  },
   // "The party sets out knowing every kind of potion on sight." (ETH-159)
   startKnown: {
     category: 'discovery',

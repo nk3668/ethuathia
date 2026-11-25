@@ -4,7 +4,7 @@
  * registries. The app runs `validateGame` before it starts, and `tools/validate-content` runs
  * `checkGame` as part of `npm test`.
  */
-import { checkContent, ContentError, FEATURES, FLOOR_TYPES, TERRAIN } from '../content';
+import { checkContent, ContentError, crateTableProblems, FEATURES, FLOOR_TYPES, TERRAIN } from '../content';
 import type { FloorTypeDef } from '../content';
 import { BASELINE_RULES } from './ai/engine';
 import { CONDITION_TARGET } from './ai/requirements';
@@ -27,6 +27,7 @@ import { DEFS, TERRAIN_IDS } from './state';
 export function checkGame(): string[] {
   const problems = checkContent([GEN_STEPS, STAT_REFS, CONDITION_TARGET, RULE_ACTIONS, TRIGGERS]);
   problems.push(...checkFloorParams(FLOOR_TYPES.all()));
+  problems.push(...crateTableProblems());
 
   TERRAIN_IDS.forEach((id, code) => {
     if (!TERRAIN.has(id)) problems.push(`sim TERRAIN_IDS[${code}]: unknown terrain "${id}"`);

@@ -2227,6 +2227,14 @@ As built (ETH-064, `src/meta/prepare/`):
   always fills `partySize(profile)` = `capacity(profile, 'partySize', BASE_PARTY_SIZE = 1)`
   (max 4); open picks are random recruits from the available classes and races with a name from
   `RECRUIT_NAMES` (content), no repeats. `dungeon` (`{ dungeonId }`) sets `depth`.
+- **Opt-in upgrades (ETH-187):** an upgrade node with `optIn: true` (only `bundle` and `start`
+  grants) grants nothing until the player ticks it on the Prepare screen. The `optIns` section
+  (`{ enabled: upgradeId[] }`, default `[]`) holds the ticks; `withOptIns(profile, choice)` returns
+  the profile minus owned opt-in nodes that are off, and `buildRunConfig` derives party bundles, run
+  modifiers and start perks from that filtered profile, so a new opt-in node is only `optIn: true`
+  plus its grant. The Prepare panel `opt-ins` lists them (hidden while none is owned). The headless
+  harness counts owned opt-in nodes as on unless `--opt-ins off`; `--upgrades` takes `id*N` for a
+  rank and a trailing `!` to attach a node behind a closed building tier.
 - **Availability:** `isAvailable(profile, id)`: content that some upgrade node unlocks is locked
   until that node is owned; everything else is open from the start (`availableClasses`,
   `availableRaces`, `availableDungeons`).

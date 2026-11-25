@@ -21,6 +21,7 @@ import {
   MONSTER_TEMPLATES,
   MONSTERS,
   baseEnchantmentFor,
+  issuedItemIds,
   enchantmentFits,
   templateFits,
 } from '../src/content';
@@ -106,13 +107,15 @@ export function reachabilityProblems(input: ReachabilityInput = {}): string[] {
 
   // Items: a loot entry on some reachable floor, or named as a contract's recover item.
   const relics = new Set(contracts.flatMap((c) => (c.objective.kind === 'recover' ? [c.objective.item] : [])));
+  // Items a class kit or an upgrade issues at the start of a run (ETH-187) need no loot entry.
+  const issued = issuedItemIds();
   const lootable = new Set<string>();
   for (let depth = 1; depth <= maxDepth; depth++) for (const d of lootTable(depth)) lootable.add(d.id);
   for (const item of items) {
-    if (lootable.has(item.id) || relics.has(item.id)) continue;
+    if (lootable.has(item.id) || relics.has(item.id) || issued.has(item.id)) continue;
     problems.push(
       item.loot === undefined
-        ? `item "${item.id}": has no loot entry and no source names it (it is not a contract's recover item).`
+        ? `item "${item.id}": has no loot entry and no source names it (it is not a contract's recover item, nor issued by a class kit or an upgrade).`
         : `item "${item.id}": its loot depth ${item.loot.minDepth ?? 1}..${item.loot.maxDepth ?? 'any'} is outside every dungeon floor (1..${maxDepth}).`,
     );
   }

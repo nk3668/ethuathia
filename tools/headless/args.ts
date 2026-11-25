@@ -27,6 +27,8 @@ export interface SimArgs {
   party: number;
   preset: HeadlessPreset;
   upgrades: string[];
+  /** Whether owned opt-in nodes (ETH-187) count as switched on (`--opt-ins on|off`). Default on: a sweep that names one wants it. */
+  optIns: boolean;
   rules: HeadlessRulesPreset;
   /** Class of every adventurer (`--class`, ETH-160); null is the Vanguard. */
   classId: string | null;
@@ -48,7 +50,7 @@ export interface SimArgs {
 }
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
-                      [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious]
+                      [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious] [--opt-ins on|off]
                       [--class ID | --race ID | --recruits] [--contract ID]
                       [--party-sweep] [--jobs N] [--json FILE] [--compare REF | --baseline FILE]
 
@@ -63,7 +65,9 @@ above the bottom or trigger stuck detection are listed at the end.
   --party P               adventurers in the party, 1 to ${MAX_PARTY} (default from preset/upgrades, 1 when fresh)
   --preset NAME           profile preset: fresh (default) or progressed
   --upgrades ID1,ID2,...  comma-separated upgrade node ids to apply (e.g. upgrade.hardy_recruits,upgrade.contract_bounty)
+                          id*N takes rank N of a ranked node; a trailing ! attaches a node behind a closed tier
   --rules NAME            behavior rule preset: baseline (default) or cautious
+  --opt-ins on|off        whether owned opt-in upgrades (e.g. the Mystery Crate) are switched on (default on)
   --class ID              class of every adventurer, e.g. outrider or class.outrider (default vanguard)
   --race ID               race of every adventurer, e.g. fenling or race.fenling (default human)
   --contract ID           the contract every run takes, e.g. cold_anvil or contract.cold_anvil (default recover_relic)
@@ -132,6 +136,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       preset: { type: 'string' },
       upgrades: { type: 'string' },
       rules: { type: 'string' },
+      'opt-ins': { type: 'string' },
       class: { type: 'string' },
       race: { type: 'string' },
       contract: { type: 'string' },
@@ -163,6 +168,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     party: int('--party', values.party, partySize(profile), 1, MAX_PARTY),
     preset,
     upgrades,
+    optIns: parseOnOff('--opt-ins', values['opt-ins']),
     rules,
     classId: parseContentId('--class', 'class', values.class),
     raceId: parseContentId('--race', 'race', values.race),
@@ -175,6 +181,13 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     baseline: values.baseline ?? null,
     help: values.help ?? false,
   };
+}
+
+/** Reads an `on`/`off` option, `on` when absent. */
+function parseOnOff(flag: string, raw: string | undefined): boolean {
+  if (raw === undefined || raw === 'on') return true;
+  if (raw === 'off') return false;
+  throw new Error(`${flag} must be on or off, got "${raw}"`);
 }
 
 /** Reads a whole-number option, or `fallback` when absent. Throws a readable `Error` when out of range. */

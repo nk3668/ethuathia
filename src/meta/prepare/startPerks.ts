@@ -3,30 +3,36 @@
  * the owned upgrades and written into the `RunConfig` fields the sim reads in `createRun` and
  * when the party leaves. `buildRunConfig` merges the result; a profile with none adds nothing.
  */
-import { START_ENCHANT_PIECES, START_KNOWN_CATEGORIES } from '../../content';
+import { ITEM_FIELD_RATION, START_ENCHANT_PIECES, START_KNOWN_CATEGORIES } from '../../content';
 import type { StartEnchantPiece, StartKnownCategory } from '../../content';
 import type { RunConfig, StartStock } from '../../sim';
 import type { Profile } from '../profile';
 import { capacity, profileGrants } from '../upgrades';
 
 /** The run config fields the owned upgrades' start perks and trade bonus set, with unset ones left out. */
-export function upgradeStartConfig(profile: Profile): Pick<RunConfig, 'startKnown' | 'kitEnchant' | 'startStock' | 'tradeBonus'> {
+export function upgradeStartConfig(profile: Profile): Pick<RunConfig, 'startKnown' | 'kitEnchant' | 'startStock' | 'startCrate' | 'tradeBonus'> {
   const known = new Set<StartKnownCategory>();
   const enchant = new Set<StartEnchantPiece>();
   const stock: StartStock[] = [];
+  let crate = false;
   for (const { grant } of profileGrants(profile)) {
     if (grant.kind !== 'start') continue;
     const perk = grant.start;
-    if (perk.perk === 'know') known.add(perk.category);
+    if (perk.perk === 'crate') crate = true;
+    else if (perk.perk === 'know') known.add(perk.category);
     else if (perk.perk === 'enchant') enchant.add(perk.piece);
     else stock.push({ item: perk.item, qty: perk.qty, ...(perk.each === true ? { each: true as const } : {}) });
   }
+  // Field Rations (ETH-187): a ranked node, so a capacity counts them and each adventurer is issued that many.
+  const rations = capacity(profile, 'fieldRations', 0);
+  if (rations > 0) stock.push({ item: ITEM_FIELD_RATION.id, qty: rations, each: true });
   const bonus = capacity(profile, 'tradeBonus', 0);
   return {
     // Fixed orders keep a config the same however the nodes were bought.
     ...(known.size > 0 ? { startKnown: START_KNOWN_CATEGORIES.filter((c) => known.has(c)) } : {}),
     ...(enchant.size > 0 ? { kitEnchant: START_ENCHANT_PIECES.filter((p) => enchant.has(p)) } : {}),
     ...(stock.length > 0 ? { startStock: mergeStock(stock) } : {}),
+    ...(crate ? { startCrate: true as const } : {}),
     ...(bonus > 0 ? { tradeBonus: bonus } : {}),
   };
 }

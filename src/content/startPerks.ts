@@ -34,12 +34,15 @@ export type StartPerk =
   /** Each adventurer's `piece` of their class kit is worn at +1, using that gear type's own enchantment. */
   | { readonly perk: 'enchant'; readonly piece: StartEnchantPiece }
   /** The party starts with `qty` of `item`, carried by its first member (or by each adventurer with `each`). Known on sight, never sold. */
-  | { readonly perk: 'stock'; readonly item: string; readonly qty: number; readonly each?: true };
+  | { readonly perk: 'stock'; readonly item: string; readonly qty: number; readonly each?: true }
+  /** The first party member carries one unidentified item rolled from `CRATE_TABLE` (the Mystery Crate, ETH-187), kit that is never sold. */
+  | { readonly perk: 'crate' };
 
 export const startPerkSchema = z.discriminatedUnion('perk', [
   z.strictObject({ perk: z.literal('know'), category: z.enum(START_KNOWN_CATEGORIES) }),
   z.strictObject({ perk: z.literal('enchant'), piece: z.enum(START_ENCHANT_PIECES) }),
   z.strictObject({ perk: z.literal('stock'), item: idSchema('item'), qty: positiveInt, each: z.literal(true).optional() }),
+  z.strictObject({ perk: z.literal('crate') }),
 ]);
 
 /** The content ids a start perk names, for reference checks. */

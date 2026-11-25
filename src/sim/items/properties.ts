@@ -239,8 +239,8 @@ export function propertyProblems(item: ItemInstance): string[] {
     if (!result.success) problems.push(`"${item.def}" has a bad ${field}: ${result.error.issues[0]?.message ?? 'invalid'}`);
   }
   problems.push(...enchantmentProblems(item));
-  if (item.kit !== undefined && itemDef(item).gear === undefined && itemDef(item).category !== 'potion' && itemDef(item).category !== 'scroll') {
-    problems.push(`"${item.def}" is marked as kit but is not gear, a potion or a scroll`);
+  if (item.kit !== undefined && itemDef(item).gear === undefined && itemDef(item).category !== 'potion' && itemDef(item).category !== 'scroll' && itemDef(item).category !== 'food') {
+    problems.push(`"${item.def}" is marked as kit but is not gear, a potion, a scroll or food`);
   }
   if (item.mix !== undefined) {
     const total = (item.mix.plain ?? 0) + (item.mix.blessed ?? 0) + (item.mix.cursed ?? 0);

@@ -179,6 +179,7 @@ describe('tools/headless', () => {
       party: 1,
       preset: 'fresh',
       upgrades: [],
+      optIns: true,
       rules: 'baseline',
       classId: null,
       raceId: null,
@@ -198,6 +199,7 @@ describe('tools/headless', () => {
       party: 3,
       preset: 'fresh',
       upgrades: [],
+      optIns: true,
       rules: 'baseline',
       classId: null,
       raceId: null,
@@ -215,6 +217,7 @@ describe('tools/headless', () => {
       party: 3,
       rules: 'cautious',
       upgrades: [],
+      optIns: true,
     });
     expect(parseSimArgs(['--preset', 'progressed', '--party', '2'])).toMatchObject({
       preset: 'progressed',
@@ -224,15 +227,19 @@ describe('tools/headless', () => {
       preset: 'fresh',
       party: 2,
       upgrades: ['upgrade.second_berth', 'upgrade.hardy_recruits'],
+      optIns: true,
     });
     expect(parseSimArgs(['--upgrades', 'upgrade.hardy_recruits,upgrade.contract_bounty'])).toMatchObject({
       preset: 'fresh',
       party: 1,
       upgrades: ['upgrade.hardy_recruits', 'upgrade.contract_bounty'],
+      optIns: true,
     });
     expect(parseSimArgs(['--json', 'out.json', '--compare', 'origin/main'])).toMatchObject({ json: 'out.json', compare: 'origin/main' });
     expect(() => parseSimArgs(['--compare', 'main', '--baseline', 'b.json'])).toThrow('not both');
     expect(parseSimArgs(['--help']).help).toBe(true);
+    expect(parseSimArgs(['--opt-ins', 'off']).optIns).toBe(false);
+    expect(() => parseSimArgs(['--opt-ins', 'maybe'])).toThrow('on or off');
     expect(() => parseSimArgs(['--seeds', '0'])).toThrow('--seeds must be a whole number from 1 up, got "0"');
     expect(() => parseSimArgs(['--party', '5'])).toThrow('--party must be a whole number from 1 to 4, got "5"');
     expect(() => parseSimArgs(['--seeds', '2.5'])).toThrow('--seeds');
@@ -275,6 +282,12 @@ describe('tools/headless', () => {
     });
 
     expect(() => buildHeadlessProfile('progressed', ['upgrade.rule_clerk'])).toThrow(/Tier 4 and up open/);
+    // A trailing ! attaches a node behind a closed tier, and id*N takes a rank (ETH-187).
+    const forced = buildHeadlessProfile('progressed', ['upgrade.rule_clerk!', 'upgrade.contract_bounty*3']);
+    expect(forced.upgrades.owned).toContain('upgrade.rule_clerk');
+    expect(forced.upgrades.ranks['upgrade.contract_bounty']).toBe(3);
+    expect(() => buildHeadlessProfile('fresh', ['upgrade.hardy_recruits*9'])).toThrow(/at most 5 ranks/);
+    expect(() => buildHeadlessProfile('fresh', ['upgrade.hardy_recruits*0'])).toThrow(/rank must be/);
   });
 
   it('validates and runs baseline and cautious behavior rules deterministically', () => {
