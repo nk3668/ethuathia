@@ -54,7 +54,7 @@ Nate (2026-11-24): leave room in the town trees for future classes and races; no
 - [ ] [ETH-035 Class equipment proficiencies and race aptitudes](ETH-035-proficiencies-aptitudes.md)
 - [x] [ETH-036 Milestone-gated class and race unlocks bought at the Guild Hall](ETH-036-milestone-unlocks-guild-hall.md)
 - [ ] [ETH-037 A signature ability per class](ETH-037-class-signature-abilities.md)
-- [ ] [ETH-038 Class-aware AI roles](ETH-038-class-aware-ai-roles.md)
+- [ ] [ETH-038 Class fit for tactics - class-only options and bonuses for a good fit](ETH-038-class-aware-ai-roles.md)
 - [x] [ETH-039 Survey ideas from DCSS and NetHack with clean-room notes](ETH-039-survey-roguelike-ideas.md)
 - [x] [ETH-081 Give each attribute a second job](ETH-081-attribute-secondary-jobs.md)
 - [x] [ETH-087 Class Mastery XP: every run banks XP toward a guild-wide level per class](ETH-087-class-mastery-levels.md)

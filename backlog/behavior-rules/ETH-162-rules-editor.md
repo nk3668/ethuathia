@@ -1,33 +1,55 @@
 ---
 id: ETH-162
-title: Rules editor and the rule data model
+title: Tactics engine - tactic options as content that build each adventurer's rules
 type: feature
-status: idea
+status: ready
 priority: P1
 milestone: M3
 epic: behavior-rules
 size: M
-depends_on: [ETH-009, ETH-121]
+depends_on: [ETH-009, ETH-121, ETH-192]
 created: 2026-11-24
-updated: 2026-11-24
+updated: 2026-11-25
 ---
 
 ## Summary
-Player-ordered Condition → Action rules per adventurer, evaluated before the baseline AI, with an editor in the Rules tab.
+The sim side of tactics (`CLAUDE.md` §5.2). A content kind `tactic` defines named options on six axes: stance, formation, role, range, focus and habit. The party picks a stance and a formation, and each adventurer picks a role, range, focus and habits. The sim builds each adventurer's player rule list from those picks, ahead of the baseline. The player can swap picks at any time, mid-run included.
 
 ## Why
-Behavior rules are the main progression system (`CLAUDE.md` §5.2), and no item built them yet. See `docs/VISUAL-DESIGN.md` §5.1.
+Nate rejected a free-form rules editor (2026-11-25). The player chooses tactics we design and swaps them on the fly. This item is the engine every other M3 tactics item builds on.
 
 ## Acceptance criteria
-- [ ] The sim evaluates rules top to bottom; the first rule that is true and valid fires, otherwise the baseline runs (`CLAUDE.md` §5.1)
-- [ ] The editor offers condition and action dropdowns, an enable toggle and drag to reorder
-- [ ] Each row shows a last-fired indicator and a hit count
-- [ ] Rules can be edited mid-run; the AI log line names the rule that fired
-- [ ] Rule sets are saved with the profile
-- [ ] The number of rule slots per adventurer is `capacity(profile, 'ruleSlots', base)`, so the Guild Hall's **Rule Clerk** (placed in M2 by ETH-132 as a placeholder) and the Library's rule-slot ranks (ETH-163) both count; the Rule Clerk's tooltip drops its "works once the rules editor lands" note
+- [ ] Content kind `tactic` (`src/content/tactics.ts`), validated at load. Each def has:
+  - an axis
+  - name, description and hint
+  - rule rows, for stance, role and habit options
+  - parameters, for range, focus and formation options
+  - optional `exclusiveWith`, for habit pairs
+  - optional `requires` and `favors` fields, validated but unused until M4
+- [ ] Building a rule list from the picks is pure and documented in `docs/ARCHITECTURE.md` §4:
+  - rule order is stance overrides, then habits, then role, then the baseline
+  - range, focus and formation reach rule actions through `AiCtx`
+  - an option whose ability tag the adventurer lacks falls back to its general intent and says so in the trace
+- [ ] Each class has a **default build** in its content. Random recruits use it; roster adventurers store their own picks on their record (save migration). Off-class picks are allowed.
+- [ ] A `setTactics` command (party or one adventurer) applies on the next decision. It is covered by the determinism test's command script.
+- [ ] The `ruleFired` trace and the AI log line name the option ("Healer: mending Bram").
+- [ ] **Neutral picks reproduce today's behavior:** T0 identity holds (0 hash diffs) with tactics off. Hand-map sim tests on a fixed seed cover rule-list building, swapping mid-run and the tag fallback. `npm run check` passes.
 
 ## Notes
-Needs decomposing before work starts: likely sim model and evaluation, vocabulary, editor UI, and persistence.
+- Shipping the actual options is split out:
+  - stances: ETH-071
+  - formation: ETH-151
+  - roles, ranges and focuses: ETH-193
+  - habits and habit slots: ETH-194
+  - the Controller role: ETH-195
+  - UI: ETH-196
+  - unlocks: ETH-163
+  - loadouts: ETH-164
+
+  This item ships one or two options per axis, as test fixtures or the starter defaults.
+- ARCHITECTURE §4 already plans `paramSchema`; parameters for tactics are fixed per option, not set by the player.
+- No automatic switching (Nate, 2026-11-25): only the player changes tactics.
 
 ## Log
 - 2026-11-24: Created in the backlog reorganization by theme (gap: no item built the editor).
+- 2026-11-25: Rewritten for the tactics design (Nate, 2026-11-25): named tactics the player picks and swaps, no rules editor and no auto-switching. Now `ready`.

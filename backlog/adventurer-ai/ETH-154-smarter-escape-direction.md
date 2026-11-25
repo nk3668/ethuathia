@@ -2,14 +2,14 @@
 id: ETH-154
 title: Smarter escape direction: flee toward allies, stairs or home instead of just away
 type: feature
-status: idea
+status: ready
 priority: P2
 milestone: M3
 epic: adventurer-ai
 size: M
 depends_on: [ETH-148]
 created: 2026-11-24
-updated: 2026-11-24
+updated: 2026-11-25
 ---
 
 ## Summary
@@ -44,9 +44,9 @@ help, wastes it.
   - an adventurer flees toward an ally when two escapes are otherwise equal;
   - a boxed-in, wounded adventurer retreats home;
   - a healthy one in the same spot doesn't.
-- [ ] Sim gate per `docs/DIFFICULTY_PHILOSOPHY.md` §9 (a balance-affecting AI change): a T2 paired
-      compare for party 1 and party 4, and the party-size ordering still holds. `npm run check`
-      passes.
+- [ ] Sim gate per `docs/DIFFICULTY_PHILOSOPHY.md` §9 as tightened 2026-11-25 (work items run T0
+      and a 20-seed smoke run only; T1–T3 wait for the capstone): a 20-seed smoke run for party 1
+      and party 4. `npm run check` passes.
 
 ## Notes
 - Reuse `isThreat`, `freshThreats` and `isWounded` from `src/sim/combat/threat.ts` (ETH-148).
@@ -55,3 +55,4 @@ help, wastes it.
 ## Log
 - 2026-11-24: Created (Nate approved filing).
 - 2026-11-24: Moved from M2 to M3 in the backlog reorganization by theme.
+- 2026-11-25: Now `ready` (M3 kickoff). The sim gate now matches the 2026-11-25 policy (no T2 in work items).

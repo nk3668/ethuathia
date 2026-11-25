@@ -21,7 +21,7 @@ Roguathia's gaps, and our answers to them:
 | Roguathia problem | Ethuathia answer |
 |---|---|
 | Upgrades are linear +N chains with no choices | Branching upgrade trees with mutually exclusive picks; every numeric upgrade comes with a tradeoff or a new option |
-| You only watch; the AI wanders for hours and hoards corpses | **Behavior rules** (if-then rules the player orders) are the main progression system, on top of a competent built-in AI |
+| You only watch; the AI wanders for hours and hoards corpses | **Tactics** (named behaviors the player picks and swaps for the party and each adventurer) are the main progression system, on top of a competent built-in AI |
 | Harder dungeons are a currency sink with no matching reward | **Omens**: opt-in difficulty modifiers that raise the reward multiplier |
 | Dead adventurers vanish | **Lineage**: gravestones, heirlooms, retired veterans and descendants |
 | No information about classes, races or monsters | A Codex, plus tooltips on everything and a trace showing why the AI did what it did |
@@ -40,7 +40,7 @@ Roguathia's gaps, and our answers to them:
 
 ```
  TOWN (hub) ──► PREPARE ──► DESCEND (auto-run) ──► RUN ENDS ──► REWARDS ──► TOWN
-   ▲  spend currencies   party, rules,    adventurers act     death / victory /   currencies,
+   ▲  spend currencies   party, tactics,  adventurers act     death / victory /   currencies,
    │  on upgrade trees   patron, Omens    on their own        retreat             heirlooms, XP
    └──────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -48,12 +48,12 @@ Roguathia's gaps, and our answers to them:
 - **Waiting for the player is the default.** When a run ends, the game shows the run summary and waits. The player can spend currencies in town, then press **Descend** on the Prepare screen to start the next run.
 - **Auto-restart** is a player toggle (off by default) in Options and on the run summary. When it is on, the next run starts after a short timer with the previous run's Prepare settings. Turning it off again takes effect at the end of the current run.
 - Town upgrades can be bought at any time; most take effect at the **next run**.
-- **Behavior rules can be edited during a run.** This is the main way to interact mid-run.
+- **Tactics can be swapped during a run.** This is the main way to interact mid-run.
 
 ### Starting a run (Prepare screen)
 1. **Party:** pick 1–4 adventurers from the roster (party size is an upgrade). Empty slots are filled with random recruits from the unlocked classes and races.
 2. **Loadout:** assign traits and buffs bought in town, starting gear from the Smithy, and each adventurer's talent build (§4).
-3. **Rules:** choose a behavior rule set per adventurer, or a party-wide one.
+3. **Tactics:** the party's stance and formation, and each adventurer's role, range, focus and habits (§5.2), or a saved loadout.
 4. **Patron deity:** optional. It grants a blessing and imposes a taboo (§6).
 5. **Omens:** toggle difficulty modifiers. The total Omen level is shown as a reward multiplier.
 6. **Dungeon:** pick a dungeon variant once more than one is unlocked (depth, floor size, theme).
@@ -62,7 +62,7 @@ Roguathia's gaps, and our answers to them:
 
 ### Ending a run
 - **Victory:** complete **every** selected contract (§6), then walk back up and out of the dungeon. Each contract pays its own reward.
-- **Retreat:** a rule or a manual command sends the party back up. The party keeps everything earned this run, and every survivor returns to the roster.
+- **Retreat:** the *Fall back* stance or a manual command sends the party back up. The party keeps everything earned this run, and every survivor returns to the roster.
 - **Wipe:** the whole party dies. Each death leaves a gravestone (§7), and **25%** of the currency earned this run is lost (§3).
 - **Run summary screen:** cause of death, conducts kept, currency breakdown with the Omen multiplier, heirlooms dropped, and an epitaph. Its buttons are **Continue** (to town), **Start next run** and **Rematch**, which replays the same seed with the same Prepare settings. Auto-restart always rolls a new seed.
 
@@ -74,7 +74,7 @@ Each currency rewards a different playstyle. No currency only buys "make it hard
 
 | Currency | Earned by | Spent on |
 |---|---|---|
-| **Renown** | Depth reached (each floor deeper is worth more) and turns survived | Guild Hall (classes, races, party size, rule slots), Library |
+| **Renown** | Depth reached (each floor deeper is worth more) and turns survived | Guild Hall (classes, races, party size, habit slots), Library |
 | **Trophies** | Kills, weighted by monster difficulty; items and gold carried out of the dungeon | Smithy (starting gear, enchantments), Bestiary unlocks |
 | **Favor** (per deity) | Victories, kept conducts, honoring your patron | Temple / devotion trees; the prestige layer |
 
@@ -103,7 +103,7 @@ The town is a set of buildings. Each building has its own upgrade tree, and each
 | Building | Tree contents |
 |---|---|
 | **Guild Hall** | Class and race unlocks (first random, then selectable, as in Roguathia), party size, contract slots and rewards. The roster is a flat 50 adventurers, not an upgrade. |
-| **Library** | New rule **conditions** and **actions**, and more rule slots per adventurer |
+| **Library** | New **tactics** (stances, formations, roles, ranges, focuses and habits) and more habit slots per adventurer |
 | **Smithy** | Starting gear kits, starting enchantment, item identification knowledge |
 | **Temple** | Deities, blessings, altar frequency in the dungeon |
 | **Cartographer** | Floor types, route forks, starting map knowledge, dungeon depth and size |
@@ -113,12 +113,12 @@ The town is a set of buildings. Each building has its own upgrade tree, and each
 ### Upgrade tree rules
 - There are two kinds of tree:
   - **Foundations:** Guild Hall, Smithy, Cartographer, Temple, Ossuary and Tavern.
-  - **Tactics:** the Library, doctrine, and the class talent trees.
+  - **Tactics:** the Library and the class talent trees. (The tactics themselves are not a tree: once unlocked, they are swapped freely, even mid-run.)
   - Both can be redone between runs (never during one). There is **no respec fee for now**; Foundations may get one later. Talent trees must always be free to redo.
 - Trees are deep (roughly 15–25 nodes per building), with cheap early nodes and costs that grow by tier, so every run can buy something. Some numeric nodes have **ranks** (e.g. Hardy Recruits I–V); capability nodes have one rank.
 - Trees are bounded: they can be finished. Adventurer levels and Mastery levels are endless.
 - Nodes branch. At least some tiers are **pick one of two**.
-- A numeric upgrade (e.g. +10% HP) shares its tier with an option that unlocks a capability (e.g. a new rule action).
+- A numeric upgrade (e.g. +10% HP) shares its tier with an option that unlocks a capability (e.g. a new tactic).
 - Show costs, effects and prerequisites in the tooltip. Locked nodes show what they need.
 
 ### Class Mastery and talents
@@ -127,7 +127,7 @@ Adventurer levels reset to 1 every run. The lasting power of a class lives in it
 - **Pacing:** slow. A really solid run that completes all its objectives earns about 5 talent points; a short loss earns little. A class's trees hold about 40 points (whether per tree or across all three is set in M4). Points past the end of the trees go into small repeatable bonuses.
 - **Talent points:** each Mastery level gives a point. **Every adventurer of the class gets the full budget** and spends it on their own build, so two adventurers of one class can play differently.
 - **Three trees per class**, named to fit the class (e.g. a Vanguard damage tree and a tanking tree). Nodes are class skills and bonuses: a higher starting level, bonus damage, damage mitigation, a new starting weapon, and so on. Some nodes take several points (ranks). Mixing trees is allowed; deeper nodes need points in that tree, and each tree ends in a very valuable **capstone**.
-- **Builds:** each adventurer keeps their build between runs. Random recruits get the class's default build; players can save named builds and apply them on the Prepare screen. Rebuilding is free between runs.
+- **Builds:** each adventurer keeps their build between runs. Random recruits get the class's default build; players can save named builds and apply them on the Prepare screen, alone or as part of a saved tactics loadout (§5.2). Rebuilding is free between runs.
 
 ---
 
@@ -137,19 +137,34 @@ Adventurer levels reset to 1 every run. The lasting power of a class lives in it
 - The game runs in turns, with an energy/speed system: each actor gains energy every tick and acts when it reaches the threshold.
 - Each turn, an adventurer:
   1. Updates their perception (field of view, known map, remembered items and monsters).
-  2. Checks their **behavior rules** from top to bottom. The first rule whose condition is true *and* whose action is valid right now is executed.
-  3. If no rule fires, falls back to the **baseline behavior** (§5.3).
-- Record which rule fired and why (the "trace") so the UI can show it.
+  2. Follows their **tactics** (§5.2). Internally each tactic is an ordered list of condition → action rules; the first rule whose condition is true *and* whose action is valid right now is executed.
+  3. If no tactic rule fires, falls back to the **baseline behavior** (§5.3).
+- Record which tactic and rule fired and why (the "trace") so the UI can show it.
 
-### 5.2 Behavior rules (the main progression system)
-- A rule is **Condition → Action**, optionally scoped to a target (self, ally, enemy, item, tile).
-- Example conditions: `HP < X%`, `enemy adjacent`, `enemy stronger than me`, `ally HP < X%`, `inventory full`, `floor explored ≥ X%`, `has unidentified potion`, `standing on altar`, `poisoned`, `outnumbered`, `contract complete`, `bounty target seen`, `carrying relic`.
-- Example actions: `quaff best healing`, `retreat toward stairs up`, `attack weakest / strongest / nearest`, `use ranged`, `cast <spell>`, `drop lowest-value item`, `equip best`, `pray`, `head to stairs down`, `regroup with party`, `retreat run`.
-- The player starts with a few slots and a small vocabulary; the Library unlocks more of both.
-- Ship **presets** ("Cautious", "Greedy", "Speedrunner") so a new player gets reasonable behavior before learning the editor.
-- Party-wide **doctrine** settings: formation (stick together / spread out), loot priority, retreat threshold.
+### 5.2 Tactics (the main progression system)
+The player never writes if-then logic. They pick from **named tactics** that we design, for the party and for each adventurer, and swap them whenever they like, mid-run included (the change applies on the adventurer's next decision). Tactics change **only when the player selects them**: there are no automatic switches.
 
-### 5.3 Baseline behavior (must be competent with zero rules)
+**Party (pick one of each):**
+- **Stance:** how the party approaches a floor. *Steady* (the default), *Cautious* (retreat early, stick close), *Reckless* (push deeper, fight everything), *Delve* (head down once the stairs are known), *Plunder* (clear floors and loot everything), *Fall back* (head home now). Delve vs Plunder replaces the old clear-floors-or-stairs doctrine.
+- **Formation:** *Stick together*, *Loose*, *Spread out* (how far the party may drift apart).
+
+**Each adventurer (pick one per axis):**
+- **Role:** *Tank* (holds the front, draws and protects), *Healer* (heals and buffs first), *Damage* (kills things), *Controller* (disables the biggest threat: stun, slow, blind), *Scout* (ranges ahead, avoids fights).
+- **Range:** *Front line*, *Close support*, *Back line*, *Keep away* (preferred engagement distance).
+- **Focus:** *Nearest*, *Weakest*, *Strongest*, *Casters*, *Melee*, *Ranged*, *Protect allies* (whoever is hitting an ally).
+- **Habits** (several at once, limited by **habit slots**: 1 to start, up to about 3 through upgrades, to be tuned by experiment): e.g. *Avoids combat*, *Treasure hunter* (detours for visible or remembered items), *Finisher*, *Bodyguard* (stays near the healer), *Softens targets* (debuff before attacking), *Sparing with potions* / *Quick to quaff*, *Curious* (tests unknown items). Habits that contradict each other are an exclusive pair; only one of the pair can be picked.
+
+**Rules for the design:**
+- **Grouped by axis**, so any combination is valid and the AI never resolves a conflict.
+- **Options name ability tags, never a specific class, spell or item.** Every ability, consumable and wand declares tags (`heal`, `buff`, `damage`, `debuff`, `control`, `ranged`, `area`, `escape`, …), and an option uses "the best `heal` I have". A new class only declares its abilities' tags to work with every option. With nothing of the tag, the option falls back to its general intent and says so ("Controller: no control abilities, fighting normally").
+- **Options are content** (`src/content/`), with optional `requires` and `favors` fields: from M4 some options can be class-only or give a bonus to a good fit, and talent nodes can unlock options. Until then, any adventurer can take any option.
+- **Class default builds:** each class has a default pick on every axis (e.g. Vanguard: Tank · Front line · Protect allies). Random recruits use it, so a party plays sensibly with no setup.
+- **Unlocks:** a small starter set is free; the Library unlocks the rest and more habit slots (§4).
+- **Saved loadouts:** a named loadout holds the party's stance and formation and each adventurer's picks, and from M4 their talent build too (§4). Loadouts are applied on the Prepare screen.
+- **Readable:** the party card shows "Mira · Healer · Back line: mending Bram (30% HP)", and every AI log line names the option that caused it.
+- Options that need missing mechanics arrive with them: *Ambusher* with sleeping monsters and stealth (M5), *Secret seeker* with secret doors and chests (M8).
+
+### 5.3 Baseline behavior (must be competent with no tactics chosen)
 Roguathia's wandering was its biggest complaint, so the baseline must not wander:
 - **Exploration:** frontier-based. Path to the nearest reachable unexplored tile using Dijkstra maps, never revisit explored dead ends, and open doors.
 - **Leave a floor** once exploration is complete or exploration value runs out, with a turn cap per floor as a safety net.
@@ -177,9 +192,9 @@ unrelated to the offline-only constraint.
 ### Quests
 - **Contracts** are main quests, picked on the Prepare screen. Types: *Recover the relic* (bottom floor), *Slay a named foe* (a unique on a set floor), *Gather* (N magical items spread over the floors), *Delve* (reach depth N), *Building quests* that open a town building or its next tier (§4), and later *Rescue* (a lost adventurer or a fallen one's heirloom, §7). Contracts last one run; a failed contract can be taken again on a later run.
 - The player starts with one contract slot; the Guild Hall adds more. **Victory needs every selected contract complete, and the party then has to walk back out.** Each contract pays its own reward, so taking more is a risk the player chooses, like an Omen.
-- **The return trip:** floors already explored are crossed quickly along known paths, but some monsters respawn, so retreat rules still matter.
+- **The return trip:** floors already explored are crossed quickly along known paths, but some monsters respawn, so the stance and retreat behavior still matter.
 - **Bounties** are side quests ("kill 3 trolls", "drink from a fountain"). They come from a bounty board on the Prepare screen and from encounters in the dungeon. A bounty never ends the run and never sends the party home. Its reward joins the run's at-risk total, so a wipe loses 25% of it like any other earnings (§3).
-- The baseline AI weighs contract targets heavily and bounty targets lightly; rules can change that (§5.2).
+- The baseline AI weighs contract targets heavily and bounty targets lightly; tactics can change that (§5.2).
 
 ### Elites and mini-bosses
 Elite monsters can appear on any floor, with a name prefix and 1–2 traits (e.g. *Venomous*, *Swift*). A mini-boss appears every **3 floors (default)**, often guarding the stairs down. Both drop magic items from a better loot table (more affixes, higher rolls, more enchantment, a chance of an artifact).
@@ -208,7 +223,7 @@ The patron is chosen before the run. Each deity has:
 The dungeon also contains altars: pray at them, sacrifice there, or convert them to your patron.
 
 ### Floor variety and routing
-Floor types include caves, mines, flooded floors, fortresses, swamps, lava fields, towns and a single big room. At some depths the route **forks**, and the player's rules or a pre-set route preference decide which way to go.
+Floor types include caves, mines, flooded floors, fortresses, swamps, lava fields, towns and a single big room. At some depths the route **forks**, and the party's stance or a pre-set route preference decide which way to go.
 
 ---
 
@@ -233,22 +248,22 @@ A desktop app (§9) with a dark theme. The dungeon uses colored monospace ASCII 
 │ Renown 12.4k  Trophies 3.1k  Favor 40 │ Floor 7/20 · Turn 4,812 │ ⏸ 1× 2× 4× 8× │
 ├───────────────┬──────────────────────────────────────┬───────────────┤
 │ PARTY         │                                      │ TABS          │
-│ ┌───────────┐ │          DUNGEON MAP                 │ Rules         │
+│ ┌───────────┐ │          DUNGEON MAP                 │ Tactics       │
 │ │@ Mira  Val│ │     (glyph grid, fog of war,         │ Town          │
 │ │HP ████░ MP│ │      follow selected / whole floor)  │ Codex         │
 │ │→ exploring│ │                                      │ Graveyard     │
-│ │  (rule #3)│ │                                      │ Stats         │
+│ │  (Scout)  │ │                                      │ Stats         │
 │ └───────────┘ │                                      │ Options       │
 │  ...          │                                      │               │
 ├───────────────┴──────────────────────────────────────┴───────────────┤
-│ LOG [All][Combat][Loot][Discovery][AI]   Mira quaffs a potion (rule #1: HP<30%) │
+│ LOG [All][Combat][Loot][Discovery][AI]   Mira quaffs a potion (Quick to quaff) │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Party cards** show HP/MP bars, status effects, the current **intent** in plain language, and which rule produced it.
+- **Party cards** show HP/MP bars, status effects, the adventurer's role, the current **intent** in plain language, and which tactic produced it.
 - **Map:** hover a tile to inspect it. Click an adventurer to select and follow them; double-click to possess.
 - **Log:** filterable, with color-coded entries. AI log entries explain each decision.
-- **Rules editor:** an ordered list of rows (condition dropdown → action dropdown, enable toggle, drag to reorder). A "last fired" indicator and a hit count appear next to each row. Presets can be saved and loaded.
+- **Tactics panel:** the party's stance and formation, then one row per adventurer with a picker per axis (role, range, focus) and their habit slots. Locked options show a padlock and the Library node that unlocks them. Every option has a tooltip with what it does and a hit count for this run. Loadouts can be saved and applied.
 - **Town:** one panel per building, with its upgrade tree drawn as a node graph.
 - **Codex:** every class, race, monster, item and Omen, filled in as it is discovered.
 - **Run summary** modal and **While you were away** modal.
@@ -260,7 +275,7 @@ A desktop app (§9) with a dark theme. The dungeon uses colored monospace ASCII 
 
 ## 9. Tech and architecture
 
-- **Language:** TypeScript (strict). It was chosen because the game is mostly UI (rules editor, upgrade trees, tooltips, log, Codex), which web tech handles best, and the simulation is lightweight turn-based logic that doesn't need a native language.
+- **Language:** TypeScript (strict). It was chosen because the game is mostly UI (tactics panel, upgrade trees, tooltips, log, Codex), which web tech handles best, and the simulation is lightweight turn-based logic that doesn't need a native language.
 - **Stack:** Vite, Vitest and **React** (with Zustand stores and CSS Modules). The map renders to `<canvas>`.
 - **Design docs:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) is the technical design (layers, shared building blocks, sim API, AI engine). [`docs/VISUAL-DESIGN.md`](docs/VISUAL-DESIGN.md) is the look: tokens, fonts, map glyphs and screen mock-ups. [`docs/DIFFICULTY_PHILOSOPHY.md`](docs/DIFFICULTY_PHILOSOPHY.md) is the difficulty, balancing and extensible danger-scaling guide. Read the relevant one before starting an item, and update it in the same change when a decision in it changes.
 - **Distribution:** packaged as a desktop app with **Tauri** (default; Electron is the fallback if Tauri causes trouble), so it installs and runs with no browser or network. During development, run it with `npm run dev` in a local browser tab.
@@ -314,8 +329,8 @@ From M2 on, each milestone is one theme, so a milestone delivers one capability 
 5. **M2 – Meta loop:** a run's earnings buy choices in town that change the next run. deeper Guild Hall and Smithy trees with ranked nodes, Foundations vs. Tactics, a starter set of classes and races to unlock, building and building-tier quests, gold and carried items to Trophies, persistent adventurer records, Class Mastery XP tracking, desktop packaging with file saves; economy pacing capstone. Its remaining work runs in two stages before the capstone:
    - **M2.1 – Town trees:** the Guild Hall and Smithy trees (Tiers I–II) from the approved town-tree page, including the nodes that need new mechanics.
    - **M2.2 – Minimal Omens:** Omen ranks, the one reward multiplier and the Prepare toggle, plus the first four Omens that the Guild Hall and Smithy unlock. The rest of the Omens and conducts stay in M6.
-6. **M3 – Behavior rules and AI:** the rules editor, Library, presets, doctrines (clear vs. stairs, formation), smarter baseline escapes; rules balance capstone.
-7. **M4 – Classes and roles:** proficiencies and aptitudes, signature abilities, class-aware AI roles, the talent tree engine (three trees per class, per-adventurer builds), a resurrection class; composition balance capstone.
+6. **M3 – Tactics and AI:** ability tags, the tactics engine and panel (party stance and formation; each adventurer's role, range, focus and habits), class default builds, the Controller role with the first stun and debuff sources, the Library and its quest, saved loadouts, smarter baseline escapes; tactics balance capstone.
+7. **M4 – Classes and roles:** proficiencies and aptitudes, signature abilities (with ability tags), class fit for tactics (class-only options and bonuses for a good fit), the talent tree engine (three trees per class, per-adventurer builds), a resurrection class; composition balance capstone.
 8. **M5 – Foes and loot:** uniques, monster families, elites and mini-bosses, sleeping monsters, affixes and artifacts, more enchantments, food buffs, gear score, identify polish, party-scaled return surge; danger and loot capstone.
 9. **M6 – Quests and risk:** everything the player opts into on the Prepare screen: more contract types and contract slots, the bounty board and bounty encounters, dungeon encounters, Omens, conducts and the reward multiplier, traps; risk/reward capstone.
 10. **M7 – Lineage:** roster and graveyard, gravestones and heirlooms, retirement and the Tavern, allied creatures and ghosts, descendants, dungeon recruits, the Rescue contract; campaign capstone.
