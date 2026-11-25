@@ -25,17 +25,17 @@ export const OMEN_STALKERS_LEDGER = defineOmen({
   ranks: [
     {
       reward: 0.1,
-      text: 'Variant monsters appear as if a floor deeper, wandering deep monsters are 5 points likelier, and a variant or wanderer carries a find 30% of the time.',
+      text: 'Variant and wandering deep monsters draw as if 1 floor deeper (wanderers 5 points likelier), and either carries a find 30% of the time.',
       flags: [omenRankFlag('omen.stalkers_ledger', 1)],
     },
     {
       reward: 0.2,
-      text: 'Variant monsters appear as if two floors deeper, wandering deep monsters are 10 points likelier, and a variant or wanderer carries a find half the time.',
+      text: 'Variant and wandering deep monsters draw as if 2 floors deeper (wanderers 10 points likelier), and either carries a find half the time.',
       flags: [omenRankFlag('omen.stalkers_ledger', 2)],
     },
     {
       reward: 0.3,
-      text: 'Variant monsters appear as if three floors deeper, wandering deep monsters are 15 points likelier, and a variant or wanderer carries a find 70% of the time.',
+      text: 'Variant and wandering deep monsters draw as if 3 floors deeper (wanderers 15 points likelier), and either carries a find 70% of the time.',
       flags: [omenRankFlag('omen.stalkers_ledger', 3)],
     },
   ],
@@ -79,16 +79,19 @@ export const OMEN_CURSED_HOARDS = defineOmen({
   ranks: [
     {
       reward: 0.1,
+      scope: 'all',
       text: 'Floor gear is cursed 10 points more often (potions and scrolls 4 points) and un-cursed gear is enchanted 15 points more often.',
       flags: [omenRankFlag('omen.cursed_hoards', 1)],
     },
     {
       reward: 0.2,
+      scope: 'all',
       text: 'Floor gear is cursed 20 points more often (potions and scrolls 8 points), un-cursed gear is enchanted 30 points more often, and its enchantments can reach one level higher.',
       flags: [omenRankFlag('omen.cursed_hoards', 2)],
     },
     {
       reward: 0.3,
+      scope: 'all',
       text: 'Floor gear is cursed 30 points more often (potions and scrolls 12 points), un-cursed gear is enchanted 45 points more often, and its enchantments can reach two levels higher.',
       flags: [omenRankFlag('omen.cursed_hoards', 3)],
     },

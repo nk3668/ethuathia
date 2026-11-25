@@ -167,7 +167,7 @@ export const ENCHANT_HONED = defineEnchantment({
   appliesTo: ['weapon'],
   bundle: { modifiers: [{ stat: 'damage', op: 'add', value: 1 }] },
   minLevel: -2,
-  maxLevel: 3,
+  maxLevel: 5,
   weight: 0,
   valuePerLevel: 15,
 });
@@ -182,7 +182,7 @@ export const ENCHANT_REINFORCED = defineEnchantment({
   appliesTo: ['armor'],
   bundle: { modifiers: [{ stat: 'armor', op: 'add', value: 1 }] },
   minLevel: -2,
-  maxLevel: 3,
+  maxLevel: 5,
   weight: 0,
   valuePerLevel: 15,
 });
@@ -197,7 +197,7 @@ export const ENCHANT_ATTUNED = defineEnchantment({
   appliesTo: ['jewelry'],
   bundle: { modifiers: [{ stat: 'hp', op: 'add', value: 2 }] },
   minLevel: -2,
-  maxLevel: 3,
+  maxLevel: 5,
   weight: 0,
   valuePerLevel: 15,
 });
@@ -213,7 +213,7 @@ export const ENCHANT_CHANNELED = defineEnchantment({
   appliesTo: ['staff'],
   bundle: { modifiers: [{ stat: 'mp', op: 'add', value: 2 }] },
   minLevel: -2,
-  maxLevel: 3,
+  maxLevel: 5,
   weight: 0,
   valuePerLevel: 15,
 });

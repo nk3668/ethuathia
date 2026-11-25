@@ -29,9 +29,9 @@ function findable(def: ItemDef): boolean {
   return def.category !== 'gold' && def.category !== 'junk' && def.category !== 'relic';
 }
 
-/** One item rolled from the loot table `extraDepth` floors deeper than `depth`; `gearOnly` limits it to weapons, armor and jewelry. */
-function rollFind(rng: Rng, depth: number, extraDepth: number, gearOnly: boolean): { def: ItemDef; props: Partial<ItemInstance> } | undefined {
-  const table = lootTable(depth + extraDepth).filter((d) => findable(d) && (!gearOnly || d.gear !== undefined));
+/** One item rolled from the loot table `extraDepth` floors deeper than `depth`; `weaponOrArmor` limits it to weapons and armor. */
+function rollFind(rng: Rng, depth: number, extraDepth: number, weaponOrArmor: boolean): { def: ItemDef; props: Partial<ItemInstance> } | undefined {
+  const table = lootTable(depth + extraDepth).filter((d) => findable(d) && (!weaponOrArmor || d.category === 'weapon' || d.category === 'armor'));
   if (table.length === 0) return undefined;
   const def = pickLootDef(table, rng);
   return { def, props: rollItemProperties(def, depth + extraDepth, rng) };

@@ -31,6 +31,7 @@ import {
   moveEntity,
   omenRankOn,
   planFloor,
+  rewardMultiplier,
   stairsOn,
   statValue,
   surgeFloor,
@@ -64,7 +65,7 @@ describe('the four Omens as content', () => {
 
   it('are unlocked by one town node each, which only unlocks: no bonus, no danger of its own', () => {
     const nodes = [
-      [UPGRADE_STALKERS_LEDGER, OMEN_STALKERS_LEDGER, 'building.guild_hall', 1, { renown: 100 }],
+      [UPGRADE_STALKERS_LEDGER, OMEN_STALKERS_LEDGER, 'building.guild_hall', 3, { renown: 100 }],
       [UPGRADE_DEEP_SURGE, OMEN_DEEP_SURGE, 'building.guild_hall', 4, { renown: 500 }],
       [UPGRADE_CURSED_HOARDS, OMEN_CURSED_HOARDS, 'building.smithy', 3, { trophies: 75 }],
       [UPGRADE_ARMED_WARBANDS, OMEN_ARMED_WARBANDS, 'building.smithy', 4, { trophies: 450 }],
@@ -150,7 +151,7 @@ describe("Stalker's Ledger", () => {
 
 describe('Cursed Hoards', () => {
   const lootOn = (omens?: OmenSelection[]) => {
-    const t = { gear: 0, cursed: 0, enchanted: 0, unidentified: 0, consumables: 0, cursedConsumables: 0 };
+    const t = { gear: 0, cursed: 0, enchanted: 0, maxEnchant: 0, highEnchant: 0, unidentified: 0, consumables: 0, cursedConsumables: 0 };
     for (const seed of SEEDS) {
       const state = run(seed, omens);
       for (const id of floorIds(state)) {
@@ -159,7 +160,10 @@ describe('Cursed Hoards', () => {
           if (def.gear !== undefined) {
             t.gear++;
             if (isCursed(item)) t.cursed++;
-            if ((item.enchant ?? 0) > 0) t.enchanted++;
+            const ench = item.enchant ?? 0;
+            if (ench > 0) t.enchanted++;
+            if (ench > t.maxEnchant) t.maxEnchant = ench;
+            if (ench >= 4) t.highEnchant++;
             if (item.identified === false) t.unidentified++;
           } else if (def.category === 'potion' || def.category === 'scroll') {
             t.consumables++;
@@ -167,16 +171,20 @@ describe('Cursed Hoards', () => {
           }
         }
       }
+      expect(checkInvariants(state)).toEqual([]);
     }
     return t;
   };
 
-  it('curses more gear, potions and scrolls, and enchants more of the rest,', () => {
+  it('curses more gear, potions and scrolls, and enchants more of the rest up to +5 at rank 3', () => {
     const off = lootOn();
     const rank3 = lootOn(on(OMEN_CURSED_HOARDS.id));
     expect(rank3.cursed / rank3.gear).toBeGreaterThan((off.cursed / off.gear) * 2);
     expect(rank3.enchanted / rank3.gear).toBeGreaterThan(off.enchanted / off.gear);
     expect(rank3.cursedConsumables / rank3.consumables).toBeGreaterThan(off.cursedConsumables / off.consumables);
+    expect(off.maxEnchant).toBeLessThanOrEqual(3);
+    expect(rank3.maxEnchant).toBeGreaterThanOrEqual(4);
+    expect(rank3.highEnchant).toBeGreaterThan(0);
   });
 
   it('never shows which pieces are cursed: all gear stays unidentified (ETH-142)', () => {
@@ -204,13 +212,14 @@ describe('Armed Warbands', () => {
     return found;
   };
 
-  it('arms tough monsters, who carry unidentified, enchanted gear and have more armor', () => {
+  it('arms tough monsters, who carry unidentified, enchanted weapon or armor and have more armor', () => {
     const armed = SEEDS.flatMap((seed) => armedOn(seed));
     expect(armed.length).toBeGreaterThan(20);
     for (const { state, e } of armed) {
       expect(MONSTERS.get(e.def).threat).toBeGreaterThanOrEqual(3);
       const carried = e.monster?.overlay?.carries ?? [];
       expect(carried).toHaveLength(1);
+      expect(['weapon', 'armor']).toContain(ITEMS.get(carried[0]?.def ?? '').category);
       expect(carried[0]?.enchant).toBeGreaterThanOrEqual(1);
       expect(isCursed(carried[0])).toBe(false);
       expect(carried[0]?.identified).toBe(false);
@@ -253,24 +262,35 @@ describe('Deep Surge', () => {
       .map((id) => getEntity(state, id))
       .filter((e) => e.monster !== undefined);
     expect(checkInvariants(state)).toEqual([]);
+    const patrolGroups = new Set(fresh.filter((e) => e.monster?.patrol !== undefined).map((e) => e.monster?.groupId)).size;
     return {
       placed,
       patrols: fresh.filter((e) => e.monster?.patrol !== undefined).length,
+      patrolGroups,
       carriers: fresh.filter((e) => (e.monster?.overlay?.carries?.length ?? 0) > 0).length,
       variants: fresh.filter((e) => (e.monster?.overlay?.templates?.length ?? 0) > 0).length,
     };
   };
 
-  it('sends a bigger surge, with more patrols and variants, and its pursuers carry finds', () => {
+  it('sends a bigger surge, with more hunting patrol groups and variants, and its pursuers carry finds', () => {
     const total = (omens?: OmenSelection[]) =>
       SEEDS.map((seed) => wave(seed, omens)).reduce(
-        (sum, w) => ({ placed: sum.placed + w.placed, patrols: sum.patrols + w.patrols, carriers: sum.carriers + w.carriers, variants: sum.variants + w.variants }),
-        { placed: 0, patrols: 0, carriers: 0, variants: 0 },
+        (sum, w) => ({
+          placed: sum.placed + w.placed,
+          patrols: sum.patrols + w.patrols,
+          patrolGroups: sum.patrolGroups + w.patrolGroups,
+          carriers: sum.carriers + w.carriers,
+          variants: sum.variants + w.variants,
+        }),
+        { placed: 0, patrols: 0, patrolGroups: 0, carriers: 0, variants: 0 },
       );
     const off = total();
+    const rank1 = total(on(OMEN_DEEP_SURGE.id, 1));
     const rank3 = total(on(OMEN_DEEP_SURGE.id));
     expect(off.carriers).toBe(0);
     expect(rank3.placed).toBeGreaterThan(off.placed * 1.5);
+    expect(rank1.patrolGroups).toBeGreaterThan(off.patrolGroups);
+    expect(rank3.patrolGroups).toBeGreaterThan(rank1.patrolGroups);
     expect(rank3.patrols).toBeGreaterThan(off.patrols);
     expect(rank3.variants).toBeGreaterThan(off.variants);
     expect(rank3.carriers).toBeGreaterThan(10);
@@ -281,5 +301,42 @@ describe('Deep Surge', () => {
     const surge = run(4, on(OMEN_DEEP_SURGE.id));
     expect(floorRisk(surge)).toBeUndefined();
     expect(planFloor(surge, 'd3')).toEqual(planFloor(plain, 'd3'));
+  });
+});
+
+describe('stacking all four Omens', () => {
+  it('stacks reward multiplier, multi-item carries, floor loot/spawns, and return surge cleanly', () => {
+    const allFour: OmenSelection[] = [
+      { id: OMEN_STALKERS_LEDGER.id, rank: 3 },
+      { id: OMEN_DEEP_SURGE.id, rank: 3 },
+      { id: OMEN_CURSED_HOARDS.id, rank: 3 },
+      { id: OMEN_ARMED_WARBANDS.id, rank: 3 },
+    ];
+    let multiCarryCount = 0;
+    for (const seed of SEEDS) {
+      const state = run(seed, allFour);
+      expect(rewardMultiplier(state)).toBeCloseTo(2.26);
+      for (const id of floorIds(state)) {
+        ensureFloor(state, id);
+        for (const eid of getFloor(state, id).entities) {
+          const e = getEntity(state, eid);
+          if ((e.monster?.overlay?.carries?.length ?? 0) >= 2) multiCarryCount++;
+        }
+      }
+      const arrival = stairsOn(state, 'd1', 'down')?.pos;
+      if (arrival !== undefined) {
+        moveEntity(state, state.party[0] as number, 'd1', arrival);
+        const before = new Set(getFloor(state, 'd1').entities);
+        surgeFloor(state, 'd1', arrival, 1);
+        for (const eid of getFloor(state, 'd1').entities) {
+          if (!before.has(eid)) {
+            const e = getEntity(state, eid);
+            if ((e.monster?.overlay?.carries?.length ?? 0) >= 2) multiCarryCount++;
+          }
+        }
+      }
+      expect(checkInvariants(state)).toEqual([]);
+    }
+    expect(multiCarryCount).toBeGreaterThan(0);
   });
 });

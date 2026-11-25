@@ -1,7 +1,7 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { defaultJobs, formatReport, headlessParty, MAX_JOBS, parseSimArgs, runSeeds } from '../../tools/headless';
+import { defaultJobs, formatPartySweep, formatReport, headlessParty, MAX_JOBS, parseSimArgs, partySweepRow, runSeeds } from '../../tools/headless';
 import { runPartySweep, runSeedsParallel } from '../../tools/parallel';
 import { formatComparison, jobsFlagSupported, makeReport } from '../../tools/compare';
 
@@ -24,6 +24,21 @@ describe('parallel harness (ETH-152)', () => {
     const three = await runPartySweep({ ...base, jobs: 3 });
     expect(three).toBe(one);
   }, 120_000);
+
+  it('forwards --omens and --contract in --party-sweep', async () => {
+    const base = { from: 1, seeds: 2, cap: 200, preset: 'fresh' as const, upgrades: [], rules: 'baseline' as const, jobs: 1 };
+    await expect(runPartySweep({ ...base, omens: [{ id: 'omen.nope', rank: 1 }] })).rejects.toThrow(/unknown Omen/);
+    await expect(runPartySweep({ ...base, contract: 'contract.nope' })).rejects.toThrow(/unknown contract/);
+    const omens = [{ id: 'omen.stalkers_ledger', rank: 3 }];
+    const contract = 'contract.cold_anvil';
+    const swept = await runPartySweep({ ...base, omens, contract });
+    const expected = formatPartySweep(
+      [1, 2, 3, 4].map((size) =>
+        partySweepRow(size, runSeeds(1, 2, { cap: 200, party: headlessParty(size), preset: 'fresh', upgrades: [], rules: 'baseline', contracts: [contract], omens })),
+      ),
+    );
+    expect(swept).toBe(expected);
+  }, 60_000);
 
   it('parses --jobs', () => {
     expect(parseSimArgs([]).jobs).toBe(defaultJobs());

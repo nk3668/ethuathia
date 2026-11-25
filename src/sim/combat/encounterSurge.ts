@@ -416,8 +416,11 @@ export function surgeFloor(
 
   // Deep Surge (ETH-186) sends more hunting patrols.
   const extraPatrols = surgeEffect(state)?.patrols ?? 0;
+  let minPatrolGroups = 0;
   if (extraPatrols > 0 && canPatrol && !(hasDepthShift && targetCount === 1)) {
-    patrolTarget = Math.min(targetCount, patrolTarget + extraPatrols);
+    const baseGroups = patrolTarget > 0 ? 1 : 0;
+    minPatrolGroups = Math.min(targetCount, baseGroups + extraPatrols);
+    patrolTarget = Math.min(targetCount, Math.max(patrolTarget + extraPatrols * 2, minPatrolGroups));
     squadTarget = targetCount - patrolTarget;
   }
 
@@ -495,7 +498,14 @@ export function surgeFloor(
         : buildPatrolWaypoints(layout, ctx.occ, ctx.stairsRoomIndices, ctx.paths, rng, ctx.routeDist);
     if (waypoints.length < 2) break;
 
-    const patrolSize = patrolLeft >= 4 ? rng.int(2, 3) : patrolLeft;
+    const groupsLeft = Math.max(1, minPatrolGroups - spawnedPatrolStarts.length);
+    const maxForThis = Math.max(1, patrolLeft - (groupsLeft - 1));
+    const patrolSize =
+      minPatrolGroups === 0 || groupsLeft <= 1
+        ? patrolLeft >= 4
+          ? rng.int(2, 3)
+          : patrolLeft
+        : Math.min(maxForThis, maxForThis >= 3 ? rng.int(2, 3) : maxForThis);
     const reach = buildGoalMap(ctx.paths, [waypoints[0] as Pos]);
     const reachablePool = basePatrolPool.filter((t) => reach.get(t.x, t.y) !== UNREACHABLE);
     if (reachablePool.length === 0) break;
