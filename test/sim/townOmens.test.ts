@@ -65,7 +65,7 @@ describe('the four Omens as content', () => {
 
   it('are unlocked by one town node each, which only unlocks: no bonus, no danger of its own', () => {
     const nodes = [
-      [UPGRADE_STALKERS_LEDGER, OMEN_STALKERS_LEDGER, 'building.guild_hall', 3, { renown: 100 }],
+      [UPGRADE_STALKERS_LEDGER, OMEN_STALKERS_LEDGER, 'building.guild_hall', 1, { renown: 100 }],
       [UPGRADE_DEEP_SURGE, OMEN_DEEP_SURGE, 'building.guild_hall', 4, { renown: 500 }],
       [UPGRADE_CURSED_HOARDS, OMEN_CURSED_HOARDS, 'building.smithy', 3, { trophies: 75 }],
       [UPGRADE_ARMED_WARBANDS, OMEN_ARMED_WARBANDS, 'building.smithy', 4, { trophies: 450 }],

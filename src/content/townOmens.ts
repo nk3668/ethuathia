@@ -109,17 +109,17 @@ export const OMEN_ARMED_WARBANDS = defineOmen({
   ranks: [
     {
       reward: 0.12,
-      text: 'A quarter of the tougher monsters (threat 3 or more) are Armed: 1 more armor, and a +1 piece of gear dropped when slain.',
+      text: 'A quarter of the tougher monsters (threat 3 or more) are Armed: 1 more armor, and a +1 weapon or armor piece dropped when slain.',
       flags: [omenRankFlag('omen.armed_warbands', 1)],
     },
     {
       reward: 0.24,
-      text: '45% of the tougher monsters (threat 3 or more) are Armed: 2 more armor, and a +2 piece of gear dropped when slain.',
+      text: '45% of the tougher monsters (threat 3 or more) are Armed: 2 more armor, and a +2 weapon or armor piece dropped when slain.',
       flags: [omenRankFlag('omen.armed_warbands', 2)],
     },
     {
       reward: 0.36,
-      text: '65% of the tougher monsters (threat 3 or more) are Armed: 3 more armor, and a +3 piece of gear dropped when slain.',
+      text: '65% of the tougher monsters (threat 3 or more) are Armed: 3 more armor, and a +3 weapon or armor piece dropped when slain.',
       flags: [omenRankFlag('omen.armed_warbands', 3)],
     },
   ],

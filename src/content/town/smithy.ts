@@ -319,7 +319,7 @@ export const UPGRADE_ARMED_WARBANDS = defineUpgrade({
   name: 'Armed Warbands',
   description:
     'The smiths can tell you what a well-armed warband is worth, as a trophy. Unlocks the Armed Warbands Omen, which you switch on ' +
-    'for a run on the Prepare screen: tougher monsters may spawn armored and carrying enchanted gear, which they drop when slain. ' +
+    'for a run on the Prepare screen: tougher monsters may spawn armored and carrying an enchanted weapon or armor, which they drop when slain. ' +
     'The node changes nothing by itself; only the Omen does, and it pays more for each rank.',
   tags: ['omen', 'capability', 'risky'],
   building,
