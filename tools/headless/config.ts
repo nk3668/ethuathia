@@ -33,6 +33,7 @@ import {
   upgradeStartConfig,
   withOptIns,
 } from '../../src/meta';
+import type { OmenSelection } from '../../src/content';
 import type { Profile } from '../../src/meta';
 import { CONDITIONS, RULE_ACTIONS } from '../../src/sim';
 import type { AdventurerConfig, Rule, RunConfig } from '../../src/sim';
@@ -120,6 +121,8 @@ export interface HeadlessOptions {
   preset?: HeadlessPreset;
   /** Explicit upgrade node ids to apply via `meta` helpers. */
   upgrades?: readonly string[];
+  /** Omens switched on, each at a rank (ETH-185). Default none. They need not be unlocked by the preset. */
+  omens?: OmenSelection[];
   /** Count owned opt-in nodes (ETH-187) as switched on. Default true. */
   optIns?: boolean;
   /** Behavior rule preset (`baseline` or `cautious`) or explicit rules ahead of `BASELINE_RULES`. */
@@ -238,6 +241,7 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): Ru
       (options.recruits === true ? recruitParty(profile, seed, options.partySize) : headlessParty(partySize(profile))),
     contracts: [...contracts],
     ...(options.depth === undefined ? {} : { depth: options.depth }),
+    ...(options.omens === undefined || options.omens.length === 0 ? {} : { omens: options.omens.map((o) => ({ ...o })) }),
     ...(partyBundles.length === 0 ? {} : { partyBundles }),
     ...(runModifiers.length === 0 ? {} : { runModifiers }),
     ...upgradeStartConfig(active),
