@@ -20,6 +20,8 @@ import { PARTY_SWEEP_MIN_RATIO } from './summary';
 export interface SimArgs {
   /** Run party sizes 1 to `MAX_PARTY` and check the win-rate ordering (`--party-sweep`, ETH-145). */
   partySweep: boolean;
+  /** Print the runs-to-afford table for every town node at this report's income (`--pacing`, ETH-161). */
+  pacing: boolean;
   /** The first seed. */
   from: number;
   /** How many seeds (one run each) to run. */
@@ -55,7 +57,7 @@ export interface SimArgs {
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
                       [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious] [--opt-ins on|off]
                       [--class ID | --race ID | --recruits] [--contract ID] [--omens id:rank,...]
-                      [--party-sweep] [--jobs N] [--json FILE] [--compare REF | --baseline FILE]
+                      [--party-sweep] [--pacing] [--jobs N] [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
 hit, and reports per seed the turns taken, the depth reached, how much of the last floor was
@@ -83,6 +85,8 @@ above the bottom or trigger stuck detection are listed at the end.
                           level per size, and warn when win rate does not rise with party size or party
                           ${MAX_PARTY} wins less than ${PARTY_SWEEP_MIN_RATIO}x as often as solo (--party is ignored; not with
                           --compare, --baseline or --json)
+  --pacing                after the report, print how many runs at its mean banked Renown and Trophies
+                          each town node takes to afford (cumulative, cheapest first per tier band)
   --jobs N                worker threads to run seeds on, 1 to ${MAX_JOBS} (default: CPU cores - 1; 1 runs
                           serially). The report is identical for any N. Lower it to leave CPU free
   --json FILE             also write the report as JSON, to keep as a baseline
@@ -167,6 +171,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       omens: { type: 'string' },
       recruits: { type: 'boolean' },
       'party-sweep': { type: 'boolean' },
+      pacing: { type: 'boolean' },
       jobs: { type: 'string' },
       json: { type: 'string' },
       compare: { type: 'string' },
@@ -201,6 +206,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     omens: parseOmens(values.omens),
     recruits: values.recruits ?? false,
     partySweep: values['party-sweep'] ?? false,
+    pacing: values.pacing ?? false,
     jobs: int('--jobs', values.jobs, defaultJobs(), 1, MAX_JOBS),
     json: values.json ?? null,
     compare: values.compare ?? null,

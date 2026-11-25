@@ -381,11 +381,11 @@ describe('CodexPanel', () => {
     render(<CodexPanel />);
     await user.click(within(section('Classes')).getByRole('button', { name: /Reaver/ }));
     expect(within(detailPane()).getByText('Training').nextSibling?.textContent).toBe(
-      'Achieve in one run: killed 40 monsters. Then bought at the Smithy for 200 Trophies.',
+      'Achieve in one run: killed 40 monsters. Then bought at the Smithy for 600 Trophies.',
     );
     await user.click(within(section('Classes')).getByRole('button', { name: /Lorekeeper/ }));
     expect(within(detailPane()).getByText('Training').nextSibling?.textContent).toBe(
-      'Achieve in one run: identified 5 items. Then bought at the Guild Hall for 250 Renown.',
+      'Achieve in one run: identified 5 items. Then bought at the Guild Hall for 750 Renown.',
     );
   });
 });

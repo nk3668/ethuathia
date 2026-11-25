@@ -41,23 +41,41 @@ export function bankedRenown(r: SeedResult): number | null {
 }
 
 /**
+ * Banked Trophies of one run (ETH-161): at-risk Trophies minus the wipe loss, plus the exit
+ * conversions (leftover gold, sold items, salvage), or `null` for reports made before ETH-023.
+ */
+export function bankedTrophies(r: SeedResult): number | null {
+  if (r.lost === undefined) return null;
+  return (r.atRisk?.trophies ?? 0) - (r.lost.trophies ?? 0) + (r.convertedTrophies ?? 0);
+}
+
+/**
  * Banked Renown per hour at 1× speed (`TURNS_PER_SECOND` steps/s), computed over all runs that
  * report banked Renown and took at least one step: total banked Renown divided by total hours.
  * Returns `null` when no runs have both banked Renown and elapsed steps.
  */
 export function renownPerHour(results: readonly SeedResult[]): number | null {
-  let totalRenown = 0;
+  return perHour(results, bankedRenown);
+}
+
+/** Banked Trophies per hour at 1× speed, as `renownPerHour` (ETH-161). */
+export function trophiesPerHour(results: readonly SeedResult[]): number | null {
+  return perHour(results, bankedTrophies);
+}
+
+function perHour(results: readonly SeedResult[], bankedOf: (r: SeedResult) => number | null): number | null {
+  let total = 0;
   let totalSteps = 0;
   let count = 0;
   for (const r of results) {
-    const banked = bankedRenown(r);
+    const banked = bankedOf(r);
     if (banked === null || r.steps <= 0) continue;
-    totalRenown += banked;
+    total += banked;
     totalSteps += r.steps;
     count++;
   }
   if (count === 0 || totalSteps === 0) return null;
-  return (totalRenown / totalSteps) * STEPS_PER_HOUR_AT_1X;
+  return (total / totalSteps) * STEPS_PER_HOUR_AT_1X;
 }
 
 /** Median of `values`, or `null` when empty. */
@@ -117,6 +135,9 @@ export interface ReportSummary {
   goldMax: number | null;
   renownBankedMean: number | null;
   renownPerHour1x: number | null;
+  /** Mean banked Trophies per run, exit conversions included (ETH-161). */
+  trophiesBankedMean: number | null;
+  trophiesPerHour1x: number | null;
   /** Median Class Mastery XP of a victory (ETH-087), the number its curve is calibrated on. */
   masteryXpWinMedian: number | null;
   masteryXpMean: number | null;
@@ -210,6 +231,8 @@ export function summarizeReport(results: readonly SeedResult[]): ReportSummary {
     goldMax: gold.length === 0 ? null : Math.max(0, ...gold),
     renownBankedMean: avg(banked),
     renownPerHour1x: renownPerHour(results),
+    trophiesBankedMean: avg(results.map(bankedTrophies).filter((n): n is number => n !== null)),
+    trophiesPerHour1x: trophiesPerHour(results),
     masteryXpWinMedian: median(results.flatMap((r) => (r.end === 'victory' && r.masteryXp !== undefined ? [r.masteryXp] : []))),
     masteryXpMean: avg(results.flatMap((r) => (r.masteryXp === undefined ? [] : [r.masteryXp]))),
     ...(mixed === undefined ? {} : { mixed }),

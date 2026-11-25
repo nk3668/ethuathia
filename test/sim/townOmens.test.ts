@@ -65,10 +65,10 @@ describe('the four Omens as content', () => {
 
   it('are unlocked by one town node each, which only unlocks: no bonus, no danger of its own', () => {
     const nodes = [
-      [UPGRADE_STALKERS_LEDGER, OMEN_STALKERS_LEDGER, 'building.guild_hall', 1, { renown: 100 }],
-      [UPGRADE_DEEP_SURGE, OMEN_DEEP_SURGE, 'building.guild_hall', 4, { renown: 500 }],
-      [UPGRADE_CURSED_HOARDS, OMEN_CURSED_HOARDS, 'building.smithy', 3, { trophies: 75 }],
-      [UPGRADE_ARMED_WARBANDS, OMEN_ARMED_WARBANDS, 'building.smithy', 4, { trophies: 450 }],
+      [UPGRADE_STALKERS_LEDGER, OMEN_STALKERS_LEDGER, 'building.guild_hall', 1, { renown: 300 }],
+      [UPGRADE_DEEP_SURGE, OMEN_DEEP_SURGE, 'building.guild_hall', 4, { renown: 1500 }],
+      [UPGRADE_CURSED_HOARDS, OMEN_CURSED_HOARDS, 'building.smithy', 3, { trophies: 225 }],
+      [UPGRADE_ARMED_WARBANDS, OMEN_ARMED_WARBANDS, 'building.smithy', 4, { trophies: 1350 }],
     ] as const;
     for (const [node, omen, building, tier, cost] of nodes) {
       expect(UPGRADES.has(node.id)).toBe(true);

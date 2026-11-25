@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { formatComparison, makeReport, parseReport, resolveCompareRef, runRef } from './compare';
 import type { SimReport } from './compare';
-import { formatReport, parseSimArgs, partyOptions, USAGE } from './headless';
+import { formatPacing, formatReport, parseSimArgs, partyOptions, summarizeReport, USAGE } from './headless';
 import type { SimArgs } from './headless';
 import { runPartySweep, runSeedsParallel } from './parallel';
 
@@ -99,6 +99,11 @@ ${USAGE}`);
   );
   const seconds = (performance.now() - started) / 1000;
   console.log(formatReport(results, args.cap));
+  if (args.pacing) {
+    const s = summarizeReport(results);
+    console.log('');
+    console.log(formatPacing({ renown: s.renownBankedMean ?? 0, trophies: s.trophiesBankedMean ?? 0 }));
+  }
   console.log(`\nRan in ${seconds.toFixed(2)} s on ${args.jobs} job${args.jobs === 1 ? '' : 's'}.`);
 
   const report = makeReport(args, results);

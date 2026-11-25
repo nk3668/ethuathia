@@ -21,7 +21,7 @@ const config = (p: Profile) => buildRunConfig(p, defaultRunChoices(), 7);
 describe("Maker's Marks", () => {
   it('is a ranked identify bundle at the specced price', () => {
     const node = UPGRADES.get(id('makers_marks'));
-    expect(node.cost).toEqual({ trophies: 35 });
+    expect(node.cost).toEqual({ trophies: 105 });
     expect(node.ranks).toEqual({ max: 3, costGrowth: 1.5 });
     expect(node.tier).toBe(1);
     expect(describeGrant(node.grants[0] as never, 3)).toMatch(/24/);
