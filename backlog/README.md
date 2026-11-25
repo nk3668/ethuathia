@@ -87,11 +87,11 @@ Every PR must pass these before it is opened. They catch a broken game, not just
      `console.error`.
 2. **Sim compare, only when the change warrants it:** follow the table in
    [`../docs/DIFFICULTY_PHILOSOPHY.md` §9](../docs/DIFFICULTY_PHILOSOPHY.md#9-measuring-balance)
-   ("When a change needs the harness" and "Seed tiers"). Balance-affecting changes run the T2 gate
-   (`npm run sim -- --seeds 100 --compare <base>`, paired) and paste the table in the PR body with a
-   line on which changes were intended. Behavior-neutral sim changes run the T0 identity check
-   (20 seeds, 0 hash diffs). UI-only, docs, backlog and test-only changes skip it. A piece of a
-   larger initiative with its own capstone balance check doesn't run T3 acceptance sweeps.
+   ("When a change needs the harness" and "Seed tiers"). Sim changes run the T0 identity check
+   (`npm run sim -- --seeds 20 --compare <base>`, 0 hash diffs, with new content off), and
+   balance-affecting ones add a 20-seed smoke run with it on; put both in the PR body with the
+   commit hash. UI-only, docs, backlog and test-only changes skip it. The larger suites (T1–T3)
+   run only in the milestone's balance capstone, once the milestone's other items are done.
 3. **Bigger soak** after changes to the step loop, AI or state shape:
    `npm run soak -- --seeds 200 --cap 2000` (about 5 minutes).
 4. **UI changes:** run `npm run dev`, look at the change in the browser and check the console has
