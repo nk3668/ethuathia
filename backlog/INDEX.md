@@ -36,7 +36,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [behavior-rules](behavior-rules/_epic.md) | Behavior rules | active | M2, M3 |
 | [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M1.6, M5, M7, later |
 | [content](content/_epic.md) | Content definitions | active | M0, M7 |
-| [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M2.1, M3, M5, M6, M7, M8, later |
+| [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M2.1, M3, M6, M7, M8, later |
 | [saves-platform](saves-platform/_epic.md) | Saves, desktop packaging and time-away | active | M2, M8 |
 | [risk-omens](risk-omens/_epic.md) | Omens and conducts | active | M2, M2.2, M6 |
 | [lineage](lineage/_epic.md) | Lineage | active | M2, M7, M8 |
@@ -192,7 +192,6 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-130](combat-items/ETH-130-more-enchantments.md) | Expand the enchantment pool with additional effects and triggers | combat-items | M5 | P3 | idea | M |
 | [ETH-150](codex-tooltips/ETH-150-rare-monster-codex-polish.md) | Codex polish for rare monsters: a faster-reveal hint and a lore-tier content warning | codex-tooltips | M5 | P3 | idea | S |
 | [ETH-156](codex-tooltips/ETH-156-hidden-blessing-codex-help.md) | Codex help text: hidden blessings and mixed stacks of potions and scrolls | codex-tooltips | M5 | P3 | idea | S |
-| [ETH-190](town-meta/ETH-190-better-loot-nodes.md) | Town nodes that raise the quality of dungeon loot | town-meta | M5 | P2 | idea | M |
 | [ETH-116](dungeon-gen/ETH-116-dungeon-encounters.md) | Dungeon encounters: placed interactive features with an interact action, choices and outcomes | dungeon-gen | M6 | P1 | ready | M |
 | [ETH-026](quests/ETH-026-slay-named-foe-contract.md) | Slay-named-foe contract | quests | M6 | P2 | idea | M |
 | [ETH-027](quests/ETH-027-gather-delve-contracts.md) | Gather and Delve contracts | quests | M6 | P2 | idea | M |
@@ -229,6 +228,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-128](saves-platform/ETH-128-time-away-catch-up.md) | Time-away catch-up simulation and summary | saves-platform | M8 | P2 | idea | M |
 | [ETH-169](tools-balance/ETH-169-gods-and-world-balance-pass.md) | Deities, merchants and themed dungeons balance pass (M8 capstone) | tools-balance | M8 | P2 | idea | M |
 | [ETH-174](town-meta/ETH-174-cartographer.md) | The Cartographer building | town-meta | M8 | P2 | idea | M |
+| [ETH-190](town-meta/ETH-190-better-loot-nodes.md) | Cartographer Tier I node that raises the quality of dungeon loot | town-meta | M8 | P2 | idea | S |
 | [ETH-049](dungeon-gen/ETH-049-dungeon-merchants.md) | Dungeon merchants | dungeon-gen | M8 | P3 | idea | M |
 | [ETH-098](dungeon-gen/ETH-098-hand-made-vaults.md) | Hand-made room vaults | dungeon-gen | M8 | P3 | idea | M |
 | [ETH-107](dungeon-gen/ETH-107-dungeon-events.md) | Rare floor-wide dungeon events | dungeon-gen | M8 | P3 | idea | M |
