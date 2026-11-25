@@ -13,7 +13,7 @@ import { deathPredicate, killerOf } from '../combat/death';
 import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
 import { depthRevealed, dungeonDepth, floorNode, floorTypeOf } from '../floors/dungeon';
-import { enchantedKitIds, issuedKitIds } from '../items/kit';
+import { enchantedKitIds, issuedKitIds, stampedKitIds } from '../items/kit';
 import { itemSale, tradeBonusOf } from '../items/sale';
 import { VICTORY_CHECKS } from '../registries';
 import type { EntityId, RunState } from '../state';
@@ -97,7 +97,8 @@ export function announceStart(state: RunState, emit: Emit): void {
     const items = entity === undefined ? [] : issuedKitIds(entity);
     if (items.length === 0 || entity === undefined) continue;
     const enchanted = enchantedKitIds(entity);
-    emit({ type: 'kitIssued', actor: m.actor, name: m.name, items, ...(enchanted.length > 0 ? { enchanted } : {}) });
+    const stamped = stampedKitIds(entity);
+    emit({ type: 'kitIssued', actor: m.actor, name: m.name, items, ...(enchanted.length > 0 ? { enchanted } : {}), ...(stamped.length > 0 ? { stamped } : {}) });
   }
   const known = state.config.startKnown ?? [];
   if (known.length > 0) emit({ type: 'startKnown', categories: [...known] });

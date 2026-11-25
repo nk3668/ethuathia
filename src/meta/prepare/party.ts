@@ -6,11 +6,12 @@
  * Picking named adventurers from a roster joins this section with the roster (M5).
  */
 import { z } from 'zod';
-import { generateText, GRAMMAR_ADVENTURER_NAME } from '../../content';
+import { CLASSES, generateText, GRAMMAR_ADVENTURER_NAME, isStampId, STAMP_IDS } from '../../content';
+import type { StampId } from '../../content';
 import { idSchema } from '../../content/schema';
 import { textRng } from '../../core';
 import type { Profile } from '../profile';
-import { capacity } from '../upgrades';
+import { capacity, profileGrants } from '../upgrades';
 import { availableClasses, availableRaces, teaserClasses, teaserRaces } from './available';
 import { defineRunChoice } from './choice';
 import type { BuildCtx } from './choice';
@@ -25,6 +26,8 @@ export const MAX_PARTY_SIZE = 4;
 export interface RecruitPick {
   readonly classId: string | null;
   readonly raceId: string | null;
+  /** The Forge Stamp (ETH-188) for this slot's kit; `null` is the class's default. Only used once the Smithy's Forge Stamps are owned. */
+  readonly stamp?: StampId | null;
 }
 
 export interface PartyChoice {
@@ -34,7 +37,17 @@ export interface PartyChoice {
 
 export const RANDOM_PICK: RecruitPick = { classId: null, raceId: null };
 
-const pickSchema = z.object({ classId: idSchema('class').nullable(), raceId: idSchema('race').nullable() });
+const pickSchema = z.object({
+  classId: idSchema('class').nullable(),
+  raceId: idSchema('race').nullable(),
+  // A save from before Forge Stamps has no stamp; a stamp that is no longer known reads as the default.
+  stamp: z.enum(STAMP_IDS).nullable().optional().catch(null),
+});
+
+/** True if the profile owns the Smithy's Forge Stamps (ETH-188): the stamp select shows and stamps are applied. */
+export function ownsStamps(profile: Profile): boolean {
+  return profileGrants(profile).some(({ grant }) => grant.kind === 'start' && grant.start.perk === 'stamps');
+}
 
 /** How many adventurers this profile's runs take. */
 export function partySize(profile: Profile): number {
@@ -86,7 +99,9 @@ export function fillParty({ profile, seed, rng, config }: BuildCtx, slots: reado
     const classId = pick.classId !== null && classes.includes(pick.classId) ? pick.classId : randomPick(classes, teasingClasses);
     const raceId = pick.raceId !== null && races.includes(pick.raceId) ? pick.raceId : randomPick(races, teasingRaces);
     const name = recruitName(seed, i, config.party.map((m) => m.name));
-    config.party.push({ name, classId, raceId });
+    // Forge Stamps (ETH-188): the slot's pick, else the class's default, resolved here so the sim sees one id. No RNG is drawn.
+    const stamp = ownsStamps(profile) ? (isStampId(pick.stamp) ? pick.stamp : CLASSES.get(classId).stamp) : undefined;
+    config.party.push({ name, classId, raceId, ...(stamp === undefined ? {} : { stamp }) });
   }
 }
 

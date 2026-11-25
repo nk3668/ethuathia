@@ -37,6 +37,12 @@ export function describeStartPerk(perk: StartPerk): string {
       return `Knows every ${START_PERK_INFO[perk.category].name} kind from the first turn`;
     case 'enchant':
       return `Starts with the ${START_PERK_INFO[perk.piece].name} of each adventurer's kit at +1`;
+    case 'tier':
+      return `Swaps the ${START_PERK_INFO[perk.piece].name} of each adventurer's kit for their class's own Tier-1 piece`;
+    case 'trinket':
+      return "Each adventurer wears their class's ring or amulet from the first turn";
+    case 'stamps':
+      return 'Each adventurer\'s kit carries a Forge Stamp (Keen, Warding or Nimble), chosen on the Prepare screen';
     case 'stock':
       return `${perk.each === true ? 'Each adventurer starts' : 'The party starts'} with ${perk.qty} ${findDef(perk.item)?.name ?? perk.item}`;
   }
@@ -53,6 +59,7 @@ const STAT_NAMES: Readonly<Record<string, string>> = {
   speed: 'speed',
   sight: 'sight',
   carry: 'carry',
+  identify: 'identify chance (%)',
 };
 
 function statName(stat: string): string {

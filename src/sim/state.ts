@@ -79,6 +79,11 @@ export interface AdventurerConfig {
    * makes one.
    */
   recordId?: string;
+  /**
+   * The Forge Stamp (ETH-188) worked into this adventurer's kit, by stamp id. Only used when the
+   * config sets `stamps`. Left out, the kit carries none.
+   */
+  stamp?: string;
 }
 
 /**

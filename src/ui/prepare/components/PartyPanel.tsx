@@ -3,8 +3,8 @@
  * with a class and a race to recruit, or "Random". Slots the party can't use yet are listed
  * locked, with what opens them.
  */
-import { CAPACITY_INFO } from '../../../content';
-import { availableClasses, availableRaces, MAX_PARTY_SIZE, partySize, RANDOM_PICK } from '../../../meta';
+import { CAPACITY_INFO, isStampId, STAMP_IDS, STAMPS } from '../../../content';
+import { availableClasses, availableRaces, MAX_PARTY_SIZE, ownsStamps, partySize, RANDOM_PICK } from '../../../meta';
 import type { RecruitPick } from '../../../meta';
 import { Explain } from '../../codex/Explain';
 import styles from '../panels.module.css';
@@ -18,6 +18,7 @@ export function PartyPanel({ profile, choices, update }: PreparePanelProps) {
   const classes = availableClasses(profile);
   const races = availableRaces(profile);
   const slots = choices.party.slots;
+  const stamps = ownsStamps(profile);
 
   const setSlot = (i: number, pick: RecruitPick) => {
     const next = Array.from({ length: Math.max(slots.length, i + 1) }, (_, j) => slots[j] ?? RANDOM_PICK);
@@ -80,6 +81,26 @@ export function PartyPanel({ profile, choices, update }: PreparePanelProps) {
                   ))}
                 </select>
               </label>
+              {stamps && (
+                <label className={styles.field}>
+                  <span className={styles.label}>Forge Stamp</span>
+                  <select
+                    name={`slot-${i}-stamp`}
+                    value={pick.stamp ?? RANDOM}
+                    title="A stamp worked into this adventurer's starting kit. Keen goes on the main-hand item, Warding and Nimble on the first armor piece."
+                    onChange={(e) => setSlot(i, { ...pick, stamp: isStampId(e.currentTarget.value) ? e.currentTarget.value : null })}
+                  >
+                    <option value={RANDOM}>
+                      {selectedClass?.stamp === undefined ? 'Class default' : `Class default (${STAMPS[selectedClass.stamp].name})`}
+                    </option>
+                    {STAMP_IDS.map((s) => (
+                      <option key={s} value={s}>
+                        {STAMPS[s].name}: {STAMPS[s].text}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <span className={styles.summary}>
                 {selectedClass !== undefined ? <Explain id={selectedClass.id} reveal /> : 'any class'}
                 {' · '}

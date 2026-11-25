@@ -3,7 +3,7 @@
  */
 import { clonePlain, Grid, seedStreams } from '../core';
 import type { Pos } from '../core';
-import { CLASSES, RACES } from '../content';
+import { CLASSES, isStampId, RACES } from '../content';
 import { newAiPart } from './ai/types';
 import { initDomains } from './domains';
 import { giveKit, giveStock, knowKinds } from './items/kit';
@@ -80,7 +80,11 @@ export function createRun(config: RunConfig, seed: number): RunState {
       stats: newStatsPart(),
       ai: newAiPart(),
     });
-    giveKit(entity, member.classId, config.kitEnchant);
+    giveKit(entity, member.classId, config.kitEnchant, {
+      ...(config.kitTier === undefined ? {} : { tier: config.kitTier }),
+      ...(config.trinket === true ? { trinket: true } : {}),
+      ...(config.stamps === true && isStampId(member.stamp) ? { stamp: member.stamp } : {}),
+    });
     state.party.push(entity.id);
   });
   // Start perks (ETH-159): kinds known from the first turn, and starting items for the first member or for each.

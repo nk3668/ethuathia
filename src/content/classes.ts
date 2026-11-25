@@ -12,6 +12,8 @@ import type { Def } from '../core';
 import { ATTRIBUTE_IDS, attributesSchema } from './attributes';
 import type { AttributeId, Attributes } from './attributes';
 import { gearSlots, ITEMS } from './items';
+import { isStampId, STAMP_IDS } from './stamps';
+import type { StampId } from './stamps';
 import type { ContentKind } from './kind';
 import { defShape } from './schema';
 
@@ -48,6 +50,31 @@ export interface ClassDef extends Def {
    * only the same slot. Left out, the class starts empty-handed.
    */
   readonly kit?: readonly string[];
+  /**
+   * The class's own Tier-1 version of its kit's main-hand item and first piece of armor (ETH-188):
+   * what the Smithy's Artisan Implements and Tailored Attire swap in for the base piece. Each must
+   * fit the slot of the piece it replaces. A class that has a `kit` names an upgrade for each of its two pieces (a kit with no armor needs only the weapon).
+   */
+  readonly kitUpgrade?: { readonly weapon?: string; readonly defense?: string };
+  /** The class's Apprentice Trinket (ETH-188): a ring or amulet worn from the start as kit. Required of every class with a `kit`. */
+  readonly trinket?: string;
+  /** The class's default Forge Stamp (ETH-188), used for random recruits and a slot left on the default. Required of every class with a `kit`. */
+  readonly stamp?: StampId;
+}
+
+/**
+ * The kit's two upgradeable pieces (ETH-188), as def ids: the first item that fits the main hand and
+ * the first piece of armor, the same two `giveKit` enchants and upgrades. Either may be missing.
+ */
+export function kitPieceIds(kit: readonly string[]): { weapon?: string; defense?: string } {
+  const out: { weapon?: string; defense?: string } = {};
+  for (const id of kit) {
+    if (!ITEMS.has(id)) continue;
+    const def = ITEMS.get(id);
+    if (out.weapon === undefined && gearSlots(def).includes('mainHand')) out.weapon = id;
+    if (out.defense === undefined && def.category === 'armor') out.defense = id;
+  }
+  return out;
 }
 
 export const CLASSES = new Registry<ClassDef>('class');
@@ -89,6 +116,42 @@ export function kitProblems(kit: readonly string[]): string[] {
   return problems;
 }
 
+/** Why a class's Smithy pieces (`kitUpgrade`, `trinket`, `stamp`) don't work with its kit, as problem lines (ETH-188). */
+export function smithyKitProblems(def: Pick<ClassDef, 'kit' | 'kitUpgrade' | 'trinket' | 'stamp'>): string[] {
+  const kit = def.kit ?? [];
+  if (kit.length === 0) {
+    return def.kitUpgrade !== undefined || def.trinket !== undefined || def.stamp !== undefined ? ['has a kitUpgrade, trinket or stamp but no kit'] : [];
+  }
+  const problems: string[] = [];
+  const pieces = kitPieceIds(kit);
+  for (const part of ['weapon', 'defense'] as const) {
+    {
+      const base = pieces[part];
+      const id = def.kitUpgrade?.[part];
+      const what = part === 'weapon' ? 'main-hand item' : 'armor piece';
+      if (base === undefined) {
+        if (id !== undefined) problems.push(`kitUpgrade.${part}: the kit has no ${what} to upgrade`);
+        continue;
+      }
+      if (id === undefined) {
+        problems.push(`has a kit ${what} but no kitUpgrade.${part} (its Tier-1 version)`);
+        continue;
+      }
+      if (!ITEMS.has(id)) continue;
+      const item = ITEMS.get(id);
+      const baseSlots = gearSlots(ITEMS.get(base));
+      if (id === base) problems.push(`kitUpgrade.${part} "${id}" is the base kit piece`);
+      else if (!gearSlots(item).some((slot) => baseSlots.includes(slot))) problems.push(`kitUpgrade.${part} "${id}" does not fit the slot of "${base}"`);
+      if (part === 'defense' && item.category !== 'armor') problems.push(`kitUpgrade.defense "${id}" is not armor`);
+    }
+  }
+  if (def.trinket === undefined) problems.push('has a kit but no trinket (a ring or amulet)');
+  else if (ITEMS.has(def.trinket) && ITEMS.get(def.trinket).category !== 'jewelry') problems.push(`trinket "${def.trinket}" is not a ring or amulet`);
+  if (def.stamp === undefined) problems.push('has a kit but no default stamp');
+  else if (!isStampId(def.stamp)) problems.push(`unknown stamp "${def.stamp as string}"`);
+  return problems;
+}
+
 export const CLASS_KIND: ContentKind<ClassDef> = {
   registry: CLASSES,
   schema: z.strictObject({
@@ -96,9 +159,19 @@ export const CLASS_KIND: ContentKind<ClassDef> = {
     attributes: attributesSchema,
     growth: growthSchema,
     kit: z.array(z.string().min(1)).min(1, 'a kit lists at least one item (leave it out for none)').optional(),
+    kitUpgrade: z.strictObject({ weapon: z.string().min(1).optional(), defense: z.string().min(1).optional() }).optional(),
+    trinket: z.string().min(1).optional(),
+    stamp: z.enum(STAMP_IDS).optional(),
   }),
-  refs: (def) => (def.kit ?? []).map((id, i) => ({ path: `kit[${i}]`, kind: 'item', id })),
-  check: (defs) => defs.flatMap((d) => kitProblems(d.kit ?? []).map((p) => `class "${d.id}": ${p}`)),
+  refs: (def) => [
+    ...(def.kit ?? []).map((id, i) => ({ path: `kit[${i}]`, kind: 'item' as const, id })),
+    ...(['weapon', 'defense'] as const).flatMap((part) => {
+      const id = def.kitUpgrade?.[part];
+      return id === undefined ? [] : [{ path: `kitUpgrade.${part}`, kind: 'item' as const, id }];
+    }),
+    ...(def.trinket === undefined ? [] : [{ path: 'trinket', kind: 'item' as const, id: def.trinket }]),
+  ],
+  check: (defs) => defs.flatMap((d) => [...kitProblems(d.kit ?? []), ...smithyKitProblems(d)].map((p) => `class "${d.id}": ${p}`)),
 };
 
 /** Registers a class def and returns it. Its shape is checked by `validateContent`. */
@@ -123,6 +196,9 @@ export const CLASS_VANGUARD = defineClass({
     grit: { min: 1, max: 2 },
   },
   kit: ['item.oak_cudgel', 'item.round_shield'],
+  kitUpgrade: { weapon: 'item.flanged_mace', defense: 'item.banded_shield' },
+  trinket: 'item.copper_band',
+  stamp: 'warding',
 });
 
 export const CLASS_OUTRIDER = defineClass({
@@ -143,6 +219,9 @@ export const CLASS_OUTRIDER = defineClass({
     grit: { min: 1, max: 1, chance: 0.5 },
   },
   kit: ['item.skinning_knife', 'item.soft_boots'],
+  kitUpgrade: { weapon: 'item.trail_dirk', defense: 'item.ridge_boots' },
+  trinket: 'item.knotwork_pendant',
+  stamp: 'nimble',
 });
 
 export const CLASS_LOREKEEPER = defineClass({
@@ -164,6 +243,9 @@ export const CLASS_LOREKEEPER = defineClass({
     grit: { min: 1, max: 1, chance: 0.75 },
   },
   kit: ['item.ashwood_staff', 'item.quilted_jerkin'],
+  kitUpgrade: { weapon: 'item.ironshod_staff', defense: 'item.scribes_coat' },
+  trinket: 'item.hearthstone_amulet',
+  stamp: 'warding',
 });
 
 export const CLASS_REAVER = defineClass({
@@ -183,4 +265,7 @@ export const CLASS_REAVER = defineClass({
     grit: { min: 1, max: 1 },
   },
   kit: ['item.iron_hatchet', 'item.iron_cap'],
+  kitUpgrade: { weapon: 'item.bearded_axe', defense: 'item.brow_helm' },
+  trinket: 'item.garnet_signet',
+  stamp: 'keen',
 });

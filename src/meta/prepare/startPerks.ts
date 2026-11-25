@@ -10,15 +10,23 @@ import type { Profile } from '../profile';
 import { capacity, profileGrants } from '../upgrades';
 
 /** The run config fields the owned upgrades' start perks and trade bonus set, with unset ones left out. */
-export function upgradeStartConfig(profile: Profile): Pick<RunConfig, 'startKnown' | 'kitEnchant' | 'startStock' | 'tradeBonus'> {
+export function upgradeStartConfig(
+  profile: Profile,
+): Pick<RunConfig, 'startKnown' | 'kitEnchant' | 'kitTier' | 'trinket' | 'stamps' | 'startStock' | 'tradeBonus'> {
   const known = new Set<StartKnownCategory>();
   const enchant = new Set<StartEnchantPiece>();
+  const tier = new Set<StartEnchantPiece>();
+  let trinket = false;
+  let stamps = false;
   const stock: StartStock[] = [];
   for (const { grant } of profileGrants(profile)) {
     if (grant.kind !== 'start') continue;
     const perk = grant.start;
     if (perk.perk === 'know') known.add(perk.category);
     else if (perk.perk === 'enchant') enchant.add(perk.piece);
+    else if (perk.perk === 'tier') tier.add(perk.piece);
+    else if (perk.perk === 'trinket') trinket = true;
+    else if (perk.perk === 'stamps') stamps = true;
     else stock.push({ item: perk.item, qty: perk.qty, ...(perk.each === true ? { each: true as const } : {}) });
   }
   const bonus = capacity(profile, 'tradeBonus', 0);
@@ -26,6 +34,9 @@ export function upgradeStartConfig(profile: Profile): Pick<RunConfig, 'startKnow
     // Fixed orders keep a config the same however the nodes were bought.
     ...(known.size > 0 ? { startKnown: START_KNOWN_CATEGORIES.filter((c) => known.has(c)) } : {}),
     ...(enchant.size > 0 ? { kitEnchant: START_ENCHANT_PIECES.filter((p) => enchant.has(p)) } : {}),
+    ...(tier.size > 0 ? { kitTier: START_ENCHANT_PIECES.filter((p) => tier.has(p)) } : {}),
+    ...(trinket ? { trinket: true as const } : {}),
+    ...(stamps ? { stamps: true as const } : {}),
     ...(stock.length > 0 ? { startStock: mergeStock(stock) } : {}),
     ...(bonus > 0 ? { tradeBonus: bonus } : {}),
   };
