@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import {
   checkInvariants,
   createRun,
+  FLEE_BLOCK_RADIUS,
   FLEE_CYCLE_LIMIT,
   FLEE_REST_TURNS,
   FLEE_RELEASE_PERCENT,
@@ -106,5 +107,25 @@ describe('flee/return cycle (ETH-189)', () => {
     expect(rested).toBeGreaterThan(0);
     // After the rest runs out the hero gets on with things (here, fleeing again) rather than resting for ever.
     expect(after).toBeGreaterThan(0);
+  });
+
+  it('never sends the party home: a hopeless cycle blocks the foe\'s area instead, with one log line', () => {
+    const { state, hero, foeX } = setup();
+    const stuck: Stuck[] = [];
+    let nearest = 0;
+    for (let i = 0; i < 2500; i++) {
+      // The foe's ground is the only way on, and HP never comes back: the cycle is hopeless.
+      if (hero.actor.hp > 8) hero.actor.hp = 8;
+      for (const e of step(state, [])) if (e.type === 'stuck') stuck.push(e);
+      if (hero.ai.memory.fleeCycle?.blocked !== undefined) nearest = Math.max(nearest, hero.pos.x);
+    }
+    const blocked = hero.ai.memory.fleeCycle?.blocked;
+    expect(blocked).toBeDefined();
+    expect(stuck.filter((s) => s.detail.includes("Can't get past"))).toHaveLength(1);
+    expect(stuck.find((s) => s.detail.includes("Can't get past"))?.detail).toContain('Fall back');
+    // It keeps out of the zone, and nothing turned the party back.
+    expect(nearest).toBeLessThan(foeX - FLEE_BLOCK_RADIUS + 1);
+    expect(state.domains.run.leaving).toBeNull();
+    expect(checkInvariants(state)).toEqual([]);
   });
 });

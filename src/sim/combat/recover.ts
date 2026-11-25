@@ -10,7 +10,8 @@
  */
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiMemory, Resolved } from '../ai/types';
-import { FLEE_CYCLE_GIVE_UP, FLEE_RELEASE_PERCENT, FLEE_REST_GIVE_UP } from './fleeConfig';
+import { FLEE_CYCLE_GIVE_UP, FLEE_HOPELESS_RECOVER_PERCENT, FLEE_RELEASE_PERCENT, FLEE_REST_GIVE_UP } from './fleeConfig';
+import { cycleRecoverPercent } from './zone';
 import { hpPercent } from './rules';
 import { visibleThreats } from './threat';
 
@@ -39,13 +40,13 @@ export const ACT_REST = defineRuleAction({
   name: 'Rest',
   description:
     'Stand still and recover, rather than walk back toward the trouble that was fled. Ends when HP is back to ' +
-    `${FLEE_RELEASE_PERCENT}%, when the rest runs out, or when a threat comes into sight. Waiting here never counts as being stuck.`,
+    `${FLEE_RELEASE_PERCENT}%, when the rest runs out (not while the foe is being avoided), or when a threat comes into sight. Waiting here never counts as being stuck.`,
   idle: true,
   parse: noParams,
   resolve({ state, actor }): Resolved | null {
     if (actor.actor.faction !== 'party' || actor.ai.memory.fleeCycle === undefined) return null;
     const hp = Math.round(hpPercent(state, actor));
-    return { request: { id: 'wait' }, detail: `resting to recover before going back, HP ${hp}% (until ${FLEE_RELEASE_PERCENT}%)` };
+    return { request: { id: 'wait' }, detail: `resting to recover before going back, HP ${hp}% (until ${cycleRecoverPercent(actor.ai.memory.fleeCycle)}%)` };
   },
   describe: () => 'rest to recover',
 });
@@ -55,20 +56,30 @@ export function cycleHopeless(cycle: NonNullable<AiMemory['fleeCycle']>): boolea
   return cycle.episodes >= FLEE_CYCLE_GIVE_UP || (cycle.rests ?? 0) >= FLEE_REST_GIVE_UP;
 }
 
-/** True once the adventurer has fled the same trouble so often that the run is not going to get better (ETH-189). */
-export const COND_NO_RECOVERY = defineCondition({
-  id: 'cond.no_recovery',
-  name: 'Cannot shake the trouble',
+/**
+ * True while the adventurer has given up on getting past a foe (ETH-189): after `FLEE_CYCLE_GIVE_UP`
+ * flights in one cycle, or `FLEE_REST_GIVE_UP` rests that did not bring HP back, the area around the foe
+ * is off-limits for exploring and going down. It is on until HP is back to `FLEE_HOPELESS_RECOVER_PERCENT`; as a
+ * baseline rule it sits below exploring and descending, so it only holds
+ * the adventurer still when there is nowhere else to go.
+ */
+export const COND_CYCLE_BLOCKED = defineCondition({
+  id: 'cond.cycle_blocked',
+  name: 'Cannot get past',
   description:
-    `True after ${FLEE_CYCLE_GIVE_UP} flights in one flee/return cycle, or after ${FLEE_REST_GIVE_UP} rests that did not bring HP back: the adventurer gives the run up and heads out.`,
+    `True after fleeing the same foe over and over without recovering (${FLEE_CYCLE_GIVE_UP} flights, or ${FLEE_REST_GIVE_UP} rests ` +
+    `that did not bring HP back), until HP is back to ${FLEE_HOPELESS_RECOVER_PERCENT}%. The ground around that foe ` +
+    'is off-limits meanwhile; the adventurer explores or descends elsewhere, or rests when there is nothing else to do. Ending the run is the player\'s call (the Fall back stance).',
   parse: noParams,
-  evaluate({ actor }) {
+  evaluate({ state, actor }) {
     const cycle = actor.ai.memory.fleeCycle;
-    if (cycle === undefined || !cycleHopeless(cycle)) return { ok: false, detail: '' };
-    return { ok: true, detail: `fled ${cycle.episodes} times, after ${cycle.rests ?? 0} ${cycle.rests === 1 ? 'rest' : 'rests'}, and still not recovered` };
+    if (cycle?.blocked === undefined) return { ok: false, detail: '' };
+    const hp = hpPercent(state, actor);
+    if (hp >= cycleRecoverPercent(cycle)) return { ok: false, detail: '' };
+    return { ok: true, detail: `can't get past the foe near (${cycle.blocked.x}, ${cycle.blocked.y}), HP ${Math.round(hp)}%` };
   },
-  describe: () => 'fled over and over without recovering',
+  describe: () => 'cannot get past a foe it keeps fleeing',
 });
 
-export const RECOVER_CONDITIONS = [COND_RECOVERING, COND_NO_RECOVERY];
+export const RECOVER_CONDITIONS = [COND_RECOVERING, COND_CYCLE_BLOCKED];
 export const RECOVER_RULE_ACTIONS = [ACT_REST];

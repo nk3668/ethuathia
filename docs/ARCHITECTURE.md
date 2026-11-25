@@ -1980,8 +1980,15 @@ As built in `src/sim/ai/` (ETH-009):
   act.rest` (idle, after the fountain rule; exempt from the waiting count like `act.wait`) holds the
   adventurer still for up to `FLEE_REST_TURNS` (500) or until HP is back, with no threat in sight.
   After `FLEE_CYCLE_GIVE_UP` (8) flights in one cycle, or `FLEE_REST_GIVE_UP` (2) rests that did not
-  bring HP back, `cond.no_recovery → act.retreat_run` (above the rest rule) gives the run up as a retreat, with its own
-  `stuck` event. `fleeCycle` is optional state: absent until a flight begins, so no `STATE_VERSION` bump.
+  bring HP back, the cycle is hopeless: `checkFleeCycle` sets `fleeCycle.blocked` (the newest remembered
+  threat's spot) and emits a second `stuck` event, the player-facing line ("Can't get past the X ... Consider
+  the Fall back stance."). While `blocked` is set, `blockFleeZone` (`combat/zone.ts`) makes every tile within
+  `FLEE_BLOCK_RADIUS` (6) of it impassable for `act.explore`, `act.pick_up` and `act.descend`, so the
+  adventurer explores elsewhere or goes down another way if one exists; if not, the baseline rule
+  `cond.cycle_blocked → act.rest` (below explore, descend and gather) holds it still until HP is back to
+  `FLEE_HOPELESS_RECOVER_PERCENT` (90), which ends the cycle and the zone. One adventurer never ends the run
+  (ending it early is the player's choice, e.g. the Fall back stance); the turn cap is the only hard net.
+  `fleeCycle` is optional state: absent until a flight begins, so no `STATE_VERSION` bump.
 - **Speed:** a lone adventurer explores a generated Hewn Halls floor in about 200 party turns
   (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite. A
   ten-floor dungeon takes a lone adventurer about 2,400 turns and a party of four about 1,200.

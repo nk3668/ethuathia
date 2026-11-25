@@ -24,9 +24,13 @@ export const FLEE_CYCLE_LIMIT = 3;
 export const FLEE_CYCLE_WINDOW = 150;
 /** How close (tiles, either axis) one flight starts to the last for them to count as the same cycle: a loop returns to the same spot (ETH-189). */
 export const FLEE_CYCLE_RADIUS = 8;
-/** Flights in one cycle, rest or no rest, after which the adventurer gives the run up as a retreat (ETH-189). */
+/** Flights in one cycle, rest or no rest, after which the cycle is hopeless and the foe's surroundings become off-limits (ETH-189). */
 export const FLEE_CYCLE_GIVE_UP = 8;
-/** Rests that ended without HP coming back, after which the next cycle gives the run up instead of resting again (ETH-189). */
+/** Rests that ended without HP coming back, after which the cycle is hopeless (ETH-189). */
 export const FLEE_REST_GIVE_UP = 2;
+/** Tiles (either axis) around the foe a hopeless cycle keeps fleeing that exploring and descending treat as off-limits (ETH-189). */
+export const FLEE_BLOCK_RADIUS = 6;
+/** HP percentage a hopeless cycle rests back up to before the foe's area is tried again: more than a normal release, since that one failed (ETH-189). */
+export const FLEE_HOPELESS_RECOVER_PERCENT = 90;
 /** The longest a cycle-breaking rest lasts, in turns: about 40 HP at `RECOVERY_INTERVAL` (ETH-189). */
 export const FLEE_REST_TURNS = 500;

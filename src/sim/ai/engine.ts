@@ -22,7 +22,7 @@ import type { Emit } from '../events';
 import { ITEMS_BASELINE_LOOT, ITEMS_BASELINE_RECOVER, ITEMS_BASELINE_URGENT } from '../items/rules';
 import { registerInvariant } from '../invariants';
 import { cycleHopeless } from '../combat/recover';
-import { FLEE_CYCLE_LIMIT, FLEE_RELEASE_PERCENT, FLEE_REST_TURNS } from '../combat/fleeConfig';
+import { FLEE_CYCLE_LIMIT, FLEE_HOPELESS_RECOVER_PERCENT, FLEE_RELEASE_PERCENT, FLEE_REST_TURNS } from '../combat/fleeConfig';
 import { hpPercent } from '../combat/rules';
 import { updateThreatMemory } from '../combat/threat';
 import { explored } from '../perception';
@@ -91,8 +91,7 @@ export const BASELINE_RULES: readonly Rule[] = [
   ...QUESTS_BASELINE,
   { condition: { id: 'cond.floor_overstayed' }, action: { id: 'act.descend', params: { regroup: false } }, enabled: true },
   { condition: { id: 'cond.hurt_no_healing', params: { below: 50 } }, action: { id: 'act.drink_fountain' }, enabled: true },
-  // Fled the same trouble over and over without recovering: give the run up, or rest instead of walking back (ETH-189).
-  { condition: { id: 'cond.no_recovery' }, action: { id: 'act.retreat_run' }, enabled: true },
+  // Fled the same trouble over and over without recovering: rest instead of walking back (ETH-189).
   { condition: { id: 'cond.recovering' }, action: { id: 'act.rest' }, enabled: true },
   // Items (ETH-061): pick up wanted items a short detour away.
   ...ITEMS_BASELINE_LOOT,
@@ -104,6 +103,8 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.always' }, action: { id: 'act.gather' }, enabled: true },
   // Don't treat a temporarily dropped Explore as "bottom floor complete, abort the run": wait out
   // the drop instead (ETH-145).
+  // Nowhere else to go but past the foe it keeps fleeing: rest until HP is back (ETH-189).
+  { condition: { id: 'cond.cycle_blocked' }, action: { id: 'act.rest' }, enabled: true },
   { condition: { id: 'cond.stuck' }, action: { id: 'act.wait' }, enabled: true },
   { condition: { id: 'cond.bottom_floor' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true },
@@ -286,23 +287,22 @@ function checkFleeCycle({ state, actor }: AiCtx, emit: Emit): void {
   const cycle = actor.ai.memory.fleeCycle;
   if (cycle === undefined || cycle.episodes < FLEE_CYCLE_LIMIT || actor.ai.memory.fleeing !== null) return;
   const giveUp = cycleHopeless(cycle);
-  if (giveUp ? cycle.gaveUp === true : cycle.restUntil !== undefined) return;
-  const action = giveUp ? 'act.retreat_run' : 'act.rest';
-  if (giveUp) cycle.gaveUp = true;
+  if (giveUp ? cycle.blocked !== undefined : cycle.restUntil !== undefined) return;
+  const newest = actor.ai.memory.threats.reduce<ThreatMark | null>((a, m) => (a === null || m.seen > a.seen ? m : a), null);
+  if (giveUp) cycle.blocked = { x: (newest?.pos ?? cycle.pos).x, y: (newest?.pos ?? cycle.pos).y };
   else {
     cycle.restUntil = state.turn + FLEE_REST_TURNS;
     cycle.rests = (cycle.rests ?? 0) + 1;
   }
-  const rule: RuleRef = { set: 'baseline', index: BASELINE_RULES.findIndex((r) => r.condition.id === (giveUp ? 'cond.no_recovery' : 'cond.recovering')) };
-  const newest = actor.ai.memory.threats.reduce<ThreatMark | null>((a, m) => (a === null || m.seen > a.seen ? m : a), null);
+  const rule: RuleRef = { set: 'baseline', index: BASELINE_RULES.findIndex((r) => r.condition.id === (giveUp ? 'cond.cycle_blocked' : 'cond.recovering')) };
   const who = newest?.name ?? 'a threat';
   const hp = Math.round(hpPercent(state, actor));
   const detail =
     `Fled ${who} ${cycle.episodes} times without recovering (HP ${hp}%). ` +
     (giveUp
-      ? 'Giving the run up and heading out.'
+      ? `Can't get past it: keeping clear of the area, exploring or going down elsewhere if there is a way, otherwise resting up to ${FLEE_HOPELESS_RECOVER_PERCENT}% HP before trying again. Consider the Fall back stance.`
       : `Resting for up to ${FLEE_REST_TURNS} turns, until HP is back to ${FLEE_RELEASE_PERCENT}%, before going back.`);
-  emit({ type: 'stuck', actor: actor.id, rule, action, turns: state.turn - cycle.last, detail, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
+  emit({ type: 'stuck', actor: actor.id, rule, action: 'act.rest', turns: state.turn - cycle.last, detail, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
 }
 
 /**

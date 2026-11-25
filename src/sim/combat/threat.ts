@@ -21,6 +21,7 @@ import { nameOf } from '../ai/navigate';
 import type { ActorEntity, Entity, RunState } from '../state';
 import { AVOID_PENALTY, AVOID_RADIUS, BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_CYCLE_RADIUS, FLEE_CYCLE_WINDOW, FLEE_HOLD_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
 import { hpPercent, visibleEnemies } from './rules';
+import { blockFleeZone, cycleRecoverPercent } from './zone';
 import { overlayOf, templatesOf } from './overlay';
 
 /** Rule actions that make a creature come after its enemies. */
@@ -92,7 +93,7 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
   });
   const hp = hpPercent(state, actor);
   // Recovered: whatever flee/return cycle there was is over (ETH-189).
-  if (memory.fleeCycle !== undefined && hp >= FLEE_RELEASE_PERCENT) delete memory.fleeCycle;
+  if (memory.fleeCycle !== undefined && hp >= cycleRecoverPercent(memory.fleeCycle)) delete memory.fleeCycle;
   const fleeing = memory.fleeing;
   if (fleeing === null) {
     if (hp < BASELINE_FLEE_PERCENT && visible.length > 0) {
@@ -102,7 +103,7 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
       const again = cycle !== undefined && state.turn - cycle.last <= FLEE_CYCLE_WINDOW && Math.max(Math.abs(cycle.pos.x - pos.x), Math.abs(cycle.pos.y - pos.y)) <= FLEE_CYCLE_RADIUS;
       // A cycle that goes on keeps its rest and give-up marks, so each is announced once; a new one
       // after a long gap (the rest) still remembers how many rests failed to bring HP back.
-      memory.fleeCycle = again ? { ...cycle, episodes: cycle.episodes + 1, last: state.turn, pos } : { episodes: 1, last: state.turn, pos, ...(cycle?.rests === undefined ? {} : { rests: cycle.rests }) };
+      memory.fleeCycle = again ? { ...cycle, episodes: cycle.episodes + 1, last: state.turn, pos } : { episodes: 1, last: state.turn, pos, ...(cycle?.rests === undefined ? {} : { rests: cycle.rests }), ...(cycle?.blocked === undefined ? {} : { blocked: cycle.blocked }) };
     }
     return;
   }
@@ -125,6 +126,8 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
 export function avoidThreats(ctx: AiCtx, paths: PathGrid): string | null {
   const { state, actor } = ctx;
   if (actor.actor.faction !== 'party') return null;
+  const zone = blockFleeZone(ctx, paths);
+  if (zone !== null) return zone;
   const marks = freshThreats(state, actor);
   if (marks.length === 0 || !isWounded(state, actor)) return null;
   const { width, height, cost } = paths;
