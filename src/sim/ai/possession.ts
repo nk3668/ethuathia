@@ -61,6 +61,7 @@ function resetMemory(ai: AiPart): void {
   ai.memory.waited = 0;
   ai.memory.last = null;
   ai.memory.waitingFor = null;
+  ai.memory.fleeing = null;
 }
 
 /** Reads a party member with an AI part from an untyped command, or says why it can't. */

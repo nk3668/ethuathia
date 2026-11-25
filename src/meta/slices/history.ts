@@ -6,9 +6,10 @@
  * `RunResult`, whose extras grow with every tracker.
  */
 import { z } from 'zod';
+import { itemValueToTrophies, VALUE_PER_TROPHY } from '../../content';
 import { currenciesSchema } from '../currencies';
 import type { Currencies } from '../currencies';
-import { CHRONICLE_TRACKER, CODEX_TRACKER, CONTRACTS_TRACKER, topMoments } from '../../sim';
+import { CHRONICLE_TRACKER, CODEX_TRACKER, CONTRACTS_TRACKER, SALVAGE_TRACKER_ID, topMoments } from '../../sim';
 import type { ChronicleEntry, RunOutcome, RunResult } from '../../sim';
 import { bankedFromRunResult, currenciesFromRewards } from '../runResult';
 import { defineSlice } from '../slice';
@@ -50,10 +51,20 @@ export interface RunRecordGold {
   readonly gold: number;
   readonly trophies: number;
   readonly rate: number;
+  readonly bonus?: number;
 }
 
 /** Carried-item sale (or loss) record kept on a `RunRecord` (ETH-171). */
 export interface RunRecordItems {
+  readonly items: number;
+  readonly value: number;
+  readonly trophies: number;
+  readonly rate: number;
+  readonly bonus?: number;
+}
+
+/** In-run salvage tally kept on a `RunRecord` (ETH-188). */
+export interface RunRecordSalvage {
   readonly items: number;
   readonly value: number;
   readonly trophies: number;
@@ -81,6 +92,8 @@ export interface RunRecord {
   readonly gold?: RunRecordGold;
   /** Carried-item sale or loss record (ETH-171); left out for runs recorded before it. */
   readonly items?: RunRecordItems;
+  /** Field Salvage Kit breakdown tally (ETH-188); left out when nothing was salvaged. */
+  readonly salvage?: RunRecordSalvage;
   /** Omens on and the reward multiplier they paid at (ETH-185); left out when none was on. */
   readonly omens?: RunRecordOmens;
   /** Why the run ended (`RunEnd.cause`); empty for runs recorded before ETH-048. */
@@ -141,14 +154,25 @@ const momentSchema = z.object({
   amount: z.number().finite().optional(),
 });
 
+const bonusSchema = z.number().finite().positive();
+
 const goldRecordSchema = z.object({
   gold: z.number().finite().nonnegative(),
   trophies: count,
   rate: z.number().finite().positive(),
+  bonus: bonusSchema.optional(),
 });
 
 const itemsRecordSchema = z.object({
   items: count,
+  value: z.number().finite().nonnegative(),
+  trophies: count,
+  rate: z.number().finite().positive(),
+  bonus: bonusSchema.optional(),
+});
+
+const salvageRecordSchema = z.object({
+  items: z.number().int().positive(),
   value: z.number().finite().nonnegative(),
   trophies: count,
   rate: z.number().finite().positive(),
@@ -168,6 +192,7 @@ const recordSchema = z.object({
   lost: currenciesSchema,
   gold: goldRecordSchema.optional(),
   items: itemsRecordSchema.optional(),
+  salvage: salvageRecordSchema.optional(),
   omens: omensRecordSchema.optional(),
   cause: z.string().max(MAX_CAUSE),
   party: z.array(memberSchema).max(16),
@@ -211,6 +236,8 @@ export function recordMoments(entries: readonly ChronicleEntry[], party: readonl
   }));
 }
 
+const salvageExtras = z.object({ items: z.number().int().positive(), value: z.number().finite().nonnegative() });
+
 /** The compact record of a finished run, numbered `run`. */
 export function runRecord(run: number, result: RunResult): RunRecord {
   const party = partyExtras.safeParse(result.extras['run.party']);
@@ -221,6 +248,15 @@ export function runRecord(run: number, result: RunResult): RunRecord {
   const chronicle = chronicleExtras.safeParse(result.extras[CHRONICLE_TRACKER.id]);
   const gold = goldRecordSchema.safeParse(result.extras['run.gold']);
   const items = itemsRecordSchema.safeParse(result.extras['run.items']);
+  const salvageRaw = salvageExtras.safeParse(result.extras[SALVAGE_TRACKER_ID]);
+  const salvage = salvageRaw.success
+    ? {
+        items: salvageRaw.data.items,
+        value: salvageRaw.data.value,
+        trophies: itemValueToTrophies(salvageRaw.data.value, VALUE_PER_TROPHY),
+        rate: VALUE_PER_TROPHY,
+      }
+    : undefined;
   const omens = omensRecordSchema.safeParse(result.extras['run.omens']);
   const fallen = deaths.success ? deaths.data.fallen : [];
   return {
@@ -232,6 +268,7 @@ export function runRecord(run: number, result: RunResult): RunRecord {
     lost: currenciesFromRewards(result.lost),
     ...(gold.success ? { gold: gold.data } : {}),
     ...(items.success ? { items: items.data } : {}),
+    ...(salvage !== undefined ? { salvage } : {}),
     ...(omens.success && omens.data.omens.length > 0 ? { omens: omens.data } : {}),
     cause: end.success ? end.data.cause.slice(0, MAX_CAUSE) : '',
     party: party.success
@@ -251,7 +288,7 @@ export function runRecord(run: number, result: RunResult): RunRecord {
 }
 
 export const historySlice = defineSlice<History>({
-  version: 6,
+  version: 7,
   schema: historySchema,
   init: () => ({
     totals: { runs: 0, victories: 0, retreats: 0, wipes: 0, turns: 0, deepestDepth: 0 },
@@ -280,6 +317,8 @@ export const historySlice = defineSlice<History>({
     5: (old) => old,
     // v6 (ETH-171): each run optionally keeps its carried-item sale record.
     6: (old) => old,
+    // v7 (ETH-188): each run optionally keeps its salvage tally and trade bonus.
+    7: (old) => old,
   },
   onRunResult: (history, result) => {
     const { totals } = history;

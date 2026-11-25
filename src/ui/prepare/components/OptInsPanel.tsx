@@ -11,7 +11,8 @@ import type { PreparePanelProps } from '../types';
 
 export function OptInsPanel({ profile, choices, update }: PreparePanelProps) {
   const nodes = optInNodes(profile);
-  const enabled = choices.optIns.enabled;
+  const ownedIds = new Set(nodes.map((n) => n.id));
+  const enabled = choices.optIns.enabled.filter((id) => ownedIds.has(id));
   const toggle = (id: string, on: boolean) => {
     const rest = enabled.filter((e) => e !== id);
     update('optIns', { enabled: on ? [...rest, id] : rest });
@@ -27,6 +28,7 @@ export function OptInsPanel({ profile, choices, update }: PreparePanelProps) {
             <span className={styles.choiceText}>
               <span className={styles.choiceName}>
                 <Explain id={node.id} />
+                {node.tags.includes('risky') && <span className={styles.note}> · Risky</span>}
               </span>
               <span className={styles.note}>
                 {node.grants.map((g) => describeGrant(g, rank)).join('; ')}

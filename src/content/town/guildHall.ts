@@ -221,8 +221,8 @@ export const UPGRADE_WAYMARK_LANTERNS = defineUpgrade({
   id: 'upgrade.waymark_lanterns',
   name: 'Waymark Lanterns',
   description:
-    'Lanterns the guild hangs along the way down, lit for the walk back. Once the party has turned back for the surface, ' +
-    '(a retreat or a victory) every adventurer sees 2 tiles further and moves 10% faster. ' +
+    'Lanterns the guild hangs along the way down, lit for the walk back. Once the party has turned back for the surface ' +
+    '(a retreat or a victory), every adventurer sees 2 tiles further and moves 10% faster. ' +
     'Pick this or Guild Chronicles; respec to change.',
   tags: ['party', 'capability', 'return'],
   building,

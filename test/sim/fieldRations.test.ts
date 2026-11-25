@@ -3,11 +3,12 @@
  * eats one when hurt with nothing in sight. Fixed seeds, hand-built floors.
  */
 import { describe, expect, it } from 'vitest';
-import { ITEM_FIELD_RATION, STATUS_REGENERATING, UPGRADE_FIELD_RATIONS } from '../../src/content';
+import { ITEM_FIELD_RATION, ITEM_TRAIL_BISCUIT, STATUS_REGENERATING, UPGRADE_FIELD_RATIONS } from '../../src/content';
 import { buildRunConfig, defaultRunChoices, newProfile } from '../../src/meta';
 import type { Profile } from '../../src/meta';
-import { checkInvariants, createRun, getEntity, getFloor, getMemory, itemSale, soldOnExit, spawnMonster, step } from '../../src/sim';
+import { addToInventory, checkInvariants, chooseRule, createRun, getEntity, getFloor, getMemory, itemSale, soldOnExit, spawnMonster, step, waitDecide } from '../../src/sim';
 import type { ActorEntity, AiActor, RunState, SimEvent } from '../../src/sim';
+import { RUN_DOMAIN_LOG_TEXT } from '../../src/ui/shell/logText/run';
 
 const W = 40;
 const wall = '#'.repeat(W);
@@ -54,6 +55,24 @@ describe('the Field Rations node', () => {
 
   it('is not loot: rations are only ever issued', () => {
     expect(ITEM_FIELD_RATION.loot).toBeUndefined();
+  });
+
+  it('values field rations above trail biscuits so overloaded adventurers drop biscuits first', () => {
+    expect(ITEM_FIELD_RATION.value).toBeGreaterThan(ITEM_TRAIL_BISCUIT.value);
+    const { state, hero } = hall(1);
+    for (let i = 0; i < 20; i++) addToInventory(hero, { def: ITEM_TRAIL_BISCUIT.id, qty: 2 });
+    const picked = chooseRule({ state, actor: hero });
+    expect(picked?.action).toBe('act.drop_lowest');
+    expect(hero.inventory?.items[(picked?.request as { index: number }).index]?.def).toBe(ITEM_TRAIL_BISCUIT.id);
+  });
+
+  it('logs the stacked quantity in kitIssued', () => {
+    const { state } = hall(3);
+    const issued = step(state, [], { decide: waitDecide }).find((e): e is Extract<SimEvent, { type: 'kitIssued' }> => e.type === 'kitIssued');
+    expect(issued?.counts).toEqual({ [ITEM_FIELD_RATION.id]: 3 });
+    const parts = RUN_DOMAIN_LOG_TEXT.kitIssued.text(issued as never, () => 'Brannoc');
+    const line = (Array.isArray(parts) ? parts : [parts]).map((p) => (typeof p === 'string' ? p : (p.label ?? p.ref))).join('');
+    expect(line).toBe('Brannoc shoulders an oak cudgel, a round shield and 3 field rations.');
   });
 });
 

@@ -86,6 +86,16 @@ describe('log text', () => {
       () => 'Mira',
     );
     expect(identified).toEqual(['Mira identifies Iron hatchet as ', { ref: 'item.iron_hatchet', label: '-1 cursed Iron hatchet' }, ' — it is cursed!']);
+
+    const salvaged = ITEMS_LOG_TEXT.itemSalvaged.text(
+      { type: 'itemSalvaged', turn: 3, actor: 1, item: 'item.iron_cap', qty: 1, value: 20, floor: 'd1', pos: { x: 0, y: 0 } },
+      () => 'Mira',
+    );
+    expect(salvaged).toEqual(['Mira breaks ', { ref: 'item.iron_cap', label: undefined }, ' down into scrap (worth 20).']);
+
+    const crateDesc = describeEvent({ type: 'crateIssued', turn: 0, actor: 1, name: 'Mira' }, () => 'Mira');
+    expect(crateDesc.parts.filter((p) => typeof p !== 'string')).toEqual([]);
+    expect(crateDesc.text).toContain('sealed');
   });
 
   it('names templated and named monsters by their event names, with and without an article (ETH-117)', () => {

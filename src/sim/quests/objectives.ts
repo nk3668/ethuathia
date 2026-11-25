@@ -28,6 +28,7 @@ import type { EventMatch, Objective, ObjectiveKindName, ObjectiveOwner } from '.
 import { checkRequirement, describeRequirement } from '../ai/requirements';
 import type { RunTracker } from '../domain';
 import type { SimEvent } from '../events';
+import { floorIdAt } from '../floors/dungeon';
 import { inventoryOf } from '../items/inventory';
 import type { ActorEntity, RunState } from '../state';
 
@@ -146,7 +147,18 @@ export const OBJECTIVE_KINDS: KindTable = {
     measure: 'state',
     goal: 'reach',
     target: (spec) => spec.depth,
-    progress: (state, spec) => ({ current: Math.min(state.domains.floors.deepest, spec.depth) }),
+    progress(state, spec) {
+      const current = Math.min(state.domains.floors.deepest, spec.depth);
+      if (current < spec.depth) return { current };
+      const targetFloor = floorIdAt(spec.depth);
+      const living = state.party
+        .map((id) => state.entities[id])
+        .filter((e): e is ActorEntity => e?.actor !== undefined && e.actor.hp > 0);
+      const by =
+        living.find((e) => e.floor === targetFloor) ??
+        living.sort((a, b) => (state.dungeon.nodes[b.floor]?.depth ?? 0) - (state.dungeon.nodes[a.floor]?.depth ?? 0))[0];
+      return by === undefined ? { current } : { current, by };
+    },
     describe: (spec) => `Reach floor ${spec.depth}`,
   },
   condition: {

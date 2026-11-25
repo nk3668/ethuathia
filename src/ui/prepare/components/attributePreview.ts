@@ -26,8 +26,9 @@ function raceModifiersText(race: RaceDef): string {
   return ATTRIBUTE_IDS.some((id) => (race.attributes[id] ?? 0) !== 0) ? attributeLine(race.attributes, true) : '';
 }
 
-function formatDerivedLine(attrs: Attributes, cls?: ClassDef): string {
-  const kit = cls?.kit === undefined ? '' : ` · Kit: ${kitLine(cls.kit)}`;
+function formatDerivedLine(attrs: Attributes, cls?: ClassDef, kitText?: string): string {
+  const itemsText = kitText ?? (cls?.kit === undefined ? '' : kitLine(cls.kit));
+  const kit = itemsText === '' ? '' : ` · Kit: ${itemsText}`;
   return `${attributeLine(attrs)} · HP ${deriveStat('hp', attrs)} · MP ${deriveStat('mp', attrs)}${kit}`;
 }
 
@@ -51,12 +52,12 @@ export interface SlotPreview {
  * Preview line for an unlocked party slot from the selected class and/or race.
  * Shows base class + race attributes and derived HP/MP without town upgrades.
  */
-export function slotAttributePreview(cls: ClassDef | undefined, race: RaceDef | undefined): SlotPreview {
+export function slotAttributePreview(cls: ClassDef | undefined, race: RaceDef | undefined, kitText?: string): SlotPreview {
   if (cls && race) {
-    return { text: formatDerivedLine(combineAttributes(cls, race), cls), resolved: true };
+    return { text: formatDerivedLine(combineAttributes(cls, race), cls, kitText), resolved: true };
   }
   if (cls) {
-    return { text: `${formatDerivedLine(cls.attributes, cls)} (before race)`, resolved: true };
+    return { text: `${formatDerivedLine(cls.attributes, cls, kitText)} (before race)`, resolved: true };
   }
   if (race) {
     const mod = raceModifiersText(race);

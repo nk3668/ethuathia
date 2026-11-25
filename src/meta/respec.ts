@@ -162,6 +162,12 @@ export function resetTree(profile: Profile, buildingId: string, options: RespecO
 
 function applyGiveUp(profile: Profile, removedIds: readonly string[], refund: Currencies, fee: Currencies): Profile {
   const removed = new Set(removedIds);
+  const optIns = profile.prepare.choices.optIns;
+  const prunedOptIns = optIns.enabled.filter((id) => !removed.has(id));
+  const prepare =
+    prunedOptIns.length === optIns.enabled.length
+      ? profile.prepare
+      : { ...profile.prepare, choices: { ...profile.prepare.choices, optIns: { enabled: prunedOptIns } } };
   const next: Profile = {
     ...profile,
     currencies: subtractCurrencies(addCurrencies(profile.currencies, refund), fee),
@@ -169,6 +175,7 @@ function applyGiveUp(profile: Profile, removedIds: readonly string[], refund: Cu
       owned: profile.upgrades.owned.filter((id) => !removed.has(id)),
       ranks: Object.fromEntries(Object.entries(profile.upgrades.ranks).filter(([id]) => !removed.has(id))),
     },
+    ...(prepare === profile.prepare ? {} : { prepare }),
   };
   const oldRanks = profile.prepare.choices.omens.ranks;
   const keptOmens = Object.fromEntries(Object.entries(oldRanks).filter(([id]) => isUnlocked(next, id)));

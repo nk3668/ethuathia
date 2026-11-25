@@ -105,16 +105,21 @@ describe('the run-start log line', () => {
 });
 
 describe('kit content validation', () => {
-  function problems(kit: string[], upgrade: ClassDef['kitUpgrade'] = CLASS_VANGUARD.kitUpgrade): string[] {
+  function problems(kit: string[], upgrade: ClassDef['kitUpgrade'] = CLASS_VANGUARD.kitUpgrade, stamp: ClassDef['stamp'] = CLASS_VANGUARD.stamp): string[] {
     const registry = new Registry<ClassDef & Def>('class');
-    registry.register({ ...CLASS_VANGUARD, kit, ...(upgrade === undefined ? {} : { kitUpgrade: upgrade }) });
+    registry.register({
+      ...CLASS_VANGUARD,
+      kit,
+      ...(upgrade === undefined ? {} : { kitUpgrade: upgrade }),
+      ...(stamp === undefined ? {} : { stamp }),
+    });
     const kind: ContentKind<ClassDef> = { ...CLASS_KIND, registry };
     return checkKinds([kind], [ITEMS]);
   }
 
   it('accepts the shipped kits and a weapon with armor', () => {
     expect(problems([ITEM_OAK_CUDGEL.id, ITEM_ROUND_SHIELD.id])).toEqual([]);
-    expect(problems([ITEM_ASHWOOD_STAFF.id], { weapon: 'item.ironshod_staff' })).toEqual([]);
+    expect(problems([ITEM_ASHWOOD_STAFF.id], { weapon: 'item.ironshod_staff' }, 'keen')).toEqual([]);
   });
 
   it('rejects an unknown item, a non-gear item and two items for one slot', () => {

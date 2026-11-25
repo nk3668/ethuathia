@@ -15,7 +15,7 @@ import { itemValueToTrophies, VALUE_PER_TROPHY } from '../../content';
 import type { RunTracker } from '../domain';
 import { TROPHIES } from '../run/result';
 import type { Entity, RunState } from '../state';
-import { upgradeSlot } from './equipment';
+import { evaluateUpgrade } from './equipment';
 import { hasHiddenProperties, isGearDef, isItemIdentified } from './identify';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
@@ -62,6 +62,8 @@ export function canSalvage(state: RunState, actor: Entity, item: ItemInstance): 
   if (!salvageOn(state)) return false;
   if (!isGearDef(item.def) || isKitItem(item)) return false;
   if (!isItemIdentified(state, item) || hasHiddenProperties(item)) return false;
-  if (itemDef(item).weight <= 0) return false;
-  return upgradeSlot(state, actor, item) === null;
+  const def = itemDef(item);
+  if (def.weight <= 0 || def.value <= 0) return false;
+  const verdict = evaluateUpgrade(state, actor, item);
+  return verdict.slot === null && verdict.held === undefined;
 }

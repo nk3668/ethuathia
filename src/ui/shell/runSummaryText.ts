@@ -4,7 +4,7 @@
  */
 import { addCurrencies, CURRENCY_INFO, latestUnlocks, milestoneTargets, RUN_RECORD_MOMENTS } from '../../meta';
 import type { Currencies, Profile, RunRecord } from '../../meta';
-import { BUILDINGS, CONTRACTS, defName, DEITIES, describeMilestoneMet, tierBand, tierGateId, UPGRADES } from '../../content';
+import { BUILDINGS, CONTRACTS, defName, DEITIES, describeMilestoneMet, itemValueToTrophies, tierBand, tierGateId, UPGRADES, VALUE_PER_TROPHY } from '../../content';
 import type { Milestone } from '../../content';
 import {
   CHRONICLE_TRACKER,
@@ -17,13 +17,14 @@ import {
   RENOWN_PER_FLOOR,
   renownByFloor,
   renownForFloor,
+  SALVAGE_TRACKER_ID,
   topMoments,
   TROPHIES,
   TURNS_PER_RENOWN,
   turnsRenown,
   WIPE_LOSS_SHARE,
 } from '../../sim';
-import type { ChronicleEntry, ContractRecord, OmensRecord, FallenRecord, FloorRenown, GoldConversionRecord, ItemSaleRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport } from '../../sim';
+import type { ChronicleEntry, ContractRecord, FallenRecord, FloorRenown, GoldConversionRecord, ItemSaleRecord, OmensRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport, SalvageTrackerState } from '../../sim';
 
 /** Each outcome's heading and icon, so it never rests on color alone. */
 export const OUTCOME_LOOK: Readonly<Record<RunOutcome, { title: string; icon: string }>> = {
@@ -62,11 +63,11 @@ export function currencyRows(report: RunReport): CurrencyRow[] {
   });
 }
 
-/** The carried-item sale record (`extras['run.items']`, ETH-171), or `null` when absent, malformed or empty. */
+/** Carried-item sale record (`extras['run.items']`, ETH-171), or `null` when absent, malformed or empty. */
 export function itemSaleOf(report: RunReport): ItemSaleRecord | null {
   const raw = report.result.extras['run.items'];
   if (typeof raw !== 'object' || raw === null) return null;
-  const { items, value, trophies, rate } = raw as Partial<ItemSaleRecord>;
+  const { items, value, trophies, rate, bonus } = raw as Partial<ItemSaleRecord>;
   if (
     typeof items !== 'number' ||
     !Number.isInteger(items) ||
@@ -83,7 +84,7 @@ export function itemSaleOf(report: RunReport): ItemSaleRecord | null {
   ) {
     return null;
   }
-  return { items, value, trophies, rate };
+  return { items, value, trophies, rate, ...(typeof bonus === 'number' && Number.isFinite(bonus) && bonus > 0 ? { bonus } : {}) };
 }
 
 /** The Omens the run had on and the reward multiplier they paid (`extras['run.omens']`, ETH-185), or `null` when none was on. */
@@ -98,7 +99,7 @@ export function omensOf(report: RunReport): { lines: { name: string; rank: numbe
 export function goldConversionOf(report: RunReport): GoldConversionRecord | null {
   const raw = report.result.extras['run.gold'];
   if (typeof raw !== 'object' || raw === null) return null;
-  const { gold, trophies, rate } = raw as Partial<GoldConversionRecord>;
+  const { gold, trophies, rate, bonus } = raw as Partial<GoldConversionRecord>;
   if (
     typeof gold !== 'number' ||
     !Number.isFinite(gold) ||
@@ -112,7 +113,33 @@ export function goldConversionOf(report: RunReport): GoldConversionRecord | null
   ) {
     return null;
   }
-  return { gold, trophies, rate };
+  return { gold, trophies, rate, ...(typeof bonus === 'number' && Number.isFinite(bonus) && bonus > 0 ? { bonus } : {}) };
+}
+
+/** Salvage summary read from `extras['track.salvage']` (ETH-188). */
+export interface SalvageSummary {
+  readonly items: number;
+  readonly value: number;
+  readonly trophies: number;
+  readonly rate: number;
+}
+
+/** The run's Field Salvage Kit breakdown tally (`extras['track.salvage']`), or `null` if none / malformed / empty. */
+export function salvageOf(report: RunReport): SalvageSummary | null {
+  const raw = report.result.extras[SALVAGE_TRACKER_ID];
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { items, value } = raw as Partial<SalvageTrackerState>;
+  if (
+    typeof items !== 'number' ||
+    !Number.isInteger(items) ||
+    items <= 0 ||
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    value < 0
+  ) {
+    return null;
+  }
+  return { items, value, trophies: itemValueToTrophies(value, VALUE_PER_TROPHY), rate: VALUE_PER_TROPHY };
 }
 
 /** The wipe loss as a whole percentage: "25%". */
@@ -298,6 +325,7 @@ export function reportFromRecord(record: RunRecord): RunReport {
         'run.party': party,
         ...(record.gold !== undefined ? { 'run.gold': { ...record.gold } } : {}),
         ...(record.items !== undefined ? { 'run.items': { ...record.items } } : {}),
+        ...(record.salvage !== undefined ? { [SALVAGE_TRACKER_ID]: { items: record.salvage.items, value: record.salvage.value } } : {}),
         ...(record.omens !== undefined ? { 'run.omens': { omens: record.omens.omens.map((o) => ({ ...o })), multiplier: record.omens.multiplier } } : {}),
         'track.deaths': { fallen },
         'track.codex': Object.fromEntries(record.met.map((id) => [id, []])),

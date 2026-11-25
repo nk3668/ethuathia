@@ -155,6 +155,7 @@ export function runModifierProblems(mod: RunModifierConfig): string[] {
   if (!RUN_MODIFIER_SCOPES.includes(mod.scope)) problems.push(`has unknown scope "${String(mod.scope)}"`);
   if (mod.bundle !== undefined && !hasRunBundle(mod.bundle)) problems.push(`has unknown bundle "${mod.bundle}"`);
   if (mod.when !== undefined && !RUN_GATES.includes(mod.when)) problems.push(`has unknown gate "${String(mod.when)}"`);
+  if (mod.when !== undefined && mod.bundle === undefined) problems.push('has a gate without a bundle');
   if (mod.potency !== undefined && (!Number.isFinite(mod.potency) || mod.potency <= 0)) problems.push(`has potency ${mod.potency}`);
   for (const flag of mod.flags ?? []) if (!nonEmpty(flag)) problems.push('has an empty flag');
   if (mod.rewardBonus !== undefined && !Number.isFinite(mod.rewardBonus)) problems.push(`has reward bonus ${mod.rewardBonus}`);
@@ -342,7 +343,9 @@ export function expireFloorModifiers(state: RunState, actor: Entity, emit: Emit)
  * so stats keeps no import of floors.
  */
 export function gateHolds(state: RunState, entity: Entity, gate: RunGate): boolean {
-  if (gate === 'fleeing') return entity.ai?.memory.fleeing != null;
+  if (gate === 'fleeing') {
+    return entity.ai?.memory.fleeing != null && entity.ai.possessed !== true && entity.ai.memory.intent?.action !== 'act.attack_adjacent';
+  }
   return state.domains.run.leaving !== null;
 }
 

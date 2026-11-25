@@ -14,7 +14,7 @@ import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
 import { rewardMultiplier } from '../stats/runModifiers';
 import { depthRevealed, dungeonDepth, floorNode, floorTypeOf } from '../floors/dungeon';
-import { carriesCrate, enchantedKitIds, issuedKitIds, stampedKitIds } from '../items/kit';
+import { carriesCrate, enchantedKitIds, issuedKitSummary, stampedKitIds } from '../items/kit';
 import { itemSale, tradeBonusOf } from '../items/sale';
 import { VICTORY_CHECKS } from '../registries';
 import type { EntityId, RunState } from '../state';
@@ -103,11 +103,21 @@ export function announceStart(state: RunState, emit: Emit): void {
     const entity = state.entities[m.actor];
     // The Mystery Crate (ETH-187) is announced on its own, without naming what is inside.
     if (entity !== undefined && state.config.startCrate === true && carriesCrate(entity)) emit({ type: 'crateIssued', actor: m.actor, name: m.name });
-    const items = entity === undefined ? [] : issuedKitIds(entity);
-    if (items.length === 0 || entity === undefined) continue;
+    if (entity === undefined) continue;
+    const summary = issuedKitSummary(entity);
+    if (summary.items.length === 0) continue;
     const enchanted = enchantedKitIds(entity);
     const stamped = stampedKitIds(entity);
-    emit({ type: 'kitIssued', actor: m.actor, name: m.name, items, ...(enchanted.length > 0 ? { enchanted } : {}), ...(stamped.length > 0 ? { stamped } : {}) });
+    emit({
+      type: 'kitIssued',
+      actor: m.actor,
+      name: m.name,
+      items: summary.items,
+      ...(summary.wornCount < summary.items.length ? { wornCount: summary.wornCount } : {}),
+      ...(Object.keys(summary.counts).length > 0 ? { counts: summary.counts } : {}),
+      ...(enchanted.length > 0 ? { enchanted } : {}),
+      ...(stamped.length > 0 ? { stamped } : {}),
+    });
   }
   const known = state.config.startKnown ?? [];
   if (known.length > 0) emit({ type: 'startKnown', categories: [...known] });
@@ -203,7 +213,7 @@ function end(state: RunState, stepEvents: readonly SimEvent[], emit: Emit, outco
     if (Object.keys(lost).length > 0) emit({ type: 'earningsLost', lost, atRisk, share: WIPE_LOSS_SHARE, depth });
   }
   const gold = state.domains.items.gold;
-  const bonus = tradeBonusOf(state);
+  const bonus = outcome === 'wipe' ? 0 : tradeBonusOf(state);
   if (gold > 0) {
     emit({
       type: 'goldSettled',
@@ -269,7 +279,7 @@ export function runResult(state: RunState): RunResult {
   if (runEnd === null) throw new Error('The run has not ended');
   const atRisk = state.domains.run.rewards.atRisk;
   const gold = state.domains.items.gold;
-  const bonus = tradeBonusOf(state);
+  const bonus = runEnd.outcome === 'wipe' ? 0 : tradeBonusOf(state);
   const trophies = runEnd.outcome === 'wipe' ? 0 : goldToTrophies(gold, GOLD_PER_TROPHY, bonus);
   const goldRecord: GoldConversionRecord = { gold, trophies, rate: GOLD_PER_TROPHY, ...(bonus > 0 ? { bonus } : {}) };
   const sale = itemSale(state, runEnd.outcome);

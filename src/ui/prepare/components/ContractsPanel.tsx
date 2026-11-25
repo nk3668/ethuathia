@@ -4,16 +4,23 @@
  * takes at least one, so the last one can't be cleared.
  */
 import { CONTRACTS } from '../../../content';
-import { buildingQuestRefusal, chosenContracts, contractSlots, isAvailable, questOffer } from '../../../meta';
+import { buildingQuestRefusal, capacity, chosenContracts, contractSlots, isAvailable, questOffer, withOptIns } from '../../../meta';
+import { applyRewardMultiplier } from '../../../sim';
 import { Explain } from '../../codex/Explain';
 import { rewardText } from '../../shell/logText/quests';
 import styles from '../panels.module.css';
 import type { PreparePanelProps } from '../types';
 
+function contractPay(base: Readonly<Record<string, number>>, bonus: number): Record<string, number> {
+  if (bonus <= 0) return { ...base };
+  return Object.fromEntries(Object.entries(base).map(([k, n]) => [k, applyRewardMultiplier(n, 1 + bonus / 100)]));
+}
+
 export function ContractsPanel({ profile, choices, update }: PreparePanelProps) {
   const slots = contractSlots(profile);
   const chosenDefs = chosenContracts(profile, choices.contracts);
   const chosen = chosenDefs.map((d) => d.id);
+  const bonus = capacity(withOptIns(profile, choices.optIns), 'contractRewardBonus', 0);
   const full = chosen.length >= slots;
   const toggle = (id: string, on: boolean) => {
     if (on) {
@@ -47,7 +54,8 @@ export function ContractsPanel({ profile, choices, update }: PreparePanelProps) 
                 <Explain id={c.id} />
               </span>
               <span className={styles.note}>
-                Pays {rewardText(c.reward)}
+                Pays {rewardText(contractPay(c.reward, bonus))}
+                {bonus > 0 && ` (+${bonus}% Guild)`}
                 {offer.state === 'locked' ? ` · not offered yet: ${offer.need}` : !open && ' · locked: unlocked by an upgrade'}
                 {refusal !== null && ` · ${refusal}`}
               </span>

@@ -93,6 +93,7 @@ export {
   levelOf,
   levelView,
   rollLevelGains,
+  XP_CARRY_SCALE,
   XP_PER_DEPTH,
   XP_PER_THREAT,
   XP_STEP,

@@ -5,10 +5,9 @@
  *
  * Tiers I and II of the approved town-tree page (ETH-159). Rows 1 to 3 are open once the Smithy is;
  * rows 4 to 6 open with the tier quest *Star-Iron* (ETH-170): bring star-iron back from floor 5.
- * Only the nodes that build on existing systems are here. Maker's Marks, the class-tier kit pick,
- * Forge Stamps, Apprentice Trinket and Field Salvage Kit (ETH-188) and the two Omens (ETH-186, at the ends of the file) join
- * the free cells of the grid: row 1 column 1, row 2 columns 0 and 1, row 3 column 2, row 4 column 2
- * and row 6 columns 0, 1 and 3.
+ * Maker's Marks, the class-tier kit pick, Forge Stamps, Apprentice Trinket and Field Salvage Kit
+ * (ETH-188) and the two Omen unlocks (ETH-186, at the end of the file) fill out the grid alongside
+ * the Smithy's core nodes.
  *
  * Costs are a starting shape for the pacing work (ETH-161).
  */
@@ -93,7 +92,7 @@ export const UPGRADE_ARTISAN_IMPLEMENTS = defineUpgrade({
   name: 'Artisan Implements',
   description:
     'The smiths forge each trade its proper tool. Every adventurer’s starting main-hand item is replaced by their class’s own ' +
-    'Tier-1 piece: a mace becomes a flanged mace, a skinning knife a trail dirk, a staff an ironshod staff, a hatchet a bearded axe. ' +
+    'Tier-1 piece: an oak cudgel becomes a flanged mace, a skinning knife a trail dirk, a staff an ironshod staff, a hatchet a bearded axe. ' +
     'Kit pieces are never sold.',
   tags: ['kit', 'capability'],
   building,
@@ -124,7 +123,7 @@ export const UPGRADE_TAILORED_ATTIRE = defineUpgrade({
 export const UPGRADE_REINFORCED_WAGON = defineUpgrade({
   id: 'upgrade.reinforced_wagon',
   name: 'Reinforced Wagon',
-  description: 'Iron bands and a deeper bed. The expedition wagon has room for one more adventurer, the third berth.',
+  description: 'Iron bands and a deeper bed. The expedition wagon has room for one more adventurer.',
   tags: ['party'],
   building,
   tier: 3,
@@ -199,7 +198,7 @@ export const UPGRADE_RUNED_IMPLEMENTS = defineUpgrade({
 export const UPGRADE_WARDED_ATTIRE = defineUpgrade({
   id: 'upgrade.warded_attire',
   name: 'Warded Attire',
-  description: 'Every adventurer’s starting defensive piece is worked at +1: shield, cap, jerkin or boots, each gains armor. Kit pieces are never sold.',
+  description: 'Every adventurer’s starting defensive piece is worked at +1 using its own base enchantment: shield, cap, jerkin or boots, each gains armor. Kit pieces are never sold.',
   tags: ['kit', 'numeric'],
   building,
   tier: 5,

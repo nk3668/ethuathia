@@ -3,7 +3,19 @@
  * `RunConfig` out. The app's Descend, auto-restart and every later way of starting a run go
  * through it, so what the town bought always reaches the run.
  */
-import { CLASSES, CONTRACTS, isBuildingQuest, ITEMS, RACES, RUN_GATE_INFO, upgradeBundle, upgradeRunGate } from '../../content';
+import {
+  CLASSES,
+  CONTRACTS,
+  isBuildingQuest,
+  isStampId,
+  ITEMS,
+  RACES,
+  RUN_GATE_INFO,
+  START_ENCHANT_PIECES,
+  START_KNOWN_CATEGORIES,
+  upgradeBundle,
+  upgradeRunGate,
+} from '../../content';
 import { Rng } from '../../core';
 import { configDepth, hasBundle, omenModifiers, omenProblems, requirementProblems, runModifierListProblems } from '../../sim';
 import type { AdventurerConfig, RunConfig, RunModifierConfig } from '../../sim';
@@ -70,7 +82,7 @@ export function upgradeBonusModifiers(profile: Profile): RunModifierConfig[] {
     const contract = sum('contractRewardBonus');
     if (xp === 0 && contract === 0) continue;
     out.push({
-      key: node.id,
+      key: `${node.id}:bonus`,
       source: { id: node.id, label: node.name },
       scope: 'party',
       ...(xp === 0 ? {} : { xpBonus: xp / 100 }),
@@ -173,12 +185,34 @@ export function checkRunConfig(config: RunConfig): string[] {
     if (m.name.trim() === '') problems.push(`party[${i}] has no name`);
     if (!CLASSES.has(m.classId)) problems.push(`party[${i}] has unknown class "${m.classId}"`);
     if (!RACES.has(m.raceId)) problems.push(`party[${i}] has unknown race "${m.raceId}"`);
+    if (m.stamp !== undefined && !isStampId(m.stamp)) problems.push(`party[${i}] has unknown stamp "${m.stamp}"`);
   });
   for (const id of config.partyBundles ?? []) if (!hasBundle(id)) problems.push(`unknown party bundle "${id}"`);
   const omenIssues = omenProblems(config.omens);
   problems.push(...omenIssues);
   problems.push(...runModifierListProblems([...(config.runModifiers ?? []), ...(omenIssues.length === 0 ? omenModifiers(config.omens) : [])]));
-  for (const { item } of config.startStock ?? []) if (!ITEMS.has(item)) problems.push(`unknown starting item "${item}"`);
+  for (const piece of config.kitEnchant ?? []) {
+    if (!START_ENCHANT_PIECES.includes(piece)) problems.push(`unknown kitEnchant piece "${String(piece)}"`);
+  }
+  for (const piece of config.kitTier ?? []) {
+    if (!START_ENCHANT_PIECES.includes(piece)) problems.push(`unknown kitTier piece "${String(piece)}"`);
+  }
+  for (const cat of config.startKnown ?? []) {
+    if (!START_KNOWN_CATEGORIES.includes(cat)) problems.push(`unknown startKnown category "${String(cat)}"`);
+  }
+  if (config.tradeBonus !== undefined && (!Number.isFinite(config.tradeBonus) || config.tradeBonus < 0)) {
+    problems.push(`tradeBonus ${String(config.tradeBonus)} must be a finite number of 0 or more`);
+  }
+  for (const { item, qty } of config.startStock ?? []) {
+    if (!ITEMS.has(item)) problems.push(`unknown starting item "${item}"`);
+    else {
+      const def = ITEMS.get(item);
+      if (def.gear === undefined && def.category !== 'potion' && def.category !== 'scroll' && def.category !== 'food') {
+        problems.push(`starting item "${item}" cannot be kit (${def.category})`);
+      }
+    }
+    if (!Number.isSafeInteger(qty) || qty < 1) problems.push(`starting item "${item}" has invalid quantity ${String(qty)}`);
+  }
   const contracts = config.contracts ?? [];
   for (const id of contracts) if (!CONTRACTS.has(id)) problems.push(`unknown contract "${id}"`);
   if (new Set(contracts).size !== contracts.length) problems.push('a contract is taken twice');

@@ -193,7 +193,7 @@ describe('Appraiser’s Eye and Assayer’s Ledger (startKnown)', () => {
     const events = step(state, []).filter((e): e is Extract<SimEvent, { type: 'startKnown' }> => e.type === 'startKnown');
     expect(events).toHaveLength(1);
     expect(text(RUN_DOMAIN_LOG_TEXT.startKnown.text(events[0] as never, () => ''))).toBe(
-      'The party sets out knowing every kind of potions, rings and amulets on sight.',
+      'The party sets out knowing all potions, rings and amulets on sight.',
     );
     expect(step(setup().state, []).some((e) => e.type === 'startKnown')).toBe(false);
   });

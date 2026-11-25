@@ -12,7 +12,7 @@ import type { Def } from '../core';
 import { ATTRIBUTE_IDS, attributesSchema } from './attributes';
 import type { AttributeId, Attributes } from './attributes';
 import { gearSlots, ITEMS } from './items';
-import { isStampId, STAMP_IDS } from './stamps';
+import { isStampId, STAMP_IDS, STAMPS } from './stamps';
 import type { StampId } from './stamps';
 import type { ContentKind } from './kind';
 import { defShape } from './schema';
@@ -146,9 +146,17 @@ export function smithyKitProblems(def: Pick<ClassDef, 'kit' | 'kitUpgrade' | 'tr
     }
   }
   if (def.trinket === undefined) problems.push('has a kit but no trinket (a ring or amulet)');
-  else if (ITEMS.has(def.trinket) && ITEMS.get(def.trinket).category !== 'jewelry') problems.push(`trinket "${def.trinket}" is not a ring or amulet`);
+  else if (ITEMS.has(def.trinket)) {
+    if (ITEMS.get(def.trinket).category !== 'jewelry') problems.push(`trinket "${def.trinket}" is not a ring or amulet`);
+    else if (kitProblems([...kit, def.trinket]).length > kitProblems(kit).length) {
+      problems.push(`trinket "${def.trinket}" has no free slot alongside the kit`);
+    }
+  }
   if (def.stamp === undefined) problems.push('has a kit but no default stamp');
   else if (!isStampId(def.stamp)) problems.push(`unknown stamp "${def.stamp as string}"`);
+  else if (pieces[STAMPS[def.stamp].piece] === undefined) {
+    problems.push(`default stamp "${def.stamp}" targets a ${STAMPS[def.stamp].piece} piece, which the kit does not have`);
+  }
   return problems;
 }
 
