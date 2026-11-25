@@ -1817,13 +1817,22 @@ interface RuleActionDef extends Def {
   player's. Nothing is special-cased, and each baseline behavior is also a rule action the
   Library can hand to the player.
 - **Monsters use the same engine** with rule sets from their content definitions.
-- **The rules editor is generated from the registries.** `paramSchema` describes each
-  parameter (percentage, item category, target choice) and `describe` renders the row. A new
-  condition appears in the editor as soon as it is registered and unlocked.
+- **Tactics, not a rules editor (M3 design, 2026-11-25, `CLAUDE.md` §5.2).** The player never
+  edits rules. They pick named **tactics** (content defs, kind `tactic`, each on one axis:
+  stance, formation, role, range, focus or habit), and the sim builds each adventurer's player
+  rule list from the picks. Planned shape, to be fixed in ETH-162:
+  - **Stance, role and habits contribute rule rows** in a fixed order: stance overrides (e.g.
+    *Fall back*), then habits, then role, then the baseline.
+  - **Range, focus and formation are parameters** that rule actions read from `AiCtx`
+    (engagement distance, target choice, leash), not rows.
+  - **Ability tags:** abilities, consumables and wands declare tags (`heal`, `control`, …) and
+    rule actions pick "the best of tag X", so options never name a class, spell or item.
+  - **Defaults reproduce today:** with no picks (or the class default build, until it is
+    tuned) the baseline runs as it does now, so T0 identity holds with tactics off.
+  - A `setTactics` command swaps picks mid-run; the trace's `RuleRef` names the option.
+  - The old "presets" and "doctrine" become saved loadouts and the stance/formation axes.
 - **Stuck detection** lives in `AiMemory`: if position and explored percentage are unchanged
   for N turns, the current goal is dropped, a different one is chosen and the change is logged.
-- **Presets and doctrine** are data: a preset is a saved `RuleSet`; doctrine is a small set of
-  party-wide parameters that conditions and actions read from `AiCtx`.
 
 As built in `src/sim/ai/` (ETH-009):
 

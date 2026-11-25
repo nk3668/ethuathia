@@ -388,29 +388,34 @@ ratio so glyphs stay sharp.
 
 ## 5. Tab panels
 
-### 5.1 Rules editor
+### 5.1 Tactics panel
+
+Design decided 2026-11-25 (`CLAUDE.md` §5.2); it replaces the earlier rules-editor mock-up.
+The exact look is settled in the tactics panel item (ETH-196).
 
 ```
-Rules for  [ Mira ▾ ]      Preset [ Cautious ▾ ]  [Save as…]        3 / 5 slots
-╭──────────────────────────────────────────────────╮
-│ ⠿  1   [ HP below 30% ▾ ]  →  [ quaff best healing ▾ ]   ● 14   [on] │
-╰──────────────────────────────────────────────────╯
-╭──────────────────────────────────────────────────╮
-│ ⠿  2   [ enemy adjacent ▾ ] →  [ attack weakest ▾ ]      ○ 212  [on] │
-╰──────────────────────────────────────────────────╯
-[ + Add rule ]
-─ Baseline (always active) ─────────────────────────
-   flee when HP is very low · fight adjacent · explore · leave floor
+Loadout [ Careful delve ▾ ]  [Save as…]
+╭ Party ─────────────────────────────────────────────────────────╮
+│ Stance     [ Steady ▾ ]          Formation [ Stick together ▾ ] │
+╰────────────────────────────────────────────────────────────────╯
+╭ Mira · Lorekeeper ─────────────────────────────────────────────╮
+│ Role [ Healer ▾ ]   Range [ Back line ▾ ]   Focus [ Casters ▾ ] │
+│ Habits  [ Quick to quaff × ]  [ + habit ]  🔒            1 / 2  │
+│ now: mending Bram (30% HP) · Healer                              │
+╰────────────────────────────────────────────────────────────────╯
+╭ Bram · Vanguard ───────────────────────────────────────────────╮
+│ Role [ Tank ▾ ]   Range [ Front line ▾ ]  Focus [ Protect allies ▾ ] │
+│ …                                                                │
+╰────────────────────────────────────────────────────────────────╯
+[ Reset to class defaults ]
 ```
 
-- Each rule is a card: drag handle, order number, condition chip, arrow, action chip,
-  last-fired dot (filled if it fired in the last few turns) with a hit count, and a toggle.
-- Chips open a dropdown built from the condition and action registries; parameters such as
-  the percentage are edited inline.
-- Locked conditions and actions appear in the dropdown greyed, with a padlock and the Library
-  node that unlocks them.
-- Baseline rules are listed below, muted and not editable, so the player can see what happens
-  when none of their rules fire.
+- Each picker lists the axis's options with a one-line description; locked options are greyed,
+  with a padlock and the Library node that unlocks them.
+- Changes apply at once, mid-run included, on each adventurer's next decision.
+- Each option's tooltip says what it does, which ability tags it uses, and its hit count this
+  run. An adventurer with nothing of a tag shows the fallback ("no control abilities").
+- The "now" line repeats the party card's intent and names the option behind it.
 
 ### 5.2 Town
 
@@ -506,10 +511,10 @@ than kept, a note says how many are kept.
 ### 6.1 Prepare
 
 ```
-╭ Party ──────────╮ ╭ Loadout & rules ────╮ ╭ Risk ──────────────────╮
+╭ Party ──────────╮ ╭ Loadout & tactics ──╮ ╭ Risk ──────────────────╮
 │ 1 Mira     Lv 6 │ │ Kit: Iron set       │ │ Patron: none ▾         │
 │ 2 Oren     Lv 3 │ │ Trait: Stout        │ │ Omens                  │
-│ 3 (random)      │ │ Rules: Cautious ▾   │ │  Gloom       ○ ● ○  II │
+│ 3 (random)      │ │ Tactics: Careful ▾  │ │  Gloom       ○ ● ○  II │
 │ 4 🔒            │ │                     │ │  Ravenous    ● ○ ○  I  │
 ╰─────────────────╯ ╰─────────────────────╯ │ Reward  ×1.45          │
                                             ╰────────────────────────╯

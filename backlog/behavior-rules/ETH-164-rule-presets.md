@@ -1,27 +1,35 @@
 ---
 id: ETH-164
-title: Shipped rule presets, plus saving and loading your own
+title: Saved tactics loadouts for the party and each adventurer, ready for talent builds
 type: feature
 status: idea
 priority: P1
 milestone: M3
 epic: behavior-rules
 size: S
-depends_on: [ETH-162]
+depends_on: [ETH-162, ETH-196]
 created: 2026-11-24
-updated: 2026-11-24
+updated: 2026-11-25
 ---
 
 ## Summary
-Ship "Cautious", "Greedy" and "Speedrunner" presets, and let the player save and load their own rule sets per adventurer or party-wide.
+The player saves named loadouts and applies them on the Prepare screen or the tactics panel. A loadout holds the party's stance and formation and each adventurer's role, range, focus and habits. Its format leaves room for each adventurer's talent build, which arrives in M4 (ETH-088).
 
 ## Why
-A new player should get reasonable behavior before learning the editor (`CLAUDE.md` §5.2).
+"Saved loadouts could be nice. Incorporate the class talent trees as well" (Nate, 2026-11-25). See `CLAUDE.md` §5.2 and §4 (Builds).
 
 ## Acceptance criteria
-- [ ] The three shipped presets use only the starter vocabulary
-- [ ] The Prepare screen picks a rule set per adventurer or party-wide (`CLAUDE.md` §2, step 3)
-- [ ] The player can save, rename and delete their own presets
+- [ ] The player can save, rename, apply and delete loadouts. They are saved with the profile (save migration).
+- [ ] There are two scopes:
+  - **party loadouts** hold stance, formation and one build per slot
+  - **adventurer builds** hold role, range, focus and habits
+  
+  A party loadout can point at adventurer builds or embed them.
+- [ ] Applying a loadout skips options that are now locked or over the habit-slot limit, and says which ones.
+- [ ] The adventurer-build record has a `talents` field, empty until ETH-088 fills it. ETH-088's named talent builds save into these records rather than a separate list.
+- [ ] A few shipped loadouts, e.g. "Careful", "Delver" and "Plunderer", use only starter options.
+- [ ] Tooltips and Codex text. `npm run check` passes.
 
 ## Log
 - 2026-11-24: Created in the backlog reorganization by theme.
+- 2026-11-25: Rewritten for the tactics design: rule presets become saved tactics loadouts, with room for M4 talent builds.

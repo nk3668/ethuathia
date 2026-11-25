@@ -1,8 +1,8 @@
 # Backlog Index
 
-**Next ID: ETH-192**
+**Next ID: ETH-198**
 
-**Current milestone: M3 (Behavior rules and AI).** M2 (Meta loop) is complete: its capstone ETH-161 and the follow-up ETH-191 merged 2026-11-25.
+**Current milestone: M3 (Tactics and AI).** M2 (Meta loop) is complete: its capstone ETH-161 and the follow-up ETH-191 merged 2026-11-25. On 2026-11-25 Nate replaced player-written behavior rules with **tactics** the player picks and swaps (`CLAUDE.md` §5.2), and the M3 items were rewritten for it.
 
 **Assigned to Gemini (Antigravity)**; All assigned items (ETH-083, ETH-095, ETH-157, ETH-158, ETH-175) are reviewed and merged.
 
@@ -18,7 +18,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | M2 | Meta loop: town economy, unlocks, records, desktop saves | ETH-161 |
 | M2.1 | Town trees: the Guild Hall and Smithy trees from the town-tree page (v4) | ETH-161 |
 | M2.2 | Minimal Omens: ranks, one reward multiplier, unlocked by town nodes | ETH-161 |
-| M3 | Behavior rules and AI | ETH-165 |
+| M3 | Tactics and AI | ETH-165 |
 | M4 | Classes and roles | ETH-146 |
 | M5 | Foes and loot | ETH-166 |
 | M6 | Quests and risk (contracts, bounties, encounters, Omens) | ETH-167 |
@@ -33,7 +33,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [sim-core](sim-core/_epic.md) | Simulation core | active | M0, M1, M2 |
 | [dungeon-gen](dungeon-gen/_epic.md) | Dungeon generation | active | M0, M1.5, M2, M6, M8, later |
 | [adventurer-ai](adventurer-ai/_epic.md) | Decision engine and baseline AI | active | M0, M1, M1.6, M3, M6 |
-| [behavior-rules](behavior-rules/_epic.md) | Behavior rules | active | M2, M3 |
+| [behavior-rules](behavior-rules/_epic.md) | Tactics (formerly behavior rules) | active | M2, M3 |
 | [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M1.6, M5, M7, later |
 | [content](content/_epic.md) | Content definitions | active | M0, M7 |
 | [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M2.1, M3, M6, M7, M8, later |
@@ -163,17 +163,23 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-185](risk-omens/ETH-185-minimal-omen-system.md) | Minimal Omen system with ranks, one reward multiplier and a Prepare toggle, unlocked by town nodes | risk-omens | M2.2 | P1 | done | M |
 | [ETH-186](risk-omens/ETH-186-first-town-omens.md) | The first four Omens and their town-tree unlock nodes | risk-omens | M2.2 | P1 | done | M |
 | [ETH-191](risk-omens/ETH-191-omens-that-bite.md) | Make Stalker's Ledger, Cursed Hoards and Armed Warbands cost win rate | risk-omens | M2.2 | P1 | done | S |
-| [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Rules editor and the rule data model | behavior-rules | M3 | P1 | idea | M |
-| [ETH-163](behavior-rules/ETH-163-library-tree.md) | Library tree unlocks rule conditions, actions and slots | behavior-rules | M3 | P1 | idea | M |
-| [ETH-164](behavior-rules/ETH-164-rule-presets.md) | Shipped rule presets, plus saving and loading your own | behavior-rules | M3 | P1 | idea | S |
-| [ETH-165](tools-balance/ETH-165-rules-balance-pass.md) | Rules and presets balance pass (M3 capstone) | tools-balance | M3 | P1 | idea | M |
-| [ETH-189](adventurer-ai/ETH-189-flee-return-oscillation.md) | Break the flee-and-return loop against a ranged foe | adventurer-ai | M3 | P2 | idea | S |
-| [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Guild Hall doctrine: prioritize clearing floors or prioritize the stairs | town-meta | M3 | P2 | ready | S |
-| [ETH-151](behavior-rules/ETH-151-formation-doctrine.md) | Formation doctrine: stick together or spread out | behavior-rules | M3 | P2 | idea | M |
-| [ETH-154](adventurer-ai/ETH-154-smarter-escape-direction.md) | Smarter escape direction: flee toward allies, stairs or home instead of just away | adventurer-ai | M3 | P2 | idea | M |
+| [ETH-192](behavior-rules/ETH-192-ability-tags.md) | Ability tags - abilities, consumables and wands declare what they do, and the AI picks the best of a tag | behavior-rules | M3 | P1 | ready | M |
+| [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Tactics engine - tactic options as content that build each adventurer's rules | behavior-rules | M3 | P1 | ready | M |
+| [ETH-193](behavior-rules/ETH-193-roles-ranges-focuses.md) | Roles, ranges and focuses - Tank, Healer, Damage and Scout; engagement distance; target choice | behavior-rules | M3 | P1 | idea | M |
+| [ETH-194](behavior-rules/ETH-194-habits-and-slots.md) | Habits and habit slots - several per adventurer, with exclusive pairs | behavior-rules | M3 | P1 | idea | M |
+| [ETH-196](behavior-rules/ETH-196-tactics-panel.md) | Tactics panel, party-card intent and the Prepare tactics column | behavior-rules | M3 | P1 | idea | M |
+| [ETH-197](town-meta/ETH-197-library-building-quest.md) | The Library building and its building quest | town-meta | M3 | P1 | idea | S |
+| [ETH-163](behavior-rules/ETH-163-library-tree.md) | Library tree unlocks tactics and habit slots | behavior-rules | M3 | P1 | idea | M |
+| [ETH-164](behavior-rules/ETH-164-rule-presets.md) | Saved tactics loadouts for the party and each adventurer, ready for talent builds | behavior-rules | M3 | P1 | idea | S |
+| [ETH-165](tools-balance/ETH-165-rules-balance-pass.md) | Tactics balance pass (M3 capstone) | tools-balance | M3 | P1 | idea | M |
+| [ETH-189](adventurer-ai/ETH-189-flee-return-oscillation.md) | Break the flee-and-return loop against a ranged foe | adventurer-ai | M3 | P2 | ready | S |
+| [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Party stances - Steady, Cautious, Reckless, Delve, Plunder and Fall back | town-meta | M3 | P2 | idea | M |
+| [ETH-151](behavior-rules/ETH-151-formation-doctrine.md) | Formation tactic - Stick together, Loose or Spread out | behavior-rules | M3 | P2 | idea | S |
+| [ETH-154](adventurer-ai/ETH-154-smarter-escape-direction.md) | Smarter escape direction: flee toward allies, stairs or home instead of just away | adventurer-ai | M3 | P2 | ready | M |
+| [ETH-195](behavior-rules/ETH-195-controller-role.md) | Controller role and Softens targets habit, with a stun status and the first control and debuff sources | behavior-rules | M3 | P2 | idea | M |
 | [ETH-035](characters/ETH-035-proficiencies-aptitudes.md) | Class equipment proficiencies and race aptitudes | characters | M4 | P2 | idea | M |
 | [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M4 | P2 | idea | M |
-| [ETH-038](characters/ETH-038-class-aware-ai-roles.md) | Class-aware AI roles | characters | M4 | P2 | idea | M |
+| [ETH-038](characters/ETH-038-class-aware-ai-roles.md) | Class fit for tactics - class-only options and bonuses for a good fit | characters | M4 | P2 | idea | M |
 | [ETH-088](characters/ETH-088-class-mastery-trees.md) | Talent tree engine: three trees per class and a build per adventurer | characters | M4 | P2 | idea | M |
 | [ETH-146](tools-balance/ETH-146-composition-balance-pass.md) | Composition and rules balance pass (M4 capstone) | tools-balance | M4 | P2 | idea | M |
 | [ETH-173](characters/ETH-173-resurrection-class.md) | A class that can resurrect a fallen party member during a run | characters | M4 | P3 | idea | M |
