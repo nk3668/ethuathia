@@ -3,7 +3,7 @@
  * `RunConfig` out. The app's Descend, auto-restart and every later way of starting a run go
  * through it, so what the town bought always reaches the run.
  */
-import { CLASSES, CONTRACTS, isBuildingQuest, ITEMS, RACES, upgradeBundle } from '../../content';
+import { CLASSES, CONTRACTS, isBuildingQuest, ITEMS, RACES, RUN_GATE_INFO, upgradeBundle, upgradeRunGate } from '../../content';
 import { Rng } from '../../core';
 import { configDepth, hasBundle, requirementProblems, runModifierListProblems } from '../../sim';
 import type { AdventurerConfig, RunConfig, RunModifierConfig } from '../../sim';
@@ -37,19 +37,22 @@ export function upgradePartyBundles(profile: Profile): string[] {
  * scope `run`, in purchase order, keyed and credited by the node (id and name) and carrying the
  * node's merged run-scope grants as its bundle. Scope `party`: an upgrade the player bought helps
  * the party, including allies outside the party roster. A ranked node (ETH-172) gets one per
- * rank, the first keyed by the node id and the rest `<id>#<rank>`, so they stack.
+ * rank, the first keyed by the node id and the rest `<id>#<rank>`, so they stack. A gated grant (`when`) carries its gate into the modifier.
  */
 export function upgradeRunModifiers(profile: Profile): RunModifierConfig[] {
   return ownedNodes(profile)
     .filter((node) => upgradeBundle(node, 'run') !== undefined)
-    .flatMap((node) =>
-      Array.from({ length: rankOf(profile, node.id) }, (_, i): RunModifierConfig => ({
+    .flatMap((node) => {
+      // A gated node (ETH-187: Extraction Drills, Waymark Lanterns) only counts while its gate holds.
+      const when = upgradeRunGate(node);
+      return Array.from({ length: rankOf(profile, node.id) }, (_, i): RunModifierConfig => ({
         key: i === 0 ? node.id : `${node.id}#${i + 1}`,
-        source: { id: node.id, label: node.name },
+        source: { id: node.id, label: when === undefined ? node.name : `${node.name}, ${RUN_GATE_INFO[when].name}` },
         scope: 'party',
         bundle: node.id,
-      })),
-    );
+        ...(when === undefined ? {} : { when }),
+      }));
+    });
 }
 
 /**

@@ -18,7 +18,7 @@ import type { Pos } from '../../core';
 import { validateAction } from '../actions';
 import type { ActionRequest } from '../actions';
 import type { Emit } from '../events';
-import { ITEMS_BASELINE_LOOT, ITEMS_BASELINE_URGENT } from '../items/rules';
+import { ITEMS_BASELINE_LOOT, ITEMS_BASELINE_RECOVER, ITEMS_BASELINE_URGENT } from '../items/rules';
 import { registerInvariant } from '../invariants';
 import { updateThreatMemory } from '../combat/threat';
 import { explored } from '../perception';
@@ -54,7 +54,7 @@ export const DROP_TURNS = 20;
  * fleeing until HP is back to `FLEE_RELEASE_PERCENT`% or no threat has been seen for `FLEE_CALM_TURNS`,
  * ETH-148) if there is an escape route (`act.flee` can't be done otherwise, so a cornered adventurer
  * fights on); attack an adjacent enemy (combat, ETH-060); rush a caster in sight that has you in
- * bolt range (ETH-040); once the party has turned back, climb
+ * bolt range (ETH-040); hurt with no threat in sight, eat a ration (ETH-187); once the party has turned back, climb
  * out with it (waiting at the stairs up for the others); walk back to the party's lead when more
  * than `PARTY_LEASH` tiles from it (ETH-145); once every contract is complete, turn
  * back and leave, and fetch a contract's item (the relic) once the party has seen it, however far
@@ -79,6 +79,8 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.in_bolt_range' }, action: { id: 'act.rush_caster' }, enabled: true },
   // Fleeing with nowhere left to run: hold still rather than walk back toward the threat (ETH-148).
   { condition: { id: 'cond.fleeing' }, action: { id: 'act.hold_position' }, enabled: true },
+  // Recovery (ETH-187): hurt with nothing in sight, eat a ration.
+  ...ITEMS_BASELINE_RECOVER,
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   // Quests (ETH-024): once every contract is complete, head out; fetch a contract item once seen.

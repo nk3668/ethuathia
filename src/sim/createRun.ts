@@ -6,6 +6,7 @@ import type { Pos } from '../core';
 import { CLASSES, RACES } from '../content';
 import { newAiPart } from './ai/types';
 import { initDomains } from './domains';
+import { giveCrate } from './items/crate';
 import { giveKit, giveStock, knowKinds } from './items/kit';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { buildDungeon, DEFAULT_FLOOR_TYPE, planFloor, resolveRunDepth } from './floors';
@@ -89,6 +90,9 @@ export function createRun(config: RunConfig, seed: number): RunState {
     const entity = state.entities[id];
     if (entity !== undefined) giveStock(state, entity, (config.startStock ?? []).filter((s) => s.each === true || i === 0));
   });
+  // The Quartermaster's crate (ETH-187): one unidentified curiosity for the first member, rolled from the seed.
+  const leader = state.entities[state.party[0] as number];
+  if (config.startCrate === true && leader !== undefined) giveCrate(state, leader);
   // The run starts before turn 0's step, so events from setting up are not reported.
   startPartyStats(state, () => undefined);
   perceiveParty(state);

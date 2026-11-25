@@ -242,6 +242,6 @@ describe('the Guild Hall tree (ETH-132)', () => {
     expect(UPGRADES.get('upgrade.outrider_training').name).toBe("Scout's Charter");
     expect(UPGRADES.get('upgrade.lorekeeper_training').name).toBe('Library Ties');
     expect(UPGRADES.get('upgrade.fenling_recruitment').name).toBe('Marsh Envoy');
-    expect(UPGRADES.get('upgrade.contract_board').exclusiveGroup).toBeUndefined();
+    expect(UPGRADES.get('upgrade.contract_board').exclusiveGroup).toBe('guild_hall.row3');
   });
 });

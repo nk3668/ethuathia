@@ -77,8 +77,8 @@ describe('Tier II and The Long Muster', () => {
     expect(gate && describeGate(gate)).toContain('Tier 4 and up open when you');
     const below = own(newProfile(), ['upgrade.second_berth', 'upgrade.outrider_training']);
     expect(questOffer(below, CONTRACT_LONG_MUSTER).state).toBe('locked');
-    // Six open nodes in Tier I (a ranked node counts by its ranks): three bought is half.
-    expect(questOffer(own(below, ['upgrade.fenling_recruitment']), CONTRACT_LONG_MUSTER)).toEqual({ state: 'offered' });
+    // Seven open nodes in Tier I (a ranked node counts by its ranks, a pick-one group as one): four bought is past half.
+    expect(questOffer(own(below, ['upgrade.fenling_recruitment', 'upgrade.contract_board']), CONTRACT_LONG_MUSTER)).toEqual({ state: 'offered' });
   });
 });
 

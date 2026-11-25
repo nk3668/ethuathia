@@ -12,8 +12,8 @@
  * The list lives in the stats slice, `state.domains.stats.runModifiers`. Change it only through
  * `addRunModifier` and `removeRunModifier`, which emit `runModifierAdded` / `runModifierRemoved`.
  */
-import { UPGRADES, upgradeBundle } from '../../content';
-import type { Bundle } from '../../content';
+import { RUN_GATE_INFO, RUN_GATES, UPGRADES, upgradeBundle } from '../../content';
+import type { Bundle, RunGate } from '../../content';
 import { defineCondition } from '../ai/types';
 import type { ParamParser } from '../ai/types';
 import type { Emit } from '../events';
@@ -62,6 +62,11 @@ export interface RunModifierConfig {
   /** Added to the pay of every completed contract (ETH-132): 0.1 is +10%, before the reward multiplier. */
   contractBonus?: number;
   until?: RunModifierUntil;
+  /**
+   * Gates the bundle (ETH-187): its modifiers and triggers count only for an actor that is fleeing, or
+   * only once the party has turned back (`RunGate`). Left out, the bundle always applies.
+   */
+  when?: RunGate;
 }
 
 /** A run modifier in the run state: a config with its potency filled in. Plain data. */
@@ -105,6 +110,7 @@ export function toRunModifier(config: RunModifierConfig): RunModifier {
   if (config.rewardBonus !== undefined) mod.rewardBonus = config.rewardBonus;
   if (config.xpBonus !== undefined) mod.xpBonus = config.xpBonus;
   if (config.contractBonus !== undefined) mod.contractBonus = config.contractBonus;
+  if (config.when !== undefined) mod.when = config.when;
   if (config.until !== undefined) mod.until = 'floor' in config.until ? { floor: config.until.floor } : { turn: config.until.turn };
   return mod;
 }
@@ -140,6 +146,7 @@ export function runModifierProblems(mod: RunModifierConfig): string[] {
   if (!nonEmpty(mod.source?.id) || !nonEmpty(mod.source?.label)) problems.push('needs a source with an id and a label');
   if (!RUN_MODIFIER_SCOPES.includes(mod.scope)) problems.push(`has unknown scope "${String(mod.scope)}"`);
   if (mod.bundle !== undefined && !hasRunBundle(mod.bundle)) problems.push(`has unknown bundle "${mod.bundle}"`);
+  if (mod.when !== undefined && !RUN_GATES.includes(mod.when)) problems.push(`has unknown gate "${String(mod.when)}"`);
   if (mod.potency !== undefined && (!Number.isFinite(mod.potency) || mod.potency <= 0)) problems.push(`has potency ${mod.potency}`);
   for (const flag of mod.flags ?? []) if (!nonEmpty(flag)) problems.push('has an empty flag');
   if (mod.rewardBonus !== undefined && !Number.isFinite(mod.rewardBonus)) problems.push(`has reward bonus ${mod.rewardBonus}`);
@@ -321,6 +328,17 @@ export function expireFloorModifiers(state: RunState, actor: Entity, emit: Emit)
 }
 
 /**
+ * Whether a run modifier's gate holds for `entity` right now (ETH-187). `fleeing` reads the AI's
+ * flight memory (`act.flee` sets it, and it clears when the flight ends); `returning` is the run
+ * domain's `leaving`, the same test as the floors domain's `headingOut`, read from the state here
+ * so stats keeps no import of floors.
+ */
+export function gateHolds(state: RunState, entity: Entity, gate: RunGate): boolean {
+  if (gate === 'fleeing') return entity.ai?.memory.fleeing != null;
+  return state.domains.run.leaving !== null;
+}
+
+/**
  * `stats.run`: every run modifier with a bundle whose scope includes the entity, at its potency,
  * credited to its source id and labeled with its source label ("Gloom (Omen, rank 2)").
  */
@@ -329,6 +347,7 @@ export const SOURCE_RUN: BundleSource = {
   visit(state, entity, visit) {
     for (const m of state.domains.stats.runModifiers) {
       if (m.bundle === undefined || !runScopeIncludes(m.scope, entity)) continue;
+      if (m.when !== undefined && !gateHolds(state, entity, m.when)) continue;
       visit(runBundleOf(m.bundle), m.source.id, m.potency, m.source.label);
     }
   },
@@ -374,6 +393,7 @@ export function describeRunModifier(mod: RunModifier, state?: RunState): string 
       parts.push(`${who.charAt(0).toUpperCase()}${who.slice(1)}: ${changes.join(', ')}.`);
     }
   }
+  if (mod.when !== undefined) parts.push(`Only ${RUN_GATE_INFO[mod.when].name}.`);
   if (mod.flags !== undefined && mod.flags.length > 0) parts.push(`Sets ${mod.flags.join(', ')}.`);
   if (mod.rewardBonus !== undefined && mod.rewardBonus !== 0) parts.push(`Rewards ${rewardBonusText(mod.rewardBonus)}.`);
   if (mod.xpBonus !== undefined && mod.xpBonus !== 0) parts.push(`XP ${rewardBonusText(mod.xpBonus)}.`);

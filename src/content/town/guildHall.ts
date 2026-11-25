@@ -2,8 +2,9 @@
  * The Guild Hall (CLAUDE.md §4), Tiers I and II of the approved town-tree page (ETH-132): party
  * size, contract slots and pay, recruit toughness, the recruit unlocks of ETH-036, in-run XP and
  * a starting mending draught, paid in Renown. The roster is a flat 50 adventurers, so there are
- * no roster upgrades. ETH-187 adds the nodes that need further mechanics (Field Rations, the
- * pick-one partners, the Mystery Crate) and ETH-186 the Omen unlocks, so some columns are left free.
+ * no roster upgrades. ETH-187 added the nodes that needed new mechanics: Field Rations (a ranked
+ * capacity that issues rations), Extraction Drills and Waymark Lanterns (gated run bundles, each
+ * the pick-one partner of an older node) and the opt-in Mystery Crate. ETH-186 adds the Omen unlocks.
  *
  * Rows 1 to 3 are Tier I and open from the start. Rows 4 to 6 are Tier II and stay locked until
  * *The Long Muster* (`buildingQuests.ts`) is done: reach floor 6 and walk out.
@@ -98,17 +99,56 @@ export const UPGRADE_OUTRIDER_TRAINING = defineUpgrade({
   grants: [{ kind: 'unlock', id: 'class.outrider' }],
 });
 
+export const UPGRADE_FIELD_RATIONS = defineUpgrade({
+  id: 'upgrade.field_rations',
+  name: 'Field Rations',
+  description:
+    'The hall cooks pack every adventurer a parcel for the trip down. Each starts the run with 1 more field ration per rank, up to 3 ranks. ' +
+    'Eating one starts Regenerating (1 HP a turn for 10 turns); another eaten meanwhile renews it. Adventurers eat one when hurt ' +
+    'with nothing in sight. Rations are starting kit: never sold on the way out. Each rank costs more than the one before.',
+  tags: ['party', 'numeric', 'healing'],
+  building,
+  tier: 2,
+  column: 2,
+  cost: { renown: 60 },
+  requires: [],
+  ranks: { max: 3, costGrowth: 1.6 },
+  // A ranked node can't carry a `start` perk, so the capacity counts the rations and `upgradeStartConfig` issues them.
+  grants: [{ kind: 'capacity', key: 'fieldRations', amount: 1 }],
+});
+
 export const UPGRADE_CONTRACT_BOARD = defineUpgrade({
   id: 'upgrade.contract_board',
   name: 'Contract Board',
-  description: 'A second pinboard by the door. A run can take on one more contract at once.',
+  description:
+    'A second pinboard by the door. A run can take on one more contract at once. Pick this or Extraction Drills; respec to change.',
   tags: ['contracts', 'capability'],
   building,
   tier: 3,
   column: 0,
   cost: { renown: 250 },
   requires: [UPGRADE_SECOND_BERTH.id],
+  exclusiveGroup: 'guild_hall.row3',
   grants: [{ kind: 'capacity', key: 'contractSlots', amount: 1 }],
+});
+
+export const UPGRADE_EXTRACTION_DRILLS = defineUpgrade({
+  id: 'upgrade.extraction_drills',
+  name: 'Extraction Drills',
+  description:
+    'The hall drills its recruits in running away well. Every adventurer moves 10% faster per rank, up to 3 ranks, only while ' +
+    'fleeing from a threat; the bonus ends when the flight does. Each rank costs more than the one before. ' +
+    'Pick this or the Contract Board; respec to change.',
+  tags: ['party', 'numeric', 'flee'],
+  building,
+  tier: 3,
+  column: 1,
+  cost: { renown: 220 },
+  requires: [],
+  ranks: { max: 3, costGrowth: 1.5 },
+  exclusiveGroup: 'guild_hall.row3',
+  // Speed is energy gained a turn with a base of 100, so +10 is +10% and ranks add up rather than compound.
+  grants: [{ kind: 'bundle', scope: 'run', when: 'fleeing', bundle: { modifiers: [{ stat: 'speed', op: 'add', value: 10 }] } }],
 });
 
 export const UPGRADE_FENLING_RECRUITMENT = defineUpgrade({
@@ -164,7 +204,7 @@ export const UPGRADE_GUILD_CHRONICLES = defineUpgrade({
   description:
     'The guild records its deeds and studies them. Every adventurer earns 10% more XP per rank during a run, up to 3 ranks. ' +
     'It changes in-run XP only (kills and depth), not the Mastery bonus at the end of a run; class Mastery still rises, ' +
-    'because Mastery counts the XP each adventurer earned.',
+    'because Mastery counts the XP each adventurer earned. Pick this or Waymark Lanterns; respec to change.',
   tags: ['party', 'numeric'],
   building,
   tier: 5,
@@ -172,7 +212,37 @@ export const UPGRADE_GUILD_CHRONICLES = defineUpgrade({
   cost: { renown: 250 },
   requires: [],
   ranks: { max: 3, costGrowth: 1.6 },
+  exclusiveGroup: 'guild_hall.row5',
   grants: [{ kind: 'capacity', key: 'xpBonus', amount: 10 }],
+});
+
+export const UPGRADE_WAYMARK_LANTERNS = defineUpgrade({
+  id: 'upgrade.waymark_lanterns',
+  name: 'Waymark Lanterns',
+  description:
+    'Lanterns the guild hangs along the way down, lit for the walk back. Once the party has turned back for the surface, ' +
+    '(a retreat or a victory) every adventurer sees 2 tiles further and moves 10% faster. ' +
+    'Pick this or Guild Chronicles; respec to change.',
+  tags: ['party', 'capability', 'return'],
+  building,
+  tier: 5,
+  column: 1,
+  cost: { renown: 700 },
+  requires: [],
+  exclusiveGroup: 'guild_hall.row5',
+  grants: [
+    {
+      kind: 'bundle',
+      scope: 'run',
+      when: 'returning',
+      bundle: {
+        modifiers: [
+          { stat: 'sight', op: 'add', value: 2 },
+          { stat: 'speed', op: 'add', value: 10 },
+        ],
+      },
+    },
+  ],
 });
 
 export const UPGRADE_SEASONED_CONSTITUTION = defineUpgrade({
@@ -201,7 +271,7 @@ export const UPGRADE_SECOND_CONTRACT_BOARD = defineUpgrade({
   tier: 6,
   column: 0,
   cost: { renown: 1200 },
-  requires: [UPGRADE_CONTRACT_BOARD.id],
+  requires: [],
   exclusiveGroup: 'guild_hall.row6',
   grants: [{ kind: 'capacity', key: 'contractSlots', amount: 1 }],
 });
@@ -220,4 +290,21 @@ export const UPGRADE_RULE_CLERK = defineUpgrade({
   requires: [],
   exclusiveGroup: 'guild_hall.row6',
   grants: [{ kind: 'capacity', key: 'ruleSlots', amount: 1 }],
+});
+
+export const UPGRADE_MYSTERY_CRATE = defineUpgrade({
+  id: 'upgrade.mystery_crate',
+  name: "Quartermaster's Mystery Crate",
+  description:
+    'The quartermaster presses a sealed crate on the first adventurer to go down. Switch it on for a run on the Prepare screen ' +
+    '(it is off until you do): the first adventurer carries one unidentified item. It might be a blessed potion, a rare scroll or a ring, ' +
+    'or a cursed dud. Which, you will not know until it is identified. It is starting kit: never sold on the way out.',
+  tags: ['party', 'capability', 'risky'],
+  building,
+  tier: 6,
+  column: 2,
+  cost: { renown: 900 },
+  requires: [],
+  optIn: true,
+  grants: [{ kind: 'start', start: { perk: 'crate' } }],
 });
