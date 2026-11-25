@@ -55,9 +55,10 @@ export type RunDomainEvent =
   /**
    * Right after `runStarted`, once per adventurer who sets out with kit (ETH-176): the item defs
    * they wear in kit order, then any starting items they carry (Smithy `stock` perks, ETH-159).
-   * `enchanted` lists the worn pieces that came at +1 from a Smithy upgrade, by def id.
+   * `enchanted` lists the worn pieces that came at +1 from a Smithy upgrade, by def id; `stamped` the pieces
+   * that carry a Forge Stamp (ETH-188), with the stamp's id.
    */
-  | { type: 'kitIssued'; actor: EntityId; name: string; items: string[]; enchanted?: string[] }
+  | { type: 'kitIssued'; actor: EntityId; name: string; items: string[]; enchanted?: string[]; stamped?: { item: string; stamp: string }[] }
   /**
    * Just before that adventurer's `kitIssued` (ETH-187): they carry the Quartermaster's Mystery Crate, one
    * sealed unidentified item. It never says what is inside, and the item is left out of `kitIssued`.

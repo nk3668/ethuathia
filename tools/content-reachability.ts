@@ -45,6 +45,7 @@ export interface ReachabilityInput {
   contracts?: readonly ContractDef[];
 }
 
+
 interface Floor {
   readonly dungeon: DungeonDef;
   readonly depth: number;
@@ -115,7 +116,7 @@ export function reachabilityProblems(input: ReachabilityInput = {}): string[] {
     if (lootable.has(item.id) || relics.has(item.id) || issued.has(item.id)) continue;
     problems.push(
       item.loot === undefined
-        ? `item "${item.id}": has no loot entry and no source names it (it is not a contract's recover item, nor issued by a class kit or an upgrade).`
+        ? `item "${item.id}": has no loot entry and no source names it (it is not a contract's recover item, nor issued at run start by a class kit or an upgrade).`
         : `item "${item.id}": its loot depth ${item.loot.minDepth ?? 1}..${item.loot.maxDepth ?? 'any'} is outside every dungeon floor (1..${maxDepth}).`,
     );
   }

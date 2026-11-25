@@ -8,8 +8,8 @@
  * - `giveKit` puts a class's kit on an adventurer. Kit items are plain and identified (an item is
  *   known unless it says `identified: false`), so no randomness is involved.
  */
-import { CLASSES, ITEMS } from '../../content';
-import type { ClassDef, StartEnchantPiece, StartKnownCategory } from '../../content';
+import { CLASSES, isStampId, ITEMS, kitPieceIds, STAMP_LEVEL, STAMPS } from '../../content';
+import type { ClassDef, StampId, StartEnchantPiece, StartKnownCategory } from '../../content';
 import type { Entity, RunState } from '../state';
 import { addToInventory, ensureInventory } from './inventory';
 import { identifyType } from './identify';
@@ -44,6 +44,35 @@ export function kitOf(classId: string): readonly string[] {
   return def?.kit ?? [];
 }
 
+/** What else a Smithy node does to a class kit at run start (ETH-188). */
+export interface KitExtras {
+  /** Pieces swapped for the class's own Tier-1 item (`tier` start perks). */
+  readonly tier?: readonly StartEnchantPiece[];
+  /** Also wear the class's trinket (`trinket` start perk). */
+  readonly trinket?: boolean;
+  /** The Forge Stamp worked into the kit (`stamps` start perk, resolved per adventurer). */
+  readonly stamp?: StampId;
+}
+
+/**
+ * The kit item ids a class starts with under `extras`: its kit with the `tier` pieces swapped for the
+ * class's `kitUpgrade`, then its trinket if asked for. Ids that don't exist are left for `giveKit` to report.
+ */
+export function kitIdsFor(classId: string, extras: KitExtras = {}): string[] {
+  const def: ClassDef | undefined = CLASSES.has(classId) ? CLASSES.get(classId) : undefined;
+  const kit = def?.kit ?? [];
+  const pieces = kitPieceIds(kit);
+  const swap = (id: string): string => {
+    if (def?.kitUpgrade === undefined) return id;
+    if (id === pieces.weapon && extras.tier?.includes('weapon') === true) return def.kitUpgrade.weapon ?? id;
+    if (id === pieces.defense && extras.tier?.includes('defense') === true) return def.kitUpgrade.defense ?? id;
+    return id;
+  };
+  const ids = kit.map(swap);
+  if (kit.length > 0 && extras.trinket === true && def?.trinket !== undefined) ids.push(def.trinket);
+  return ids;
+}
+
 /**
  * Puts the class kit on `entity`, each piece in its slot, in kit order. Returns the item ids worn.
  * `enchant` (ETH-159) lists the pieces that come at +1: the `weapon` is the piece that fits the
@@ -51,10 +80,11 @@ export function kitOf(classId: string): readonly string[] {
  * enchantment (`baseEnchantmentFor`), so a staff gains Max MP and a cap gains armor. Kit pieces
  * stay identified. Throws if a piece has nowhere to go (content validation rules this out).
  */
-export function giveKit(entity: Entity, classId: string, enchant: readonly StartEnchantPiece[] = []): string[] {
+export function giveKit(entity: Entity, classId: string, enchant: readonly StartEnchantPiece[] = [], extras: KitExtras = {}): string[] {
   const worn: string[] = [];
   let defenseDone = false;
-  for (const id of kitOf(classId)) {
+  const stamp = extras.stamp !== undefined && isStampId(extras.stamp) ? STAMPS[extras.stamp] : undefined;
+  for (const id of kitIdsFor(classId, extras)) {
     if (!ITEMS.has(id)) throw new Error(`Class "${classId}" kit names unknown item "${id}"`);
     const item = newKitItem(id);
     const slot = slotFor(entity, item);
@@ -64,6 +94,9 @@ export function giveKit(entity: Entity, classId: string, enchant: readonly Start
     const isDefense = !defenseDone && itemDef(item).category === 'armor';
     if (isDefense) defenseDone = true;
     if ((isWeapon && enchant.includes('weapon')) || (isDefense && enchant.includes('defense'))) item.enchant = KIT_ENCHANT_LEVEL;
+    if (stamp !== undefined && ((isWeapon && stamp.piece === 'weapon') || (isDefense && stamp.piece === 'defense'))) {
+      item.enchantments = [{ id: stamp.enchantment, level: STAMP_LEVEL }];
+    }
     equipped[slot] = item;
     worn.push(id);
   }
@@ -77,6 +110,19 @@ export function issuedKitIds(entity: Entity): string[] {
   const worn = Object.values(entity.inventory?.equipped ?? {}).filter(known);
   const carried = (entity.inventory?.items ?? []).filter(known);
   return [...worn, ...carried].map((item) => item.def);
+}
+
+/** The worn kit pieces that carry a Forge Stamp, as `{ item, stamp }` with the stamp's id (ETH-188, for the log). */
+export function stampedKitIds(entity: Entity): { item: string; stamp: StampId }[] {
+  const out: { item: string; stamp: StampId }[] = [];
+  for (const item of Object.values(entity.inventory?.equipped ?? {})) {
+    if (item.kit !== true) continue;
+    for (const e of item.enchantments ?? []) {
+      const stamp = Object.values(STAMPS).find((s) => s.enchantment === e.id);
+      if (stamp !== undefined) out.push({ item: item.def, stamp: stamp.id });
+    }
+  }
+  return out;
 }
 
 /** True if `entity` carries the Mystery Crate's item: a kit item that is still unidentified (ETH-187). */

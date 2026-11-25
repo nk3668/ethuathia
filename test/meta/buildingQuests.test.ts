@@ -122,7 +122,9 @@ describe('the upgrade share', () => {
     const open: Profile = { ...newProfile(), milestones: { unlocked: [{ id: BUILDING_SMITHY.id, run: 1 }] } };
     // Rows behind the Smithy's closed tier gate (ETH-159) don't count yet.
     const gated = BUILDING_SMITHY.tierGates?.[0]?.fromTier ?? Infinity;
-    expect(upgradeShare(open).total).toBe(base.total + UPGRADES.all().filter((n) => n.building === BUILDING_SMITHY.id && n.tier < gated).length);
+    const rows = UPGRADES.all().filter((n) => n.building === BUILDING_SMITHY.id && n.tier < gated);
+    const groups = new Set(rows.flatMap((n) => (n.exclusiveGroup === undefined ? [] : [n.exclusiveGroup])));
+    expect(upgradeShare(open).total).toBe(base.total + rows.filter((n) => n.exclusiveGroup === undefined).length + groups.size);
   });
 });
 

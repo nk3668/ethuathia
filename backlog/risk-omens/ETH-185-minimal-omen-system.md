@@ -27,6 +27,7 @@ Town trees v4 (Nate, 2026-11-24) turns every risk node into an Omen unlock, so a
 - [ ] Codex entries for Omens (hint while locked), tooltips, and a log line at run start naming the active Omens; a test Omen covers ranks, the multiplier and the wipe loss.
 
 ## Notes
+- A run tracker with `unmultiplied: true` (ETH-188, `track.salvage`: Field Salvage Kit scrap) joins the at-risk total but is not scaled by the Omen reward multiplier, like exit sales (`CLAUDE.md` §3). `sumTrackerRewards` in `src/sim/run/trackers.ts` already skips it; keep it that way when the multiplier moves.
 - The multiplier per rank is a content number; ETH-161 tunes it with ETH-186's Omens on and off.
 - Reward-multiplier tables in `docs/DIFFICULTY_PHILOSOPHY.md` should say where the Omen multiplier sits; update it in the same change.
 - Clearing a run at a high Omen level unlocking more Omens (§6) is M6 (ETH-067).

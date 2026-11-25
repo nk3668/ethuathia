@@ -4,11 +4,11 @@
  * item that is never found as loot but is handed out on the way in still counts as reachable.
  *
  * Sources, all read from content so a new one needs no edit here:
- * - a class's starting `kit` (`ClassDef.kit`);
+ * - a class's starting `kit`, its `kitUpgrade` pieces and its `trinket` (`ClassDef`, ETH-188);
  * - an upgrade's `start` stock perk (the Medic's Satchel);
  * - a capacity that issues an item (`CAPACITY_INFO[key].issues`, e.g. Field Rations);
  * - any other table a start perk draws from, registered with `registerIssuedItems`
- *   (the Mystery Crate's table, and later the Smithy's salvage kit).
+ *   (the Mystery Crate's table).
  */
 import { CLASSES } from './classes';
 import { ITEMS } from './items';
@@ -28,7 +28,11 @@ export function registerIssuedItems(source: string, ids: () => readonly string[]
 /** Every item id that some class kit, upgrade or registered table issues at the start of a run. */
 export function issuedItemIds(): Set<string> {
   const out = new Set<string>();
-  for (const c of CLASSES.all()) for (const id of c.kit ?? []) out.add(id);
+  for (const c of CLASSES.all()) {
+    for (const id of c.kit ?? []) out.add(id);
+    // The Smithy's Tier-1 kit pieces and Apprentice Trinket (ETH-188).
+    for (const id of [c.kitUpgrade?.weapon, c.kitUpgrade?.defense, c.trinket]) if (id !== undefined) out.add(id);
+  }
   for (const node of UPGRADES.all()) {
     for (const g of node.grants) {
       if (g.kind === 'start' && g.start.perk === 'stock') out.add(g.start.item);

@@ -55,6 +55,23 @@ export const UPGRADE_FITTED_STRAPS = defineUpgrade({
   grants: [{ kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat: 'carry', op: 'add', value: 2 }] } }],
 });
 
+export const UPGRADE_MAKERS_MARKS = defineUpgrade({
+  id: 'upgrade.makers_marks',
+  name: 'Maker’s Marks',
+  description:
+    'The smiths teach the party to read a maker’s stamp and the wear on an edge. Each rank adds 8% to the chance an adventurer ' +
+    'works out what an unknown item is when picking it up. Every item gets one try, and one that stays unknown still has to ' +
+    'be identified another way.',
+  tags: ['identify', 'numeric'],
+  building,
+  tier: 1,
+  column: 1,
+  cost: { trophies: 35 },
+  requires: [],
+  ranks: { max: 3, costGrowth: 1.5 },
+  grants: [{ kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat: 'identify', op: 'add', value: 8 }] } }],
+});
+
 export const UPGRADE_APPRAISERS_EYE = defineUpgrade({
   id: 'upgrade.appraisers_eye',
   name: 'Appraiser’s Eye',
@@ -68,6 +85,39 @@ export const UPGRADE_APPRAISERS_EYE = defineUpgrade({
   cost: { trophies: 150 },
   requires: [UPGRADE_FITTED_STRAPS.id],
   grants: [{ kind: 'start', start: { perk: 'know', category: 'potion' } }],
+});
+
+export const UPGRADE_ARTISAN_IMPLEMENTS = defineUpgrade({
+  id: 'upgrade.artisan_implements',
+  name: 'Artisan Implements',
+  description:
+    'The smiths forge each trade its proper tool. Every adventurer’s starting main-hand item is replaced by their class’s own ' +
+    'Tier-1 piece: a mace becomes a flanged mace, a skinning knife a trail dirk, a staff an ironshod staff, a hatchet a bearded axe. ' +
+    'Kit pieces are never sold.',
+  tags: ['kit', 'capability'],
+  building,
+  tier: 2,
+  column: 0,
+  cost: { trophies: 120 },
+  requires: [UPGRADE_FITTED_STRAPS.id],
+  exclusiveGroup: 'smithy.tier2',
+  grants: [{ kind: 'start', start: { perk: 'tier', piece: 'weapon' } }],
+});
+
+export const UPGRADE_TAILORED_ATTIRE = defineUpgrade({
+  id: 'upgrade.tailored_attire',
+  name: 'Tailored Attire',
+  description:
+    'Fitted by the guild tailors. Every adventurer’s starting defensive piece is replaced by their class’s own Tier-1 piece: ' +
+    'a banded shield, ridge boots, a scribe’s coat or a brow helm. Kit pieces are never sold.',
+  tags: ['kit', 'capability'],
+  building,
+  tier: 2,
+  column: 1,
+  cost: { trophies: 120 },
+  requires: [UPGRADE_FITTED_STRAPS.id],
+  exclusiveGroup: 'smithy.tier2',
+  grants: [{ kind: 'start', start: { perk: 'tier', piece: 'defense' } }],
 });
 
 export const UPGRADE_REINFORCED_WAGON = defineUpgrade({
@@ -190,4 +240,55 @@ export const UPGRADE_ASSAYERS_LEDGER = defineUpgrade({
   cost: { trophies: 500 },
   requires: [UPGRADE_SCROLL_CASE.id],
   grants: [{ kind: 'start', start: { perk: 'know', category: 'jewelry' } }],
+});
+
+export const UPGRADE_FIELD_SALVAGE_KIT = defineUpgrade({
+  id: 'upgrade.field_salvage_kit',
+  name: 'Field Salvage Kit',
+  description:
+    'A roll of tongs, chisels and a portable anvil. Switch it on in the Prepare screen: an overloaded adventurer whose least ' +
+    'valuable item is plain, identified gear breaks it down into scrap instead of dropping it. Scrap weighs nothing and pays ' +
+    'Trophies at the exit sale rate (1 per 10 value) as the run goes. Those Trophies are at risk like any earning, but Omens ' +
+    'do not multiply them. Never enchanted, cursed, unidentified or kit items, and never an upgrade.',
+  tags: ['economy', 'capability', 'opt_in'],
+  building,
+  tier: 6,
+  column: 3,
+  cost: { trophies: 350 },
+  requires: [UPGRADE_SCROLL_CASE.id],
+  optIn: true,
+  grants: [{ kind: 'start', start: { perk: 'salvage' } }],
+});
+
+export const UPGRADE_FORGE_STAMPS = defineUpgrade({
+  id: 'upgrade.forge_stamps',
+  name: 'Forge Stamps',
+  description:
+    'Three stamps for the smiths’ irons: Keen, Warding and Nimble. On the Prepare screen each adventurer gets one worked into their ' +
+    'starting kit. Keen (+1 Accuracy) goes on the main-hand item; Warding (+10% Status Resistance) and Nimble (+1 Evasion) on the ' +
+    'first piece of armor. Each class has a default, and random recruits use it. Kit pieces are never sold.',
+  tags: ['kit', 'capability', 'prepare'],
+  building,
+  tier: 6,
+  column: 0,
+  cost: { trophies: 550 },
+  requires: [UPGRADE_SCROLL_CASE.id],
+  exclusiveGroup: 'smithy.tier6',
+  grants: [{ kind: 'start', start: { perk: 'stamps' } }],
+});
+
+export const UPGRADE_APPRENTICE_TRINKET = defineUpgrade({
+  id: 'upgrade.apprentice_trinket',
+  name: 'Apprentice Trinket',
+  description:
+    'A piece of the apprentices’ work for every adventurer: a ring or amulet matched to their class (a copper band, a knotwork ' +
+    'pendant, a hearthstone amulet or a garnet signet), worn from the first turn. Kit pieces are never sold.',
+  tags: ['kit', 'capability'],
+  building,
+  tier: 6,
+  column: 1,
+  cost: { trophies: 550 },
+  requires: [UPGRADE_SCROLL_CASE.id],
+  exclusiveGroup: 'smithy.tier6',
+  grants: [{ kind: 'start', start: { perk: 'trinket' } }],
 });

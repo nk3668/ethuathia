@@ -100,7 +100,7 @@ export {
   teaserClasses,
   teaserRaces,
 } from './prepare/available';
-export { BASE_PARTY_SIZE, MAX_PARTY_SIZE, partySize, RANDOM_PICK, recruitName, TEASER_CHANCE } from './prepare/party';
+export { BASE_PARTY_SIZE, MAX_PARTY_SIZE, ownsStamps, partySize, RANDOM_PICK, recruitName, TEASER_CHANCE } from './prepare/party';
 export type { PartyChoice, RecruitPick } from './prepare/party';
 export { chosenDungeon } from './prepare/dungeon';
 export type { DungeonChoice } from './prepare/dungeon';

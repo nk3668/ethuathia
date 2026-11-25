@@ -79,8 +79,13 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
         const name = ITEMS.has(id) ? ITEMS.get(id).name.toLowerCase() : 'an item';
         // A piece a Smithy upgrade made +1 (ETH-159) says so: "a +1 oak cudgel".
         const plus = e.enchanted?.includes(id) === true;
+        // A Forge Stamp (ETH-188) says so: "a keen iron hatchet", "a round shield of warding".
+        const stamp = e.stamped?.find((s) => s.item === id)?.stamp;
+        const prefix = stamp === 'keen' || stamp === 'nimble' ? `${stamp} ` : '';
+        const first = prefix === '' ? name : prefix;
         if (i > 0) parts.push(i === e.items.length - 1 ? ' and ' : ', ');
-        parts.push(`${plus ? 'a +1' : /^[aeiou]/.test(name) ? 'an' : 'a'} `, mention(id, name));
+        parts.push(`${plus ? 'a +1' : /^[aeiou]/.test(first) ? 'an' : 'a'} ${prefix}`, mention(id, name));
+        if (stamp === 'warding') parts.push(' of warding');
       });
       parts.push('.');
       return parts;

@@ -23,6 +23,7 @@ import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
 import { itemName } from './name';
 import { carryLimit, carryWeight, inventoryOf, isOverloaded, itemsAt, knownItems, lowestValueIndex, wantsItem } from './inventory';
+import { canSalvage } from './salvage';
 import { itemValue } from './value';
 
 /** How far (in steps) the baseline goes out of its way for an item it wants. */
@@ -261,6 +262,27 @@ export const ACT_DROP_LOWEST = defineRuleAction({
   describe: () => 'drop the least valuable item',
 });
 
+/**
+ * Field Salvage Kit (ETH-188): if the least valuable thing carried is plain, identified gear, break it
+ * down into scrap instead of dropping it. Anything else (or the kit off) means the rule is not valid and
+ * `act.drop_lowest` follows. It looks only at what the party knows, so it never reveals an unidentified piece.
+ */
+export const ACT_SALVAGE_LOWEST = defineRuleAction({
+  id: 'act.salvage_lowest',
+  name: 'Salvage the least valuable',
+  description:
+    'With the Smithy’s Field Salvage Kit switched on: break the least valuable thing in the pack down into weightless scrap worth Trophies, if it is plain, identified gear (never enchanted, cursed, unidentified or kit items, nor an upgrade). Otherwise this rule does nothing.',
+  parse: noParams,
+  resolve({ state, actor }): Resolved | null {
+    const index = lowestValueIndex(state, actor);
+    if (index === null) return null;
+    const entry = inventoryOf(actor)[index] as ItemInstance;
+    if (!canSalvage(state, actor, entry)) return null;
+    return { request: { id: 'salvage', index }, detail: `breaking down the ${itemName(state, entry, actor)} for scrap, the least valuable thing carried` };
+  },
+  describe: () => 'salvage the least valuable item',
+});
+
 /** The tile index of `pos` on the actor's floor. */
 function tileIndex(ctx: AiCtx, pos: Pos): number {
   return pos.y * getFloor(ctx.state, ctx.actor.floor).terrain.width + pos.x;
@@ -426,6 +448,7 @@ export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [
   ACT_QUAFF_HEALING,
   ACT_EAT_RATION,
   ACT_DROP_LOWEST,
+  ACT_SALVAGE_LOWEST,
   ACT_PICK_UP,
   ACT_EQUIP_UPGRADE,
   ACT_USE_UNCURSE,
@@ -443,6 +466,7 @@ export const ITEMS_BASELINE_URGENT: readonly Rule[] = [
   { condition: { id: 'cond.wounded', params: { percent: HEAL_BELOW_PERCENT } }, action: { id: 'act.quaff_healing' }, enabled: true },
   { condition: { id: 'cond.wearing_cursed' }, action: { id: 'act.use_uncurse' }, enabled: true },
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.equip_upgrade' }, enabled: true },
+  { condition: { id: 'cond.overloaded' }, action: { id: 'act.salvage_lowest' }, enabled: true },
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.drop_lowest' }, enabled: true },
 ];
 

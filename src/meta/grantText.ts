@@ -38,6 +38,14 @@ export function describeStartPerk(perk: StartPerk): string {
       return `Knows every ${START_PERK_INFO[perk.category].name} kind from the first turn`;
     case 'enchant':
       return `Starts with the ${START_PERK_INFO[perk.piece].name} of each adventurer's kit at +1`;
+    case 'tier':
+      return `Swaps the ${START_PERK_INFO[perk.piece].name} of each adventurer's kit for their class's own Tier-1 piece`;
+    case 'trinket':
+      return "Each adventurer wears their class's ring or amulet from the first turn";
+    case 'stamps':
+      return 'Each adventurer\'s kit carries a Forge Stamp (Keen, Warding or Nimble), chosen on the Prepare screen';
+    case 'salvage':
+      return 'Overloaded adventurers break plain, identified gear into scrap worth Trophies instead of dropping it (switch it on in the Prepare screen)';
     case 'crate':
       return 'The first adventurer carries a sealed, unidentified crate from the Quartermaster: a blessed find or a cursed dud';
     case 'stock':
@@ -56,6 +64,7 @@ const STAT_NAMES: Readonly<Record<string, string>> = {
   speed: 'speed',
   sight: 'sight',
   carry: 'carry',
+  identify: 'identify chance (%)',
 };
 
 function statName(stat: string): string {

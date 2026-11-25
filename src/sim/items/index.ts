@@ -48,6 +48,7 @@ import type { IdentifiedTrackerState } from './identify';
 import { instanceProblem, itemDef, itemWeight } from './instance';
 import type { StartStock } from './kit';
 import { itemName } from './name';
+import { SALVAGE_TRACKER } from './salvage';
 import { propertyProblems } from './properties';
 import { weaponScalingText } from './scaling';
 import type { InventoryPart, ItemInstance } from './instance';
@@ -65,6 +66,7 @@ export * from './properties';
 export * from './crate';
 export * from './kit';
 export * from './sale';
+export * from './salvage';
 export * from './scaling';
 export * from './name';
 export * from './equipment';
@@ -95,6 +97,11 @@ export type ItemsEvent =
   | { type: 'goldPickedUp'; actor: EntityId; item: string; amount: number; floor: FloorId; pos: Pos }
   /** `actor` dropped `qty` of `item` at `pos`. `identified: false` when its base type is still unknown (ETH-044). */
   | { type: 'dropped'; actor: EntityId; item: string; name?: string; identified?: false; qty: number; floor: FloorId; pos: Pos }
+  /**
+   * `actor` broke `qty` of `item` down into scrap worth `value` (Field Salvage Kit, ETH-188). Only ever plain,
+   * identified gear, so `name` is the item's own.
+   */
+  | { type: 'itemSalvaged'; actor: EntityId; item: string; name?: string; qty: number; value: number; floor: FloorId; pos: Pos }
   /** `actor` used one `item` (quaffed, read, ate). Its effects' events follow. */
   | { type: 'used'; actor: EntityId; item: string; name?: string; floor: FloorId; pos: Pos }
   /** `actor` put on `item` in `slot`; `replaced` is the item it took off there (now in its pack), if any, and `replacedName` its name when it differs from the def's. */
@@ -236,6 +243,14 @@ export interface ItemsConfig {
   startKnown?: StartKnownCategory[];
   /** Kit pieces worn at +1 (Smithy `enchant` perks, ETH-159). Leave out for none. */
   kitEnchant?: StartEnchantPiece[];
+  /** Kit pieces swapped for the class's own Tier-1 item (Smithy `tier` perks, ETH-188). Leave out for none. */
+  kitTier?: StartEnchantPiece[];
+  /** Every adventurer also wears their class's trinket as kit (Smithy `trinket` perk, ETH-188). Leave out for none. */
+  trinket?: true;
+  /** Forge Stamps are in play: each adventurer's `AdventurerConfig.stamp` is worked into their kit (Smithy `stamps` perk, ETH-188). Leave out for none. */
+  stamps?: true;
+  /** Field Salvage Kit is on: an overloaded adventurer breaks plain identified gear into scrap instead of dropping it (Smithy opt-in `salvage` perk, ETH-188). Leave out for off. */
+  salvage?: true;
   /** Extra starting items, never sold: carried by the first party member, or by every member when `each` (Smithy `stock` perks, ETH-159, and the Guild Hall's Medic's Satchel, ETH-132). Leave out for none. */
   startStock?: StartStock[];
   /** The first party member carries one unidentified item rolled from the crate table, never sold (the Mystery Crate, ETH-187). Leave out for none. */
@@ -491,7 +506,7 @@ export const ITEMS_DOMAIN: SimDomain<ItemsTypes> = {
   genSteps: [GEN_LOOT],
   bundleSources: [SOURCE_EQUIPPED],
   effectHandlers: ITEMS_EFFECT_HANDLERS,
-  trackers: [CURSED_GEAR_TRACKER as RunTracker<unknown>, IDENTIFIED_TRACKER as RunTracker<unknown>],
+  trackers: [CURSED_GEAR_TRACKER as RunTracker<unknown>, IDENTIFIED_TRACKER as RunTracker<unknown>, SALVAGE_TRACKER as RunTracker<unknown>],
   turnStart: itemsTurnStart,
   discoveries: {
     itemSighted: (e) => (e.identified !== false && ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),

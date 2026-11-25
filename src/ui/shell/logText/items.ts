@@ -45,6 +45,11 @@ export const ITEMS_LOG_TEXT: LogTextRecord<ItemsEvent> = {
     category: 'loot',
     text: (e, nameOf) => [`${nameOf(e.actor)} drops `, ...itemParts(e.item, e.qty, e.name, e.identified), '.'],
   },
+  // "Mira breaks the iron cap down into scrap." (ETH-188)
+  itemSalvaged: {
+    category: 'loot',
+    text: (e, nameOf) => [`${nameOf(e.actor)} breaks `, ...itemParts(e.item, e.qty, e.name), ` down into scrap (worth ${e.value}).`],
+  },
   used: {
     category: 'loot',
     text: (e, nameOf) => [`${nameOf(e.actor)} ${verb(e.item)} `, mention(e.item, e.name), '.'],

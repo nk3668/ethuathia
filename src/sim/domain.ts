@@ -101,6 +101,12 @@ export interface RunTracker<S> {
    * Leave it out for a tracker that earns nothing, such as the Codex.
    */
   rewards?(state: S): RewardAmounts;
+  /**
+   * Set on a tracker whose `rewards` are a conversion, not earnings (ETH-188 Field Salvage Kit): the
+   * run's reward multiplier (Omens) does not apply to them, like leftover gold and sold items
+   * (CLAUDE.md §3). They still join the at-risk total, so a wipe loses its share.
+   */
+  readonly unmultiplied?: true;
   /** What goes into `RunResult.extras[id]` at run end. Plain data. Default: the state itself. */
   extras?(state: S): unknown;
 }
