@@ -15,11 +15,12 @@ import { MONSTERS, monsterPowers, STATUSES } from '../../content';
 import type { Bundle, Effect } from '../../content';
 import { bundleOf, statValue } from '../stats/getStat';
 import { carriesHealingPotion } from '../floors/fountains';
+import { fleeBelowOf, fleeReleaseOf } from '../ai/stanceParams';
 import type { PathGrid } from '../goalMap';
 import type { AiActor, AiCtx, ThreatMark } from '../ai/types';
 import { nameOf } from '../ai/navigate';
 import type { ActorEntity, Entity, RunState } from '../state';
-import { AVOID_PENALTY, AVOID_RADIUS, BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_HOLD_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
+import { AVOID_PENALTY, AVOID_RADIUS, FLEE_CALM_TURNS, FLEE_HOLD_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
 import { hpPercent, visibleEnemies } from './rules';
 import { overlayOf, templatesOf } from './overlay';
 
@@ -93,7 +94,7 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
   const hp = hpPercent(state, actor);
   const fleeing = memory.fleeing;
   if (fleeing === null) {
-    if (hp < BASELINE_FLEE_PERCENT && visible.length > 0) memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
+    if (hp < fleeBelowOf(actor) && visible.length > 0) memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
     return;
   }
   if (visible.length > 0) fleeing.lastSeen = state.turn;
@@ -103,7 +104,7 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
     memory.fleeing = null;
     return;
   }
-  if (hp >= FLEE_RELEASE_PERCENT || state.turn - fleeing.lastSeen >= FLEE_CALM_TURNS) memory.fleeing = null;
+  if (hp >= fleeReleaseOf(actor) || state.turn - fleeing.lastSeen >= FLEE_CALM_TURNS) memory.fleeing = null;
 }
 
 /**

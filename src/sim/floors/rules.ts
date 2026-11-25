@@ -6,6 +6,7 @@
  */
 import type { Pos } from '../../core';
 import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
+import { stanceParamOf } from '../ai/stanceParams';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import { RULE_ACTIONS } from '../registries';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, RuleActionDef } from '../ai/types';
@@ -38,6 +39,11 @@ export const PARTY_LEASH = 8;
  * exploring pulls it back out past the leash doesn't flip between the two rules every turn.
  */
 export const PARTY_CLOSE = 3;
+
+/** The distance to walk back to for a leash of `leash` tiles (a stance's own, ETH-071): `PARTY_CLOSE` at the baseline's leash, scaled with it otherwise. */
+export function partyClose(leash: number): number {
+  return leash === PARTY_LEASH ? PARTY_CLOSE : Math.max(2, Math.floor((PARTY_CLOSE / PARTY_LEASH) * leash));
+}
 
 /**
  * Game turns the party may spend on one floor, counted from its first arrival, before the
@@ -172,7 +178,7 @@ export const COND_FLOOR_OVERSTAYED = defineCondition({
   parse: noParams,
   evaluate({ state, actor }) {
     const turns = turnsOnFloor(state, actor.floor);
-    const cap = floorTurnCap(state);
+    const cap = Math.round((floorTurnCap(state) * stanceParamOf(actor, 'floorCapPercent', 100)) / 100);
     return turns >= cap ? { ok: true, detail: `${turns} turns on this floor, the limit is ${cap}` } : { ok: false, detail: '' };
   },
   describe: () => 'overstayed the floor',
@@ -258,7 +264,8 @@ export const COND_PARTY_SCATTERED = defineCondition({
     if (lead === null || lead.id === actor.id) return { ok: false, detail: '' };
     const gap = Math.max(Math.abs(lead.pos.x - actor.pos.x), Math.abs(lead.pos.y - actor.pos.y));
     const regrouping = actor.ai?.memory.intent?.action === ACT_REGROUP_ID;
-    return gap > (regrouping ? PARTY_CLOSE : PARTY_LEASH)
+    const leash = stanceParamOf(actor, 'leash', PARTY_LEASH);
+    return gap > (regrouping ? partyClose(leash) : leash)
       ? { ok: true, detail: `${gap} tiles from ${nameOf(lead)}` }
       : { ok: false, detail: '' };
   },

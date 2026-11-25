@@ -47,6 +47,7 @@ export * from './requirements';
 export * from './startPerks';
 export * from './stamps';
 export * from './tactics';
+export * from './stances';
 export * from './upgrades';
 export * from './town';
 export * from './bundles';

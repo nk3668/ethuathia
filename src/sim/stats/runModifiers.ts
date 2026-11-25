@@ -53,7 +53,7 @@ export interface RunModifierConfig {
   bundle?: string;
   /** Scales the bundle's modifiers and trigger amounts. Default 1. */
   potency?: number;
-  /** Named switches code and rules read with `runFlag` / `cond.run_flag` (`doctrine.seek_stairs`, `omen.dry_wells`). */
+  /** Named switches code and rules read with `runFlag` / `cond.run_flag` (`omen.dry_wells`). */
   flags?: string[];
   /** Added to the reward multiplier: 0.2 is +20% on every at-risk currency. */
   rewardBonus?: number;

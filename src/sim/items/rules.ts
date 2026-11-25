@@ -8,6 +8,7 @@
 import type { Pos } from '../../core';
 import { EQUIP_SLOT_INFO, gearSlots, hasEffectKind, ITEMS, STATUS_REGENERATING } from '../../content';
 import { bestByTag } from '../ai/abilities';
+import { stanceParamOf } from '../ai/stanceParams';
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams, parseMinCount } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } from '../ai/types';
@@ -287,7 +288,8 @@ export const ACT_PICK_UP = defineRuleAction({
     'Pick up items worth having that the party has seen nearby, walking over to them if they are close. Junk is left ' +
     'where it lies, and nothing is taken that would only have to be dropped again.',
   parse: numberParam('maxDetour', PICKUP_DETOUR, 0, 200),
-  resolve(ctx, { maxDetour }): Resolved | null {
+  resolve(ctx, { maxDetour: baseDetour }): Resolved | null {
+    const maxDetour = stanceParamOf(ctx.actor, 'pickupDetour', baseDetour);
     const { state, actor } = ctx;
     let best: { id: number; value: number; name: string } | null = null;
     for (const e of itemsAt(state, actor.floor, actor.pos)) {
