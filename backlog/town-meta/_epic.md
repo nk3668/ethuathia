@@ -2,7 +2,7 @@
 epic: town-meta
 title: Town, currencies and upgrades
 status: active
-milestones: [M2, M2.1, M3, M6, M7, M8, later]
+milestones: [M2, M2.1, M3, M5, M6, M7, M8, later]
 ---
 
 ## Goal
@@ -52,3 +52,4 @@ More items are added when M2 becomes the current milestone.
 - [x] [ETH-172 Upgrade engine supports ranked nodes and quest-locked tiers](ETH-172-upgrade-ranks-and-tiers.md)
 - [x] [ETH-180 Stat tooltips name a ranked upgrade once, with its rank count](ETH-180-ranked-tooltip-stacking.md)
 - [ ] [ETH-174 The Cartographer building](ETH-174-cartographer.md)
+- [ ] [ETH-190 Town nodes that raise the quality of dungeon loot](ETH-190-better-loot-nodes.md)

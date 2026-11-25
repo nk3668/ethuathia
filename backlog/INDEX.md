@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-190**
+**Next ID: ETH-191**
 
 **Current milestone: M2 (Meta loop).** M2's remaining work runs as M2.1 (town trees), then M2.2 (minimal Omens), then the ETH-161 capstone.
 
@@ -36,7 +36,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [behavior-rules](behavior-rules/_epic.md) | Behavior rules | active | M2, M3 |
 | [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M1.6, M5, M7, later |
 | [content](content/_epic.md) | Content definitions | active | M0, M7 |
-| [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M2.1, M3, M6, M7, M8, later |
+| [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M2.1, M3, M5, M6, M7, M8, later |
 | [saves-platform](saves-platform/_epic.md) | Saves, desktop packaging and time-away | active | M2, M8 |
 | [risk-omens](risk-omens/_epic.md) | Omens and conducts | active | M2, M2.2, M6 |
 | [lineage](lineage/_epic.md) | Lineage | active | M2, M7, M8 |
@@ -192,6 +192,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-130](combat-items/ETH-130-more-enchantments.md) | Expand the enchantment pool with additional effects and triggers | combat-items | M5 | P3 | idea | M |
 | [ETH-150](codex-tooltips/ETH-150-rare-monster-codex-polish.md) | Codex polish for rare monsters: a faster-reveal hint and a lore-tier content warning | codex-tooltips | M5 | P3 | idea | S |
 | [ETH-156](codex-tooltips/ETH-156-hidden-blessing-codex-help.md) | Codex help text: hidden blessings and mixed stacks of potions and scrolls | codex-tooltips | M5 | P3 | idea | S |
+| [ETH-190](town-meta/ETH-190-better-loot-nodes.md) | Town nodes that raise the quality of dungeon loot | town-meta | M5 | P2 | idea | M |
 | [ETH-116](dungeon-gen/ETH-116-dungeon-encounters.md) | Dungeon encounters: placed interactive features with an interact action, choices and outcomes | dungeon-gen | M6 | P1 | ready | M |
 | [ETH-026](quests/ETH-026-slay-named-foe-contract.md) | Slay-named-foe contract | quests | M6 | P2 | idea | M |
 | [ETH-027](quests/ETH-027-gather-delve-contracts.md) | Gather and Delve contracts | quests | M6 | P2 | idea | M |
