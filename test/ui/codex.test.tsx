@@ -491,7 +491,7 @@ describe('Explain', () => {
     await user.tab();
     const tip = await screen.findByRole('tooltip');
     expect(tip.textContent).toContain('WornMain hand · Mace');
-    expect(tip.textContent).toContain('StatsDamage +3, Accuracy −1');
+    expect(tip.textContent).toContain('StatsDamage +2, Accuracy −1');
   });
 
   it('shows that a discovered ring fits either ring slot (ETH-111)', async () => {
