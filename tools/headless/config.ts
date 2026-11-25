@@ -184,8 +184,8 @@ export function buildHeadlessProfile(preset: HeadlessPreset = 'fresh', upgrades:
 
 /**
  * Resolves `HeadlessOptions` into a checked `RunConfig` using real `meta` helpers
- * (`partySize`, `upgradePartyBundles`, `upgradeRunModifiers`, `chosenContracts`, `checkRunConfig`).
- * Keeps the default (`fresh`, no upgrades) byte-identical to `{ party, contracts, depth? }`.
+ * (`partySize`, `upgradePartyBundles`, `upgradeRunModifiers`, `chosenContracts`, `milestoneRequirements`,
+ * `checkRunConfig`), matching `buildRunConfig` for the profile's watched `metInRun` reveals.
  */
 export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): RunConfig {
   if (options.recruits === true && options.party !== undefined) {

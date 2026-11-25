@@ -164,4 +164,12 @@ describe('Town tab', () => {
     expect(useProfileStore.getState().resetTree('building.guild_hall', true)).toBe(false);
     expect(useProfileStore.getState().profile.upgrades.owned).toHaveLength(2);
   });
+
+  it('shows the new run-scope reveal wording on sealed class nodes (ETH-184)', async () => {
+    const user = userEvent.setup();
+    render(<TownPanel />);
+    await user.click(nodeButton('Lorekeeper Training'));
+    const detail = screen.getByRole('region', { name: 'Lorekeeper Training details' });
+    expect(detail.textContent).toContain('Revealed when you achieve in one run: identified 5 items.');
+  });
 });

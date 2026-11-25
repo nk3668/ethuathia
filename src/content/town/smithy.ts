@@ -32,7 +32,7 @@ export const UPGRADE_REAVER_TRAINING = defineUpgrade({
   column: 0,
   cost: { trophies: 200 },
   requires: [],
-  reveal: { kind: 'reachDepth', depth: 5 },
+  reveal: { kind: 'metInRun', requirement: { cond: 'cond.run_kills', params: { min: 40 } } },
   grants: [{ kind: 'unlock', id: 'class.reaver' }],
 });
 

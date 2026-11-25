@@ -252,6 +252,20 @@ export const noParams: ParamParser<null> = (raw) => {
   return 'Takes no parameters';
 };
 
+/** Params for count-threshold conditions (`cond.run_kills`, `cond.run_identified`). */
+export interface MinCountParams {
+  min: number;
+}
+
+/** Reads `{ min: whole number of 1 or more }`, rejecting extra keys and invalid counts. */
+export const parseMinCount: ParamParser<MinCountParams> = (raw) => {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return 'Params must be an object with "min"';
+  const { min, ...rest } = raw as Record<string, unknown>;
+  if (Object.keys(rest).length > 0) return `Unknown parameter "${Object.keys(rest)[0] as string}"`;
+  if (typeof min !== 'number' || !Number.isInteger(min) || min < 1) return '"min" must be a whole number of 1 or more';
+  return { min };
+};
+
 interface DefText {
   id: string;
   name: string;

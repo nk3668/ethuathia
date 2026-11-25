@@ -151,7 +151,7 @@ export const UPGRADE_LOREKEEPER_TRAINING = defineUpgrade({
   column: 2,
   cost: { renown: 250 },
   requires: [],
-  reveal: { kind: 'finishRuns', count: 5 },
+  reveal: { kind: 'metInRun', requirement: { cond: 'cond.run_identified', params: { min: 5 } } },
   grants: [{ kind: 'unlock', id: 'class.lorekeeper' }],
 });
 
