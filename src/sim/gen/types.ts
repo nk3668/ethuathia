@@ -14,6 +14,26 @@ export interface Rect {
 }
 
 /**
+ * What opt-in Omens change about how a floor is built (ETH-186). Every field is optional and 0
+ * when left out. The whole object is absent on a run with no such Omen, so generation takes the
+ * path it always did.
+ */
+export interface FloorRisk {
+  /** Danger levels added when reading the template ramp (Stalker's Ledger). */
+  templateShift?: number;
+  /** Added to the out-of-depth chance (Stalker's Ledger). */
+  oodBonus?: number;
+  /** Added to the chance a piece of gear is cursed (Cursed Hoards). */
+  curseBonus?: number;
+  /** Added to the chance a potion or scroll is cursed (Cursed Hoards). */
+  consumableCurseBonus?: number;
+  /** Added to the chance un-cursed gear is enchanted (Cursed Hoards). */
+  enchantBonus?: number;
+  /** Added to the highest enchantment loot can roll (Cursed Hoards). */
+  enchantCapBonus?: number;
+}
+
+/**
  * A floor being built. Steps change it in place. It is a `FloorPlan` (terrain, features and
  * starts) plus notes that later steps read, such as where the rooms are.
  */
@@ -32,6 +52,8 @@ export interface FloorDraft extends FloorPlan {
   partyBudgetStep?: number;
   /** The dungeon variant being built, if known (carries ecology & encounter curves). */
   dungeon?: DungeonDef;
+  /** What opt-in Omens change about this floor (ETH-186). Absent when none is on. */
+  risk?: FloorRisk;
   /**
    * The floor's loot RNG (`lootRngState`), separate from the layout RNG every step gets, so
    * placing items never shifts the layout. Steps that place items draw only from this one.

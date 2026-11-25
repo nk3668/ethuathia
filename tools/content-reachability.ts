@@ -20,12 +20,14 @@ import {
   ITEMS,
   MONSTER_TEMPLATES,
   MONSTERS,
+  OMENS,
+  UPGRADES,
   baseEnchantmentFor,
   issuedItemIds,
   enchantmentFits,
   templateFits,
 } from '../src/content';
-import type { ContractDef, DungeonDef, EnchantmentDef, ItemDef, MonsterDef, MonsterTemplateDef } from '../src/content';
+import type { ContractDef, DungeonDef, EnchantmentDef, ItemDef, MonsterDef, MonsterTemplateDef, OmenDef, UpgradeNodeDef } from '../src/content';
 // The sim's entry point first: its modules import each other in a cycle that only resolves from there.
 import '../src/sim';
 import { monsterWeightAt } from '../src/sim/combat/monsters';
@@ -43,6 +45,8 @@ export interface ReachabilityInput {
   enchantments?: readonly EnchantmentDef[];
   dungeons?: readonly DungeonDef[];
   contracts?: readonly ContractDef[];
+  omens?: readonly OmenDef[];
+  upgrades?: readonly UpgradeNodeDef[];
 }
 
 
@@ -76,6 +80,8 @@ export function reachabilityProblems(input: ReachabilityInput = {}): string[] {
   const enchantments = input.enchantments ?? ENCHANTMENTS.all();
   const dungeons = input.dungeons ?? DUNGEONS.all();
   const contracts = input.contracts ?? CONTRACTS.all();
+  const omens = input.omens ?? OMENS.all();
+  const upgrades = input.upgrades ?? UPGRADES.all();
   const floors = floorsOf(dungeons);
   const maxDepth = dungeons.reduce((m, d) => Math.max(m, d.depth.max), 0);
   const problems: string[] = [];
@@ -149,6 +155,12 @@ export function reachabilityProblems(input: ReachabilityInput = {}): string[] {
           `its range ${e.minDepth ?? 1}..${e.maxDepth ?? 'any'} within floors 1..${maxDepth}.`,
       );
     }
+  }
+
+  // Omens (ETH-186): an Omen starts locked, so some upgrade node must unlock it or it can never be switched on.
+  const unlocked = new Set(upgrades.flatMap((u) => u.grants.flatMap((g) => (g.kind === 'unlock' ? [g.id] : []))));
+  for (const o of omens) {
+    if (!unlocked.has(o.id)) problems.push(`omen "${o.id}": no upgrade node unlocks it, so it stays locked forever.`);
   }
 
   return problems;

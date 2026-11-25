@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DUNGEON_OLD_DELVE, ENCHANT_HONED, ENCHANT_KEEN, MONSTER_TEMPLATES, MONSTERS } from '../../src/content';
+import { DUNGEON_OLD_DELVE, ENCHANT_HONED, ENCHANT_KEEN, MONSTER_TEMPLATES, MONSTERS, OMEN_DEEP_SURGE } from '../../src/content';
 import type { DungeonDef, EnchantmentDef, MonsterDef, MonsterTemplateDef } from '../../src/content';
 import { reachabilityProblems } from '../../tools/content-reachability';
 
@@ -69,5 +69,13 @@ describe('content reachability (ETH-143)', () => {
     expect(problems[0]).toContain('enchantment "enchant.far_off": none of the gear it fits');
     expect(problems[1]).toContain('enchantment "enchant.fits_nothing": fits no gear item');
     expect(problems[2]).toContain('enchantment "enchant.unused_base": no gear def uses this base enchantment');
+  });
+
+  it('names an Omen no upgrade node unlocks', () => {
+    const lonely = { ...OMEN_DEEP_SURGE, id: 'omen.lonely' };
+    const problems = reachabilityProblems({ omens: [OMEN_DEEP_SURGE, lonely], monsters: [], templates: [], enchantments: [] }).filter((p) =>
+      p.startsWith('omen'),
+    );
+    expect(problems).toEqual([expect.stringContaining('omen "omen.lonely": no upgrade node unlocks it')]);
   });
 });

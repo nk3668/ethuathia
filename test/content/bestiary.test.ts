@@ -194,7 +194,8 @@ describe('ETH-134 expanded bestiary', () => {
 
   it('uses clean-room original names, valid single-char hex glyphs, descriptions, and ETH-091 hints for every monster and template', () => {
     const monsters = MONSTERS.all();
-    const templates = MONSTER_TEMPLATES.all();
+    // The Armed template only an Omen applies (ETH-186) is never rolled, so it is not part of the bestiary's set.
+    const templates = MONSTER_TEMPLATES.all().filter((t) => !t.tags.includes('omen'));
     expect(new Set(monsters.map((m) => m.name.toLowerCase())).size).toBe(monsters.length);
     expect(new Set(templates.map((t) => t.name.toLowerCase())).size).toBe(templates.length);
 
@@ -214,8 +215,9 @@ describe('ETH-134 expanded bestiary', () => {
     }
   });
 
-  it('expands monster templates to 8 clean-room entries with threatMul 1.5–2.0, lootTier >= 1, and glyphTint', () => {
-    const templates = MONSTER_TEMPLATES.all();
+  it('expands monster templates to 8 rollable clean-room entries with threatMul 1.5–2.0, lootTier >= 1, and glyphTint', () => {
+    // The Armed template only an Omen applies (ETH-186) is never rolled, so it is not part of the bestiary's set.
+    const templates = MONSTER_TEMPLATES.all().filter((t) => !t.tags.includes('omen'));
     expect(templates).toHaveLength(8);
     expect(templates.map((t) => t.name)).toEqual(
       expect.arrayContaining(['Venomous', 'Swift', 'Hulking', 'Hexspitting', 'Ironclad', 'Knitflesh', 'Dazzling', 'Relentless']),

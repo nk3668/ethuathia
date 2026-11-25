@@ -8,7 +8,7 @@ import type { DungeonDef, FloorTypeDef } from '../../content';
 import type { FloorPlan } from '../floorText';
 import { GEN_STEPS } from '../registries';
 import { Terrain } from '../state';
-import type { BoundGenStep, FloorDraft } from './types';
+import type { BoundGenStep, FloorDraft, FloorRisk } from './types';
 
 /** The smallest floor side: room for a wall border round one floor tile. */
 const MIN_SIDE = 3;
@@ -49,6 +49,8 @@ export interface GenerateOptions {
   danger?: number;
   /** The dungeon variant being generated, for ecology and encounter curves. */
   dungeon?: DungeonDef;
+  /** What opt-in Omens change about this floor (ETH-186). */
+  risk?: FloorRisk;
   /** The floor's loot RNG (`lootRngState`). Default: `rng` itself, after the layout steps. */
   loot?: Rng;
   /** Adventurers the run sets out with, for the party-size encounter surcharge (ETH-145). Default 1. */
@@ -74,6 +76,7 @@ export function generateFloor(type: FloorTypeDef, rng: Rng, options: GenerateOpt
     partySize: options.partySize ?? 1,
     ...(options.partyBudgetStep === undefined ? {} : { partyBudgetStep: options.partyBudgetStep }),
     ...(options.dungeon === undefined ? {} : { dungeon: options.dungeon }),
+    ...(options.risk === undefined ? {} : { risk: options.risk }),
     loot: options.loot ?? rng,
     items: [],
     spawns: [],

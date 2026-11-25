@@ -2,7 +2,8 @@
  * Command-line argument parsing and usage help for `tools/sim.ts` (and `int` helper shared with `tools/run-soak.ts`).
  */
 import { parseArgs } from 'node:util';
-import { CLASSES, CONTRACTS, RACES } from '../../src/content';
+import { CLASSES, CONTRACTS, maxOmenRank, OMENS, RACES } from '../../src/content';
+import type { OmenSelection } from '../../src/content';
 import { partySize } from '../../src/meta';
 import {
   buildHeadlessProfile,
@@ -34,6 +35,8 @@ export interface SimArgs {
   classId: string | null;
   /** Race of every adventurer (`--race`, ETH-160); null is the Human. */
   raceId: string | null;
+  /** Omens switched on, each at a rank (`--omens id:rank,...`, ETH-186). They need not be unlocked. */
+  omens: OmenSelection[];
   /** The one contract every run takes (`--contract`, ETH-093); null is the default, Recover the relic. */
   contract: string | null;
   /** Field the Prepare screen's random party per seed (`--recruits`, ETH-178); `party` is its size. */
@@ -51,7 +54,7 @@ export interface SimArgs {
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
                       [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious] [--opt-ins on|off]
-                      [--class ID | --race ID | --recruits] [--contract ID]
+                      [--class ID | --race ID | --recruits] [--contract ID] [--omens id:rank,...]
                       [--party-sweep] [--jobs N] [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
@@ -71,6 +74,8 @@ above the bottom or trigger stuck detection are listed at the end.
   --class ID              class of every adventurer, e.g. outrider or class.outrider (default vanguard)
   --race ID               race of every adventurer, e.g. fenling or race.fenling (default human)
   --contract ID           the contract every run takes, e.g. cold_anvil or contract.cold_anvil (default recover_relic)
+  --omens ID:RANK,...     Omens switched on, each at a rank, e.g. deep_surge:3,omen.cursed_hoards:2 (default none). They need
+                          not be unlocked in the town, so a sweep can measure one in isolation
   --recruits              field the party the Prepare screen gives a new player: random recruits from the
                           available classes and races, drawn from each seed (--party sets the size), and add
                           a per-class and per-race breakdown to the report (not with --class or --race)
@@ -108,6 +113,25 @@ function parseContentId(flag: string, kind: 'class' | 'race', raw: string | unde
   throw new Error(`${flag} "${raw}" is not a ${kind}. Available: ${registry.all().map((d) => d.id).join(', ')}`);
 }
 
+/** Reads `--omens`: `id:rank` pairs, an id with or without the `omen.` prefix and a rank from 1 to the Omen's top rank. */
+export function parseOmens(raw: string | undefined): OmenSelection[] {
+  if (raw === undefined) return [];
+  if (raw.trim() === '') throw new Error('--omens must be a comma-separated list of id:rank, e.g. deep_surge:3');
+  const seen = new Set<string>();
+  return raw.split(',').map((part) => {
+    const [name, rankText, ...extra] = part.trim().split(':');
+    const rank = Number(rankText);
+    if (name === undefined || name === '' || rankText === undefined || extra.length > 0) throw new Error(`--omens entry "${part}" must look like id:rank`);
+    const id = name.includes('.') ? name : `omen.${name}`;
+    if (!OMENS.has(id)) throw new Error(`--omens "${name}" is not an Omen. Available: ${OMENS.all().map((d) => d.id).join(', ')}`);
+    const top = maxOmenRank(OMENS.get(id));
+    if (!Number.isInteger(rank) || rank < 1 || rank > top) throw new Error(`--omens rank for ${id} must be a whole number from 1 to ${top}, got "${rankText}"`);
+    if (seen.has(id)) throw new Error(`--omens names ${id} twice`);
+    seen.add(id);
+    return { id, rank };
+  });
+}
+
 /** Resolves `--contract`: a full id or the part after the dot. */
 function parseContract(raw: string | undefined): string | null {
   if (raw === undefined) return null;
@@ -140,6 +164,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       class: { type: 'string' },
       race: { type: 'string' },
       contract: { type: 'string' },
+      omens: { type: 'string' },
       recruits: { type: 'boolean' },
       'party-sweep': { type: 'boolean' },
       jobs: { type: 'string' },
@@ -173,6 +198,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     classId: parseContentId('--class', 'class', values.class),
     raceId: parseContentId('--race', 'race', values.race),
     contract: parseContract(values.contract),
+    omens: parseOmens(values.omens),
     recruits: values.recruits ?? false,
     partySweep: values['party-sweep'] ?? false,
     jobs: int('--jobs', values.jobs, defaultJobs(), 1, MAX_JOBS),

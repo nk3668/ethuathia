@@ -27,6 +27,7 @@ import { STATUS_KIND } from './statuses';
 import type { Glyph } from './schema';
 import { TERRAIN, TERRAIN_KIND } from './terrain';
 import './town';
+import './townOmens';
 import { BUILDING_KIND, UPGRADE_KIND } from './upgrades';
 
 /** Every content kind, in the order they are validated. A new kind is added here. */

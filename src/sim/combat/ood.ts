@@ -8,6 +8,7 @@
 import type { Rng } from '../../core';
 import { MONSTERS } from '../../content';
 import type { DungeonDef, DungeonEcology, MonsterDef } from '../../content';
+import type { FloorRisk } from '../gen/types';
 import { defineChronicleKind } from '../run/chronicle';
 
 /** Highlight and chronicle kind id when an out-of-depth monster is spotted. */
@@ -27,11 +28,13 @@ function matchesEcology(def: MonsterDef, ecology?: DungeonEcology): boolean {
  * Resolves template spawn probability from `dungeon.encounters.templateRamp` at `danger`, or
  * returns `fallback` (clamped to `[0, 1]`, default `0`) when no ramp is configured.
  */
-export function computeTemplateChance(dungeon: DungeonDef | undefined, danger: number, fallback = 0): number {
+export function computeTemplateChance(dungeon: DungeonDef | undefined, danger: number, fallback = 0, risk?: FloorRisk): number {
   const ramp = dungeon?.encounters?.templateRamp;
   if (ramp === undefined) return Math.max(0, Math.min(1, fallback));
-  if (danger < ramp.minDanger) return 0;
-  const raw = ramp.base + (danger - ramp.minDanger) * ramp.perDanger;
+  // Stalker's Ledger (ETH-186) reads the ramp as if the floor were deeper.
+  const shifted = danger + (risk?.templateShift ?? 0);
+  if (shifted < ramp.minDanger) return 0;
+  const raw = ramp.base + (shifted - ramp.minDanger) * ramp.perDanger;
   return Math.max(0, Math.min(1, Math.min(ramp.max, raw)));
 }
 
@@ -47,12 +50,13 @@ export function computeOodDanger(
   dungeon: DungeonDef | undefined,
   danger: number,
   rng: Rng,
+  risk?: FloorRisk,
 ): { danger: number; ood: boolean } {
   const ood = dungeon?.encounters?.ood;
-  if (ood === undefined || danger < ood.minDanger || ood.chance <= 0 || ood.boost <= 0) {
+  if (ood === undefined || danger + (risk?.templateShift ?? 0) < ood.minDanger || ood.chance <= 0 || ood.boost <= 0) {
     return { danger, ood: false };
   }
-  if (!rng.chance(ood.chance)) return { danger, ood: false };
+  if (!rng.chance(ood.chance + (risk?.oodBonus ?? 0))) return { danger, ood: false };
   const elevated = danger + ood.boost;
   if (elevated <= danger) return { danger, ood: false };
   const hasMonster = MONSTERS.all().some(

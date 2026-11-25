@@ -122,6 +122,7 @@ export {
   toRunModifier,
 } from './runModifiers';
 export { omenBundleId, omenLabel, omenModifiers, omenProblems, omenShortLabel } from './omens';
+export * from './omenEffects';
 export type {
   RunFlagParams,
   RunModifier,

@@ -76,6 +76,7 @@ ${USAGE}`);
     ...(args.classId === null ? [] : [`class ${args.classId}`]),
     ...(args.raceId === null ? [] : [`race ${args.raceId}`]),
     ...(args.contract === null ? [] : [`contract ${args.contract}`]),
+    ...(args.omens.length === 0 ? [] : [`omens ${args.omens.map((o) => `${o.id}:${o.rank}`).join(',')}`]),
     ...(args.upgrades.length === 0 ? [] : [`upgrades ${args.upgrades.join(',')}`]),
     ...(args.optIns ? [] : ['opt-ins off']),
   ].join(', ');
@@ -92,6 +93,7 @@ ${USAGE}`);
       optIns: args.optIns,
       rules: args.rules,
       ...(args.contract === null ? {} : { contracts: [args.contract] }),
+      ...(args.omens.length === 0 ? {} : { omens: args.omens }),
     },
     args.jobs,
   );
