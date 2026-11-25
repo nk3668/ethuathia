@@ -22,7 +22,7 @@ import {
   upgradeStartingItems,
 } from '../../src/meta';
 import type { Profile } from '../../src/meta';
-import { createRun, emptyRunResult, getStat, grantXp, snapshot, XP_TRACKER } from '../../src/sim';
+import { checkInvariants, createRun, emptyRunResult, getStat, grantXp, snapshot, XP_TRACKER } from '../../src/sim';
 import type { Emit, EntityId, RunResult, SimEvent } from '../../src/sim';
 import { REMOVED_GUILD_HALL_NODES } from '../../src/meta/slices/legacyUpgrades';
 import { contractReward } from '../../src/sim/quests/contracts';
@@ -165,6 +165,8 @@ describe("Medic's Satchel", () => {
       expect(draught?.kit).toBe(true);
       expect(soldOnExit(draught as never)).toBe(false);
     }
+    // A kit potion is a valid item state.
+    expect(checkInvariants(state)).toEqual([]);
   });
 });
 
