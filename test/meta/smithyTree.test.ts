@@ -125,8 +125,8 @@ describe('the Tier II lock', () => {
     expect(questOffer(none, CONTRACT_STAR_IRON).state).toBe('locked');
     expect(questOffer(buy(none, id('fitted_straps')), CONTRACT_STAR_IRON).state).toBe('locked');
     expect(questOffer(buy(none, id('fitted_straps'), id('appraisers_eye')), CONTRACT_STAR_IRON).state).toBe('locked');
-    // Straps I is a third of a node; with the eye and the wagon that is 2.3 of the 4 Tier I nodes.
-    expect(questOffer(buy(none, id('fitted_straps'), id('appraisers_eye'), id('reinforced_wagon')), CONTRACT_STAR_IRON)).toEqual({ state: 'offered' });
+    // Straps I is a third of a node; with the eye, the wagon and the marks that is 3.3 of the 5 Tier I nodes.
+    expect(questOffer(buy(none, id('fitted_straps'), id('appraisers_eye'), id('reinforced_wagon'), id('makers_marks')), CONTRACT_STAR_IRON)).toEqual({ state: 'offered' });
     expect(questOffer(tierTwo(none), CONTRACT_STAR_IRON)).toEqual({ state: 'done' });
   });
 });

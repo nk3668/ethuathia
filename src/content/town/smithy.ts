@@ -55,6 +55,23 @@ export const UPGRADE_FITTED_STRAPS = defineUpgrade({
   grants: [{ kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat: 'carry', op: 'add', value: 2 }] } }],
 });
 
+export const UPGRADE_MAKERS_MARKS = defineUpgrade({
+  id: 'upgrade.makers_marks',
+  name: 'Maker’s Marks',
+  description:
+    'The smiths teach the party to read a maker’s stamp and the wear on an edge. Each rank adds 8% to the chance an adventurer ' +
+    'works out what an unknown item is when picking it up. Every item gets one try, and one that stays unknown still has to ' +
+    'be identified another way.',
+  tags: ['identify', 'numeric'],
+  building,
+  tier: 1,
+  column: 1,
+  cost: { trophies: 35 },
+  requires: [],
+  ranks: { max: 3, costGrowth: 1.5 },
+  grants: [{ kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat: 'identify', op: 'add', value: 8 }] } }],
+});
+
 export const UPGRADE_APPRAISERS_EYE = defineUpgrade({
   id: 'upgrade.appraisers_eye',
   name: 'Appraiser’s Eye',

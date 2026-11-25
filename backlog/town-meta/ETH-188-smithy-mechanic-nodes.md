@@ -2,7 +2,7 @@
 id: ETH-188
 title: Smithy nodes that need new mechanics - Maker's Marks, class-tier kits, Forge Stamps, Apprentice Trinket, Field Salvage Kit
 type: feature
-status: idea
+status: in-progress
 priority: P1
 milestone: M2.1
 epic: town-meta
