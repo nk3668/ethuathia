@@ -24,8 +24,8 @@ import {
 } from '../../src/meta';
 import type { Profile } from '../../src/meta';
 
-// The shipped Guild Hall: second_berth (T1) → roster_ledger, and the pick-one pair
-// hardy_recruits / contract_board (T2); third_berth (T3) needs roster_ledger.
+// The shipped Guild Hall (ETH-132): second_berth (T1, 60 Renown) then contract_board (row 3, needs it);
+// its only pick-one pair (row 6) is behind the Long Muster gate, so pick-one tests use fixtures.
 
 // A test-only building with a Favor cost and an unlock grant.
 defineBuilding({ id: 'building.test_shrine', name: 'Test Shrine', description: 'A test shrine.', tags: [], kind: 'tactics' });
@@ -77,6 +77,23 @@ testNode('right', 1, 2, 7, { exclusiveGroup: 'test_shrine.t1' });
 testNode('after', 2, 1, 20, { requires: ['upgrade.test_left'] });
 testNode('last', 3, 1, 30, { requires: ['upgrade.test_after'] });
 
+// A Foundations pick-one pair at 120 Renown each, for the respec fee.
+for (const [id, column] of [['pick_a', 1], ['pick_b', 2]] as const) {
+  defineUpgrade({
+    id: `upgrade.test_forge_${id}`,
+    name: `Test Forge ${id}`,
+    description: 'A test node.',
+    tags: [],
+    building: 'building.test_forge',
+    tier: 1,
+    column,
+    cost: { renown: 120 },
+    requires: [],
+    exclusiveGroup: 'test_forge.t1',
+    grants: [{ kind: 'capacity', key: 'ruleSlots', amount: 1 }],
+  });
+}
+
 function rich(renown = 10_000): Profile {
   const p = newProfile();
   return { ...p, currencies: { ...p.currencies, renown } };
@@ -90,7 +107,7 @@ describe('purchase', () => {
   it('pays the cost, records the node and leaves the input untouched', () => {
     const before = rich(100);
     const after = purchase(before, 'upgrade.second_berth');
-    expect(after.currencies.renown).toBe(50);
+    expect(after.currencies.renown).toBe(40);
     expect(after.upgrades.owned).toEqual(['upgrade.second_berth']);
     expect(before.upgrades.owned).toEqual([]);
     expect(before.currencies.renown).toBe(100);
@@ -103,19 +120,19 @@ describe('purchase', () => {
     expect(canPurchase(poor, 'upgrade.second_berth')).toMatchObject({
       ok: false,
       status: 'expensive',
-      reason: 'Needs 40 Renown more.',
-      short: { renown: 40, trophies: 0, favor: {} },
+      reason: 'Needs 50 Renown more.',
+      short: { renown: 50, trophies: 0, favor: {} },
     });
-    expect(canPurchase(poor, 'upgrade.third_berth')).toMatchObject({
+    expect(canPurchase(poor, 'upgrade.contract_board')).toMatchObject({
       ok: false,
       status: 'locked',
-      missing: ['upgrade.roster_ledger'],
-      reason: 'Needs Roster Ledger first.',
+      missing: ['upgrade.second_berth'],
+      reason: 'Needs Second Berth first.',
     });
     const owned = buy(rich(), 'upgrade.second_berth');
     expect(canPurchase(owned, 'upgrade.second_berth')).toMatchObject({ ok: false, status: 'owned' });
-    expect(canPurchase(owned, 'upgrade.roster_ledger')).toEqual({ ok: true });
-    expect(() => purchase(poor, 'upgrade.second_berth')).toThrow(/Cannot buy Second Berth: Needs 40 Renown more/);
+    expect(canPurchase(owned, 'upgrade.contract_board')).toEqual({ ok: true });
+    expect(() => purchase(poor, 'upgrade.second_berth')).toThrow(/Cannot buy Second Berth: Needs 50 Renown more/);
   });
 
   it('checks Favor per deity', () => {
@@ -129,20 +146,20 @@ describe('purchase', () => {
 
 describe('pick-one groups', () => {
   it('excludes the other nodes of the group once one is owned', () => {
-    const p = buy(rich(), 'upgrade.second_berth', 'upgrade.hardy_recruits');
-    expect(nodeStatus(p, 'upgrade.hardy_recruits')).toBe('owned');
-    expect(nodeStatus(p, 'upgrade.contract_board')).toBe('excluded');
-    expect(canPurchase(p, 'upgrade.contract_board')).toMatchObject({
+    const p = buy(rich(), 'upgrade.test_left');
+    expect(nodeStatus(p, 'upgrade.test_left')).toBe('owned');
+    expect(nodeStatus(p, 'upgrade.test_right')).toBe('excluded');
+    expect(canPurchase(p, 'upgrade.test_right')).toMatchObject({
       status: 'excluded',
-      chosen: 'upgrade.hardy_recruits',
-      reason: 'You chose Hardy Recruits in this pick-one tier. Respec to choose again.',
+      chosen: 'upgrade.test_left',
+      reason: 'You chose Test left in this pick-one tier. Respec to choose again.',
     });
-    expect(() => purchase(p, 'upgrade.contract_board')).toThrow(RangeError);
+    expect(() => purchase(p, 'upgrade.test_right')).toThrow(RangeError);
   });
 
   it('reports excluded before locked', () => {
-    const p = { ...rich(), upgrades: { owned: ['upgrade.contract_board'], ranks: {} } };
-    expect(nodeStatus(p, 'upgrade.hardy_recruits')).toBe('excluded');
+    const p = { ...rich(), upgrades: { owned: ['upgrade.test_left'], ranks: {} } };
+    expect(nodeStatus(p, 'upgrade.test_right')).toBe('excluded');
   });
 });
 
@@ -162,18 +179,18 @@ describe('tree kinds', () => {
 
 describe('respec', () => {
   it('is free by default: refunds the chosen node in full and frees the group (Foundations)', () => {
-    const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.contract_board');
-    expect(p.currencies.renown).toBe(830);
-    const plan = respecPlan(p, 'guild_hall.tier2');
-    expect(plan).toMatchObject({ chosen: 'upgrade.contract_board', removed: ['upgrade.contract_board'] });
+    const p = buy(rich(1000), 'upgrade.test_forge_pick_a');
+    expect(p.currencies.renown).toBe(880);
+    const plan = respecPlan(p, 'test_forge.t1');
+    expect(plan).toMatchObject({ chosen: 'upgrade.test_forge_pick_a', removed: ['upgrade.test_forge_pick_a'] });
     expect(plan?.refund.renown).toBe(120);
     expect(plan?.fee.renown).toBe(0);
 
-    const after = respec(p, 'guild_hall.tier2');
-    expect(after.upgrades.owned).toEqual(['upgrade.second_berth']);
-    expect(after.currencies.renown).toBe(950);
-    expect(nodeStatus(after, 'upgrade.hardy_recruits')).toBe('available');
-    expect(purchase(after, 'upgrade.hardy_recruits').upgrades.owned).toContain('upgrade.hardy_recruits');
+    const after = respec(p, 'test_forge.t1');
+    expect(after.upgrades.owned).toEqual([]);
+    expect(after.currencies.renown).toBe(1000);
+    expect(nodeStatus(after, 'upgrade.test_forge_pick_b')).toBe('available');
+    expect(purchase(after, 'upgrade.test_forge_pick_b').upgrades.owned).toContain('upgrade.test_forge_pick_b');
   });
 
   it('is free for Tactics too', () => {
@@ -182,12 +199,12 @@ describe('respec', () => {
   });
 
   it('charges a Foundations fee of the constant\'s share of the chosen node when it is nonzero', () => {
-    const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.contract_board');
-    const plan = respecPlan(p, 'guild_hall.tier2', FEE_HALF);
+    const p = buy(rich(1000), 'upgrade.test_forge_pick_a');
+    const plan = respecPlan(p, 'test_forge.t1', FEE_HALF);
     expect(plan?.refund.renown).toBe(120);
     expect(plan?.fee.renown).toBe(60);
-    expect(respec(p, 'guild_hall.tier2', FEE_HALF).currencies.renown).toBe(890);
-    expect(respecFee(UPGRADES.get('upgrade.contract_board'), FEE_HALF).renown).toBe(60);
+    expect(respec(p, 'test_forge.t1', FEE_HALF).currencies.renown).toBe(940);
+    expect(respecFee(UPGRADES.get('upgrade.test_forge_pick_a'), FEE_HALF).renown).toBe(60);
   });
 
   it('never charges Tactics, whatever the Foundations rate', () => {
@@ -214,35 +231,30 @@ describe('respec', () => {
   });
 
   it('leaves owned nodes in other branches alone', () => {
-    const p = buy(rich(), 'upgrade.second_berth', 'upgrade.roster_ledger', 'upgrade.third_berth', 'upgrade.drill_yard', 'upgrade.fourth_berth');
-    expect(respecPlan(p, 'guild_hall.tier4')?.removed).toEqual(['upgrade.drill_yard']);
-    expect(respec(p, 'guild_hall.tier4').upgrades.owned).toEqual([
-      'upgrade.second_berth',
-      'upgrade.roster_ledger',
-      'upgrade.third_berth',
-      'upgrade.fourth_berth',
-    ]);
+    const p = buy(rich(), 'upgrade.second_berth', 'upgrade.contract_board', 'upgrade.test_forge_pick_b');
+    expect(respecPlan(p, 'test_forge.t1')?.removed).toEqual(['upgrade.test_forge_pick_b']);
+    expect(respec(p, 'test_forge.t1').upgrades.owned).toEqual(['upgrade.second_berth', 'upgrade.contract_board']);
   });
 
   it('refuses when nothing in the group is owned', () => {
-    expect(respecPlan(rich(), 'guild_hall.tier2')).toBeNull();
-    expect(() => respec(rich(), 'guild_hall.tier2')).toThrow(/Nothing to respec/);
+    expect(respecPlan(rich(), 'test_forge.t1')).toBeNull();
+    expect(() => respec(rich(), 'test_forge.t1')).toThrow(/Nothing to respec/);
   });
 
   it('is refused during a run, for both kinds, changing nothing', () => {
-    const f = buy(rich(1000), 'upgrade.second_berth', 'upgrade.contract_board');
+    const f = buy(rich(1000), 'upgrade.second_berth', 'upgrade.test_forge_pick_a');
     const t = buy(rich(1000), 'upgrade.test_left');
     expect(respecBlock({ runActive: true })).toBe(RUN_ACTIVE_REASON);
     expect(respecBlock({ runActive: false })).toBeNull();
     expect(respecBlock()).toBeNull();
-    expect(() => respec(f, 'guild_hall.tier2', { runActive: true })).toThrow(RUN_ACTIVE_REASON);
+    expect(() => respec(f, 'test_forge.t1', { runActive: true })).toThrow(RUN_ACTIVE_REASON);
     expect(() => respec(t, 'test_shrine.t1', { runActive: true })).toThrow(RUN_ACTIVE_REASON);
-    expect(respec(f, 'guild_hall.tier2', { runActive: false }).upgrades.owned).toEqual(['upgrade.second_berth']);
+    expect(respec(f, 'test_forge.t1', { runActive: false }).upgrades.owned).toEqual(['upgrade.second_berth']);
   });
 });
 
 describe('resetTree', () => {
-  const OWNED_HALL = ['upgrade.second_berth', 'upgrade.roster_ledger', 'upgrade.hardy_recruits'];
+  const OWNED_HALL = ['upgrade.second_berth', 'upgrade.contract_board', 'upgrade.hardy_recruits'];
 
   it('gives up the whole tree and refunds everything, free by default', () => {
     const start = rich(1000);
@@ -260,7 +272,7 @@ describe('resetTree', () => {
     const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.test_left');
     const after = resetTree(p, 'building.test_shrine');
     expect(after.upgrades.owned).toEqual(['upgrade.second_berth']);
-    expect(after.currencies.renown).toBe(1000 - 50);
+    expect(after.currencies.renown).toBe(1000 - 60);
   });
 
   it('charges a Foundations fee on the whole refund when the constant is nonzero, never Tactics', () => {
@@ -283,12 +295,12 @@ describe('resetTree', () => {
 
 describe('saves from before tree kinds', () => {
   it('load unchanged: kinds live in content, so the owned list is unchanged, and v1 saves gain empty ranks', () => {
-    const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.contract_board');
+    const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.test_forge_pick_a');
     const old = JSON.parse(encodeSave(p, 1)) as { slices: { upgrades: { version: number; data: unknown } } };
-    old.slices.upgrades = { version: 1, data: { owned: ['upgrade.second_berth', 'upgrade.contract_board'] } };
+    old.slices.upgrades = { version: 1, data: { owned: ['upgrade.second_berth', 'upgrade.test_forge_pick_a'] } };
     const decoded = decodeSave(JSON.stringify(old));
-    expect(decoded.ok && decoded.profile.upgrades).toEqual({ owned: ['upgrade.second_berth', 'upgrade.contract_board'], ranks: {} });
-    if (decoded.ok) expect(respec(decoded.profile, 'guild_hall.tier2').upgrades.owned).toEqual(['upgrade.second_berth']);
+    expect(decoded.ok && decoded.profile.upgrades).toEqual({ owned: ['upgrade.second_berth', 'upgrade.test_forge_pick_a'], ranks: {} });
+    if (decoded.ok) expect(respec(decoded.profile, 'test_forge.t1').upgrades.owned).toEqual(['upgrade.second_berth']);
   });
 });
 
@@ -299,7 +311,7 @@ describe('grants', () => {
       { source: 'upgrade.second_berth', grant: { kind: 'capacity', key: 'partySize', amount: 1 } },
       {
         source: 'upgrade.hardy_recruits',
-        grant: { kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat: 'hp', op: 'add', value: 2 }] } },
+        grant: { kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat: 'hp', op: 'add', value: 3 }] } },
       },
     ]);
   });
@@ -307,10 +319,10 @@ describe('grants', () => {
   it('adds capacity grants to a base', () => {
     let p = rich();
     expect(capacity(p, 'partySize', 1)).toBe(1);
-    p = buy(p, 'upgrade.second_berth', 'upgrade.roster_ledger', 'upgrade.third_berth', 'upgrade.fourth_berth');
-    expect(capacity(p, 'partySize', 1)).toBe(4);
-    expect(capacity(p, 'rosterSize', 6)).toBe(8);
-    expect(capacity(p, 'contractSlots', 1)).toBe(1);
+    p = buy(p, 'upgrade.second_berth', 'upgrade.contract_board');
+    expect(capacity(p, 'partySize', 1)).toBe(2);
+    expect(capacity(p, 'contractSlots', 1)).toBe(2);
+    expect(capacity(p, 'ruleSlots', 1)).toBe(1);
   });
 
   it('derives unlocks from owned nodes and ignores ids no longer in content', () => {

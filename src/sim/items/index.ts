@@ -229,7 +229,13 @@ export interface ItemsParts {
 }
 
 /** Fields this domain adds to `RunConfig`. */
-export interface ItemsConfig {}
+export interface ItemsConfig {
+  /**
+   * Items every adventurer starts with in their pack, as starting kit (ETH-132, the Guild Hall's Medic's
+   * Satchel): each is marked kit (`newKitItem`), so it is never sold on the way out. Item ids must exist.
+   */
+  startingItems?: { item: string; qty: number }[];
+}
 
 /** This domain's row in `DomainTypes` (`src/sim/domain.ts`). */
 export interface ItemsTypes {

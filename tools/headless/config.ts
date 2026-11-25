@@ -6,12 +6,8 @@ import {
   CLASS_VANGUARD,
   CONTRACT_RECOVER_RELIC,
   RACE_HUMAN,
-  UPGRADE_DRILL_YARD,
-  UPGRADE_FOURTH_BERTH,
   UPGRADE_HARDY_RECRUITS,
-  UPGRADE_ROSTER_LEDGER,
   UPGRADE_SECOND_BERTH,
-  UPGRADE_THIRD_BERTH,
   UPGRADES,
 } from '../../src/content';
 import {
@@ -27,8 +23,10 @@ import {
   partySize,
   purchase,
   recruitParty,
+  upgradeBonusModifiers,
   upgradePartyBundles,
   upgradeRunModifiers,
+  upgradeStartingItems,
 } from '../../src/meta';
 import type { Profile } from '../../src/meta';
 import { CONDITIONS, RULE_ACTIONS } from '../../src/sim';
@@ -75,16 +73,12 @@ export type HeadlessPreset = 'fresh' | 'progressed';
 export const HEADLESS_PRESETS: readonly HeadlessPreset[] = ['fresh', 'progressed'];
 
 /**
- * Valid Guild Hall progression path for `--preset progressed`: unlocks all four berths and
- * picks Hardy Recruits (+2 max HP) and Drill Yard (+1 accuracy), verified through `purchase`.
+ * Valid Guild Hall progression path for `--preset progressed`: the second berth (party of two) and
+ * Hardy Recruits (+3 max HP), verified through `purchase`. The wider berths moved to other buildings (ETH-132).
  */
 export const PROGRESSED_UPGRADES: readonly string[] = [
   UPGRADE_SECOND_BERTH.id,
-  UPGRADE_ROSTER_LEDGER.id,
   UPGRADE_HARDY_RECRUITS.id,
-  UPGRADE_THIRD_BERTH.id,
-  UPGRADE_FOURTH_BERTH.id,
-  UPGRADE_DRILL_YARD.id,
 ];
 
 export type HeadlessRulesPreset = 'baseline' | 'cautious';
@@ -196,7 +190,8 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): Ru
   const profile = buildHeadlessProfile(preset, upgrades);
   const hasUpgrades = profile.upgrades.owned.length > 0;
   const partyBundles = upgradePartyBundles(profile);
-  const runModifiers = upgradeRunModifiers(profile);
+  const runModifiers = [...upgradeRunModifiers(profile), ...upgradeBonusModifiers(profile)];
+  const startingItems = upgradeStartingItems(profile);
   const watchRequirements = milestoneRequirements(profile);
   const contracts =
     options.contracts ??
@@ -210,6 +205,7 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): Ru
     ...(options.depth === undefined ? {} : { depth: options.depth }),
     ...(partyBundles.length === 0 ? {} : { partyBundles }),
     ...(runModifiers.length === 0 ? {} : { runModifiers }),
+    ...(startingItems.length === 0 ? {} : { startingItems }),
     ...(watchRequirements.length === 0 ? {} : { watchRequirements }),
   };
   const problems = checkRunConfig(config);

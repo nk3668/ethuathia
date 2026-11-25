@@ -91,7 +91,7 @@ const TEST_FUNGAL_PIT = defineDungeon({
   description: 'A test dungeon variant with custom depth, Danger curve, and ecology rules.',
   hint: 'Damp cavern shafts overrun with fungal beasts.',
   tags: ['dungeon'],
-  depth: { min: 4, max: 6 },
+  depth: { min: 6, max: 8 },
   danger: { start: 3, perFloor: 1.5 },
   floorType: 'floor.halls',
   ecology: {
@@ -170,7 +170,7 @@ describe('configDepthRange, resolveRunDepth, and Danger curves', () => {
   it('resolves defaults from dungeonId and clamps partial ranges via clampRange', () => {
     expect(configDepthRange({ party: [HERO] })).toEqual({ min: 6, max: 10 });
     expect(configDepth({ party: [HERO] })).toBe(10);
-    expect(configDepthRange({ party: [HERO], dungeonId: TEST_FUNGAL_PIT.id })).toEqual({ min: 4, max: 6 });
+    expect(configDepthRange({ party: [HERO], dungeonId: TEST_FUNGAL_PIT.id })).toEqual({ min: 6, max: 8 });
     expect(configDepthRange({ party: [HERO], depth: { min: 8 } })).toEqual({ min: 8, max: 10 });
     expect(configDepthRange({ party: [HERO], depth: { max: 4 } })).toEqual({ min: 4, max: 4 });
     expect(configDepthRange({ party: [HERO], depth: { min: 12 } })).toEqual({ min: 12, max: 12 });

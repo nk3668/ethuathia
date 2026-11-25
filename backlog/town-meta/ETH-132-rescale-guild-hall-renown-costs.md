@@ -2,7 +2,7 @@
 id: ETH-132
 title: Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs
 type: content
-status: ready
+status: done
 priority: P1
 milestone: M2.1
 epic: town-meta
@@ -49,13 +49,13 @@ Tier III (Training Grounds, Guild Trophy Room, Guild Horn, Warden) and the Retre
 **Guild Chronicles is in-run XP only.** Class Mastery still rises with it, because Mastery XP counts the in-run XP each member earned (`src/meta/mastery.ts`); the run-end Mastery bonus is unaffected. Its tooltip says both.
 
 ## Acceptance criteria
-- [ ] `src/content/town/guildHall.ts` holds the "here" nodes above, with ranks via ETH-172 and the Tier II gate via ETH-170 (*The Long Muster*'s contract def ships here). Pick-one rows whose other half belongs to ETH-187 ship as single nodes; ETH-187 turns them into picks.
-- [ ] **No roster upgrades** (Nate, 2026-11-24): the roster is a flat `ROSTER_SIZE` = 50. Remove the `rosterSize` capacity key and its nodes (Roster Ledger, Open Muster), and Drill Yard.
-- [ ] Guild Chronicles multiplies XP earned in the run (kills and anything else that grants XP) and nothing else; a test shows Mastery gains follow from it.
-- [ ] Every tier with a numeric node also offers a capability (`CLAUDE.md` §4); every node has tooltip and Codex text; `validateContent` passes.
-- [ ] **Old saves:** owned node ids that no longer exist are refunded at their old price in a migration; nodes that keep their id keep their purchase.
-- [ ] Tests that pin Guild Hall costs or ids are updated, plus a test that Tier II stays locked until *The Long Muster* is done.
-- [ ] **T1 (20 seeds):** the harness still runs (it fields a fixed party and buys nothing, so no change is expected); ETH-161 measures pacing.
+- [x] `src/content/town/guildHall.ts` holds the "here" nodes above, with ranks via ETH-172 and the Tier II gate via ETH-170 (*The Long Muster*'s contract def ships here). Pick-one rows whose other half belongs to ETH-187 ship as single nodes; ETH-187 turns them into picks.
+- [x] **No roster upgrades** (Nate, 2026-11-24): the roster is a flat `ROSTER_SIZE` = 50. Remove the `rosterSize` capacity key and its nodes (Roster Ledger, Open Muster), and Drill Yard.
+- [x] Guild Chronicles multiplies XP earned in the run (kills and anything else that grants XP) and nothing else; a test shows Mastery gains follow from it.
+- [x] Every tier with a numeric node also offers a capability (`CLAUDE.md` §4); every node has tooltip and Codex text; `validateContent` passes.
+- [x] **Old saves:** owned node ids that no longer exist are refunded at their old price in a migration; nodes that keep their id keep their purchase.
+- [x] Tests that pin Guild Hall costs or ids are updated, plus a test that Tier II stays locked until *The Long Muster* is done.
+- [x] **T1 (20 seeds):** the harness still runs (it fields a fixed party and buys nothing, so no change is expected); ETH-161 measures pacing.
 
 ## Notes
 - Defaults: old saves get a refund for removed nodes rather than a mapping to new ones; Rule Clerk ships inert.
@@ -67,3 +67,5 @@ Tier III (Training Grounds, Guild Trophy Room, Guild Horn, Warden) and the Retre
 - 2026-11-24: Progression discussion with Nate: slower pacing and deeper trees; this now rebuilds the Guild Hall tree on ETH-172 ranks and tiers.
 - 2026-11-24: (spec gate) Proposed tree written; the proposal moved to the town-tree page. Nate: flat roster of 50.
 - 2026-11-24: Town trees v4 approved (Gemini's themed rework merged with doctrines, Omen unlocks and Hardy Recruits). Moved to M2.1 as P1 and `ready`; nodes needing new mechanics split out to ETH-187, Omen nodes to ETH-186.
+- 2026-11-24: Started (in-progress).
+- 2026-11-24: Done. Guild Hall rebuilt (12 nodes, Tiers I-II), The Long Muster gate, envelope save v2 refund, new run bonuses (XP, contract pay, starting draughts). T1 (20 seeds): 6 reached the bottom, 5 victories, 15 wipes, median depth 6, Renown 335 per run (fixed party, buys nothing).

@@ -27,6 +27,7 @@ import { dungeonDepth, floorIdAt } from '../floors/dungeon';
 import { inventoryOf } from '../items/inventory';
 import type { RewardAmounts } from '../run/result';
 import { Terrain } from '../state';
+import { applyRewardMultiplier, contractMultiplier } from '../stats/runModifiers';
 import type { EntityId, FloorId, RunConfig, RunState } from '../state';
 import { findObjective, finishObjectivesStep, measureObjective, newObjective, syncObjectives } from './objectives';
 import type { ObjectiveProgress, TrackedObjective } from './objectives';
@@ -90,8 +91,12 @@ export function initContracts(config: RunConfig): ContractState[] {
 }
 
 /** The reward of a contract, as at-risk amounts. A fresh copy. */
-export function contractReward(id: string): RewardAmounts {
-  return { ...contractDef(id).reward };
+export function contractReward(id: string, state?: RunState): RewardAmounts {
+  const base = contractDef(id).reward;
+  const multiplier = state === undefined ? 1 : contractMultiplier(state);
+  if (multiplier === 1) return { ...base };
+  // Guild upgrades' contract bonus (ETH-132), rounded down per currency; the Omen multiplier comes after, in the tracker.
+  return Object.fromEntries(Object.entries(base).map(([key, amount]) => [key, applyRewardMultiplier(amount, multiplier)]));
 }
 
 /**
@@ -103,7 +108,7 @@ export function announceContracts(state: RunState, emit: Emit): void {
   if (slice.announced) return;
   slice.announced = true;
   if (slice.contracts.length === 0) return;
-  emit({ type: 'contractsTaken', contracts: slice.contracts.map((c) => ({ contract: c.contract, reward: contractReward(c.contract) })) });
+  emit({ type: 'contractsTaken', contracts: slice.contracts.map((c) => ({ contract: c.contract, reward: contractReward(c.contract, state) })) });
 }
 
 /**
@@ -132,7 +137,7 @@ export function syncContracts(state: RunState, emit: Emit, events: readonly SimE
         type: 'contractCompleted',
         contract: c.contract,
         actor: by?.id ?? null,
-        reward: contractReward(c.contract),
+        reward: contractReward(c.contract, state),
         floor: by?.floor ?? state.dungeon.entry,
         pos: by === undefined ? { x: 0, y: 0 } : { x: by.pos.x, y: by.pos.y },
       });

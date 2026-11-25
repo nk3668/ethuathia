@@ -132,9 +132,17 @@ export function defineBuilding(def: BuildingDef): BuildingDef {
  */
 export const CAPACITY_INFO = {
   partySize: { name: 'Party size', about: 'How many adventurers descend together.' },
-  rosterSize: { name: 'Roster size', about: 'How many named adventurers the guild keeps between runs.' },
   contractSlots: { name: 'Contract slots', about: 'How many contracts a run can take on at once.' },
   ruleSlots: { name: 'Rule slots', about: 'How many behavior rules each adventurer can hold.' },
+  contractRewardBonus: {
+    name: 'Contract reward bonus (%)',
+    about: 'Extra pay on every contract completed, in percent, before any Omen multiplier.',
+  },
+  xpBonus: {
+    name: 'In-run XP bonus (%)',
+    about: 'Extra XP every adventurer earns during a run, in percent. Class Mastery follows, as it counts that XP.',
+  },
+  startingDraughts: { name: 'Starting mending draughts', about: 'Mending draughts each adventurer starts a run with. Starting kit is never sold.' },
 } as const satisfies Record<string, { name: string; about: string }>;
 
 export type CapacityKey = keyof typeof CAPACITY_INFO;
