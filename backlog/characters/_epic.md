@@ -66,4 +66,5 @@ Nate (2026-11-24): leave room in the town trees for future classes and races; no
 - [x] [ETH-177 Reprice Finesse so classes can share one point budget](ETH-177-reprice-finesse.md)
 - [ ] [ETH-179 A woodland race that heals by consuming the fallen but can't drink healing potions](ETH-179-corpse-eating-race.md)
 - [ ] [ETH-182 Revisit attributes and derived stats, starting with Grit](ETH-182-attribute-stat-revisit.md)
+- [ ] [ETH-184 Run-scope kill and identify counts, so the Reaver and Lorekeeper get their intended reveals](ETH-184-kill-identify-reveal-conditions.md)
 - [ ] [ETH-173 A class that can resurrect a fallen party member during a run](ETH-173-resurrection-class.md)
