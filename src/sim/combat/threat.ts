@@ -19,7 +19,7 @@ import type { PathGrid } from '../goalMap';
 import type { AiActor, AiCtx, ThreatMark } from '../ai/types';
 import { nameOf } from '../ai/navigate';
 import type { ActorEntity, Entity, RunState } from '../state';
-import { AVOID_PENALTY, AVOID_RADIUS, BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_HOLD_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
+import { AVOID_PENALTY, AVOID_RADIUS, BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_CYCLE_RADIUS, FLEE_CYCLE_WINDOW, FLEE_HOLD_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
 import { hpPercent, visibleEnemies } from './rules';
 import { overlayOf, templatesOf } from './overlay';
 
@@ -91,9 +91,19 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
     return e?.actor !== undefined && e.actor.hp > 0;
   });
   const hp = hpPercent(state, actor);
+  // Recovered: whatever flee/return cycle there was is over (ETH-189).
+  if (memory.fleeCycle !== undefined && hp >= FLEE_RELEASE_PERCENT) delete memory.fleeCycle;
   const fleeing = memory.fleeing;
   if (fleeing === null) {
-    if (hp < BASELINE_FLEE_PERCENT && visible.length > 0) memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
+    if (hp < BASELINE_FLEE_PERCENT && visible.length > 0) {
+      memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
+      const cycle = memory.fleeCycle;
+      const pos = { x: actor.pos.x, y: actor.pos.y };
+      const again = cycle !== undefined && state.turn - cycle.last <= FLEE_CYCLE_WINDOW && Math.max(Math.abs(cycle.pos.x - pos.x), Math.abs(cycle.pos.y - pos.y)) <= FLEE_CYCLE_RADIUS;
+      // A cycle that goes on keeps its rest and give-up marks, so each is announced once; a new one
+      // after a long gap (the rest) still remembers how many rests failed to bring HP back.
+      memory.fleeCycle = again ? { ...cycle, episodes: cycle.episodes + 1, last: state.turn, pos } : { episodes: 1, last: state.turn, pos, ...(cycle?.rests === undefined ? {} : { rests: cycle.rests }) };
+    }
     return;
   }
   if (visible.length > 0) fleeing.lastSeen = state.turn;

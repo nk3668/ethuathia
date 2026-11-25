@@ -1970,6 +1970,18 @@ As built in `src/sim/ai/` (ETH-009):
   (50) that rule is dropped the same way, with a `stuck` event ("Waited 50 turns with nobody in
   the party moving (...)"), and the walk chooses again at once. A straggler still on the move
   resets the count, so gathering for the party is never cut short.
+  Flee/return cycles (ETH-189, `src/sim/combat/recover.ts`) are counted by flights, not position:
+  a hurt adventurer that flees a foe on the way to its goal, calms down, walks back and flees
+  again moves and explores, so none of the above sees it. `updateThreatMemory` keeps
+  `memory.fleeCycle` (flights begun within `FLEE_CYCLE_WINDOW` (150) turns and `FLEE_CYCLE_RADIUS` (8)
+  tiles of each other with HP never back to `FLEE_RELEASE_PERCENT`; cleared on recovery). At
+  `FLEE_CYCLE_LIMIT` (3) flights `checkFleeCycle` (engine) emits a `stuck` event ("Fled X 3 times
+  without recovering ... Resting ...") and sets `restUntil`, so baseline `cond.recovering →
+  act.rest` (idle, after the fountain rule; exempt from the waiting count like `act.wait`) holds the
+  adventurer still for up to `FLEE_REST_TURNS` (500) or until HP is back, with no threat in sight.
+  After `FLEE_CYCLE_GIVE_UP` (8) flights in one cycle, or `FLEE_REST_GIVE_UP` (2) rests that did not
+  bring HP back, `cond.no_recovery → act.retreat_run` (above the rest rule) gives the run up as a retreat, with its own
+  `stuck` event. `fleeCycle` is optional state: absent until a flight begins, so no `STATE_VERSION` bump.
 - **Speed:** a lone adventurer explores a generated Hewn Halls floor in about 200 party turns
   (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite. A
   ten-floor dungeon takes a lone adventurer about 2,400 turns and a party of four about 1,200.
