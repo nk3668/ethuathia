@@ -5,8 +5,8 @@
  * switches tactics on its own.
  */
 import { describe, expect, it } from 'vitest';
-import { FOCUS_STRONGEST, HABIT_QUICK_TO_QUAFF, ROLE_DAMAGE, ROLE_HEALER, STANCE_FALL_BACK } from '../../src/content';
-import { checkInvariants, chooseRule, createRun, defaultPicks, deserialize, getEntity, serialize, spawnMonster, step } from '../../src/sim';
+import { FOCUS_STRONGEST, HABIT_QUICK_TO_QUAFF, HABIT_TREASURE_HUNTER, ROLE_DAMAGE, ROLE_HEALER, STANCE_FALL_BACK } from '../../src/content';
+import { checkInvariants, chooseRule, createRun, defaultPicks, deserialize, getEntity, moveEntity, placeItem, serialize, spawnMonster, step, waitDecide } from '../../src/sim';
 import type { ActorEntity, AdventurerConfig, AiActor, Command, EntityId, RunState, SimEvent } from '../../src/sim';
 
 const HERO: AdventurerConfig = { name: 'Brannoc', classId: 'class.reaver', raceId: 'race.human' };
@@ -116,10 +116,13 @@ describe('swapping tactics mid-run', () => {
   });
 
   it('puts habits before the role, in pick order, and the first rule that can act wins', () => {
-    const { state, hero, maxHp } = hall([{ ...HERO, tactics: { role: ROLE_HEALER.id, habits: [HABIT_QUICK_TO_QUAFF.id] } }]);
-    hero.actor.hp = Math.round(maxHp * 0.55); // above the Healer's line, below the habit's
-    hero.inventory = { items: [{ def: DRAUGHT, qty: 1 }] };
-    expect(decide(state, hero).rule.option).toBe(HABIT_QUICK_TO_QUAFF.id);
+    const { state, hero, maxHp } = hall([{ ...HERO, tactics: { role: ROLE_HEALER.id, habits: [HABIT_TREASURE_HUNTER.id] } }]);
+    wound(hero, maxHp); // the Healer's row could act too
+    placeItem(state, 'd1', { x: 17, y: 1 }, { def: DRAUGHT, qty: 1 });
+    moveEntity(state, hero.id, 'd1', { x: 12, y: 1 });
+    step(state, [], { decide: waitDecide }); // seen from 5 tiles off
+    moveEntity(state, hero.id, 'd1', { x: 1, y: 1 });
+    expect(decide(state, hero).rule.option).toBe(HABIT_TREASURE_HUNTER.id);
   });
 });
 
@@ -179,10 +182,10 @@ describe('setTactics checking', () => {
 
   it('accepts a command whose fields are all valid, with several axes at once', () => {
     const { state, hero } = hall();
-    const events = step(state, [{ type: 'setTactics', actor: hero.id, role: ROLE_HEALER.id, focus: FOCUS_STRONGEST.id, habits: [HABIT_QUICK_TO_QUAFF.id] }]);
+    const events = step(state, [{ type: 'setTactics', actor: hero.id, role: ROLE_HEALER.id, focus: FOCUS_STRONGEST.id, habits: [HABIT_TREASURE_HUNTER.id] }]);
     expect(rejected(events)).toEqual([]);
     expect(events.filter((e) => e.type === 'tacticsSet').map((e) => (e as { axis: string }).axis)).toEqual(['role', 'focus', 'habit']);
-    expect(hero.ai.rules.map((r) => r.option)).toEqual([HABIT_QUICK_TO_QUAFF.id, ...Array(ROLE_HEALER.rows?.length).fill(ROLE_HEALER.id)]);
+    expect(hero.ai.rules.map((r) => r.option)).toEqual([HABIT_TREASURE_HUNTER.id, ...Array(ROLE_HEALER.rows?.length).fill(ROLE_HEALER.id)]);
   });
 });
 

@@ -138,6 +138,8 @@ export interface HeadlessOptions {
   recruits?: boolean;
   /** The party size for `recruits`. Default: the profile's party size. */
   partySize?: number;
+  /** One habit (`tactic.*`) every adventurer carries (`--habit`, ETH-194). Default none. */
+  habit?: string;
 }
 
 /** The contracts a headless run takes on by default (ETH-024): Recover the relic, the Prepare default. */
@@ -247,9 +249,11 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): Ru
     options.party ??
     (options.recruits === true ? recruitParty(active, seed, options.partySize) : headlessParty(partySize(profile)));
   const useStamps = ownsStamps(active);
-  const party = useStamps
+  const stamped = useStamps
     ? baseParty.map((m) => (m.stamp !== undefined || !CLASSES.has(m.classId) ? m : { ...m, stamp: CLASSES.get(m.classId).stamp }))
     : baseParty;
+  const party =
+    options.habit === undefined ? stamped : stamped.map((m) => ({ ...m, tactics: { ...m.tactics, habits: [options.habit as string] } }));
 
   const config: RunConfig = {
     party,

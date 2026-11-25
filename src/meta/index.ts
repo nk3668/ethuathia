@@ -115,6 +115,7 @@ export type { OptInsChoice } from './prepare/optIns';
 export { activeOmens, availableOmens, multiplierText, OMEN_MULTIPLIER_TEXT, omenBreakdown, omenMultiplier } from './prepare/omens';
 export type { OmenBreakdownLine, OmensChoice } from './prepare/omens';
 export { upgradeStartConfig } from './prepare/startPerks';
+export { BASE_HABIT_SLOTS, fitHabits, habitSlotsOf } from './prepare/habits';
 export { buildRunConfig, checkRunConfig, PREPARE_STREAM, recruitParty, startRun, upgradeBonusModifiers, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
 export {
   canAfford,

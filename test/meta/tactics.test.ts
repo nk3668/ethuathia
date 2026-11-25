@@ -12,7 +12,7 @@ import type { AiActor } from '../../src/sim';
 import { emptyRunResult } from '../../src/sim';
 
 const choices: RunChoices = { ...defaultRunChoices(), party: { slots: [{ classId: 'class.vanguard', raceId: 'race.human' }] } };
-const PICKS = { role: 'tactic.healer', range: 'tactic.back_line', focus: 'tactic.strongest', habits: ['tactic.quick_to_quaff'] };
+const PICKS = { role: 'tactic.healer', range: 'tactic.back_line', focus: 'tactic.strongest', habits: ['tactic.treasure_hunter'] };
 
 /** A profile whose first adventurer (adv.1) exists after one banked run. */
 function withRecord(): { profile: Profile; id: string } {
@@ -52,8 +52,8 @@ describe('a record\'s tactics picks', () => {
     expect(second.config.party[0]?.tactics).toEqual(PICKS);
     const state = createRun({ ...second.config, floorText: ['####', '#@.#', '####'], depth: 1 }, 5);
     const hero = getEntity(state, state.party[0] as number) as AiActor;
-    expect(hero.ai.tactics).toMatchObject({ role: 'tactic.healer', focus: 'tactic.strongest', habits: ['tactic.quick_to_quaff'] });
-    expect(hero.ai.rules.map((r) => r.option)).toEqual(['tactic.quick_to_quaff', 'tactic.healer', 'tactic.healer', 'tactic.healer']);
+    expect(hero.ai.tactics).toMatchObject({ role: 'tactic.healer', focus: 'tactic.strongest', habits: ['tactic.treasure_hunter'] });
+    expect(hero.ai.rules.map((r) => r.option)).toEqual(['tactic.treasure_hunter', 'tactic.healer', 'tactic.healer', 'tactic.healer']);
   });
 
   it('are ignored when the content no longer has the option', () => {

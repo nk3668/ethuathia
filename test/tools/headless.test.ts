@@ -208,6 +208,7 @@ describe('tools/headless', () => {
       contract: null,
       omens: [],
       recruits: false,
+      habit: null,
       partySweep: false,
       pacing: false,
       jobs: defaultJobs(),
@@ -230,6 +231,7 @@ describe('tools/headless', () => {
       contract: null,
       omens: [],
       recruits: false,
+      habit: null,
       partySweep: false,
       pacing: false,
       jobs: defaultJobs(),
@@ -249,6 +251,9 @@ describe('tools/headless', () => {
       { id: 'omen.deep_surge', rank: 3 },
       { id: 'omen.cursed_hoards', rank: 1 },
     ]);
+    expect(parseSimArgs(['--habit', 'treasure_hunter']).habit).toBe('tactic.treasure_hunter');
+    expect(parseSimArgs(['--habit', 'tactic.curious']).habit).toBe('tactic.curious');
+    expect(() => parseSimArgs(['--habit', 'tank'])).toThrow(/not a habit/);
     expect(() => parseSimArgs(['--omens', 'deep_surge:4'])).toThrow(/rank for omen.deep_surge/);
     expect(() => parseSimArgs(['--omens', 'nothing:1'])).toThrow(/not an Omen/);
     expect(() => parseSimArgs(['--omens', 'deep_surge'])).toThrow(/id:rank/);
@@ -280,7 +285,7 @@ describe('tools/headless', () => {
     expect(() => parseSimArgs(['--rules', 'reckless'])).toThrow('--rules');
     expect(() => parseSimArgs(['--upgrades', ''])).toThrow('--upgrades');
     expect(() => parseSimArgs(['--upgrades', 'upgrade.nope'])).toThrow('Unknown upgrade "upgrade.nope"');
-    // Rule Clerk is in the Guild Hall's gated Tier II, so a sweep can't apply it.
+    // Habit Tutor is in the Guild Hall's gated Tier II, so a sweep can't apply it.
     expect(() => parseSimArgs(['--upgrades', 'upgrade.rule_clerk'])).toThrow('Tier 4 and up open');
     expect(() => parseSimArgs(['--bogus'])).toThrow();
   });

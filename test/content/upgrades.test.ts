@@ -222,11 +222,11 @@ describe('the Guild Hall tree (ETH-132)', () => {
     }
   });
 
-  it('puts the row 6 pick between a contract slot and an inert rule slot, and says the rule slot does nothing yet', () => {
+  it('puts the row 6 pick between a contract slot and a habit slot', () => {
     const pick = nodes.filter((n) => n.exclusiveGroup === 'guild_hall.row6');
     expect(pick.map((n) => n.id).sort()).toEqual(['upgrade.rule_clerk', 'upgrade.second_contract_board']);
     expect(pick.every((n) => n.tier === 6 && n.cost.renown === 3600)).toBe(true);
-    expect(UPGRADES.get('upgrade.rule_clerk').description).toMatch(/does nothing until/);
+    expect(UPGRADES.get('upgrade.rule_clerk').description).toMatch(/habit slot/);
   });
 
   it('ranks the numeric nodes at the specced prices', () => {

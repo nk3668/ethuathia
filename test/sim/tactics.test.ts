@@ -8,7 +8,7 @@ import {
   CLASSES,
   FOCUS_STRONGEST,
   FORMATION_LOOSE,
-  HABIT_QUICK_TO_QUAFF,
+  HABIT_TREASURE_HUNTER,
   picksProblems,
   RANGE_BACK_LINE,
   ROLE_HEALER,
@@ -87,10 +87,10 @@ describe('building rules from picks', () => {
   });
 
   it('orders stance, then habits in pick order, then role, and tags each row with its option', () => {
-    const rules = buildTacticRules(picks({ stance: STANCE_FALL_BACK.id, habits: [HABIT_QUICK_TO_QUAFF.id], role: ROLE_HEALER.id }));
+    const rules = buildTacticRules(picks({ stance: STANCE_FALL_BACK.id, habits: [HABIT_TREASURE_HUNTER.id], role: ROLE_HEALER.id }));
     expect(rules.map((r) => [r.option, r.action.id])).toEqual([
       [STANCE_FALL_BACK.id, 'act.retreat_run'],
-      [HABIT_QUICK_TO_QUAFF.id, 'act.use_ability'],
+      [HABIT_TREASURE_HUNTER.id, 'act.pick_up'],
       [ROLE_HEALER.id, 'act.use_ability'],
       [ROLE_HEALER.id, 'act.tend_ally'],
       [ROLE_HEALER.id, 'act.hang_back'],

@@ -108,6 +108,27 @@ function unknownScrollIndex(state: RunState, actor: Entity): number | null {
 }
 
 /**
+ * A calm moment to try something unknown (ETH-142, ETH-194): no threat in sight, HP at or above
+ * `minPercent` of the maximum and a remembered staircase the actor can reach. The goal maps are
+ * built only once the cheaper checks pass.
+ */
+export function calmWithExit(ctx: AiCtx, minPercent: number): { ok: boolean; detail: string } {
+  const { state, actor } = ctx;
+  if (visibleThreats(state, actor).length > 0) return { ok: false, detail: '' };
+  const max = statValue(state, actor, 'hp');
+  if (actor.actor.hp * 100 < max * minPercent) return { ok: false, detail: '' };
+  const paths = aiPathGrid(ctx);
+  for (const dir of ['down', 'up'] as const) {
+    const stairs = knownStairs(state, actor.floor, dir);
+    if (stairs === null) continue;
+    if (buildGoalMap(paths, [stairs]).get(actor.pos.x, actor.pos.y) !== UNREACHABLE) {
+      return { ok: true, detail: `no enemy in sight, healthy, stairs ${dir} in reach` };
+    }
+  }
+  return { ok: false, detail: '' };
+}
+
+/**
  * True while the actor carries a scroll it can't identify yet and can test it without risk: no
  * enemy in sight, healthy, a known way out. The engine checks a rule's condition before its action
  * resolves, so the cheap test (is there anything to test?) comes first and the goal maps behind
@@ -120,20 +141,8 @@ export const COND_SAFE_TO_TEST = defineCondition({
     'True while the adventurer carries a scroll of unknown type, no threat is in sight, HP is above the healing threshold and stairs it remembers can be reached: a calm moment to try something unknown.',
   parse: noParams,
   evaluate(ctx) {
-    const { state, actor } = ctx;
-    if (unknownScrollIndex(state, actor) === null) return { ok: false, detail: '' };
-    if (visibleThreats(state, actor).length > 0) return { ok: false, detail: '' };
-    const max = statValue(state, actor, 'hp');
-    if (actor.actor.hp * 100 < max * HEAL_BELOW_PERCENT) return { ok: false, detail: '' };
-    const paths = aiPathGrid(ctx);
-    for (const dir of ['down', 'up'] as const) {
-      const stairs = knownStairs(state, actor.floor, dir);
-      if (stairs === null) continue;
-      if (buildGoalMap(paths, [stairs]).get(actor.pos.x, actor.pos.y) !== UNREACHABLE) {
-        return { ok: true, detail: `no enemy in sight, healthy, stairs ${dir} in reach` };
-      }
-    }
-    return { ok: false, detail: '' };
+    if (unknownScrollIndex(ctx.state, ctx.actor) === null) return { ok: false, detail: '' };
+    return calmWithExit(ctx, HEAL_BELOW_PERCENT);
   },
   describe: () => 'safe to test an unknown scroll',
 });
@@ -450,7 +459,7 @@ export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [
  * drop the least valuable thing.
  */
 export const ITEMS_BASELINE_URGENT: readonly Rule[] = [
-  { condition: { id: 'cond.wounded', params: { percent: HEAL_BELOW_PERCENT } }, action: { id: 'act.quaff_healing' }, enabled: true },
+  { condition: { id: 'cond.needs_healing' }, action: { id: 'act.quaff_healing' }, enabled: true },
   { condition: { id: 'cond.wearing_cursed' }, action: { id: 'act.use_uncurse' }, enabled: true },
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.equip_upgrade' }, enabled: true },
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.salvage_lowest' }, enabled: true },

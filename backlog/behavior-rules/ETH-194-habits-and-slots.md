@@ -2,7 +2,7 @@
 id: ETH-194
 title: Habits and habit slots - several per adventurer, with exclusive pairs
 type: feature
-status: in-progress
+status: pending-review
 priority: P1
 milestone: M3
 epic: behavior-rules
@@ -19,7 +19,7 @@ Ship the **habit** axis (`CLAUDE.md` §5.2). Habits are small behaviors an adven
 Habits give each adventurer a personality on top of their role. The slot count is the main progression lever for tactics, and Nate wants it tuned by experiment.
 
 ## Acceptance criteria
-- [ ] Habit defs, each with rule rows built by ETH-162:
+- [x] Habit defs, each with rule rows built by ETH-162:
   - *Avoids combat* (steers around known threats)
   - *Treasure hunter* (detours for visible or remembered items; there are no secrets or chests until M8)
   - *Finisher* (goes for wounded foes)
@@ -27,9 +27,9 @@ Habits give each adventurer a personality on top of their role. The slot count i
   - *Sparing with potions* and *Quick to quaff*, an exclusive pair (different healing thresholds)
   - *Curious* (tests unknown items when safe)
 - [ ] *Softens targets* (debuff before attacking) is listed here but ships with ETH-195, which adds the first debuff sources.
-- [ ] Habit slots are `capacity(profile, 'habitSlots', 1)`. The Guild Hall's **Rule Clerk** is renamed and re-texted as a habit-slot node, and the `ruleSlots` key becomes `habitSlots` with a save migration.
-- [ ] The sim refuses more habits than slots, or both habits of an exclusive pair, and says why.
-- [ ] Trace, tooltip, Codex and log text. Hand-map sim tests per habit on a fixed seed. `npm run check` passes.
+- [x] Habit slots are `capacity(profile, 'habitSlots', 1)`. The Guild Hall's **Rule Clerk** is renamed and re-texted as a habit-slot node, and the `ruleSlots` key becomes `habitSlots` (no save migration was needed: capacities are derived from owned nodes, see the Log).
+- [x] The sim refuses more habits than slots, or both habits of an exclusive pair, and says why.
+- [x] Trace, tooltip, Codex and log text. Hand-map sim tests per habit on a fixed seed. `npm run check` passes.
 
 ## Notes
 - *Ambusher* waits for sleeping monsters and stealth (ETH-097, M5), and *Secret seeker* for secrets in M8 (Nate, 2026-11-25).
@@ -93,3 +93,7 @@ T0 identity (20 seeds): no habits picked -> metric-identical to ETH-162 (the bas
 ## Log
 - 2026-11-25: Created from the tactics design (Nate, 2026-11-25).
 - 2026-11-25: Started. Refined plan written; planning gate, no code until approved.
+- 2026-11-25: Plan approved. Decisions: Quick to quaff and Sparing are param-only (`healBelow`, read by the baseline's quaff rule through `cond.needs_healing`); Avoids combat reuses ETH-193's `act.avoid_fight`; Avoids combat and Finisher are a second exclusive pair; Rule Clerk keeps its id and becomes **Habit Tutor**; Curious drinks unknown potions (a harmful one is possible, said in the tooltip). Rebased on ETH-193 (stack 162 -> 193 -> 194).
+- 2026-11-25: Correction to the item text: there is **no save migration** for `ruleSlots` -> `habitSlots`. Capacities are derived from the owned nodes' grants and never stored, and the node keeps its id, so old saves load as they are. The only version bump is `STATE_VERSION` 41 -> 42 for `RunConfig.habitSlots`.
+- 2026-11-25: Built: six habits (`src/content/tacticsHabits.ts`), conditions and actions in `src/sim/combat/habitRules.ts` and `src/sim/items/habitRules.ts`, `habitParams.ts`, slots in `RunConfig.habitSlots` (checked in `createRun`, `setTactics` and the `core.tactics` invariant), `habitSlotsOf` and `fitHabits` in `src/meta/prepare/habits.ts`, `--habit` in `npm run sim`. Finisher's threshold is 35% (a rat at 1 of 3 HP is 33%). Tests: `test/sim/tacticsHabits.test.ts`, `test/meta/habitSlots.test.ts`. `npm run check` green. T0 (20 seeds vs ETH-193, no habits): every metric identical; state hashes differ only because the state version changed. Smoke (20 seeds, `--recruits --party 3`, Bodyguard on 3 Lorekeepers): no habit breaks a run.
+- Out of scope: a trigger counter per habit in the sim report (hit counts for the tooltip belong with ETH-196); Softens targets with ETH-195; a note to the player when `fitHabits` drops habits (ETH-196's panel).

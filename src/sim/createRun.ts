@@ -40,7 +40,7 @@ export function adventurerActor(member: AdventurerConfig): ActorPart {
  */
 function startingAi(member: AdventurerConfig, config: RunConfig) {
   const picks = startingPicks(member.classId, config.tactics, member.tactics);
-  const problems = tacticPickProblems(picks);
+  const problems = tacticPickProblems(picks, config.habitSlots);
   if (problems.length > 0) throw new Error(`Adventurer "${member.name}" has invalid tactics: ${problems.join('; ')}`);
   const ai = newAiPart();
   applyTactics(ai, picks);

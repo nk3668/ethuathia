@@ -266,7 +266,7 @@ export const UPGRADE_SECOND_CONTRACT_BOARD = defineUpgrade({
   id: 'upgrade.second_contract_board',
   name: 'Second Contract Board',
   description:
-    'A whole wall of writs and a clerk to sort them. A run can take on one more contract at once. Pick this or the Rule Clerk; respec to change.',
+    'A whole wall of writs and a clerk to sort them. A run can take on one more contract at once. Pick this or the Habit Tutor; respec to change.',
   tags: ['contracts', 'capability'],
   building,
   tier: 6,
@@ -279,18 +279,18 @@ export const UPGRADE_SECOND_CONTRACT_BOARD = defineUpgrade({
 
 export const UPGRADE_RULE_CLERK = defineUpgrade({
   id: 'upgrade.rule_clerk',
-  name: 'Rule Clerk',
+  name: 'Habit Tutor',
   description:
-    'A clerk who writes down how each adventurer likes to fight. It adds a rule slot per adventurer, but behavior rules arrive in a ' +
-    'later update: this does nothing until then. Pick this or the Second Contract Board; respec to change.',
-  tags: ['rules', 'capability'],
+    'A tutor who drills each adventurer in one more habit, such as Treasure hunter or Quick to quaff. It adds a habit slot per ' +
+    'adventurer. Pick this or the Second Contract Board; respec to change.',
+  tags: ['habits', 'capability'],
   building,
   tier: 6,
   column: 1,
   cost: { renown: 3600 },
   requires: [],
   exclusiveGroup: 'guild_hall.row6',
-  grants: [{ kind: 'capacity', key: 'ruleSlots', amount: 1 }],
+  grants: [{ kind: 'capacity', key: 'habitSlots', amount: 1 }],
 });
 
 export const UPGRADE_MYSTERY_CRATE = defineUpgrade({
