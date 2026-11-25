@@ -108,6 +108,8 @@ export { availableContracts, BASE_CONTRACT_SLOTS, chosenContracts, contractSlots
 export { buildingQuestRefusal, questNeedText, questOffer, upgradeShare } from './prepare/buildingQuests';
 export type { QuestOffer, UpgradeShare } from './prepare/buildingQuests';
 export type { ContractsChoice } from './prepare/contracts';
+export { enabledOptIns, optInNodes, withOptIns } from './prepare/optIns';
+export type { OptInsChoice } from './prepare/optIns';
 export { upgradeStartConfig } from './prepare/startPerks';
 export { buildRunConfig, checkRunConfig, PREPARE_STREAM, recruitParty, startRun, upgradeBonusModifiers, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
 export {

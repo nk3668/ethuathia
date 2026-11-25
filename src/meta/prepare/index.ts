@@ -10,12 +10,14 @@
 import type { ChoiceOf, RunChoiceSection } from './choice';
 import { CONTRACTS_CHOICE } from './contracts';
 import { DUNGEON_CHOICE } from './dungeon';
+import { OPT_INS_CHOICE } from './optIns';
 import { PARTY_CHOICE } from './party';
 
 export const RUN_CHOICES = {
   party: PARTY_CHOICE,
   dungeon: DUNGEON_CHOICE,
   contracts: CONTRACTS_CHOICE,
+  optIns: OPT_INS_CHOICE,
 } as const;
 
 type Sections = typeof RUN_CHOICES;

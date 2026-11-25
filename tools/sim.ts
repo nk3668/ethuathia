@@ -77,6 +77,7 @@ ${USAGE}`);
     ...(args.raceId === null ? [] : [`race ${args.raceId}`]),
     ...(args.contract === null ? [] : [`contract ${args.contract}`]),
     ...(args.upgrades.length === 0 ? [] : [`upgrades ${args.upgrades.join(',')}`]),
+    ...(args.optIns ? [] : ['opt-ins off']),
   ].join(', ');
   console.log(`Headless run: ${details}\n`);
   const started = performance.now();
@@ -88,6 +89,7 @@ ${USAGE}`);
       ...partyOptions(args.party, args),
       preset: args.preset,
       upgrades: args.upgrades,
+      optIns: args.optIns,
       rules: args.rules,
       ...(args.contract === null ? {} : { contracts: [args.contract] }),
     },

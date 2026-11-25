@@ -12,7 +12,8 @@
  * - a prerequisite is a node of the same building on an earlier tier, so trees have no cycles;
  * - a pick-one group (`exclusiveGroup`) has two or more nodes, all on one tier of one building;
  * - no two nodes of a building share a tier and column;
- * - a ranked node (ETH-172) may only have `capacity` and `bundle` grants, as an `unlock` or a `start` perk can't stack.
+ * - a ranked node (ETH-172) may only have `capacity` and `bundle` grants, as an `unlock` or a `start` perk can't stack;
+ * - an opt-in node (ETH-187) may only have `bundle` and `start` grants, as the Prepare screen switches those per run.
  *
  * **Ranks** let a node be bought several times (`ranks`); **tier gates** keep a building's higher
  * rows locked until a milestone is met (`BuildingDef.tierGates`). Both are engine features with
@@ -223,6 +224,12 @@ export interface UpgradeNodeDef extends Def {
    * and the run summary says so.
    */
   readonly reveal?: Milestone;
+  /**
+   * An opt-in node (ETH-187): owning it grants nothing until the player switches it on for a run on
+   * the Prepare screen (the `optIns` choice, `src/meta/prepare/optIns.ts`). Off by default, so a
+   * risk or a trade-off is never forced. Only `bundle` and `start` grants may be on one.
+   */
+  readonly optIn?: true;
 }
 
 export interface NodeRanks {
@@ -331,6 +338,7 @@ const upgradeSchema = z.strictObject({
     })
     .optional(),
   reveal: milestoneSchema.optional(),
+  optIn: z.literal(true).optional(),
 });
 
 /**
@@ -393,6 +401,12 @@ export function checkUpgradeTrees(defs: readonly UpgradeNodeDef[]): string[] {
   for (const def of defs) {
     if (def.ranks !== undefined && def.grants.some((g) => g.kind === 'unlock' || g.kind === 'start')) {
       problems.push(`${label(def)}: a ranked node may only have capacity and bundle grants, as an unlock or a start perk can't stack`);
+    }
+  }
+
+  for (const def of defs) {
+    if (def.optIn === true && def.grants.some((g) => g.kind === 'capacity' || g.kind === 'unlock')) {
+      problems.push(`${label(def)}: an opt-in node may only have bundle and start grants, as capacities and unlocks apply to the whole profile`);
     }
   }
 
