@@ -1989,6 +1989,15 @@ As built in `src/sim/ai/` (ETH-009):
   `FLEE_HOPELESS_RECOVER_PERCENT` (90), which ends the cycle and the zone. One adventurer never ends the run
   (ending it early is the player's choice, e.g. the Fall back stance); the turn cap is the only hard net.
   `fleeCycle` is optional state: absent until a flight begins, so no `STATE_VERSION` bump.
+- **Escape direction (ETH-154, `src/sim/combat/escape.ts`):** `act.flee` asks `escapeStep` for its step. It takes the flee
+  map's best step unless another free step (not next to a danger, not blocked) costs within `ESCAPE_TIE_MARGIN` (2) of it;
+  among those it picks the one closest to a living party member on the floor, then to the known stairs up (goal maps on
+  the same path grid), then the cheapest. A tie-break only, never a detour from a clearly better escape. The trace adds
+  ", fleeing toward Mira" or ", fleeing toward the stairs up" when that decided the step. `cond.boxed_in → act.retreat_run`
+  (baseline, after `act.rest`, so a flee/return rest still comes first) holds when the adventurer is wounded (`isWounded`),
+  has fresh remembered threats, and every frontier tile and known way down is within `GUARDED_RADIUS` (= `AVOID_RADIUS`, 6)
+  of one; the trace reads "heading home: wounded, no healing, threats on every way forward". It turns the whole party back
+  like any retreat. No saved state, so no version bump.
 - **Speed:** a lone adventurer explores a generated Hewn Halls floor in about 200 party turns
   (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite. A
   ten-floor dungeon takes a lone adventurer about 2,400 turns and a party of four about 1,200.

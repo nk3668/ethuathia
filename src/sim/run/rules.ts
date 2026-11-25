@@ -59,7 +59,8 @@ export const ACT_RETREAT_RUN = defineRuleAction({
   name: 'Retreat',
   description:
     'Turn the whole party back: climb the stairs up floor by floor and walk out of the dungeon, ending the run. ' +
-    'The party keeps everything it earned, and every survivor returns to the roster.',
+    'The party keeps everything it earned, and every survivor returns to the roster. A wounded adventurer with no healing ' +
+    'whose every way forward is near a threat it remembers turns the party back this way too.',
   parse: noParams,
   resolve(ctx): Resolved | null {
     const { state, actor } = ctx;

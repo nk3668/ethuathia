@@ -93,6 +93,8 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.hurt_no_healing', params: { below: 50 } }, action: { id: 'act.drink_fountain' }, enabled: true },
   // Fled the same trouble over and over without recovering: rest instead of walking back (ETH-189).
   { condition: { id: 'cond.recovering' }, action: { id: 'act.rest' }, enabled: true },
+  // Wounded with no healing and a threat on every way forward: go home rather than walk past it (ETH-154).
+  { condition: { id: 'cond.boxed_in' }, action: { id: 'act.retreat_run' }, enabled: true },
   // Items (ETH-061): pick up wanted items a short detour away.
   ...ITEMS_BASELINE_LOOT,
   // Cohesion (ETH-145): while there is still ground to explore, stay near the party's lead rather
