@@ -45,7 +45,7 @@ export function describeStartPerk(perk: StartPerk): string {
     case 'stamps':
       return 'Each adventurer\'s kit carries a Forge Stamp (Keen, Warding or Nimble), chosen on the Prepare screen';
     case 'salvage':
-      return 'Overloaded adventurers break plain, identified gear into scrap worth Trophies instead of dropping it (switch it on in the Prepare screen)';
+      return 'Overloaded adventurers break plain, identified gear into scrap worth Trophies instead of dropping it';
     case 'crate':
       return 'The first adventurer carries a sealed, unidentified crate from the Quartermaster: a blessed find or a cursed dud';
     case 'stock':
@@ -65,6 +65,11 @@ const STAT_NAMES: Readonly<Record<string, string>> = {
   sight: 'sight',
   carry: 'carry',
   identify: 'identify chance (%)',
+  statusResist: 'status resistance (%)',
+  trapSpot: 'trap spotting (%)',
+  disarm: 'disarm (%)',
+  flee: 'flee chance (%)',
+  forceDoor: 'force doors (%)',
 };
 
 function statName(stat: string): string {

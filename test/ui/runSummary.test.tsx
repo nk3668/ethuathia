@@ -27,6 +27,7 @@ import {
   RENOWN_FORMULA_TEXT,
   renownBreakdown,
   reportFromRecord,
+  salvageOf,
   unlockLines,
 } from '../../src/ui/shell/runSummaryText';
 import { describe as describe_ } from '../../src/ui/shell/text';
@@ -366,6 +367,41 @@ describe('RunSummary', () => {
     act(() => useRunStore.getState().runEnded(wipe));
     dialog = screen.getByRole('dialog', { name: /Wipe/ });
     expect(dialog.textContent).toContain('Items lost: 4 items');
+  });
+
+  it('shows Smelting Pit bonus on conversion and salvage tallies across live and history runs', async () => {
+    render(<RunSummary />);
+    const report: RunReport = {
+      result: {
+        ...emptyRunResult('retreat'),
+        atRisk: { renown: 20, trophies: 3 },
+        converted: { trophies: 13 + 15 },
+        turns: 120,
+        deepestDepth: 2,
+        extras: {
+          'run.gold': { gold: 100, trophies: 13, rate: GOLD_PER_TROPHY, bonus: 30 },
+          'run.items': { items: 2, value: 120, trophies: 15, rate: VALUE_PER_TROPHY, bonus: 30 },
+          'track.salvage': { items: 2, value: 30 },
+        },
+      },
+      end: { outcome: 'retreat', turn: 120, cause: 'Retreated.', depth: 2 },
+    };
+    act(() => useRunStore.getState().runEnded(report));
+    const dialog = screen.getByRole('dialog', { name: /Retreat/ });
+    expect(dialog.textContent).toContain('Gold converted: 100 gold → +13 Trophies (+30% Smithy)');
+    expect(dialog.textContent).toContain('Items sold: 2 items → +15 Trophies (+30% Smithy)');
+    expect(dialog.textContent).toContain('Salvaged: 2 items → +3 Trophies (at risk)');
+    expect(salvageOf(report)).toEqual({ items: 2, value: 30, trophies: 3, rate: VALUE_PER_TROPHY });
+
+    const rebuilt = reportFromRecord(runRecord(1, report.result));
+    expect(goldConversionOf(rebuilt)?.bonus).toBe(30);
+    expect(itemSaleOf(rebuilt)?.bonus).toBe(30);
+    expect(salvageOf(rebuilt)).toEqual({ items: 2, value: 30, trophies: 3, rate: VALUE_PER_TROPHY });
+
+    act(() => within(dialog).getByText('Trophies').focus());
+    const tip = (await screen.findByRole('tooltip')).textContent ?? '';
+    expect(tip).toContain('+30% Smithy');
+    expect(tip).toContain('Salvage: 2 items');
   });
 
   it('shows Gold converted on victory/retreat and Gold lost on wipe with conversion-rate tooltips (ETH-083)', async () => {

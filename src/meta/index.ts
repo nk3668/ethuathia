@@ -39,7 +39,7 @@ export type { ProfileBefore, ProfileSlice, SliceMigration, SliceState } from './
 export { discoveriesSchema, mergeMonsterKills, monsterKillsSchema } from './slices/codex';
 export type { Codex, MonsterKills } from './slices/codex';
 export { HISTORY_LIMIT, recordMoments, RUN_RECORD_MOMENTS, runRecord } from './slices/history';
-export type { History, RunRecord, RunRecordContract, RunRecordGold, RunRecordMember } from './slices/history';
+export type { History, RunRecord, RunRecordContract, RunRecordGold, RunRecordItems, RunRecordMember, RunRecordSalvage } from './slices/history';
 export {
   activeRecords,
   addTrait,
@@ -49,6 +49,7 @@ export {
   newRecord,
   recordOf,
   retiredRecords,
+  ROSTER_SIZE,
   setStatus,
 } from './adventurers';
 export type { NewRecordInit } from './adventurers';

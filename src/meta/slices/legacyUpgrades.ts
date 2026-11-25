@@ -35,10 +35,22 @@ export function refundRemovedNodes(envelope: Obj): Obj {
   if (gone.length === 0) return envelope;
   const refund = gone.reduce((sum, id) => sum + (REMOVED_GUILD_HALL_NODES[id] ?? 0), 0);
 
-  const nextUpgrades = { ...upgrades, data: { ...upgrades.data, owned: owned.filter((id) => !gone.includes(id as string)) } };
+  const nextRanks = isObj(upgrades.data.ranks)
+    ? Object.fromEntries(Object.entries(upgrades.data.ranks).filter(([id]) => !gone.includes(id)))
+    : upgrades.data.ranks;
+  const nextUpgrades = {
+    ...upgrades,
+    data: {
+      ...upgrades.data,
+      owned: owned.filter((id) => !gone.includes(id as string)),
+      ...(upgrades.data.ranks !== undefined ? { ranks: nextRanks } : {}),
+    },
+  };
   const nextSlices: Obj = { ...slices, upgrades: nextUpgrades };
   if (isObj(currencies) && isObj(currencies.data) && typeof currencies.data.renown === 'number') {
     nextSlices.currencies = { ...currencies, data: { ...currencies.data, renown: currencies.data.renown + refund } };
+  } else if (currencies === undefined && refund > 0) {
+    nextSlices.currencies = { version: 1, data: { renown: refund, trophies: 0, favor: {} } };
   }
   return { ...envelope, slices: nextSlices };
 }

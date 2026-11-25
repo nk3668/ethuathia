@@ -77,10 +77,10 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.enemy_adjacent' }, action: { id: 'act.attack_adjacent' }, enabled: true },
   // Combat roles (ETH-040): rush a caster that can bolt you rather than stand under fire.
   { condition: { id: 'cond.in_bolt_range' }, action: { id: 'act.rush_caster' }, enabled: true },
-  // Fleeing with nowhere left to run: hold still rather than walk back toward the threat (ETH-148).
-  { condition: { id: 'cond.fleeing' }, action: { id: 'act.hold_position' }, enabled: true },
   // Recovery (ETH-187): hurt with nothing in sight, eat a ration.
   ...ITEMS_BASELINE_RECOVER,
+  // Fleeing with nowhere left to run: hold still rather than walk back toward the threat (ETH-148).
+  { condition: { id: 'cond.fleeing' }, action: { id: 'act.hold_position' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   // Quests (ETH-024): once every contract is complete, head out; fetch a contract item once seen.

@@ -74,6 +74,7 @@ export function crateTableProblems(table: readonly CrateEntry[] = CRATE_TABLE): 
     if (entry.enchant !== undefined) {
       const base = baseEnchantmentFor(def);
       if (base === undefined) problems.push(`${at}: only gear takes an enchantment`);
+      else if (entry.enchant === 0) problems.push(`${at}: enchantment 0 is not valid`);
       else if (!Number.isInteger(entry.enchant) || entry.enchant < base.minLevel || entry.enchant > base.maxLevel) {
         problems.push(`${at}: enchantment ${entry.enchant} is outside ${base.minLevel}..${base.maxLevel}`);
       }

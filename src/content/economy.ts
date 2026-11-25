@@ -16,7 +16,9 @@ export const GOLD_PER_TROPHY = 10;
  */
 export function goldToTrophies(gold: number, rate = GOLD_PER_TROPHY, bonusPercent = 0): number {
   if (!Number.isFinite(gold) || gold <= 0 || !Number.isFinite(rate) || rate <= 0) return 0;
-  return bonusPercent > 0 ? Math.floor((gold * (100 + bonusPercent)) / (rate * 100)) : Math.floor(gold / rate);
+  return Number.isFinite(bonusPercent) && bonusPercent > 0
+    ? Math.floor((gold * (100 + bonusPercent)) / (rate * 100))
+    : Math.floor(gold / rate);
 }
 
 /**
@@ -32,5 +34,7 @@ export const VALUE_PER_TROPHY = 10;
  */
 export function itemValueToTrophies(value: number, rate = VALUE_PER_TROPHY, bonusPercent = 0): number {
   if (!Number.isFinite(value) || value <= 0 || !Number.isFinite(rate) || rate <= 0) return 0;
-  return bonusPercent > 0 ? Math.floor((value * (100 + bonusPercent)) / (rate * 100)) : Math.floor(value / rate);
+  return Number.isFinite(bonusPercent) && bonusPercent > 0
+    ? Math.floor((value * (100 + bonusPercent)) / (rate * 100))
+    : Math.floor(value / rate);
 }

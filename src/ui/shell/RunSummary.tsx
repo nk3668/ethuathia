@@ -28,9 +28,11 @@ import {
   RENOWN_FORMULA_TEXT,
   renownBreakdown,
   reportFromRecord,
+  salvageOf,
   tierOpenText,
   unlockLines,
 } from './runSummaryText';
+import type { SalvageSummary } from './runSummaryText';
 import { rewardText } from './logText/quests';
 import { contentName, momentLine } from './text';
 
@@ -81,6 +83,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const renown = renownBreakdown(report);
   const goldInfo = goldConversionOf(report);
   const itemInfo = itemSaleOf(report);
+  const salvageInfo = salvageOf(report);
   const renownSources =
     renown === null
       ? []
@@ -191,7 +194,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
                     {row.key === RENOWN ? (
                       <Tooltip content={<RenownFormulaContent />}>{currencyName(row.key)}</Tooltip>
                     ) : row.key === TROPHIES ? (
-                      <Tooltip content={<TrophiesFormulaContent gold={goldInfo} items={itemInfo} outcome={report.end.outcome} />}>
+                      <Tooltip content={<TrophiesFormulaContent gold={goldInfo} items={itemInfo} salvage={salvageInfo} outcome={report.end.outcome} />}>
                         {currencyName(row.key)}
                       </Tooltip>
                     ) : (
@@ -219,6 +222,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
                   <span className={styles.goldTrophies}>
                     +{formatNumber(goldInfo.trophies)} {goldInfo.trophies === 1 ? 'Trophy' : 'Trophies'}
                   </span>
+                  {goldInfo.bonus !== undefined && ` (+${goldInfo.bonus}% Smithy)`}
                 </span>
               )}
             </p>
@@ -239,8 +243,24 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
                   <span className={styles.goldTrophies}>
                     +{formatNumber(itemInfo.trophies)} {itemInfo.trophies === 1 ? 'Trophy' : 'Trophies'}
                   </span>
+                  {itemInfo.bonus !== undefined && ` (+${itemInfo.bonus}% Smithy)`}
                 </span>
               )}
+            </p>
+          )}
+          {salvageInfo !== null && (
+            <p className={styles.goldLine}>
+              <Tooltip content="Field Salvage Kit broke plain gear down into scrap during the run. Salvage Trophies are at risk (25% lost on a wipe) and are not multiplied by Omens.">
+                Salvaged
+              </Tooltip>
+              {': '}
+              <span>
+                {formatNumber(salvageInfo.items)} {salvageInfo.items === 1 ? 'item' : 'items'} →{' '}
+                <span className={styles.goldTrophies}>
+                  +{formatNumber(salvageInfo.trophies)} {salvageInfo.trophies === 1 ? 'Trophy' : 'Trophies'}
+                </span>{' '}
+                (at risk)
+              </span>
             </p>
           )}
           {showRenownBreakdown && renown !== null && (
@@ -326,10 +346,12 @@ function RenownFormulaContent() {
 function TrophiesFormulaContent({
   gold,
   items,
+  salvage,
   outcome,
 }: {
   gold: GoldConversionRecord | null;
   items: ItemSaleRecord | null;
+  salvage: SalvageSummary | null;
   outcome: RunOutcome;
 }) {
   const rate = gold?.rate ?? GOLD_PER_TROPHY;
@@ -341,7 +363,7 @@ function TrophiesFormulaContent({
       {gold !== null && outcome !== 'wipe' && gold.trophies > 0 && (
         <>
           <br />
-          Leftover gold: {formatNumber(gold.gold)} gold → +{formatNumber(gold.trophies)}{' '}
+          Leftover gold: {formatNumber(gold.gold)} gold{gold.bonus !== undefined ? ` (+${gold.bonus}% Smithy)` : ''} → +{formatNumber(gold.trophies)}{' '}
           {gold.trophies === 1 ? 'Trophy' : 'Trophies'}.
         </>
       )}
@@ -356,7 +378,8 @@ function TrophiesFormulaContent({
       {items !== null && outcome !== 'wipe' && (
         <>
           <br />
-          Items: {formatNumber(items.items)} sold (value {formatNumber(items.value)}) → +{formatNumber(items.trophies)}{' '}
+          Items: {formatNumber(items.items)} sold (value {formatNumber(items.value)}
+          {items.bonus !== undefined ? `, +${items.bonus}% Smithy` : ''}) → +{formatNumber(items.trophies)}{' '}
           {items.trophies === 1 ? 'Trophy' : 'Trophies'}.
         </>
       )}
@@ -364,6 +387,13 @@ function TrophiesFormulaContent({
         <>
           <br />
           On a wipe all {formatNumber(items.items)} carried items are lost.
+        </>
+      )}
+      {salvage !== null && (
+        <>
+          <br />
+          Salvage: {formatNumber(salvage.items)} {salvage.items === 1 ? 'item' : 'items'} (value {formatNumber(salvage.value)}) → +{formatNumber(salvage.trophies)}{' '}
+          {salvage.trophies === 1 ? 'Trophy' : 'Trophies'} (at risk, unmultiplied).
         </>
       )}
     </>

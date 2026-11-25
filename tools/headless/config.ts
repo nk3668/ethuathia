@@ -4,6 +4,7 @@
 import { availableParallelism } from 'node:os';
 import {
   BUILDING_SMITHY,
+  CLASSES,
   CLASS_VANGUARD,
   CONTRACT_RECOVER_RELIC,
   RACE_HUMAN,
@@ -23,8 +24,10 @@ import {
   milestoneRequirements,
   newProfile,
   owns,
+  ownsStamps,
   partySize,
   purchase,
+  rankOf,
   recruitParty,
   upgradeBonusModifiers,
   upgradePartyBundles,
@@ -178,8 +181,14 @@ export function buildHeadlessProfile(preset: HeadlessPreset = 'fresh', upgrades:
       const available = UPGRADES.all().map((u) => u.id).join(', ');
       throw new Error(`Unknown upgrade "${id}". Available upgrades: ${available}`);
     }
-    if (owns(profile, id)) continue;
     const node = UPGRADES.get(id);
+    if (wantRank > maxRank(node)) throw new Error(`Upgrade "${id}" has at most ${maxRank(node)} ranks, got ${wantRank}`);
+    if (owns(profile, id)) {
+      if (wantRank > rankOf(profile, id)) {
+        profile = { ...profile, upgrades: { ...profile.upgrades, ranks: { ...profile.upgrades.ranks, [id]: wantRank } } };
+      }
+      continue;
+    }
     if (node.exclusiveGroup !== undefined) {
       const conflict = chosenInGroup(profile, node.exclusiveGroup);
       if (conflict !== undefined && conflict.id !== id) {
@@ -198,8 +207,7 @@ export function buildHeadlessProfile(preset: HeadlessPreset = 'fresh', upgrades:
     } else {
       throw new Error(`Cannot apply upgrade "${id}": ${check.reason}`);
     }
-    if (wantRank > 1) {
-      if (wantRank > maxRank(node)) throw new Error(`Upgrade "${id}" has at most ${maxRank(node)} ranks, got ${wantRank}`);
+    if (wantRank > rankOf(profile, id)) {
       profile = { ...profile, upgrades: { ...profile.upgrades, ranks: { ...profile.upgrades.ranks, [id]: wantRank } } };
     }
   }
@@ -232,10 +240,16 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): Ru
     options.contracts ??
     (hasUpgrades ? chosenContracts(profile, defaultRunChoices().contracts).map((d) => d.id) : HEADLESS_CONTRACTS);
 
+  const baseParty =
+    options.party ??
+    (options.recruits === true ? recruitParty(active, seed, options.partySize) : headlessParty(partySize(profile)));
+  const useStamps = ownsStamps(active);
+  const party = useStamps
+    ? baseParty.map((m) => (m.stamp !== undefined || !CLASSES.has(m.classId) ? m : { ...m, stamp: CLASSES.get(m.classId).stamp }))
+    : baseParty;
+
   const config: RunConfig = {
-    party:
-      options.party ??
-      (options.recruits === true ? recruitParty(profile, seed, options.partySize) : headlessParty(partySize(profile))),
+    party,
     contracts: [...contracts],
     ...(options.depth === undefined ? {} : { depth: options.depth }),
     ...(partyBundles.length === 0 ? {} : { partyBundles }),

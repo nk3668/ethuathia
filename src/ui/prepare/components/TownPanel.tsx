@@ -1,30 +1,37 @@
 /**
- * What the town gives this run (ETH-064): every owned upgrade's party bundle, which
- * `buildRunConfig` attaches to each adventurer. Read-only; the Town tab is where they are bought.
+ * What the town gives this run (ETH-064): every active upgrade's party/run bundles, start perks,
+ * and run capacities (XP, contract pay, trade bonus, rations) that `buildRunConfig` applies.
+ * Read-only; the Town tab is where they are bought.
  */
-import { UPGRADES, maxRank } from '../../../content';
-import { describeGrant, rankOf, upgradePartyBundles, withOptIns } from '../../../meta';
+import { maxRank } from '../../../content';
+import type { UpgradeNodeDef } from '../../../content';
+import { describeGrant, ownedNodes, rankOf, withOptIns } from '../../../meta';
 import { Explain } from '../../codex/Explain';
 import styles from '../panels.module.css';
 import type { PreparePanelProps } from '../types';
 
+const RUN_CAPACITIES = new Set(['tradeBonus', 'contractRewardBonus', 'fieldRations', 'xpBonus']);
+
+function runGrants(node: UpgradeNodeDef) {
+  return node.grants.filter((g) => g.kind === 'bundle' || g.kind === 'start' || (g.kind === 'capacity' && RUN_CAPACITIES.has(g.key)));
+}
+
 export function TownPanel({ profile, choices }: PreparePanelProps) {
-  // A ranked node is listed once per rank; show it once with its rank.
-  const nodes = [...new Set(upgradePartyBundles(withOptIns(profile, choices.optIns)))].map((id) => UPGRADES.get(id));
+  const active = withOptIns(profile, choices.optIns);
+  const nodes = ownedNodes(active).filter((node) => runGrants(node).length > 0);
   if (nodes.length === 0) {
     return <p className={styles.note}>No town upgrades strengthen the party yet. The Town tab has them.</p>;
   }
   return (
     <ul className={styles.list}>
       {nodes.map((node) => {
-        const rank = rankOf(profile, node.id);
+        const rank = rankOf(active, node.id);
         return (
           <li key={node.id}>
             <Explain id={node.id} />
             <span className={styles.note}>
               {' '}
-              {node.grants
-                .filter((g) => g.kind === 'bundle' && g.scope === 'party')
+              {runGrants(node)
                 .map((g) => describeGrant(g, rank))
                 .join('; ')}
               {maxRank(node) > 1 && ` (rank ${rank}/${maxRank(node)})`}

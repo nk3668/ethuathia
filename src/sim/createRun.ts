@@ -7,6 +7,7 @@ import { CLASSES, isStampId, RACES } from '../content';
 import { newAiPart } from './ai/types';
 import { initDomains } from './domains';
 import { giveCrate } from './items/crate';
+import { identifyType } from './items/identify';
 import { giveKit, giveStock, knowKinds } from './items/kit';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { buildDungeon, DEFAULT_FLOOR_TYPE, planFloor, resolveRunDepth } from './floors';
@@ -81,11 +82,13 @@ export function createRun(config: RunConfig, seed: number): RunState {
       stats: newStatsPart(),
       ai: newAiPart(),
     });
-    giveKit(entity, member.classId, config.kitEnchant, {
+    const stamp = config.stamps === true ? (isStampId(member.stamp) ? member.stamp : CLASSES.get(member.classId).stamp) : undefined;
+    const worn = giveKit(entity, member.classId, config.kitEnchant, {
       ...(config.kitTier === undefined ? {} : { tier: config.kitTier }),
       ...(config.trinket === true ? { trinket: true } : {}),
-      ...(config.stamps === true && isStampId(member.stamp) ? { stamp: member.stamp } : {}),
+      ...(stamp === undefined ? {} : { stamp }),
     });
+    for (const id of worn) identifyType(state, id);
     state.party.push(entity.id);
   });
   // Start perks (ETH-159): kinds known from the first turn, and starting items for the first member or for each.

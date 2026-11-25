@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { UPGRADE_EXTRACTION_DRILLS, UPGRADE_WAYMARK_LANTERNS } from '../../src/content';
 import { buildRunConfig, defaultRunChoices, newProfile } from '../../src/meta';
 import type { Profile } from '../../src/meta';
-import { checkInvariants, createRun, getEntity, getFloor, getMemory, getStat, spawnMonster, step } from '../../src/sim';
+import { checkInvariants, createRun, getEntity, getFloor, getMemory, getStat, isPossessed, runModifierProblems, spawnMonster, step } from '../../src/sim';
 import type { ActorEntity, AiActor, RunConfig, RunState } from '../../src/sim';
 
 const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
@@ -69,6 +69,28 @@ describe('Extraction Drills', () => {
     const plain = gap(newProfile());
     const drilled = gap(drills(3));
     expect(drilled).toBeGreaterThan(plain);
+  });
+
+  it('clears fleeing on possess so direct control does not keep the speed bonus, and skips cornered melee', () => {
+    const { state, hero } = setup(drills(3));
+    const calm = speed(state, hero).value;
+    hero.ai.memory.fleeing = { since: 0, lastSeen: 0, held: 0 };
+    expect(speed(state, hero).value).toBe(calm + 30);
+
+    step(state, [{ type: 'possess', actor: hero.id }]);
+    expect(isPossessed(hero)).toBe(true);
+    expect(hero.ai.memory.fleeing).toBeNull();
+    expect(speed(state, hero).value).toBe(calm);
+    step(state, [{ type: 'release', actor: hero.id }]);
+    expect(speed(state, hero).value).toBe(calm);
+
+    hero.ai.memory.fleeing = { since: 0, lastSeen: 0, held: 0 };
+    hero.ai.memory.intent = { rule: { set: 'baseline', index: 4 }, action: 'act.attack_adjacent', detail: 'attacking' };
+    expect(speed(state, hero).value).toBe(calm);
+  });
+
+  it('rejects a run gate on a modifier with no bundle', () => {
+    expect(runModifierProblems({ key: 'bad', source: { id: 'x', label: 'X' }, scope: 'party', when: 'fleeing' })).toContain('has a gate without a bundle');
   });
 });
 

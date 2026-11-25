@@ -27,7 +27,7 @@ import type { RunTracker } from '../domain';
 import type { Emit } from '../events';
 import type { Entity, EntityId, RunState } from '../state';
 import { statValue } from './getStat';
-import { applyRewardMultiplier, xpMultiplier } from './runModifiers';
+import { xpMultiplier } from './runModifiers';
 
 /** XP a kill is worth per point of the victim's threat (a gloam rat is threat 1). */
 export const XP_PER_THREAT = 1;
@@ -44,6 +44,9 @@ export const KILL_SHARE_RADIUS = 6;
 /** A shared kill is worth this much more per extra sharer, before it is split. */
 export const KILL_GROUP_BONUS = 0.55;
 
+/** Fixed-point scale for carrying fractional XP across kills (`xpRemainder`, ETH-132). */
+export const XP_CARRY_SCALE = 1000;
+
 /** Attribute points an actor's level-ups have added, per attribute. */
 export type GrowthGains = Partial<Record<AttributeId, number>>;
 
@@ -54,6 +57,8 @@ export interface GrowthPart {
   xp: number;
   /** Points every level-up so far has rolled, summed per attribute. */
   gained: GrowthGains;
+  /** Fractional XP remainder carried toward the next whole XP (`1..XP_CARRY_SCALE - 1`, omitted when 0). */
+  xpRemainder?: number;
 }
 
 /** Why XP was earned: `source` is the victim's def for a kill, the floor id for depth. */
@@ -162,10 +167,26 @@ export function levelView(entity: Entity): LevelView {
 export function grantXp(state: RunState, entity: Entity, amount: number, reason: XpReason, source: string, emit: Emit): void {
   const adventurer = entity.adventurer;
   if (adventurer === undefined || entity.actor === undefined || entity.actor.hp <= 0) return;
+  const base = Math.floor(amount);
+  if (base <= 0) return;
   // The run's XP bonus (Guild Chronicles, ETH-132): every grant, kills and depth alike; Mastery follows from `xpGained`.
-  const xpAmount = applyRewardMultiplier(Math.floor(amount), xpMultiplier(state));
-  if (xpAmount <= 0) return;
+  const mul = xpMultiplier(state);
+  const prevRem = entity.growth?.xpRemainder ?? 0;
+  let xpAmount: number;
+  let nextRem: number;
+  if (mul === 1 && prevRem === 0) {
+    xpAmount = base;
+    nextRem = 0;
+  } else {
+    const scaled = Math.floor(base * mul * XP_CARRY_SCALE + 1e-6) + prevRem;
+    xpAmount = Math.floor(scaled / XP_CARRY_SCALE);
+    nextRem = scaled % XP_CARRY_SCALE;
+  }
+  if (xpAmount <= 0 && nextRem === 0) return;
   const growth = entity.growth ?? (entity.growth = { level: 1, xp: 0, gained: {} });
+  if (nextRem > 0) growth.xpRemainder = nextRem;
+  else delete growth.xpRemainder;
+  if (xpAmount <= 0) return;
   growth.xp += xpAmount;
   emit({ type: 'xpGained', actor: entity.id, classId: adventurer.classId, amount: xpAmount, xp: growth.xp, reason, source });
   const target = levelForXp(growth.xp);
@@ -258,6 +279,9 @@ export function growthProblems(entity: Entity): string[] {
       if (!isAttributeId(attribute)) problems.push(`entity ${id} has growth in unknown attribute "${attribute}"`);
       else if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) problems.push(`entity ${id} has ${attribute} growth ${String(value)}`);
     }
+  }
+  if (growth.xpRemainder !== undefined && (!Number.isSafeInteger(growth.xpRemainder) || growth.xpRemainder < 1 || growth.xpRemainder >= XP_CARRY_SCALE)) {
+    problems.push(`entity ${id} has XP remainder ${String(growth.xpRemainder)}`);
   }
   return problems;
 }

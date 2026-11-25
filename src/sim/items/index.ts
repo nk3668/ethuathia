@@ -48,7 +48,8 @@ import type { IdentifiedTrackerState } from './identify';
 import { instanceProblem, itemDef, itemWeight } from './instance';
 import type { StartStock } from './kit';
 import { itemName } from './name';
-import { SALVAGE_TRACKER } from './salvage';
+import { SALVAGE_TRACKER, SALVAGE_TRACKER_ID } from './salvage';
+import type { SalvageTrackerState } from './salvage';
 import { propertyProblems } from './properties';
 import { weaponScalingText } from './scaling';
 import type { InventoryPart, ItemInstance } from './instance';
@@ -484,6 +485,23 @@ registerInvariant('items.identified', (state) => {
   return typeof s.count === 'number' && Number.isSafeInteger(s.count) && s.count >= 0
     ? []
     : [`the identified tracker count is ${String(s.count)}, not a whole number of 0 or more`];
+});
+
+/** Salvaged item and value totals are whole numbers of 0 or more (`track.salvage`, ETH-188). */
+registerInvariant('items.salvage', (state) => {
+  const s = state.domains.run.trackers[SALVAGE_TRACKER_ID] as Partial<SalvageTrackerState> | undefined;
+  if (s === undefined) return [];
+  const problems: string[] = [];
+  if (typeof s.items !== 'number' || !Number.isSafeInteger(s.items) || s.items < 0) {
+    problems.push(`salvage tracker items is ${String(s.items)}, not a whole number of 0 or more`);
+  }
+  if (typeof s.value !== 'number' || !Number.isSafeInteger(s.value) || s.value < 0) {
+    problems.push(`salvage tracker value is ${String(s.value)}, not a whole number of 0 or more`);
+  }
+  if (s.items === 0 && typeof s.value === 'number' && s.value > 0) {
+    problems.push(`salvage tracker has value ${s.value} with 0 items`);
+  }
+  return problems;
 });
 
 /** A run chronicle moment (ETH-120): a valuable find. `ids` is the item, `amount` its value. */

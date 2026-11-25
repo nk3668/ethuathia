@@ -268,7 +268,7 @@ describe('tools/headless', () => {
 
     const upgradedConfig = buildHeadlessConfig({ upgrades: ['upgrade.hardy_recruits', 'upgrade.contract_bounty'] });
     expect(upgradedConfig.runModifiers).toEqual([
-      { key: 'upgrade.contract_bounty', source: { id: 'upgrade.contract_bounty', label: 'Contract Bounty' }, scope: 'party', contractBonus: 0.1 },
+      { key: 'upgrade.contract_bounty:bonus', source: { id: 'upgrade.contract_bounty', label: 'Contract Bounty' }, scope: 'party', contractBonus: 0.1 },
     ]);
     const plainState = createRun(freshConfig, 1);
     const upgradedState = createRun(upgradedConfig, 1);
@@ -282,10 +282,14 @@ describe('tools/headless', () => {
     });
 
     expect(() => buildHeadlessProfile('progressed', ['upgrade.rule_clerk'])).toThrow(/Tier 4 and up open/);
-    // A trailing ! attaches a node behind a closed tier, and id*N takes a rank (ETH-187).
-    const forced = buildHeadlessProfile('progressed', ['upgrade.rule_clerk!', 'upgrade.contract_bounty*3']);
+    // A trailing ! attaches a node behind a closed tier, and id*N takes a rank (ETH-187), even on a preset-owned node.
+    const forced = buildHeadlessProfile('progressed', ['upgrade.rule_clerk!', 'upgrade.contract_bounty*3', 'upgrade.hardy_recruits*3']);
     expect(forced.upgrades.owned).toContain('upgrade.rule_clerk');
     expect(forced.upgrades.ranks['upgrade.contract_bounty']).toBe(3);
+    expect(forced.upgrades.ranks['upgrade.hardy_recruits']).toBe(3);
+    const stamped = buildHeadlessConfig({ upgrades: ['upgrade.forge_stamps!'], recruits: true }, 1);
+    expect(stamped.stamps).toBe(true);
+    expect(stamped.party.every((m) => m.stamp !== undefined)).toBe(true);
     expect(() => buildHeadlessProfile('fresh', ['upgrade.hardy_recruits*9'])).toThrow(/at most 5 ranks/);
     expect(() => buildHeadlessProfile('fresh', ['upgrade.hardy_recruits*0'])).toThrow(/rank must be/);
   });

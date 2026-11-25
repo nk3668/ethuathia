@@ -14,7 +14,7 @@
  * Never import `domains.ts` or `index.ts` from this folder.
  */
 import type { Pos } from '../../core';
-import { requirementKey } from '../../content';
+import { baseEnchantmentFor, isStampId, ITEMS, requirementKey, STAMPS } from '../../content';
 import type { Requirement, StartKnownCategory } from '../../content';
 import type { ActionRecord } from '../actions';
 import type { Killer } from '../combat/death';
@@ -58,7 +58,18 @@ export type RunDomainEvent =
    * `enchanted` lists the worn pieces that came at +1 from a Smithy upgrade, by def id; `stamped` the pieces
    * that carry a Forge Stamp (ETH-188), with the stamp's id.
    */
-  | { type: 'kitIssued'; actor: EntityId; name: string; items: string[]; enchanted?: string[]; stamped?: { item: string; stamp: string }[] }
+  | {
+      type: 'kitIssued';
+      actor: EntityId;
+      name: string;
+      items: string[];
+      /** Number of leading `items` entries worn (remaining entries are starting pack supplies). */
+      wornCount?: number;
+      /** Total quantity issued per pack supply def id when greater than 1. */
+      counts?: Record<string, number>;
+      enchanted?: string[];
+      stamped?: { item: string; stamp: string }[];
+    }
   /**
    * Just before that adventurer's `kitIssued` (ETH-187): they carry the Quartermaster's Mystery Crate, one
    * sealed unidentified item. It never says what is inside, and the item is left out of `kitIssued`.
@@ -297,8 +308,22 @@ export const RUN_DOMAIN: SimDomain<RunDomainTypes> = {
       ...e.party.flatMap((m) => [{ id: m.classId, mark: 'seen' as const }, { id: m.raceId, mark: 'seen' as const }]),
       ...(e.floorType === null ? [] : [{ id: e.floorType, mark: 'seen' as const }]),
     ],
-    // A class kit is worn from the start, so its items are used (ETH-176).
-    kitIssued: (e) => e.items.map((id) => ({ id, mark: 'used' as const })),
+    // Worn class kit is used from the start; carried supplies are seen until used (ETH-176, ETH-187).
+    kitIssued: (e) => {
+      const wornCount = e.wornCount ?? e.items.length;
+      const out: { id: string; mark: 'seen' | 'used' }[] = e.items.map((id, i) => ({
+        id,
+        mark: i < wornCount ? ('used' as const) : ('seen' as const),
+      }));
+      for (const id of e.enchanted ?? []) {
+        const base = ITEMS.has(id) ? baseEnchantmentFor(ITEMS.get(id)) : undefined;
+        if (base !== undefined) out.push({ id: base.id, mark: 'used' });
+      }
+      for (const s of e.stamped ?? []) {
+        if (isStampId(s.stamp)) out.push({ id: STAMPS[s.stamp].enchantment, mark: 'used' });
+      }
+      return out;
+    },
   },
   chronicle: RUN_DOMAIN_CHRONICLE,
   chronicleKinds: [CHRONICLE_FELL, CHRONICLE_EARNINGS_LOST],

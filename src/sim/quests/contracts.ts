@@ -197,9 +197,11 @@ export const CONTRACTS_TRACKER: RunTracker<{ contracts: ContractRecord[] }> = {
   init: () => ({ contracts: [] }),
   reduce: (s, e) => {
     if (e.type === 'contractsTaken') return { contracts: e.contracts.map((c) => ({ contract: c.contract, reward: { ...c.reward }, complete: false })) };
-    if (e.type === 'contractCompleted' || e.type === 'contractLost') {
-      const complete = e.type === 'contractCompleted';
-      return { contracts: s.contracts.map((c) => (c.contract === e.contract ? { ...c, reward: { ...c.reward }, complete } : c)) };
+    if (e.type === 'contractCompleted') {
+      return { contracts: s.contracts.map((c) => (c.contract === e.contract ? { ...c, reward: { ...e.reward }, complete: true } : c)) };
+    }
+    if (e.type === 'contractLost') {
+      return { contracts: s.contracts.map((c) => (c.contract === e.contract ? { ...c, reward: { ...c.reward }, complete: false } : c)) };
     }
     return s;
   },

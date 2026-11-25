@@ -7,6 +7,9 @@
 import type { Profile } from './profile';
 import type { AdventurerId, AdventurerOrigin, AdventurerRecord, Adventurers } from './slices/adventurers';
 
+/** Cap on active roster adventurers (docs/ARCHITECTURE.md §6.1, ETH-132). */
+export const ROSTER_SIZE = 50;
+
 /** A valid record id: `adv.<n>`. */
 export const ADVENTURER_ID_PATTERN = /^adv\.[1-9][0-9]*$/;
 

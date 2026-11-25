@@ -59,6 +59,49 @@ describe('PrepareScreen', () => {
     expect(town.getByText(/\+3 max HP for each adventurer/)).toBeTruthy();
   });
 
+  it('shows opt-ins with risky badges, Forge Stamps + kit previews, Town non-party grants, and Guild contract bonus', async () => {
+    const user = userEvent.setup();
+    useProfileStore.setState((s) => ({
+      profile: {
+        ...s.profile,
+        upgrades: {
+          owned: [
+            'upgrade.mystery_crate',
+            'upgrade.contract_bounty',
+            'upgrade.extraction_drills',
+            'upgrade.smelting_pit',
+            'upgrade.scroll_case',
+            'upgrade.forge_stamps',
+            'upgrade.artisan_implements',
+          ],
+          ranks: { 'upgrade.smelting_pit': 2 },
+        },
+      },
+    }));
+    render(<PrepareScreen />);
+
+    const party = within(screen.getByTestId('prepare-party'));
+    expect(party.getAllByText(/in Town/).length).toBeGreaterThan(0);
+    await user.selectOptions(party.getByRole('combobox', { name: 'Class' }), 'class.vanguard');
+    await user.selectOptions(party.getByRole('combobox', { name: 'Forge Stamp' }), 'keen');
+    expect(party.getByText(/Flanged mace \(keen\), Round shield/)).toBeTruthy();
+    expect(party.getByText('Keen')).toBeTruthy();
+
+    const optIns = within(screen.getByTestId('prepare-opt-ins'));
+    expect(optIns.getByText(/Risky/)).toBeTruthy();
+    await user.click(optIns.getByRole('checkbox'));
+    expect(useProfileStore.getState().profile.prepare.choices.optIns.enabled).toEqual(['upgrade.mystery_crate']);
+
+    const town = within(screen.getByTestId('prepare-town'));
+    expect(town.getByText("Quartermaster's Mystery Crate")).toBeTruthy();
+    expect(town.getByText('Smelting Pit')).toBeTruthy();
+    expect(town.getByText('Scroll Case')).toBeTruthy();
+    expect(town.getByText('Extraction Drills')).toBeTruthy();
+
+    const contracts = within(screen.getByTestId('prepare-contracts'));
+    expect(contracts.getAllByText(/\+10% Guild/)).toHaveLength(3);
+  });
+
   it('says why a run could not start', () => {
     useRunStore.setState({ startError: 'No dungeon is available' });
     render(<PrepareScreen />);

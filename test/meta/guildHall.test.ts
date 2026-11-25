@@ -12,6 +12,7 @@ import {
   decodeSave,
   defaultRunChoices,
   describeGate,
+  describeGrant,
   encodeSave,
   isMilestoneOpen,
   masteryShares,
@@ -22,8 +23,8 @@ import {
   upgradeStartConfig,
 } from '../../src/meta';
 import type { Profile } from '../../src/meta';
-import { checkInvariants, createRun, emptyRunResult, getStat, grantXp, snapshot, XP_TRACKER } from '../../src/sim';
-import type { Emit, EntityId, RunResult, SimEvent } from '../../src/sim';
+import { checkInvariants, createRun, emptyRunResult, getEntity, getStat, grantKillXp, grantXp, runResult, snapshot, STAT_IDS, step, XP_TRACKER } from '../../src/sim';
+import type { ActorEntity, Emit, Entity, EntityId, RunResult, SimEvent } from '../../src/sim';
 import { REMOVED_GUILD_HALL_NODES } from '../../src/meta/slices/legacyUpgrades';
 import { contractReward } from '../../src/sim/quests/contracts';
 import { inventoryOf } from '../../src/sim/items/inventory';
@@ -121,8 +122,66 @@ describe('Guild Chronicles: in-run XP, and the Mastery that follows', () => {
   it('changes nothing else: no XP bonus, no modifier', () => {
     expect(upgradeBonusModifiers(own(newProfile(), ['upgrade.second_berth', 'upgrade.hardy_recruits']))).toEqual([]);
     expect(upgradeBonusModifiers(own(newProfile(), ['upgrade.guild_chronicles'], { 'upgrade.guild_chronicles': 2 }))).toEqual([
-      { key: 'upgrade.guild_chronicles', source: { id: 'upgrade.guild_chronicles', label: 'Guild Chronicles' }, scope: 'party', xpBonus: 0.2 },
+      { key: 'upgrade.guild_chronicles:bonus', source: { id: 'upgrade.guild_chronicles', label: 'Guild Chronicles' }, scope: 'party', xpBonus: 0.2 },
     ]);
+  });
+
+  it('carries fractional XP across small threat-1 kills for both solo and multi-member parties', () => {
+    const soloProfile = own(newProfile(), ['upgrade.guild_chronicles']);
+    const solo = runFor(soloProfile);
+    const hero = getEntity(solo, solo.party[0] as EntityId) as ActorEntity;
+    const foe = { id: 999, def: 'monster.gloam_rat', floor: hero.floor, pos: { ...hero.pos } } as Entity;
+    for (let i = 0; i < 10; i++) grantKillXp(solo, hero, foe, 1, () => undefined);
+    expect(hero.growth?.xp).toBe(11);
+    expect(hero.growth?.xpRemainder).toBeUndefined();
+    expect(checkInvariants(solo)).toEqual([]);
+
+    const duoProfile = own(newProfile(), ['upgrade.guild_chronicles', 'upgrade.second_berth']);
+    const duoCfg = buildRunConfig(duoProfile, defaultRunChoices(), 3);
+    const duo = createRun({ ...duoCfg, floorTexts: [['#####', '#<@.#', '#####']], depth: 1, monsters: false }, 3);
+    const a = getEntity(duo, duo.party[0] as EntityId) as ActorEntity;
+    const b = getEntity(duo, duo.party[1] as EntityId) as ActorEntity;
+    const nearbyFoe = { id: 999, def: 'monster.gloam_rat', floor: a.floor, pos: { x: a.pos.x + 1, y: a.pos.y } } as Entity;
+    for (let i = 0; i < 10; i++) grantKillXp(duo, a, nearbyFoe, 1, () => undefined);
+    expect(a.growth?.xp).toBe(11);
+    expect(b.growth?.xp).toBe(11);
+    expect(checkInvariants(duo)).toEqual([]);
+  });
+});
+
+describe('The Long Muster end-to-end', () => {
+  it('completes on floor 6 at the descending adventurer’s position and wins on return', () => {
+    const floorTexts = Array.from({ length: 6 }, (_, i) => [
+      '#########',
+      i === 0 ? '#<@....>#' : i === 5 ? '#<......#' : '#<.....>#',
+      '#########',
+    ]);
+    const state = createRun(
+      { party: [{ name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' }], depth: 6, floorTexts, monsters: false, contracts: [CONTRACT_LONG_MUSTER.id] },
+      1,
+    );
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 400 && state.domains.run.end === null; i++) {
+      events.push(...step(state, []));
+      expect(checkInvariants(state)).toEqual([]);
+    }
+    const done = events.find((e): e is Extract<SimEvent, { type: 'contractCompleted' }> => e.type === 'contractCompleted');
+    expect(done).toMatchObject({ contract: CONTRACT_LONG_MUSTER.id, actor: state.party[0], floor: 'd6' });
+    expect(done?.pos.x).toBeGreaterThan(0);
+    expect(runResult(state).outcome).toBe('victory');
+  });
+});
+
+describe('grantText stat coverage', () => {
+  it('has human-readable names for every stat id', () => {
+    for (const stat of STAT_IDS) {
+      const text = describeGrant({ kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat, op: 'add', value: 1 }] } });
+      expect(text).not.toMatch(/statusResist|trapSpot|forceDoor/);
+    }
+    for (const stat of ['identify', 'statusResist', 'trapSpot', 'disarm', 'flee', 'forceDoor'] as const) {
+      const text = describeGrant({ kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat, op: 'add', value: 1 }] } });
+      expect(text, stat).toContain('(%)');
+    }
   });
 });
 
@@ -196,5 +255,18 @@ describe('the roster ledger refund (save migration)', () => {
     envelope.version = 1;
     const migrated = decodeSave(JSON.stringify(envelope));
     expect(migrated.ok && migrated.profile).toEqual(p);
+  });
+
+  it('strips removed keys from ranks and creates currencies if missing during migration', () => {
+    const p = rich(0);
+    const env = JSON.parse(encodeSave(p, 1)) as { version: number; slices: Record<string, { version: number; data: Record<string, unknown> }> };
+    env.version = 1;
+    env.slices.upgrades = { version: 2, data: { owned: ['upgrade.drill_yard'], ranks: { 'upgrade.drill_yard': 2 } } };
+    delete env.slices.currencies;
+    const decoded = decodeSave(JSON.stringify(env));
+    if (!decoded.ok) throw new Error(decoded.error);
+    expect(decoded.profile.upgrades.owned).toEqual([]);
+    expect(decoded.profile.upgrades.ranks).toEqual({});
+    expect(decoded.profile.currencies.renown).toBe(REMOVED_GUILD_HALL_NODES['upgrade.drill_yard']);
   });
 });

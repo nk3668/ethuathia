@@ -4,10 +4,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import { BUILDING_SMITHY, CLASSES, ITEMS, smithyKitProblems, tierGateId, UPGRADES } from '../../src/content';
-import { buildRunConfig, canPurchase, defaultRunChoices, describeGrant, newProfile, purchase } from '../../src/meta';
+import { buildRunConfig, canPurchase, defaultRunChoices, describeGrant, newProfile, purchase, recruitParty } from '../../src/meta';
 import type { Profile } from '../../src/meta';
 import { PARTY_CHOICE } from '../../src/meta/prepare/party';
-import { createRun, getEntity, soldOnExit, step, waitDecide, wornItems } from '../../src/sim';
+import { createRun, discoveriesOf, getEntity, isTypeIdentified, soldOnExit, step, waitDecide, wornItems } from '../../src/sim';
 import { RUN_DOMAIN_LOG_TEXT } from '../../src/ui/shell/logText/run';
 import type { ActorEntity, EntityId, ItemInstance, RunConfig, SimEvent } from '../../src/sim';
 
@@ -83,6 +83,8 @@ describe('Apprentice Trinket', () => {
     const trinket = purchase(withCase(), id('apprentice_trinket'));
     expect(config(trinket).trinket).toBe(true);
     expect(canPurchase(trinket, id('forge_stamps'))).toMatchObject({ ok: false, status: 'excluded' });
+    const state = createRun({ party: CLASS_IDS.map((c, i) => ({ name: `T${i}`, classId: c, raceId: 'race.human' })), depth: 1, floorTexts: ROOM, monsters: false, trinket: true }, 1);
+    for (const c of CLASS_IDS) expect(isTypeIdentified(state, CLASSES.get(c).trinket as string), c).toBe(true);
     party({ trinket: true }).forEach((e, i) => {
       const def = CLASSES.get(CLASS_IDS[i] as string);
       const jewelry = wornItems(e).filter((w) => ITEMS.get(w.item.def).category === 'jewelry');
@@ -101,13 +103,14 @@ describe('Forge Stamps', () => {
     expect(cfg.stamps).toBe(true);
     expect(cfg.party.every((m) => m.stamp === CLASSES.get(m.classId).stamp)).toBe(true);
     // Class defaults: Vanguard warding (shield), Outrider nimble (boots), Reaver keen (hatchet).
+    const recruits = recruitParty(purchase(withCase(), id('forge_stamps')), 5, 2);
+    expect(recruits.every((m) => m.stamp === CLASSES.get(m.classId).stamp)).toBe(true);
     const members = party({ stamps: true }, CLASS_IDS, undefined);
     expect(members).toHaveLength(4);
-    const withDefaults = CLASS_IDS.map((c) => party({ stamps: true }, [c], CLASSES.get(c).stamp)[0] as ActorEntity);
     const ench = (e: ActorEntity) => Object.fromEntries(wornItems(e).map((w) => [w.item.def, w.item.enchantments?.[0]?.id]));
-    expect(ench(withDefaults[0] as ActorEntity)['item.round_shield']).toBe('enchant.warding');
-    expect(ench(withDefaults[1] as ActorEntity)['item.soft_boots']).toBe('enchant.nimble');
-    expect(ench(withDefaults[3] as ActorEntity)['item.iron_hatchet']).toBe('enchant.keen');
+    expect(ench(members[0] as ActorEntity)['item.round_shield']).toBe('enchant.warding');
+    expect(ench(members[1] as ActorEntity)['item.soft_boots']).toBe('enchant.nimble');
+    expect(ench(members[3] as ActorEntity)['item.iron_hatchet']).toBe('enchant.keen');
   });
 
   it('use the stamp the config names per adventurer, and ignore it without the node', () => {
@@ -133,17 +136,29 @@ describe('Forge Stamps', () => {
     expect(buildRunConfig(rich(), choices, 3).party[0]).not.toHaveProperty('stamp');
   });
 
-  it('say so in the run-start log line', () => {
+  it('say so in the run-start log line and discover kit enchantments and pack supplies properly', () => {
     const state = createRun(
-      { party: [{ name: 'Mira', classId: 'class.reaver', raceId: 'race.human', stamp: 'keen' }], depth: 1, floorTexts: ROOM, monsters: false, stamps: true },
+      {
+        party: [{ name: 'Mira', classId: 'class.reaver', raceId: 'race.human', stamp: 'keen' }],
+        depth: 1,
+        floorTexts: ROOM,
+        monsters: false,
+        stamps: true,
+        kitEnchant: ['weapon'],
+        startStock: [{ item: 'item.scroll_of_identify', qty: 1 }],
+      },
       1,
     );
     const events: SimEvent[] = step(state, [], { decide: waitDecide });
     const issued = events.find((e) => e.type === 'kitIssued') as Extract<SimEvent, { type: 'kitIssued' }>;
     expect(issued.stamped).toEqual([{ item: 'item.iron_hatchet', stamp: 'keen' }]);
+    const disc = discoveriesOf(issued);
+    expect(disc).toContainEqual({ id: 'enchant.keen', mark: 'used' });
+    expect(disc).toContainEqual({ id: 'enchant.honed', mark: 'used' });
+    expect(disc).toContainEqual({ id: 'item.scroll_of_identify', mark: 'seen' });
     const parts = RUN_DOMAIN_LOG_TEXT.kitIssued.text(issued as never, () => 'Mira');
     const text = (Array.isArray(parts) ? parts : [parts]).map((p) => (typeof p === 'string' ? p : ((p as { label?: string; ref: string }).label ?? (p as { ref: string }).ref))).join('');
-    expect(text).toContain('a keen');
+    expect(text).toContain('keen');
   });
 });
 
@@ -174,6 +189,8 @@ describe('class kit content', () => {
     expect(smithyKitProblems({ ...v, kitUpgrade: { weapon: 'item.round_shield', defense: 'item.banded_shield' } }).join('\n')).toContain('does not fit the slot');
     expect(smithyKitProblems({ ...v, kitUpgrade: { weapon: 'item.oak_cudgel', defense: 'item.banded_shield' } }).join('\n')).toContain('base kit piece');
     expect(smithyKitProblems({ ...v, trinket: 'item.oak_cudgel' }).join('\n')).toContain('not a ring or amulet');
+    expect(smithyKitProblems({ ...v, kit: [...(v.kit ?? []), 'item.knotwork_pendant'], trinket: 'item.hearthstone_amulet' }).join('\n')).toContain('no free slot');
+    expect(smithyKitProblems({ kit: ['item.ashwood_staff'], kitUpgrade: { weapon: 'item.ironshod_staff' }, trinket: 'item.hearthstone_amulet', stamp: 'warding' }).join('\n')).toContain('does not have');
     expect(smithyKitProblems({ kit: undefined, stamp: 'keen' }).join('\n')).toContain('no kit');
   });
 });

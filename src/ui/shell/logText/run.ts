@@ -1,6 +1,6 @@
 /** Log wording for the run domain's events (`src/sim/run/`). One entry per event type. */
 import { formatNumber } from '../../../core';
-import { ITEMS, MONSTERS, START_PERK_INFO, STATUSES } from '../../../content';
+import { isStampId, ITEMS, MONSTERS, STAMPS, START_PERK_INFO, STATUSES } from '../../../content';
 import { deathLine } from '../../../sim';
 import type { RunDomainEvent } from '../../../sim';
 import { currencyName } from '../runSummaryText';
@@ -27,9 +27,18 @@ export const MOMENT_EARNINGS_LOST = defineHighlight({
 
 const OUTCOME_TEXT = { victory: 'Victory!', retreat: 'The party is out: a retreat.', wipe: 'The party is lost.' } as const;
 
-/** ", with the Smelting Pit's +15%" when the Smithy's trade bonus applied (ETH-159). */
+/** ", with the Smithy's +15%" when the Smithy's trade bonus applied (ETH-159). */
 function tradeBonusNote(bonus: number | undefined): string {
-  return bonus === undefined ? '' : `, with the Smithy’s +${bonus}%`;
+  return bonus === undefined || bonus <= 0 ? '' : `, with the Smithy’s +${bonus}%`;
+}
+
+function pluralItemName(lower: string): string {
+  const ofIdx = lower.indexOf(' of ');
+  if (ofIdx > 0) {
+    const head = lower.slice(0, ofIdx);
+    return `${head.endsWith('s') ? head : `${head}s`}${lower.slice(ofIdx)}`;
+  }
+  return lower.endsWith('s') ? lower : `${lower}s`;
 }
 
 function list(names: readonly string[]): string {
@@ -76,16 +85,26 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
     text: (e) => {
       const parts: LogPart[] = [`${e.name} shoulders `];
       e.items.forEach((id, i) => {
-        const name = ITEMS.has(id) ? ITEMS.get(id).name.toLowerCase() : 'an item';
+        const known = ITEMS.has(id);
+        const name = known ? ITEMS.get(id).name.toLowerCase() : 'item';
+        const qty = e.counts?.[id] ?? 1;
+        if (i > 0) parts.push(i === e.items.length - 1 ? ' and ' : ', ');
+        if (qty > 1) {
+          const plural = known ? pluralItemName(name) : 'items';
+          parts.push(`${qty} `, known ? mention(id, plural) : plural);
+          return;
+        }
         // A piece a Smithy upgrade made +1 (ETH-159) says so: "a +1 oak cudgel".
         const plus = e.enchanted?.includes(id) === true;
         // A Forge Stamp (ETH-188) says so: "a keen iron hatchet", "a round shield of warding".
-        const stamp = e.stamped?.find((s) => s.item === id)?.stamp;
-        const prefix = stamp === 'keen' || stamp === 'nimble' ? `${stamp} ` : '';
-        const first = prefix === '' ? name : prefix;
-        if (i > 0) parts.push(i === e.items.length - 1 ? ' and ' : ', ');
-        parts.push(`${plus ? 'a +1' : /^[aeiou]/.test(first) ? 'an' : 'a'} ${prefix}`, mention(id, name));
-        if (stamp === 'warding') parts.push(' of warding');
+        const rawStamp = e.stamped?.find((s) => s.item === id)?.stamp;
+        const stamp = isStampId(rawStamp) ? rawStamp : undefined;
+        const hasPrefixStamp = stamp === 'keen' || stamp === 'nimble';
+        const first = hasPrefixStamp ? stamp : name;
+        parts.push(`${plus ? 'a +1' : /^[aeiou]/.test(first) ? 'an' : 'a'} `);
+        if (hasPrefixStamp) parts.push(mention(STAMPS[stamp].enchantment, stamp), ' ');
+        parts.push(known ? mention(id, name) : name);
+        if (stamp === 'warding') parts.push(' of ', mention(STAMPS.warding.enchantment, 'warding'));
       });
       parts.push('.');
       return parts;
@@ -96,10 +115,10 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
     category: 'system',
     text: (e) => `${e.name} carries the Quartermaster’s crate: sealed, and not to be opened until it is identified.`,
   },
-  // "The party sets out knowing every kind of potion on sight." (ETH-159)
+  // "The party sets out knowing all potions, rings and amulets on sight." (ETH-159)
   startKnown: {
     category: 'discovery',
-    text: (e) => `The party sets out knowing every kind of ${e.categories.map((c) => START_PERK_INFO[c].plural).join(', ')} on sight.`,
+    text: (e) => `The party sets out knowing all ${e.categories.map((c) => START_PERK_INFO[c].plural).join(', ')} on sight.`,
   },
   turnedBack: {
     category: 'ai',

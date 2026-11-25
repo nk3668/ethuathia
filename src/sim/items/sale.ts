@@ -49,7 +49,7 @@ export function soldOnExit(item: ItemInstance): boolean {
  * lost and `trophies` is `0`. The Trophies are rounded down once, over the whole sum.
  */
 export function itemSale(state: RunState, outcome: RunOutcome): ItemSaleRecord {
-  const bonus = tradeBonusOf(state);
+  const bonus = outcome === 'wipe' ? 0 : tradeBonusOf(state);
   let items = 0;
   let value = 0;
   for (const id of state.party) {

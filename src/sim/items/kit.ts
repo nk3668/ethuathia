@@ -112,6 +112,23 @@ export function issuedKitIds(entity: Entity): string[] {
   return [...worn, ...carried].map((item) => item.def);
 }
 
+/**
+ * Summary of the kit items `entity` set out with (for `kitIssued`): worn pieces in order, then
+ * deduplicated pack kit defs with summed stack quantities (> 1 recorded in `counts`).
+ */
+export function issuedKitSummary(entity: Entity): { items: string[]; wornCount: number; counts: Record<string, number> } {
+  const known = (item: ItemInstance) => isKitItem(item) && item.identified !== false;
+  const worn = Object.values(entity.inventory?.equipped ?? {}).filter(known).map((item) => item.def);
+  const packTotals = new Map<string, number>();
+  for (const item of (entity.inventory?.items ?? []).filter(known)) {
+    packTotals.set(item.def, (packTotals.get(item.def) ?? 0) + item.qty);
+  }
+  const carried = [...packTotals.keys()];
+  const counts: Record<string, number> = {};
+  for (const [id, qty] of packTotals) if (qty > 1) counts[id] = qty;
+  return { items: [...worn, ...carried], wornCount: worn.length, counts };
+}
+
 /** The worn kit pieces that carry a Forge Stamp, as `{ item, stamp }` with the stamp's id (ETH-188, for the log). */
 export function stampedKitIds(entity: Entity): { item: string; stamp: StampId }[] {
   const out: { item: string; stamp: StampId }[] = [];
@@ -144,6 +161,7 @@ export function giveStock(state: RunState, entity: Entity, stock: readonly Start
   const given: string[] = [];
   for (const { item: id, qty } of stock) {
     if (!ITEMS.has(id)) throw new Error(`Start stock names unknown item "${id}"`);
+    if (!Number.isSafeInteger(qty) || qty < 1) throw new Error(`Start stock "${id}" has invalid quantity ${String(qty)}`);
     const limit = itemDef(newItem(id)).stack ?? 1;
     identifyType(state, id);
     for (let left = qty; left > 0; left -= limit) {

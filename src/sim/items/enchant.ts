@@ -265,7 +265,7 @@ export function enchantmentProblems(item: ItemInstance): string[] {
 }
 
 /** The tooltip line on a class starting kit item (ETH-176). */
-export const KIT_NOTE = 'Starting kit: issued each run (class gear, or a potion from the town), so it is not sold for Trophies when carried out.';
+export const KIT_NOTE = 'Starting kit: issued each run (class gear or supplies from the town), so it is not sold for Trophies when carried out.';
 
 /**
  * Concise tooltip note describing `item`'s visible states (enchantment, blessing, special

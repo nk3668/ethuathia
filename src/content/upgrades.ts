@@ -16,8 +16,7 @@
  * - an opt-in node (ETH-187) may only have `bundle` and `start` grants, as the Prepare screen switches those per run.
  *
  * **Ranks** let a node be bought several times (`ranks`); **tier gates** keep a building's higher
- * rows locked until a milestone is met (`BuildingDef.tierGates`). Both are engine features with
- * no content yet; `src/meta/upgrades.ts` does the buying.
+ * rows locked until a milestone is met (`BuildingDef.tierGates`). `src/meta/upgrades.ts` does the buying.
  */
 import { z } from 'zod';
 import { Registry } from '../core';
