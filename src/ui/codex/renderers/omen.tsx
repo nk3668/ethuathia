@@ -7,7 +7,7 @@ export default defineCodexRenderer<OmenDef>({
   registry: OMENS,
   label: 'Omens',
   order: 50,
-  hint: 'Unlock it in the town to read about it.',
+  hint: 'Unlock it in the town and take it into a run to add it to the Codex.',
   fields: (def) => [
     {
       label: 'Opt-in',

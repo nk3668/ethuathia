@@ -19,6 +19,7 @@ import {
   newProfile,
   omenBreakdown,
   omenMultiplier,
+  resetTree,
   startRun,
 } from '../../src/meta';
 import type { Profile, RunChoices } from '../../src/meta';
@@ -146,14 +147,26 @@ describe('unlocking and choosing Omens', () => {
     expect(completeRunChoices({}).omens).toEqual({ ranks: {} });
   });
 
-  it('rejects a config naming an Omen or rank that does not exist', () => {
+  it('rejects a config naming an Omen or rank that does not exist, and catches key collisions', () => {
     const config = buildRunConfig(withGloom(), defaultRunChoices(), 3);
     const run = (omens: RunConfig['omens']) => () => createRun({ ...BASE, omens }, 3);
     expect(run([{ id: GLOOM.id, rank: 2 }])).not.toThrow();
-    expect(run([{ id: 'omen.nobody', rank: 1 }])).toThrow(/unknown Omen/);
-    expect(run([{ id: GLOOM.id, rank: 4 }])).toThrow(/which it does not have/);
-    expect(run([{ id: GLOOM.id, rank: 1 }, { id: GLOOM.id, rank: 2 }])).toThrow(/twice/);
+    expect(run([{ id: 'omen.nobody', rank: 1 }])).toThrow(/Invalid Omens:.*unknown Omen/);
+    expect(run([{ id: GLOOM.id, rank: 4 }])).toThrow(/Invalid Omens:.*which it does not have/);
+    expect(run([{ id: GLOOM.id, rank: 1 }, { id: GLOOM.id, rank: 2 }])).toThrow(/Invalid Omens:.*twice/);
     expect(checkRunConfig({ ...config, omens: [{ id: GLOOM.id, rank: 0 }] }).join()).toContain('rank 0');
+    const colliding = checkRunConfig({
+      ...config,
+      runModifiers: [{ key: GLOOM.id, source: { id: 'custom.id', label: 'Custom' }, scope: 'party', flags: ['f'] }],
+      omens: [{ id: GLOOM.id, rank: 1 }],
+    });
+    expect(colliding.join()).toContain('used twice');
+  });
+
+  it('prunes remembered Omen ranks when resetting the tree that unlocked them', () => {
+    const profile: Profile = { ...withGloom(), prepare: { choices: choose({ [GLOOM.id]: 3 }) } };
+    const afterReset = resetTree(profile, 'building.guild_hall');
+    expect(afterReset.prepare.choices.omens.ranks).toEqual({});
   });
 });
 
@@ -181,10 +194,11 @@ describe('an Omen in a run', () => {
     expect(events.find((e) => e.type === 'runModifierAdded')).toMatchObject({ atStart: true, source: { label: 'Test Gloom (Omen, rank 2)' }, rewardBonus: 0.25 });
   });
 
-  it('a flag-only rank sets its flag and no stats', () => {
+  it('a flag-only rank sets its flag and no stats, and describes its rank text', () => {
     const state = createRun({ ...BASE, omens: [{ id: GLOOM.id, rank: 3 }] }, 1);
     expect(state.domains.stats.runModifiers[0]).toMatchObject({ flags: ['omen.test_gloom'], rewardBonus: 0.5 });
     expect(state.domains.stats.runModifiers[0]?.bundle).toBeUndefined();
+    expect(snapshot(state).domains.stats.runModifiers[0]?.text).toBe('Monsters see everything. Rewards +50%.');
   });
 
   it('pays one multiplier across Omens, applied to what the run earns and before the wipe loss', () => {

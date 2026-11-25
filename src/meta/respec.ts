@@ -8,7 +8,7 @@ import type { TreeKind, UpgradeNodeDef } from '../content';
 import { addCurrencies, emptyCurrencies, subtractCurrencies } from './currencies';
 import type { Currencies } from './currencies';
 import type { Profile } from './profile';
-import { chosenInGroup, ownedNodes, rankCost, rankOf } from './upgrades';
+import { chosenInGroup, isUnlocked, ownedNodes, rankCost, rankOf } from './upgrades';
 
 /**
  * Share of the price of what a respec or reset gives up that a **Foundations** tree keeps as a
@@ -162,12 +162,22 @@ export function resetTree(profile: Profile, buildingId: string, options: RespecO
 
 function applyGiveUp(profile: Profile, removedIds: readonly string[], refund: Currencies, fee: Currencies): Profile {
   const removed = new Set(removedIds);
-  return {
+  const next: Profile = {
     ...profile,
     currencies: subtractCurrencies(addCurrencies(profile.currencies, refund), fee),
     upgrades: {
       owned: profile.upgrades.owned.filter((id) => !removed.has(id)),
       ranks: Object.fromEntries(Object.entries(profile.upgrades.ranks).filter(([id]) => !removed.has(id))),
+    },
+  };
+  const oldRanks = profile.prepare.choices.omens.ranks;
+  const keptOmens = Object.fromEntries(Object.entries(oldRanks).filter(([id]) => isUnlocked(next, id)));
+  if (Object.keys(keptOmens).length === Object.keys(oldRanks).length) return next;
+  return {
+    ...next,
+    prepare: {
+      ...next.prepare,
+      choices: { ...next.prepare.choices, omens: { ranks: keptOmens } },
     },
   };
 }

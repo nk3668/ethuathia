@@ -280,10 +280,10 @@ export function startPartyStats(state: RunState, emit: Emit): void {
   const { partyBundles = [], partyStatuses = [] } = state.config;
   for (const id of partyBundles) if (!hasBundle(id)) throw new Error(`Unknown party bundle "${id}"`);
   for (const s of partyStatuses) if (!STATUSES.has(s.status)) throw new Error(`Unknown party status "${s.status}"`);
-  const modProblems = runModifierListProblems(state.domains.stats.runModifiers);
-  if (modProblems.length > 0) throw new Error(`Invalid run modifiers: ${modProblems.join('; ')}`);
   const omenIssues = omenProblems(state.config.omens);
   if (omenIssues.length > 0) throw new Error(`Invalid Omens: ${omenIssues.join('; ')}`);
+  const modProblems = runModifierListProblems(state.domains.stats.runModifiers);
+  if (modProblems.length > 0) throw new Error(`Invalid run modifiers: ${modProblems.join('; ')}`);
   for (const id of state.party) {
     const entity = state.entities[id];
     if (entity?.actor === undefined) continue;

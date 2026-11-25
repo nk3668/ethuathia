@@ -8,7 +8,7 @@
  * (`omenMultiplier`), shown on the Prepare screen with `omenBreakdown` as its tooltip.
  */
 import { z } from 'zod';
-import { OMENS, omenRank } from '../../content';
+import { MAX_OMEN_RANKS, OMENS, omenRank } from '../../content';
 import type { OmenDef, OmenSelection } from '../../content';
 import { idSchema } from '../../content/schema';
 import type { Profile } from '../profile';
@@ -66,7 +66,7 @@ export function multiplierText(multiplier: number): string {
 }
 
 export const OMENS_CHOICE = defineRunChoice<OmensChoice>({
-  schema: z.object({ ranks: z.record(idSchema('omen'), z.number().int().min(0).max(9)) }),
+  schema: z.object({ ranks: z.record(idSchema('omen'), z.number().int().min(0).max(MAX_OMEN_RANKS)) }),
   init: () => ({ ranks: {} }),
   apply({ profile, config }, choice) {
     const omens = activeOmens(profile, choice);

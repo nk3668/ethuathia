@@ -42,7 +42,7 @@ export function OmensPanel({ profile, choices, update }: PreparePanelProps) {
         return (
           <fieldset key={def.id} className={styles.omen} data-on={rank > 0} data-testid={`omen-${def.id}`}>
             <legend className={styles.choiceName}>
-              <Explain id={def.id} />
+              <Explain id={def.id} reveal />
             </legend>
             <span className={styles.note}>{rank > 0 ? (omenRank(def, rank)?.text ?? '') : 'Off. Pick a rank to take the risk and the reward.'}</span>
             <div className={styles.rankRow}>
