@@ -167,7 +167,10 @@ describe('ETH-134 expanded bestiary', () => {
       7,
     );
     const hero = getEntity(state, state.party[0] as EntityId) as ActorEntity;
-    if (hero.ai !== undefined) hero.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
+    if (hero.ai !== undefined) {
+      hero.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
+      delete hero.ai.tactics;
+    }
 
     const sentinel = spawnMonster(state, 'monster.crypt_sentinel', 'd1', { x: 8, y: 2 }) as ActorEntity;
     expect(statValue(state, sentinel, 'statusResist')).toBe(30);

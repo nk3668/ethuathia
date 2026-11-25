@@ -21,7 +21,7 @@ import type { TacticDef } from '../../src/content';
 import { buildTacticRules, checkGame, createRun, defaultPicks, getEntity, startingPicks } from '../../src/sim';
 import type { AdventurerConfig, AiActor, EntityId, RunState, TacticPicks } from '../../src/sim';
 
-const HERO: AdventurerConfig = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
+const HERO: AdventurerConfig = { name: 'Brannoc', classId: 'class.reaver', raceId: 'race.human' };
 const WALL = '#'.repeat(40);
 const HALL = [WALL, '#<@' + '.'.repeat(36) + '#', '#' + '.'.repeat(38) + '#', WALL];
 
@@ -29,7 +29,7 @@ function hall(party = [HERO], seed = 3): { state: RunState; hero: AiActor } {
   const state = createRun({ party, floorText: HALL, depth: 1, monsters: false }, seed);
   return { state, hero: getEntity(state, state.party[0] as EntityId) as AiActor };
 }
-const picks = (over: Partial<TacticPicks> = {}): TacticPicks => ({ ...defaultPicks('class.vanguard'), ...over });
+const picks = (over: Partial<TacticPicks> = {}): TacticPicks => ({ ...defaultPicks('class.reaver'), ...over });
 
 describe('tactic content', () => {
   it('passes the game checks, including every row accepting its params', () => {
@@ -92,6 +92,8 @@ describe('building rules from picks', () => {
       [STANCE_FALL_BACK.id, 'act.retreat_run'],
       [HABIT_QUICK_TO_QUAFF.id, 'act.use_ability'],
       [ROLE_HEALER.id, 'act.use_ability'],
+      [ROLE_HEALER.id, 'act.tend_ally'],
+      [ROLE_HEALER.id, 'act.hang_back'],
     ]);
     expect(rules.every((r) => r.enabled)).toBe(true);
   });
@@ -112,7 +114,7 @@ describe('building rules from picks', () => {
     const own = startingPicks('class.reaver', { stance: STANCE_FALL_BACK.id }, { role: ROLE_HEALER.id });
     expect(own).toMatchObject({ stance: STANCE_FALL_BACK.id, role: ROLE_HEALER.id, focus: defaultPicks('class.reaver').focus });
     const { hero } = hall();
-    expect(hero.ai.tactics).toEqual(defaultPicks('class.vanguard'));
+    expect(hero.ai.tactics).toEqual(defaultPicks('class.reaver'));
     expect(hero.ai.rules).toEqual([]);
   });
 

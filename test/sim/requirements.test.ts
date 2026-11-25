@@ -376,6 +376,7 @@ describe('cond.run_kills and cond.run_identified (ETH-184)', () => {
         const hero = getEntity(state, state.party[0] as EntityId) as AiActor;
         hero.inventory = { items: [variant] };
         hero.ai.rules = [{ condition: { id: 'cond.run_identified', params: { min: 1 } }, action: { id: 'act.wait' }, enabled: true }];
+        delete hero.ai.tactics;
         placeItem(state, 'd1', { x: hero.pos.x + 1, y: hero.pos.y }, { ...variant });
         const choice = chooseRule({ state, actor: hero });
         return {

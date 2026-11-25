@@ -18,7 +18,10 @@ function setup(party = [HERO], seed = 1): { state: RunState; hero: ActorEntity }
   const state = createRun({ party, floorText: ROOM, depth: 1 }, seed);
   for (const id of state.party) {
     const e = getEntity(state, id);
-    if (e.ai !== undefined) e.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
+    if (e.ai !== undefined) {
+      e.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
+      delete e.ai.tactics;
+    }
   }
   return { state, hero: getEntity(state, state.party[0] as number) as ActorEntity };
 }

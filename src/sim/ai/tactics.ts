@@ -55,6 +55,18 @@ export function focusPreference(ctx: AiCtx): FocusPreference {
   return FOCUS_PREFERENCES.find((p) => p === prefer) ?? 'weakest';
 }
 
+/**
+ * The distance in tiles `ctx.actor` prefers to engage an enemy from (ETH-193): its range option's
+ * `engage` (1 is toe to toe, the default). Monsters and hand-built actors have no picks and engage
+ * at 1, without resolving anything.
+ */
+export function engageDistance(ctx: AiCtx): number {
+  const picks = ctx.actor.ai.tactics;
+  const range = ctx.tactics?.range ?? (picks === undefined ? undefined : TACTICS.get(picks.range));
+  const engage = range?.params?.engage;
+  return typeof engage === 'number' ? engage : 1;
+}
+
 /** The default picks of a class (neutral when `classId` is unknown or not given), with the party defaults. */
 export function defaultPicks(classId: string | undefined): TacticPicks {
   const build = classId !== undefined && CLASSES.has(classId) ? classTactics(CLASSES.get(classId)) : classTactics({});

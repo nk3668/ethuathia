@@ -53,7 +53,7 @@ describe('a record\'s tactics picks', () => {
     const state = createRun({ ...second.config, floorText: ['####', '#@.#', '####'], depth: 1 }, 5);
     const hero = getEntity(state, state.party[0] as number) as AiActor;
     expect(hero.ai.tactics).toMatchObject({ role: 'tactic.healer', focus: 'tactic.strongest', habits: ['tactic.quick_to_quaff'] });
-    expect(hero.ai.rules.map((r) => r.option)).toEqual(['tactic.quick_to_quaff', 'tactic.healer']);
+    expect(hero.ai.rules.map((r) => r.option)).toEqual(['tactic.quick_to_quaff', 'tactic.healer', 'tactic.healer', 'tactic.healer']);
   });
 
   it('are ignored when the content no longer has the option', () => {

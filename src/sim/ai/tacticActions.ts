@@ -8,11 +8,11 @@ import { bestByTag } from './abilities';
 import { defineRuleAction } from './types';
 import type { ParamParser, RuleActionDef } from './types';
 
-interface TagParams {
+export interface TagParams {
   tag: AbilityTag;
 }
 
-const parseTag: ParamParser<TagParams> = (raw) => {
+export const parseTag: ParamParser<TagParams> = (raw) => {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return 'Params must be an object with "tag"';
   const { tag, ...rest } = raw as Record<string, unknown>;
   if (Object.keys(rest).length > 0) return `Unknown parameter "${Object.keys(rest)[0] as string}"`;

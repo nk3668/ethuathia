@@ -81,6 +81,7 @@ describe('party members in narrow passages', () => {
     const { state, hero, ally } = setup(BENT_CORRIDOR);
     // The explorer heads east along the corridor; the ally walks west to its far end.
     ally.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.test_walk_to', params: { x: 1, y: 1 } }, enabled: true }];
+    delete ally.ai.tactics;
 
     let passed = false;
     const events: SimEvent[] = [];
@@ -106,6 +107,7 @@ describe('party members in narrow passages', () => {
   it('squeezes past a member standing idle in the way', () => {
     const { state, hero, ally } = setup(BENT_CORRIDOR);
     ally.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
+    delete ally.ai.tactics;
     const events = run(state, 40);
     expect(ofType(events, 'stuck')).toEqual([]);
     expect(ofType(events, 'swapped')).toMatchObject([{ actor: hero.id, other: ally.id }]);
@@ -160,6 +162,7 @@ describe('party members in narrow passages', () => {
   it('carries on identically after a save and load mid-passage', () => {
     const { state, ally } = setup(BENT_CORRIDOR);
     ally.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.test_walk_to', params: { x: 1, y: 1 } }, enabled: true }];
+    delete ally.ai.tactics;
     run(state, 4);
     const copy = deserialize(serialize(state));
     expect(run(copy, 30)).toEqual(run(state, 30));

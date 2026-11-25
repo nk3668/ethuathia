@@ -9,7 +9,7 @@ import { FOCUS_STRONGEST, HABIT_QUICK_TO_QUAFF, ROLE_DAMAGE, ROLE_HEALER, STANCE
 import { checkInvariants, chooseRule, createRun, defaultPicks, deserialize, getEntity, serialize, spawnMonster, step } from '../../src/sim';
 import type { ActorEntity, AdventurerConfig, AiActor, Command, EntityId, RunState, SimEvent } from '../../src/sim';
 
-const HERO: AdventurerConfig = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
+const HERO: AdventurerConfig = { name: 'Brannoc', classId: 'class.reaver', raceId: 'race.human' };
 const ALLY: AdventurerConfig = { name: 'Mira', classId: 'class.outrider', raceId: 'race.human' };
 const DRAUGHT = 'item.mending_draught';
 const WALL = '#'.repeat(40);
@@ -86,7 +86,7 @@ describe('swapping tactics mid-run', () => {
     const f = fired(events).find((e) => e.actor === hero.id);
     expect(f).toMatchObject({ rule: { set: 'own', option: ROLE_HEALER.id }, action: 'act.use_ability' });
     expect(hero.ai.tactics?.role).toBe(ROLE_HEALER.id);
-    expect(hero.ai.rules.map((r) => r.option)).toEqual([ROLE_HEALER.id]);
+    expect(hero.ai.rules.map((r) => r.option)).toEqual(Array(ROLE_HEALER.rows?.length).fill(ROLE_HEALER.id));
 
     expect(decide(state, hero, [setRole(hero, ROLE_DAMAGE.id)]).rule.set).toBe('baseline');
     expect(hero.ai.rules).toEqual([]);
@@ -170,7 +170,7 @@ describe('setTactics checking', () => {
     const events = step(state, [make(hero)]);
     expect(rejected(events)).toHaveLength(1);
     expect(events.filter((e) => e.type === 'tacticsSet')).toEqual([]);
-    expect(hero.ai.tactics).toEqual(defaultPicks('class.vanguard'));
+    expect(hero.ai.tactics).toEqual(defaultPicks('class.reaver'));
     expect(hero.ai.rules).toEqual([]);
     // Nothing but the turn's own play changed: no rule list was touched anywhere.
     for (const id of state.party) expect((getEntity(state, id) as AiActor).ai.rules).toEqual([]);
@@ -182,7 +182,7 @@ describe('setTactics checking', () => {
     const events = step(state, [{ type: 'setTactics', actor: hero.id, role: ROLE_HEALER.id, focus: FOCUS_STRONGEST.id, habits: [HABIT_QUICK_TO_QUAFF.id] }]);
     expect(rejected(events)).toEqual([]);
     expect(events.filter((e) => e.type === 'tacticsSet').map((e) => (e as { axis: string }).axis)).toEqual(['role', 'focus', 'habit']);
-    expect(hero.ai.rules.map((r) => r.option)).toEqual([HABIT_QUICK_TO_QUAFF.id, ROLE_HEALER.id]);
+    expect(hero.ai.rules.map((r) => r.option)).toEqual([HABIT_QUICK_TO_QUAFF.id, ...Array(ROLE_HEALER.rows?.length).fill(ROLE_HEALER.id)]);
   });
 });
 

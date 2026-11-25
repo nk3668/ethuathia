@@ -32,6 +32,7 @@ function setup(floorText: string[], seed = 1, holdHero = true): { state: RunStat
   const hero = getEntity(state, state.party[0] as EntityId) as ActorEntity;
   if (holdHero && hero.ai !== undefined) {
     hero.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
+    delete hero.ai.tactics;
   }
   return { state, hero };
 }

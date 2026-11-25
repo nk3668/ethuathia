@@ -75,6 +75,9 @@ export const BASELINE_RULES: readonly Rule[] = [
   ...ITEMS_BASELINE_URGENT,
   { condition: { id: 'cond.stuck' }, action: { id: 'act.back_off' }, enabled: true },
   { condition: { id: 'cond.fleeing' }, action: { id: 'act.flee' }, enabled: true },
+  // Range options (ETH-193): keep the preferred engagement distance while an ally holds the front.
+  // Always null at Front line (the default) and with nobody up front, so it changes nothing then.
+  { condition: { id: 'cond.always' }, action: { id: 'act.hold_range' }, enabled: true },
   { condition: { id: 'cond.enemy_adjacent' }, action: { id: 'act.attack_adjacent' }, enabled: true },
   // Combat roles (ETH-040): rush a caster that can bolt you rather than stand under fire.
   { condition: { id: 'cond.in_bolt_range' }, action: { id: 'act.rush_caster' }, enabled: true },

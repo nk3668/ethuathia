@@ -163,7 +163,10 @@ describe('monster AI', () => {
   it('closes in on an adventurer it can see, round a pillar, then attacks', () => {
     const { state, hero } = setup(['############', '#@...#.....#', '#.........##', '#..........#', '############'], 4);
     // Hold the hero in place so only the monster moves.
-    if (hero.ai !== undefined) hero.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
+    if (hero.ai !== undefined) {
+      hero.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
+      delete hero.ai.tactics;
+    }
     const mossling = spawnMonster(state, 'monster.mossling', 'd1', { x: 9, y: 3 }) as ActorEntity;
     const events = run(state, 30, () => dist(hero, mossling) <= 1);
     expect(dist(hero, mossling)).toBeLessThanOrEqual(1);
