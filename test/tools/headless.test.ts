@@ -212,7 +212,7 @@ describe('tools/headless', () => {
     });
     expect(parseSimArgs(['--preset', 'progressed', '--rules', 'cautious'])).toMatchObject({
       preset: 'progressed',
-      party: 4,
+      party: 2,
       rules: 'cautious',
       upgrades: [],
     });
@@ -225,10 +225,10 @@ describe('tools/headless', () => {
       party: 2,
       upgrades: ['upgrade.second_berth', 'upgrade.hardy_recruits'],
     });
-    expect(parseSimArgs(['--upgrades', 'upgrade.hardy_recruits,upgrade.drill_yard'])).toMatchObject({
+    expect(parseSimArgs(['--upgrades', 'upgrade.hardy_recruits,upgrade.contract_bounty'])).toMatchObject({
       preset: 'fresh',
       party: 1,
-      upgrades: ['upgrade.hardy_recruits', 'upgrade.drill_yard'],
+      upgrades: ['upgrade.hardy_recruits', 'upgrade.contract_bounty'],
     });
     expect(parseSimArgs(['--json', 'out.json', '--compare', 'origin/main'])).toMatchObject({ json: 'out.json', compare: 'origin/main' });
     expect(() => parseSimArgs(['--compare', 'main', '--baseline', 'b.json'])).toThrow('not both');
@@ -240,7 +240,8 @@ describe('tools/headless', () => {
     expect(() => parseSimArgs(['--rules', 'reckless'])).toThrow('--rules');
     expect(() => parseSimArgs(['--upgrades', ''])).toThrow('--upgrades');
     expect(() => parseSimArgs(['--upgrades', 'upgrade.nope'])).toThrow('Unknown upgrade "upgrade.nope"');
-    expect(() => parseSimArgs(['--upgrades', 'upgrade.hardy_recruits,upgrade.contract_board'])).toThrow('exclusive group');
+    // Rule Clerk is in the Guild Hall's gated Tier II, so a sweep can't apply it.
+    expect(() => parseSimArgs(['--upgrades', 'upgrade.rule_clerk'])).toThrow('Tier 4 and up open');
     expect(() => parseSimArgs(['--bogus'])).toThrow();
   });
 
@@ -255,28 +256,25 @@ describe('tools/headless', () => {
     const progressedProfile = buildHeadlessProfile('progressed');
     expect(progressedProfile.upgrades.owned).toEqual(PROGRESSED_UPGRADES);
     const progressedConfig = buildHeadlessConfig({ preset: 'progressed' });
-    expect(progressedConfig.party).toHaveLength(4);
-    expect(progressedConfig.partyBundles).toEqual(['upgrade.hardy_recruits', 'upgrade.drill_yard']);
+    expect(progressedConfig.party).toHaveLength(2);
+    expect(progressedConfig.partyBundles).toEqual(['upgrade.hardy_recruits']);
 
-    const upgradedConfig = buildHeadlessConfig({ upgrades: ['upgrade.hardy_recruits', 'upgrade.drill_yard'] });
+    const upgradedConfig = buildHeadlessConfig({ upgrades: ['upgrade.hardy_recruits', 'upgrade.contract_bounty'] });
+    expect(upgradedConfig.runModifiers).toEqual([
+      { key: 'upgrade.contract_bounty', source: { id: 'upgrade.contract_bounty', label: 'Contract Bounty' }, scope: 'party', contractBonus: 0.1 },
+    ]);
     const plainState = createRun(freshConfig, 1);
     const upgradedState = createRun(upgradedConfig, 1);
     const plainHero = plainState.entities[plainState.party[0] as number] as Entity;
     const upgradedHero = upgradedState.entities[upgradedState.party[0] as number] as Entity;
-    expect(getStat(upgradedState, upgradedHero, 'hp').value).toBe(getStat(plainState, plainHero, 'hp').value + 2);
+    expect(getStat(upgradedState, upgradedHero, 'hp').value).toBe(getStat(plainState, plainHero, 'hp').value + 3);
     expect(getStat(upgradedState, upgradedHero, 'hp').parts).toContainEqual({
       op: 'add',
-      value: 2,
+      value: 3,
       source: { id: 'upgrade.hardy_recruits', label: 'Hardy Recruits' },
     });
-    expect(getStat(upgradedState, upgradedHero, 'accuracy').value).toBe(getStat(plainState, plainHero, 'accuracy').value + 1);
-    expect(getStat(upgradedState, upgradedHero, 'accuracy').parts).toContainEqual({
-      op: 'add',
-      value: 1,
-      source: { id: 'upgrade.drill_yard', label: 'Drill Yard' },
-    });
 
-    expect(() => buildHeadlessProfile('progressed', ['upgrade.contract_board'])).toThrow(/exclusive group/);
+    expect(() => buildHeadlessProfile('progressed', ['upgrade.rule_clerk'])).toThrow(/Tier 4 and up open/);
   });
 
   it('validates and runs baseline and cautious behavior rules deterministically', () => {

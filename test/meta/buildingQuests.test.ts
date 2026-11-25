@@ -98,8 +98,8 @@ describe('the upgrade share', () => {
   const base = upgradeShare(newProfile());
 
   it('counts every node of the open buildings once, and nodes of a locked building not at all', () => {
-    // The Smithy is locked, so only the Guild Hall and the fixture hall count.
-    const hallNodes = UPGRADES.all().filter((n) => n.building === 'building.guild_hall' || n.building === HALL);
+    // The Smithy is locked and the Guild Hall's Tier II (rows 4 and up) is gated, so only its first three rows and the fixture hall count.
+    const hallNodes = UPGRADES.all().filter((n) => (n.building === 'building.guild_hall' && n.tier < 4) || n.building === HALL);
     const groups = new Set(hallNodes.flatMap((n) => (n.exclusiveGroup === undefined ? [] : [n.exclusiveGroup])));
     const ungrouped = hallNodes.filter((n) => n.exclusiveGroup === undefined).length;
     expect(base.total).toBe(ungrouped + groups.size);

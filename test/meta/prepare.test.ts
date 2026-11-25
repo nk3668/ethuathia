@@ -63,11 +63,11 @@ describe('buildRunConfig', () => {
   });
 
   it('takes as many adventurers as the Guild Hall allows, with distinct names', () => {
-    const profile = own(newProfile(), 'upgrade.second_berth', 'upgrade.roster_ledger', 'upgrade.third_berth', 'upgrade.fourth_berth');
-    expect(partySize(profile)).toBe(4);
+    const profile = own(newProfile(), 'upgrade.second_berth');
+    expect(partySize(profile)).toBe(2);
     const config = buildRunConfig(profile, defaultRunChoices(), 9);
-    expect(config.party).toHaveLength(4);
-    expect(new Set(config.party.map((m) => m.name)).size).toBe(4);
+    expect(config.party).toHaveLength(2);
+    expect(new Set(config.party.map((m) => m.name)).size).toBe(2);
     // Retries when a slot's first name is already taken in the party.
     const first = recruitName(9, 0, []);
     const second = recruitName(9, 0, [first]);
@@ -99,8 +99,8 @@ describe('buildRunConfig', () => {
     const plain = createRun(buildRunConfig(newProfile(), defaultRunChoices(), 3), 3);
     const hardy = createRun(config, 3);
     const hp = (state: typeof plain) => getStat(state, state.entities[state.party[0] as number] as never, 'hp');
-    expect(hp(hardy).value).toBe(hp(plain).value + 2);
-    expect(hp(hardy).parts).toContainEqual({ op: 'add', value: 2, source: { id: 'upgrade.hardy_recruits', label: 'Hardy Recruits' } });
+    expect(hp(hardy).value).toBe(hp(plain).value + 3);
+    expect(hp(hardy).parts).toContainEqual({ op: 'add', value: 3, source: { id: 'upgrade.hardy_recruits', label: 'Hardy Recruits' } });
   });
 
   it('starts a run the sim accepts', () => {

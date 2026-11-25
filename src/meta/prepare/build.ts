@@ -3,14 +3,14 @@
  * `RunConfig` out. The app's Descend, auto-restart and every later way of starting a run go
  * through it, so what the town bought always reaches the run.
  */
-import { CLASSES, CONTRACTS, isBuildingQuest, RACES, upgradeBundle } from '../../content';
+import { CLASSES, CONTRACTS, isBuildingQuest, ITEM_MENDING_DRAUGHT, ITEMS, RACES, upgradeBundle } from '../../content';
 import { Rng } from '../../core';
 import { configDepth, hasBundle, requirementProblems, runModifierListProblems } from '../../sim';
 import type { AdventurerConfig, RunConfig, RunModifierConfig } from '../../sim';
 import type { Profile } from '../profile';
 import { milestoneRequirements } from '../milestones';
 import { newRecord } from '../adventurers';
-import { ownedNodes, rankOf } from '../upgrades';
+import { capacity, ownedNodes, rankOf } from '../upgrades';
 import { CHOICE_ENTRIES } from './index';
 import type { RunChoices } from './index';
 import { fillParty, MAX_PARTY_SIZE, partySize } from './party';
@@ -51,6 +51,37 @@ export function upgradeRunModifiers(profile: Profile): RunModifierConfig[] {
 }
 
 /**
+ * The run modifiers owned upgrades give through the `xpBonus` and `contractRewardBonus` capacities
+ * (ETH-132: Guild Chronicles, Contract Bounty): one per owned node that has either, keyed and
+ * credited by the node, with every rank summed. The percent becomes a fraction (10 is 0.1).
+ */
+export function upgradeBonusModifiers(profile: Profile): RunModifierConfig[] {
+  const out: RunModifierConfig[] = [];
+  for (const node of ownedNodes(profile)) {
+    const ranks = rankOf(profile, node.id);
+    const sum = (key: string) =>
+      node.grants.reduce((total, g) => (g.kind === 'capacity' && g.key === key ? total + g.amount * ranks : total), 0);
+    const xp = sum('xpBonus');
+    const contract = sum('contractRewardBonus');
+    if (xp === 0 && contract === 0) continue;
+    out.push({
+      key: node.id,
+      source: { id: node.id, label: node.name },
+      scope: 'party',
+      ...(xp === 0 ? {} : { xpBonus: xp / 100 }),
+      ...(contract === 0 ? {} : { contractBonus: contract / 100 }),
+    });
+  }
+  return out;
+}
+
+/** The pack items every adventurer starts with from owned upgrades (ETH-132, Medic's Satchel): mending draughts. */
+export function upgradeStartingItems(profile: Profile): { item: string; qty: number }[] {
+  const draughts = capacity(profile, 'startingDraughts', 0);
+  return draughts > 0 ? [{ item: ITEM_MENDING_DRAUGHT.id, qty: draughts }] : [];
+}
+
+/**
  * The run config for `choices` on this profile: each `RUN_CHOICES` section applies its choice in
  * order (random recruits draw from `seed`, so the same seed gives the same party), then the
  * owned upgrades' party bundles are added to `partyBundles` and their run-scope bundle grants
@@ -64,7 +95,9 @@ export function buildRunConfig(profile: Profile, choices: RunChoices, seed: numb
   for (const [key, section] of CHOICE_ENTRIES) section.apply(ctx, choices[key]);
   const bundles = upgradePartyBundles(profile);
   if (bundles.length > 0) config.partyBundles = [...(config.partyBundles ?? []), ...bundles];
-  const mods = upgradeRunModifiers(profile);
+  const mods = [...upgradeRunModifiers(profile), ...upgradeBonusModifiers(profile)];
+  const startingItems = upgradeStartingItems(profile);
+  if (startingItems.length > 0) config.startingItems = startingItems;
   if (mods.length > 0) config.runModifiers = [...(config.runModifiers ?? []), ...mods];
   // The locked `metInRun` milestones' requirements, for `track.requirements` (ETH-121).
   const watch = milestoneRequirements(profile);
@@ -139,6 +172,7 @@ export function checkRunConfig(config: RunConfig): string[] {
     if (!RACES.has(m.raceId)) problems.push(`party[${i}] has unknown race "${m.raceId}"`);
   });
   for (const id of config.partyBundles ?? []) if (!hasBundle(id)) problems.push(`unknown party bundle "${id}"`);
+  for (const s of config.startingItems ?? []) if (!ITEMS.has(s.item) || !Number.isInteger(s.qty) || s.qty < 1) problems.push(`bad starting item "${s.item}" x${s.qty}`);
   problems.push(...runModifierListProblems(config.runModifiers ?? []));
   const contracts = config.contracts ?? [];
   for (const id of contracts) if (!CONTRACTS.has(id)) problems.push(`unknown contract "${id}"`);

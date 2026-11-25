@@ -107,6 +107,8 @@ export {
   removeRunModifier,
   rewardBonusText,
   rewardMultiplier,
+  xpMultiplier,
+  contractMultiplier,
   RUN_MODIFIER_SCOPES,
   runBundleOf,
   runFlag,

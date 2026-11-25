@@ -108,7 +108,7 @@ export { availableContracts, BASE_CONTRACT_SLOTS, chosenContracts, contractSlots
 export { buildingQuestRefusal, questNeedText, questOffer, upgradeShare } from './prepare/buildingQuests';
 export type { QuestOffer, UpgradeShare } from './prepare/buildingQuests';
 export type { ContractsChoice } from './prepare/contracts';
-export { buildRunConfig, checkRunConfig, PREPARE_STREAM, recruitParty, startRun, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
+export { buildRunConfig, checkRunConfig, PREPARE_STREAM, recruitParty, startRun, upgradeBonusModifiers, upgradePartyBundles, upgradeRunModifiers, upgradeStartingItems } from './prepare/build';
 export {
   canAfford,
   canPurchase,

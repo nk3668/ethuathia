@@ -3,10 +3,11 @@
  */
 import { clonePlain, Grid, seedStreams } from '../core';
 import type { Pos } from '../core';
-import { CLASSES, RACES } from '../content';
+import { CLASSES, ITEMS, RACES } from '../content';
 import { newAiPart } from './ai/types';
 import { initDomains } from './domains';
-import { giveKit } from './items/kit';
+import { addToInventory } from './items/inventory';
+import { giveKit, newKitItem } from './items/kit';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { buildDungeon, DEFAULT_FLOOR_TYPE, planFloor, resolveRunDepth } from './floors';
 import type { FloorPlan } from './floorText';
@@ -81,6 +82,10 @@ export function createRun(config: RunConfig, seed: number): RunState {
       ai: newAiPart(),
     });
     giveKit(entity, member.classId);
+    for (const start of config.startingItems ?? []) {
+      if (!ITEMS.has(start.item)) throw new Error(`Starting item "${start.item}" is not an item`);
+      addToInventory(entity, { ...newKitItem(start.item), qty: start.qty });
+    }
     state.party.push(entity.id);
   });
   // The run starts before turn 0's step, so events from setting up are not reported.

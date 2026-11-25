@@ -62,7 +62,7 @@ above the bottom or trigger stuck detection are listed at the end.
   --cap T                 party turns allowed per run (default ${DEFAULT_TURN_CAP})
   --party P               adventurers in the party, 1 to ${MAX_PARTY} (default from preset/upgrades, 1 when fresh)
   --preset NAME           profile preset: fresh (default) or progressed
-  --upgrades ID1,ID2,...  comma-separated upgrade node ids to apply (e.g. upgrade.hardy_recruits,upgrade.drill_yard)
+  --upgrades ID1,ID2,...  comma-separated upgrade node ids to apply (e.g. upgrade.hardy_recruits,upgrade.contract_bounty)
   --rules NAME            behavior rule preset: baseline (default) or cautious
   --class ID              class of every adventurer, e.g. outrider or class.outrider (default vanguard)
   --race ID               race of every adventurer, e.g. fenling or race.fenling (default human)

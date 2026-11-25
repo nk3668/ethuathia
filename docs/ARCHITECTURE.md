@@ -1066,7 +1066,10 @@ doctrine (ETH-071) and Tavern veterans add a run modifier, not their own `Bundle
 store or reward math.**
 
 - **Shape:** `RunModifier = { key, source: { id, label }, scope: 'party' | 'monsters' | 'all',
-  bundle?, potency, flags?, rewardBonus?, until? }`, plain data. `key` is unique in the run.
+  bundle?, potency, flags?, rewardBonus?, xpBonus?, contractBonus?, until? }`, plain data. `key` is unique in the run.
+  `xpBonus` (ETH-132) adds to the in-run XP multiplier (`xpMultiplier`, read by `grantXp`) and `contractBonus`
+  to the pay of completed contracts (`contractMultiplier`, read by `contractReward(id, state)`), both
+  additive across sources and before the reward multiplier.
   `source.id` is credited in stat tooltips and discovered in the Codex (when it is a content id);
   `source.label` is the tooltip text ("Gloom (Omen, rank 2)"). `bundle` is any def with a bundle
   (`bundleOf`) or an upgrade node id, whose `run`-scope grants are used (`runBundleOf`).
@@ -2101,7 +2104,7 @@ As built (ETH-063):
   `{ kind: 'unlock', id }` and `{ kind: 'capacity', key, amount }`. `bundle` is the shared
   `Bundle` (§2.2, `bundleSchema` plus a check that it has a modifier or trigger; its refs come
   from `bundleRefs`). Capacity keys and their tooltip names are `CAPACITY_INFO` (`partySize`,
-  `rosterSize`, `contractSlots`, `ruleSlots`); a new capacity is one entry there.
+  `contractSlots`, `ruleSlots`, and the run bonuses `contractRewardBonus`, `xpBonus`, `startingDraughts`); a new capacity is one entry there.
 - **Doctrine choices** (e.g. "Prioritize clearing floors" vs "Prioritize the stairs") are
   `unlock` grants of `doctrine.*` ids in a pick-one group, with no separate grant kind. The
   placeholder `doctrine` kind exists so those ids validate. The doctrine item adds the defs
@@ -2277,6 +2280,8 @@ As built (ETH-059, ETH-095):
   then its schema; it never throws and returns `{ ok: false, error }` for a save it can't read
   (not a save, from a newer game, damaged, invalid). A missing slice starts at its default and
   an unknown one is dropped, both with a note. The mid-run `activeRun` is not saved yet.
+  Envelope v2 (ETH-132, `slices/legacyUpgrades.ts`) refunds owned upgrade nodes that left the tree at
+  their old price: it needs two slices (`upgrades` and `currencies`), so it is an envelope step.
 - `profileStore` (§8) loads on start; while loading, or after a failed load, it writes nothing,
   so an unreadable save is never overwritten until the player imports a save or resets. The
   Options tab's Save section has save now, export as text or to a file, import from text or a
