@@ -2248,7 +2248,11 @@ As built (ETH-064, `src/meta/prepare/`):
   (`omenModifiers`, `src/sim/stats/omens.ts`): key = the Omen id, source label "Gloom (Omen, rank 2)", the
   rank's `reward` as `rewardBonus`, and the rank's bundle reached through the id `omen.gloom#2`
   (`runBundleOf`). `createRun` throws on an unknown Omen, a rank out of range or an Omen twice
-  (`omenProblems`, also in `checkRunConfig`). The one multiplier is `rewardMultiplier` (1 + Σ bonuses), so
+  (`omenProblems`, also in `checkRunConfig`, which then validates the Omens' run modifiers with
+  `runModifierListProblems` like any other). A respec or tree reset that gives up an Omen's unlock node
+  also drops that Omen from the saved `omens` picks (`applyGiveUp`, `src/meta/respec.ts`); the highest
+  rank a pick may hold is `MAX_OMEN_RANKS`. A flag-only rank's tooltip line is its `text`, not the
+  flag id. The one multiplier is `rewardMultiplier` (1 + Σ bonuses), so
   conversions at the exit (gold, sold items, salvage: `unmultiplied` trackers) stay outside it. When a run
   has Omens, `RunResult.extras['run.omens']` = `{ omens, multiplier }` (absent otherwise) and the run
   history record keeps it as `omens`; the run summary shows an "Omen multiplier" line under the currency
