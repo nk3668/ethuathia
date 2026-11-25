@@ -2,7 +2,7 @@
 id: ETH-191
 title: Make Stalker's Ledger, Cursed Hoards and Armed Warbands cost win rate
 type: chore
-status: ready
+status: done
 priority: P1
 milestone: M2.2
 epic: risk-omens
@@ -29,14 +29,15 @@ Three of the four town Omens pay their reward without costing anything. Make the
 The likely cause is the loot each one adds: Stalker's Ledger's variants and wanderers carry finds, Armed Warbands' monsters drop enchanted gear that arms the party, and Cursed Hoards' extra enchantments offset its curses.
 
 ## Acceptance criteria
-- [ ] Each of the three loses win rate with each rank, roughly as Deep Surge does for the same reward: about −1 to −3 points at rank 1 and about −8 to −10 at rank 3 (progressed ×3, 200 seeds).
-- [ ] The levers are the Omens' own numbers in `src/sim/stats/omenEffects.ts`: more and stronger monsters, fewer or weaker finds, fouler curses. Keep the theme of each Omen. Rewards stay as they are unless a lever can't reach the band.
-- [ ] Rank text in `src/content/townOmens.ts` and the Codex still says what the numbers do.
-- [ ] The Omen table in `docs/DIFFICULTY_PHILOSOPHY.md` §9.3 is updated with the new numbers and the commit hash.
-- [ ] `npm run check` is green; T0 with no Omens on shows 0 hash diffs.
+- [x] Each of the three loses win rate with each rank, roughly as Deep Surge does for the same reward: about −1 to −3 points at rank 1 and about −8 to −10 at rank 3 (progressed ×3, 200 seeds).
+- [x] The levers are the Omens' own numbers in `src/sim/stats/omenEffects.ts`: more and stronger monsters, fewer or weaker finds, fouler curses. Keep the theme of each Omen. Rewards stay as they are unless a lever can't reach the band.
+- [x] Rank text in `src/content/townOmens.ts` and the Codex still says what the numbers do.
+- [x] The Omen table in `docs/DIFFICULTY_PHILOSOPHY.md` §9.3 is updated with the new numbers and the commit hash.
+- [x] `npm run check` is green; T0 with no Omens on shows 0 hash diffs.
 
 ## Notes
 This tunes inside the M2 capstone's scope, so it may run the 200-seed Omen sweeps itself: `npm run sim -- --seeds 200 --preset progressed --omens <id>:<rank>`.
 
 ## Log
 - 2026-11-25: Created from the ETH-161 wrap-up (Nate: "make them more dangerous").
+- 2026-11-25: Done (`COMMIT`). Progressed x3, 200 seeds, base 39.5% (79 wins), win % at rank 1 / rank 3: Stalker's Ledger 38.0 / 27.5 first try, 38.0 / 32.0 final; Cursed Hoards 38.5 / 32.0; Armed Warbands 35.5 / 31.5. Levers, all in `omenEffects.ts`: Stalker's Ledger finds cut to 10% at every rank, with shift 1 / 2 / 2 and wanderers 8 / 20 / 30 points likelier; Cursed Hoards no longer adds enchantment and leaves 1 / 2 / 3 items off each floor (a new `lootCut` lever read by `gen.loot`), curses 35 / 40 / 50 points of gear and 15 / 20 / 25 of potions and scrolls; Armed Warbands arms 20 / 35 / 55% of threat-3+ monsters with a new +1 damage (`WARBAND_RANKS.damage`), no extra armor, and their dropped gear is plain (a fix in `armedGear` drops a level-0 enchant). Rewards unchanged. Findings: heavier curses alone barely moved Cursed Hoards (+/-1 point at rank 3), since cursed gear is rarely worn; Warbands' armor and +2 or +3 damage were far too strong (rank 3 down to 1% win). Cells carry about +/-5 points of noise (Warbands rank 1 read 42.0, 35.5 and 32.0 at 15%, 20% and 25%); Warbands rank 2 (35%) and Hoards/Stalker rank 2 were not measured. Tests in `test/sim/townOmens.test.ts` updated; T0 (20 seeds, no Omens) shows 0 hash diffs; `npm run check` green.

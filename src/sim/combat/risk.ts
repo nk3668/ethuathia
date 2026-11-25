@@ -51,7 +51,11 @@ function armedGear(rng: Rng, depth: number, level: number): ItemInstance | undef
   delete props.blessing;
   delete props.enchantments;
   const base = baseEnchantmentFor(found.def);
-  if (base !== undefined) props.enchant = Math.max(base.minLevel, Math.min(base.maxLevel, level));
+  delete props.enchant;
+  if (base !== undefined) {
+    const enchant = Math.max(base.minLevel, Math.min(base.maxLevel, level));
+    if (enchant !== 0) props.enchant = enchant;
+  }
   return { def: found.def.id, qty: 1, ...props };
 }
 
@@ -91,7 +95,10 @@ export function monsterRiskOverlay(
     const templates = out.templates ?? [];
     if (templates.length < MAX_TEMPLATES && !templates.includes(ARMED_TEMPLATE_ID)) {
       out.templates = [...templates, ARMED_TEMPLATE_ID];
-      if (warband.effect.armor > 0) out.stats = { ...out.stats, add: { ...out.stats?.add, armor: (out.stats?.add?.armor ?? 0) + warband.effect.armor } };
+      out.stats = {
+        ...out.stats,
+        add: { ...out.stats?.add, armor: (out.stats?.add?.armor ?? 0) + warband.effect.armor, damage: (out.stats?.add?.damage ?? 0) + warband.effect.damage },
+      };
       const gear = armedGear(rng, depth, warband.effect.enchant);
       if (gear !== undefined) carries.push(gear);
     }

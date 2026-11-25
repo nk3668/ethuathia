@@ -344,11 +344,11 @@ Two M2 bands miss and are open questions for Nate: return-trip lethality is 2.6%
 | Omen | Rank 1 win % / reward | Rank 3 win % / reward | Verdict |
 |---|---|---|---|
 | Deep Surge | 38.5 / +10% | 30.0 / +30% (return-trip deaths 23%) | Priced: the only real risk |
-| Stalker's Ledger | 43.5 / +10% | 42.0 / +30% | Free: its finds outweigh the danger |
-| Cursed Hoards | 39.5 / +10% | 39.0 / +30% | Free |
-| Armed Warbands | 48.5 / +12% | 42.5 / +36% | Free, a buff at rank 1: the dropped gear arms the party |
+| Stalker's Ledger | 38.0 / +10% | 32.0 / +30% | Priced (`ETH-191`) |
+| Cursed Hoards | 38.5 / +10% | 32.0 / +30% | Priced (`ETH-191`) |
+| Armed Warbands | 35.5 / +12% | 31.5 / +36% | Priced (`ETH-191`) |
 
-Three of the four break "risk is a choice and pays for it": they pay without costing. Not changed in this pass; see the `ETH-161` Log.
+At `4f1dcfd` three of the four paid without costing (Stalker's Ledger 43.5 / 42.0, Cursed Hoards 39.5 / 39.0, Armed Warbands 48.5 / 42.5 at ranks 1 / 3): their finds and dropped gear offset the danger. `ETH-191` (Nate: "make them more dangerous") retuned them to lose win rate with rank like Deep Surge, `COMMIT`, same 200-seed progressed setup. The levers: Stalker's Ledger finds almost never (10%), shifts the ramp 1 / 2 / 2 floors and makes wanderers 8 / 20 / 30 points likelier; Cursed Hoards leaves 1 / 2 / 3 fewer items per floor and curses more of what is left, with no extra enchantment; Armed Warbands arms 20 / 35 / 55% of the tougher monsters, each with +1 damage, and their dropped gear is plain. Rewards are unchanged. Cells carry about ±5 points of noise (Armed Warbands rank 1 read 42.0, 35.5 and 32.0 at 15%, 20% and 25%), so the ranks sit roughly in the Deep Surge band (about −1 to −4 at rank 1, −8 at rank 3), not exactly on it.
 
 **Town nodes flagged during M2 (progressed ×3, 200 seeds, base 39.5%):** Artisan Implements 63.0% (+23.5, far the strongest node), Extraction Drills III 47.5% (+8), Field Rations III 42.5% (+3), Forge Stamps 41.0% (+1.5).
 

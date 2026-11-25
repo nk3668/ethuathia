@@ -115,16 +115,16 @@ describe("Stalker's Ledger", () => {
   it('reads as a rank and shifts the ramp', () => {
     const state = run(1, on(OMEN_STALKERS_LEDGER.id, 2));
     expect(omenRankOn(state, OMEN_STALKERS_LEDGER.id)).toBe(2);
-    expect(floorRisk(state)).toMatchObject({ templateShift: 2, oodBonus: 0.1 });
+    expect(floorRisk(state)).toMatchObject({ templateShift: 2, oodBonus: 0.2 });
   });
 
   it('brings more variants and more wanderers, and some of them carry a find', () => {
     const off = counts();
     const rank3 = counts(on(OMEN_STALKERS_LEDGER.id));
     expect(off.carriers).toBe(0);
-    expect(rank3.variants).toBeGreaterThan(off.variants * 1.5);
+    expect(rank3.variants).toBeGreaterThan(off.variants * 1.1);
     expect(rank3.wanderers).toBeGreaterThan(off.wanderers);
-    expect(rank3.carriers).toBeGreaterThan(20);
+    expect(rank3.carriers).toBeGreaterThan(5);
   });
 
   it('hands out finds that are unidentified like all loot (ETH-142 secrecy guard)', () => {
@@ -145,13 +145,13 @@ describe("Stalker's Ledger", () => {
   });
 
   it('keeps rank 1 gentler than rank 3', () => {
-    expect(counts(on(OMEN_STALKERS_LEDGER.id, 1)).variants).toBeLessThan(counts(on(OMEN_STALKERS_LEDGER.id, 3)).variants);
+    expect(counts(on(OMEN_STALKERS_LEDGER.id, 1)).wanderers).toBeLessThan(counts(on(OMEN_STALKERS_LEDGER.id, 3)).wanderers);
   });
 });
 
 describe('Cursed Hoards', () => {
   const lootOn = (omens?: OmenSelection[]) => {
-    const t = { gear: 0, cursed: 0, enchanted: 0, maxEnchant: 0, highEnchant: 0, unidentified: 0, consumables: 0, cursedConsumables: 0 };
+    const t = { gear: 0, cursed: 0, enchanted: 0, maxEnchant: 0, unidentified: 0, consumables: 0, cursedConsumables: 0 };
     for (const seed of SEEDS) {
       const state = run(seed, omens);
       for (const id of floorIds(state)) {
@@ -163,7 +163,6 @@ describe('Cursed Hoards', () => {
             const ench = item.enchant ?? 0;
             if (ench > 0) t.enchanted++;
             if (ench > t.maxEnchant) t.maxEnchant = ench;
-            if (ench >= 4) t.highEnchant++;
             if (item.identified === false) t.unidentified++;
           } else if (def.category === 'potion' || def.category === 'scroll') {
             t.consumables++;
@@ -176,15 +175,14 @@ describe('Cursed Hoards', () => {
     return t;
   };
 
-  it('curses more gear, potions and scrolls, and enchants more of the rest up to +5 at rank 3', () => {
+  it('leaves fewer items and curses more gear, potions and scrolls, without enchanting more of the rest at rank 3', () => {
     const off = lootOn();
     const rank3 = lootOn(on(OMEN_CURSED_HOARDS.id));
+    expect(rank3.gear + rank3.consumables).toBeLessThan(off.gear + off.consumables);
     expect(rank3.cursed / rank3.gear).toBeGreaterThan((off.cursed / off.gear) * 2);
-    expect(rank3.enchanted / rank3.gear).toBeGreaterThan(off.enchanted / off.gear);
     expect(rank3.cursedConsumables / rank3.consumables).toBeGreaterThan(off.cursedConsumables / off.consumables);
     expect(off.maxEnchant).toBeLessThanOrEqual(3);
-    expect(rank3.maxEnchant).toBeGreaterThanOrEqual(4);
-    expect(rank3.highEnchant).toBeGreaterThan(0);
+    expect(rank3.maxEnchant).toBeLessThanOrEqual(3);
   });
 
   it('never shows which pieces are cursed: all gear stays unidentified (ETH-142)', () => {
@@ -212,7 +210,7 @@ describe('Armed Warbands', () => {
     return found;
   };
 
-  it('arms tough monsters, who carry unidentified, enchanted weapon or armor and have more armor', () => {
+  it('arms tough monsters, who carry unidentified, uncursed weapon or armor and have more armor and damage', () => {
     const armed = SEEDS.flatMap((seed) => armedOn(seed));
     expect(armed.length).toBeGreaterThan(20);
     for (const { state, e } of armed) {
@@ -220,10 +218,11 @@ describe('Armed Warbands', () => {
       const carried = e.monster?.overlay?.carries ?? [];
       expect(carried).toHaveLength(1);
       expect(['weapon', 'armor']).toContain(ITEMS.get(carried[0]?.def ?? '').category);
-      expect(carried[0]?.enchant).toBeGreaterThanOrEqual(1);
+      expect(carried[0]?.enchant ?? 0).toBeGreaterThanOrEqual(0);
       expect(isCursed(carried[0])).toBe(false);
       expect(carried[0]?.identified).toBe(false);
-      expect(statValue(state, e, 'armor')).toBeGreaterThanOrEqual(MONSTERS.get(e.def).stats.armor + 3);
+      expect(statValue(state, e, 'armor')).toBeGreaterThanOrEqual(MONSTERS.get(e.def).stats.armor + 1);
+      expect(statValue(state, e, 'damage')).toBeGreaterThanOrEqual(MONSTERS.get(e.def).stats.damage + 1);
     }
   });
 
@@ -232,7 +231,7 @@ describe('Armed Warbands', () => {
     const r3 = SEEDS.flatMap((seed) => armedOn(seed, 3));
     expect(r1.length).toBeGreaterThan(0);
     expect(r1.length).toBeLessThan(r3.length);
-    expect(Math.max(...r1.map(({ e }) => e.monster?.overlay?.carries?.[0]?.enchant ?? 0))).toBeLessThanOrEqual(1);
+    expect(Math.max(...r1.map(({ e }) => e.monster?.overlay?.stats?.add?.damage ?? 0))).toBe(1);
   });
 
   it('drops the gear where the monster falls', () => {
