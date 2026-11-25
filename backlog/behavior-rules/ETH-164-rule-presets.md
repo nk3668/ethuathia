@@ -7,7 +7,7 @@ priority: P1
 milestone: M3
 epic: behavior-rules
 size: S
-depends_on: [ETH-162, ETH-196]
+depends_on: [ETH-162, ETH-196, ETH-071]
 created: 2026-11-24
 updated: 2026-11-25
 ---
@@ -33,3 +33,4 @@ The player saves named loadouts and applies them on the Prepare screen or the ta
 ## Log
 - 2026-11-24: Created in the backlog reorganization by theme.
 - 2026-11-25: Rewritten for the tactics design: rule presets become saved tactics loadouts, with room for M4 talent builds.
+- 2026-11-25: Also depends on ETH-071: loadouts hold the party stance.

@@ -7,7 +7,7 @@ priority: P1
 milestone: M3
 epic: behavior-rules
 size: M
-depends_on: [ETH-162, ETH-086, ETH-197]
+depends_on: [ETH-162, ETH-086, ETH-197, ETH-193, ETH-194, ETH-071, ETH-151]
 created: 2026-11-24
 updated: 2026-11-25
 ---
@@ -43,3 +43,4 @@ The player starts with a small set of tactics, and the Library grows it (`CLAUDE
 ## Log
 - 2026-11-24: Created in the backlog reorganization by theme.
 - 2026-11-25: Rewritten for the tactics design: unlocks tactic options and habit slots instead of rule conditions, actions and slots. Depends on the Library's building quest (ETH-197).
+- 2026-11-25: Also depends on ETH-193, ETH-194, ETH-071 and ETH-151, since the tree unlocks the options those items add.

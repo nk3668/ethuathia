@@ -4,7 +4,7 @@
 
 **Current milestone: M3 (Tactics and AI).** M2 (Meta loop) is complete: its capstone ETH-161 and the follow-up ETH-191 merged 2026-11-25. On 2026-11-25 Nate replaced player-written behavior rules with **tactics** the player picks and swaps (`CLAUDE.md` §5.2), and the M3 items were rewritten for it.
 
-**Assigned to Gemini (Antigravity)**; All assigned items (ETH-083, ETH-095, ETH-157, ETH-158, ETH-175) are reviewed and merged.
+**Assigned to Gemini (Antigravity):** ETH-197 (M3). Earlier items (ETH-083, ETH-095, ETH-157, ETH-158, ETH-175) are reviewed and merged.
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
@@ -168,7 +168,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-193](behavior-rules/ETH-193-roles-ranges-focuses.md) | Roles, ranges and focuses - Tank, Healer, Damage and Scout; engagement distance; target choice | behavior-rules | M3 | P1 | idea | M |
 | [ETH-194](behavior-rules/ETH-194-habits-and-slots.md) | Habits and habit slots - several per adventurer, with exclusive pairs | behavior-rules | M3 | P1 | idea | M |
 | [ETH-196](behavior-rules/ETH-196-tactics-panel.md) | Tactics panel, party-card intent and the Prepare tactics column | behavior-rules | M3 | P1 | idea | M |
-| [ETH-197](town-meta/ETH-197-library-building-quest.md) | The Library building and its building quest | town-meta | M3 | P1 | idea | S |
+| [ETH-197](town-meta/ETH-197-library-building-quest.md) | The Library building and its building quest | town-meta | M3 | P1 | ready | S |
 | [ETH-163](behavior-rules/ETH-163-library-tree.md) | Library tree unlocks tactics and habit slots | behavior-rules | M3 | P1 | idea | M |
 | [ETH-164](behavior-rules/ETH-164-rule-presets.md) | Saved tactics loadouts for the party and each adventurer, ready for talent builds | behavior-rules | M3 | P1 | idea | S |
 | [ETH-165](tools-balance/ETH-165-rules-balance-pass.md) | Tactics balance pass (M3 capstone) | tools-balance | M3 | P1 | idea | M |
