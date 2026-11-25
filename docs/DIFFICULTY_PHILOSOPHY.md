@@ -234,7 +234,7 @@ Decide by what the change can affect, not by its size.
 
 | Kind of change | Harness? | Tier |
 |---|---|---|
-| **Balance-affecting:** monster, item, loot or enchantment numbers; XP and leveling; recovery and healing; combat formulas; encounter generation, spawn budgets, templates and patrols; baseline AI decisions (rules, conditions, actions, their order); run-end and return-trip rules; rewards and currency formulas; anything party size or upgrades change inside a run | **Yes** | T2 gate, or T3 if the item has to hit a §2 band |
+| **Balance-affecting:** monster, item, loot or enchantment numbers; XP and leveling; recovery and healing; combat formulas; encounter generation, spawn budgets, templates and patrols; baseline AI decisions (rules, conditions, actions, their order); run-end and return-trip rules; rewards and currency formulas; anything party size or upgrades change inside a run | **Yes** | T2 gate, or T3 if the item has to hit a §2 band; a piece of a milestone runs only T0 and a smoke run (below) |
 | **Behavior-neutral sim changes:** refactors, performance work, serialization and state-shape changes that don't alter decisions, new events, trace or log text | **Identity check only** | T0 |
 | **Not sim-related:** anything only in `src/ui/` (it can't change the sim; layer rule, `CLAUDE.md` §9), Codex and tooltip text, content names, descriptions and glyphs, docs, backlog, tests only, tooling that doesn't touch the sim | **No** | `npm run check` (+ a look at the running app for UI) |
 
@@ -255,7 +255,12 @@ Why 200 for acceptance: at 100 seeds the 95% interval on a ~20% win rate is abou
 
 ### Pieces of a larger deliverable
 
-When an item is one piece of a larger initiative that ends in its own balance check (each milestone's capstone, §9.1, such as `ETH-080` for M1.5), the piece doesn't run T3. Absolute bands are the capstone's job, and tuning a piece toward them is wasted once the next piece moves them again. A piece runs **T2** (T1 is enough if the capstone follows straight after). It records its numbers with the commit hash in its item Log, so the capstone can tell which piece moved what. It must still show no catastrophic regression: no new stalls, stuck runs or crashes, and no collapse in win rate or depth.
+When an item is one piece of a larger initiative that ends in its own balance check (each milestone's capstone, §9.1, such as `ETH-080` for M1.5), the piece doesn't run T1, T2 or T3 (Nate, 2026-11-25). Absolute bands and deltas are the capstone's job, and measuring a piece is mostly wasted once the next piece moves the numbers again. A piece runs:
+
+- **T0** with its new content unowned or switched off, against its base: 0 hash diffs, so nothing changed for a player who doesn't use it. A piece that is meant to change every run (a formula or baseline AI change) records that T0 fails and why.
+- **A smoke run** (20 seeds) with its content on, showing no stalls, stuck runs, crashes, or a collapse in win rate or depth.
+
+It records both with the commit hash in its item Log. The capstone measures the milestone as a whole against the milestone's base; if a number moved unexpectedly, it attributes it by running the pieces' commits with `--compare`. An item whose own purpose is tuning (a balance item, not a piece) still runs T2 or T3 as the table above says.
 
 ### Measure on a clean tree
 
