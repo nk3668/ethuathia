@@ -1,5 +1,5 @@
 /** Log wording for the stats domain's events (`src/sim/stats/`). One entry per event type. */
-import { ATTRIBUTE_IDS, attributeDef, findDef } from '../../../content';
+import { ATTRIBUTE_IDS, attributeDef, findDef, OMENS } from '../../../content';
 import type { AttributeId } from '../../../content';
 import { rewardBonusText, scopeWords } from '../../../sim';
 import type { StatsEvent } from '../../../sim';
@@ -80,9 +80,13 @@ export const STATS_LOG_TEXT: LogTextRecord<StatsEvent> = {
   // Run-wide modifiers (ETH-115): an Omen, a blessing, a curse or a dungeon event takes hold or ends.
   runModifierAdded: {
     category: 'system',
-    text: (e) =>
-      `${e.atStart === true ? 'This run is under' : e.replaced === true ? 'Renewed:' : 'Now in force:'} ${e.source.label}, ` +
-      `affecting ${scopeWords(e.scope)}${bonusesText(e)}.`,
+    text: (e) => {
+      const lead = `${e.atStart === true ? 'This run is under' : e.replaced === true ? 'Renewed:' : 'Now in force:'} ${e.source.label}`;
+      const omen = OMENS.has(e.source.id) ? OMENS.get(e.source.id) : undefined;
+      const flagOnlyOmen = omen !== undefined && omen.ranks.every((r) => r.bundle === undefined);
+      const scope = flagOnlyOmen ? '' : `, affecting ${scopeWords(e.scope)}`;
+      return `${lead}${scope}${bonusesText(e)}.`;
+    },
   },
   runModifierRemoved: {
     category: 'system',

@@ -62,14 +62,24 @@ export async function runSeedsParallel(
 
 /** `--party-sweep`: runs party sizes 1 to `MAX_PARTY` on the pool, one size after another, and returns the table text. */
 export async function runPartySweep(
-  args: Pick<SimArgs, 'from' | 'seeds' | 'cap' | 'preset' | 'upgrades' | 'rules' | 'jobs'> & Partial<Pick<SimArgs, 'classId' | 'raceId' | 'recruits' | 'optIns'>>,
+  args: Pick<SimArgs, 'from' | 'seeds' | 'cap' | 'preset' | 'upgrades' | 'rules' | 'jobs'> &
+    Partial<Pick<SimArgs, 'classId' | 'raceId' | 'recruits' | 'optIns' | 'omens' | 'contract'>>,
 ): Promise<string> {
   const rows = [];
   for (let size = 1; size <= MAX_PARTY; size++) {
     const results = await runSeedsParallel(
       args.from,
       args.seeds,
-      { cap: args.cap, ...partyOptions(size, args), preset: args.preset, upgrades: args.upgrades, rules: args.rules, ...(args.optIns === false ? { optIns: false } : {}) },
+      {
+        cap: args.cap,
+        ...partyOptions(size, args),
+        preset: args.preset,
+        upgrades: args.upgrades,
+        rules: args.rules,
+        ...(args.optIns === false ? { optIns: false } : {}),
+        ...(args.contract !== undefined && args.contract !== null ? { contracts: [args.contract] } : {}),
+        ...(args.omens !== undefined && args.omens.length > 0 ? { omens: args.omens } : {}),
+      },
       args.jobs,
     );
     rows.push(partySweepRow(size, results));

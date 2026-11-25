@@ -17,7 +17,7 @@ import {
   upgradeRunGate,
 } from '../../content';
 import { Rng } from '../../core';
-import { configDepth, hasBundle, requirementProblems, runModifierListProblems } from '../../sim';
+import { configDepth, hasBundle, omenModifiers, omenProblems, requirementProblems, runModifierListProblems } from '../../sim';
 import type { AdventurerConfig, RunConfig, RunModifierConfig } from '../../sim';
 import type { Profile } from '../profile';
 import { milestoneRequirements } from '../milestones';
@@ -188,7 +188,9 @@ export function checkRunConfig(config: RunConfig): string[] {
     if (m.stamp !== undefined && !isStampId(m.stamp)) problems.push(`party[${i}] has unknown stamp "${m.stamp}"`);
   });
   for (const id of config.partyBundles ?? []) if (!hasBundle(id)) problems.push(`unknown party bundle "${id}"`);
-  problems.push(...runModifierListProblems(config.runModifiers ?? []));
+  const omenIssues = omenProblems(config.omens);
+  problems.push(...omenIssues);
+  problems.push(...runModifierListProblems([...(config.runModifiers ?? []), ...(omenIssues.length === 0 ? omenModifiers(config.omens) : [])]));
   for (const piece of config.kitEnchant ?? []) {
     if (!START_ENCHANT_PIECES.includes(piece)) problems.push(`unknown kitEnchant piece "${String(piece)}"`);
   }

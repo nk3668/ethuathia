@@ -12,6 +12,7 @@ import type { Rect } from '../gen/types';
 import { buildGoalMap, pathAlong, UNREACHABLE } from '../goalMap';
 import type { PathGrid } from '../goalMap';
 import { Terrain } from '../state';
+import { surgeEffect } from '../stats/omenEffects';
 import type { FloorId, RunState } from '../state';
 import { buildPatrolWaypoints } from './encounterPatrols';
 import {
@@ -36,6 +37,7 @@ import {
 } from './monsters';
 import type { RespawnOptions } from './monsters';
 import { rollTemplates } from './overlay';
+import { monsterRiskOverlay } from './risk';
 
 /** Fallback return-trip surge profile when `dungeon.encounters.surge` is omitted (ETH-136). */
 export const DEFAULT_SURGE_PROFILE: SurgeProfile = {
@@ -177,6 +179,7 @@ interface SurgeFloorContext {
 }
 
 function resolveSurgeWavePlan(
+  state: RunState,
   dungeon: DungeonDef,
   depth: number,
   localDanger: number,
@@ -188,6 +191,7 @@ function resolveSurgeWavePlan(
   if (allDefs.length === 0) return null;
 
   const surge = dungeon.encounters?.surge ?? DEFAULT_SURGE_PROFILE;
+  const boost = surgeEffect(state);
   const hasDepthShift = options.depthShift !== undefined;
 
   let dangerMin: number;
@@ -207,7 +211,7 @@ function resolveSurgeWavePlan(
     dangerMax = Math.max(dangerMin, bottomDanger);
     const baseMin = bottomDanger <= 2 ? 1 : 2;
     const baseMax = bottomDanger <= 2 ? 2 : bottomDanger <= 6 ? 3 : 4;
-    const mul = Math.max(0, surge.countMul);
+    const mul = Math.max(0, surge.countMul) * (boost?.countMul ?? 1);
     defaults =
       mul === 0
         ? { min: 0, max: 0 }
@@ -222,7 +226,7 @@ function resolveSurgeWavePlan(
   const targetCount = rng.int(min, max);
   if (targetCount <= 0) return null;
 
-  return { dangerMin, dangerMax, targetCount, templateBonus: surge.templateBonus, hasDepthShift };
+  return { dangerMin, dangerMax, targetCount, templateBonus: surge.templateBonus + (boost?.templateBonus ?? 0), hasDepthShift };
 }
 
 function buildSurgeFloorContext(
@@ -384,7 +388,7 @@ export function surgeFloor(
   const bottomDanger = floorDanger(state, dungeonDepth(state));
   const rng = new Rng(seedState(state.seed, `respawn/${floorId}/${wave}`));
 
-  const plan = resolveSurgeWavePlan(dungeon, floor.depth, localDanger, bottomDanger, options, rng);
+  const plan = resolveSurgeWavePlan(state, dungeon, floor.depth, localDanger, bottomDanger, options, rng);
   if (plan === null) return 0;
 
   const ctx = buildSurgeFloorContext(state, floorId, arrivalPos, options, rng);
@@ -410,6 +414,16 @@ export function surgeFloor(
     }
   }
 
+  // Deep Surge (ETH-186) sends more hunting patrols.
+  const extraPatrols = surgeEffect(state)?.patrols ?? 0;
+  let minPatrolGroups = 0;
+  if (extraPatrols > 0 && canPatrol && !(hasDepthShift && targetCount === 1)) {
+    const baseGroups = patrolTarget > 0 ? 1 : 0;
+    minPatrolGroups = Math.min(targetCount, baseGroups + extraPatrols);
+    patrolTarget = Math.min(targetCount, Math.max(patrolTarget + extraPatrols * 2, minPatrolGroups));
+    squadTarget = targetCount - patrolTarget;
+  }
+
   let nextGroupId = ctx.nextGroupId;
   let placed = 0;
 
@@ -421,7 +435,7 @@ export function surgeFloor(
   ): void => {
     const tChance = surgeTemplateChance(dungeon, spawnDanger, templateBonus, options.templateChance, hasDepthShift);
     const templates = rollTemplates(def, rng, tChance);
-    const overlay = templates.length === 0 ? undefined : { templates };
+    const overlay = monsterRiskOverlay(state, def, templates.length === 0 ? undefined : { templates }, rng, floor.depth, 'surge');
     spawnMonster(state, def.id, floorId, pos, overlay, monsterOptions);
     recordPlacement(ctx.occ, def, pos);
     placed++;
@@ -484,7 +498,14 @@ export function surgeFloor(
         : buildPatrolWaypoints(layout, ctx.occ, ctx.stairsRoomIndices, ctx.paths, rng, ctx.routeDist);
     if (waypoints.length < 2) break;
 
-    const patrolSize = patrolLeft >= 4 ? rng.int(2, 3) : patrolLeft;
+    const groupsLeft = Math.max(1, minPatrolGroups - spawnedPatrolStarts.length);
+    const maxForThis = Math.max(1, patrolLeft - (groupsLeft - 1));
+    const patrolSize =
+      minPatrolGroups === 0 || groupsLeft <= 1
+        ? patrolLeft >= 4
+          ? rng.int(2, 3)
+          : patrolLeft
+        : Math.min(maxForThis, maxForThis >= 3 ? rng.int(2, 3) : maxForThis);
     const reach = buildGoalMap(ctx.paths, [waypoints[0] as Pos]);
     const reachablePool = basePatrolPool.filter((t) => reach.get(t.x, t.y) !== UNREACHABLE);
     if (reachablePool.length === 0) break;

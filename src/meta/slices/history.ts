@@ -71,6 +71,12 @@ export interface RunRecordSalvage {
   readonly rate: number;
 }
 
+/** The Omens a run had on and its reward multiplier (ETH-185); left out for runs without Omens. */
+export interface RunRecordOmens {
+  readonly omens: readonly { readonly id: string; readonly rank: number }[];
+  readonly multiplier: number;
+}
+
 /** One finished run, as the history keeps it. */
 export interface RunRecord {
   /** 1 for the player's first run, counting every run ever finished. */
@@ -88,6 +94,8 @@ export interface RunRecord {
   readonly items?: RunRecordItems;
   /** Field Salvage Kit breakdown tally (ETH-188); left out when nothing was salvaged. */
   readonly salvage?: RunRecordSalvage;
+  /** Omens on and the reward multiplier they paid at (ETH-185); left out when none was on. */
+  readonly omens?: RunRecordOmens;
   /** Why the run ended (`RunEnd.cause`); empty for runs recorded before ETH-048. */
   readonly cause: string;
   /** Who set out, in party order; empty for runs recorded before ETH-048. */
@@ -170,6 +178,11 @@ const salvageRecordSchema = z.object({
   rate: z.number().finite().positive(),
 });
 
+const omensRecordSchema = z.object({
+  omens: z.array(z.object({ id: z.string().max(80), rank: z.number().int().positive() })).max(32),
+  multiplier: z.number().finite().nonnegative(),
+});
+
 const recordSchema = z.object({
   run: z.number().int().positive(),
   outcome: z.enum(['victory', 'retreat', 'wipe']),
@@ -180,6 +193,7 @@ const recordSchema = z.object({
   gold: goldRecordSchema.optional(),
   items: itemsRecordSchema.optional(),
   salvage: salvageRecordSchema.optional(),
+  omens: omensRecordSchema.optional(),
   cause: z.string().max(MAX_CAUSE),
   party: z.array(memberSchema).max(16),
   met: z.array(z.string().max(80)).max(1000),
@@ -243,6 +257,7 @@ export function runRecord(run: number, result: RunResult): RunRecord {
         rate: VALUE_PER_TROPHY,
       }
     : undefined;
+  const omens = omensRecordSchema.safeParse(result.extras['run.omens']);
   const fallen = deaths.success ? deaths.data.fallen : [];
   return {
     run,
@@ -254,6 +269,7 @@ export function runRecord(run: number, result: RunResult): RunRecord {
     ...(gold.success ? { gold: gold.data } : {}),
     ...(items.success ? { items: items.data } : {}),
     ...(salvage !== undefined ? { salvage } : {}),
+    ...(omens.success && omens.data.omens.length > 0 ? { omens: omens.data } : {}),
     cause: end.success ? end.data.cause.slice(0, MAX_CAUSE) : '',
     party: party.success
       ? party.data.map((m) => {

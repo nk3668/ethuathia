@@ -24,7 +24,7 @@ import {
   turnsRenown,
   WIPE_LOSS_SHARE,
 } from '../../sim';
-import type { ChronicleEntry, ContractRecord, FallenRecord, FloorRenown, GoldConversionRecord, ItemSaleRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport, SalvageTrackerState } from '../../sim';
+import type { ChronicleEntry, ContractRecord, FallenRecord, FloorRenown, GoldConversionRecord, ItemSaleRecord, OmensRecord, PartyMemberRecord, RewardAmounts, RunEnd, RunOutcome, RunReport, SalvageTrackerState } from '../../sim';
 
 /** Each outcome's heading and icon, so it never rests on color alone. */
 export const OUTCOME_LOOK: Readonly<Record<RunOutcome, { title: string; icon: string }>> = {
@@ -85,6 +85,14 @@ export function itemSaleOf(report: RunReport): ItemSaleRecord | null {
     return null;
   }
   return { items, value, trophies, rate, ...(typeof bonus === 'number' && Number.isFinite(bonus) && bonus > 0 ? { bonus } : {}) };
+}
+
+/** The Omens the run had on and the reward multiplier they paid (`extras['run.omens']`, ETH-185), or `null` when none was on. */
+export function omensOf(report: RunReport): { lines: { name: string; rank: number }[]; multiplier: number } | null {
+  const raw = report.result.extras['run.omens'] as Partial<OmensRecord> | undefined;
+  if (typeof raw !== 'object' || raw === null || !Array.isArray(raw.omens) || raw.omens.length === 0) return null;
+  const multiplier = typeof raw.multiplier === 'number' && Number.isFinite(raw.multiplier) ? raw.multiplier : 1;
+  return { lines: raw.omens.map((o) => ({ name: defName(o.id), rank: o.rank })), multiplier };
 }
 
 /** Leftover gold conversion record (`extras['run.gold']`, ETH-083), or `null` when absent or malformed. */
@@ -318,6 +326,7 @@ export function reportFromRecord(record: RunRecord): RunReport {
         ...(record.gold !== undefined ? { 'run.gold': { ...record.gold } } : {}),
         ...(record.items !== undefined ? { 'run.items': { ...record.items } } : {}),
         ...(record.salvage !== undefined ? { [SALVAGE_TRACKER_ID]: { items: record.salvage.items, value: record.salvage.value } } : {}),
+        ...(record.omens !== undefined ? { 'run.omens': { omens: record.omens.omens.map((o) => ({ ...o })), multiplier: record.omens.multiplier } } : {}),
         'track.deaths': { fallen },
         'track.codex': Object.fromEntries(record.met.map((id) => [id, []])),
         // Party members in the kept moments are numbered by party place, like `party` above.

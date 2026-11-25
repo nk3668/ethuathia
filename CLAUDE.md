@@ -271,7 +271,7 @@ A desktop app (§9) with a dark theme. The dungeon uses colored monospace ASCII 
   - The UI reads snapshots and events from the sim and sends commands back. It never mutates sim state directly.
 - **Content is data:** classes, races, monsters, items, Omens, deities and upgrade nodes are typed definitions in `src/content/`, validated at load time.
 - **Saves:** local only, written to a save file in the app data folder through Tauri (IndexedDB when running in a dev browser tab). Saves are versioned with migrations, with export/import to a file or string and a hard reset. Autosave regularly and on close.
-- **Balance harness:** a script that runs N seeded headless runs and reports depth, death causes and currency per hour. Use it to check any balance change. It starts as `npm run sim` (M0: turns and explored share per floor). Which changes need it, and how many seeds (T0 identity 20, T1 direction 50, T2 gate 100, T3 acceptance 200), is set in `docs/DIFFICULTY_PHILOSOPHY.md` §9. UI-only, docs and test-only changes don't run it. A work item inside a milestone runs only the T0 identity check (with its new content unowned or switched off) and a short smoke run with it on; the milestone's balance capstone does the measuring (T2/T3).
+- **Balance harness:** a script that runs N seeded headless runs and reports depth, death causes and currency per hour. Use it to check any balance change. It starts as `npm run sim` (M0: turns and explored share per floor). Which changes need it, and how many seeds (T0 identity 20, T1 direction 50, T2 gate 100, T3 acceptance 200), is set in `docs/DIFFICULTY_PHILOSOPHY.md` §9. UI-only, docs and test-only changes don't run it. Work items run only the T0 identity check (with their new content unowned or switched off) and a short smoke run with it on. The larger suites (T1–T3) wait until the milestone is finished and run only in its balance capstone.
 
 ### Proposed layout
 ```
@@ -303,7 +303,7 @@ Imports only point downward in this list: `core` imports nothing, `ui` may impor
 
 ## 10. Roadmap
 
-The milestones are broken down into work items in the backlog (§11). Every milestone, and every major content addition, ends with a balance check item (`docs/DIFFICULTY_PHILOSOPHY.md` §9.1).
+The milestones are broken down into work items in the backlog (§11). Every milestone ends with a balance check item that also covers its major content additions (`docs/DIFFICULTY_PHILOSOPHY.md` §9.1).
 
 1. **M0 – Skeleton:** scaffold the project; sim core with one floor, one adventurer, baseline exploration and canvas map; pause and speed controls.
 2. **M1 – A full run:** multiple floors, stairs, combat, items, death, run summary, auto-restart; the Recover-relic contract and the return trip; attributes, leveling, monster roles, equipment slots, enchantment and identification.

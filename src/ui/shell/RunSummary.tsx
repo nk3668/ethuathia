@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { GOLD_PER_TROPHY } from '../../content';
+import { GOLD_PER_TROPHY, rankNumeral } from '../../content';
 import { formatNumber } from '../../core';
-import { goldConversionText, itemSaleText, masteryGainBanked, TROPHIES_KILLS_TEXT, TROPHIES_OMEN_TEXT } from '../../meta';
+import { goldConversionText, itemSaleText, masteryGainBanked, multiplierText, OMEN_MULTIPLIER_TEXT, TROPHIES_KILLS_TEXT, TROPHIES_OMEN_TEXT } from '../../meta';
 import { RENOWN, TROPHIES } from '../../sim';
 import type { GoldConversionRecord, ItemSaleRecord, RunOutcome, RunReport } from '../../sim';
 import { Button, Tooltip } from '../kit';
@@ -22,6 +22,7 @@ import {
   itemSaleOf,
   lossNote,
   momentsOf,
+  omensOf,
   OUTCOME_LOOK,
   partyOf,
   RENOWN_FORMULA_EXAMPLES,
@@ -84,6 +85,7 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
   const goldInfo = goldConversionOf(report);
   const itemInfo = itemSaleOf(report);
   const salvageInfo = salvageOf(report);
+  const omenInfo = omensOf(report);
   const renownSources =
     renown === null
       ? []
@@ -208,6 +210,14 @@ function SummaryDialog({ report, run }: { report: RunReport; run?: number }) {
               ))}
             </tbody>
           </table>
+          {omenInfo !== null && (
+            <p className={styles.goldLine} data-testid="summary-omens">
+              <Tooltip content={OMEN_MULTIPLIER_TEXT}>Omen multiplier</Tooltip>
+              {': '}
+              <span className={styles.goldTrophies}>{multiplierText(omenInfo.multiplier)}</span> (
+              {omenInfo.lines.map((o) => `${o.name} ${rankNumeral(o.rank)}`).join(', ')})
+            </p>
+          )}
           {goldInfo !== null && (
             <p className={styles.goldLine}>
               <Tooltip content={goldConversionText(goldInfo.rate)}>

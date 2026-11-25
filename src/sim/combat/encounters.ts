@@ -120,14 +120,14 @@ function pickSpawnWithBudget(
   templateFallback: number,
   rng: Rng,
 ): { def: MonsterDef; templates: string[]; cost: number; ood?: true } | null {
-  const oodRoll = rollOodDanger(draft.dungeon, baseDanger, rng);
+  const oodRoll = rollOodDanger(draft.dungeon, baseDanger, rng, draft.risk);
   const spawnDanger = oodRoll.danger;
   const activePool = poolForOodRoll(baseDanger, basePool, oodRoll, ecology);
 
   let def = pickMonsterForSlot(slot.roles, activePool, spawnDanger, rng, ecology, preferTags);
   if (def === undefined) return null;
 
-  const tChance = templateChanceFor(draft.dungeon, baseDanger, templateFallback);
+  const tChance = templateChanceFor(draft.dungeon, baseDanger, templateFallback, draft.risk);
   let templates = rollTemplates(def, rng, tChance);
   let cost = computeThreatCost(def, templates);
   const oodTag = (d: MonsterDef): { ood?: true } => (oodRoll.ood && d.danger.min > baseDanger ? { ood: true as const } : {});

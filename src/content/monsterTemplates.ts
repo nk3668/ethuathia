@@ -22,6 +22,9 @@ import { defShape, nonNegativeInt, positiveInt } from './schema';
 /** At most this many templates on one monster (default approved by Nate). */
 export const MAX_TEMPLATES = 2;
 
+/** The tag of a template only an Omen puts on a monster: generation never rolls it (ETH-186). */
+export const OMEN_ONLY_TAG = 'omen';
+
 /** The highest loot tier: 0 is the plain table, higher tiers roll better loot (ETH-052). */
 export const MAX_LOOT_TIER = 3;
 
@@ -273,4 +276,24 @@ export const TEMPLATE_RELENTLESS = defineMonsterTemplate({
   lootTier: 2,
   weight: 2,
   glyphTint: '#e36b5b',
+});
+
+/**
+ * Put on a monster by the Armed Warbands Omen (ETH-186), never rolled on its own (the `omen` tag
+ * keeps it out of `rollTemplates`). The Omen's rank adds more armor on top of this one point.
+ */
+export const TEMPLATE_ARMED = defineMonsterTemplate({
+  id: 'template.armed',
+  name: 'Armed',
+  description:
+    'It has taken up arms: scavenged plate and a weapon someone else paid for. It takes a point of armor off every blow, and ' +
+    'on a bad day for it, the gear is left where it falls.',
+  hint: 'A creature that has taken to wearing what it has killed.',
+  tags: ['trait', OMEN_ONLY_TAG],
+  prefix: 'Armed',
+  bundle: { modifiers: [{ stat: 'armor', op: 'add', value: 1 }] },
+  threatMul: 1.3,
+  lootTier: 1,
+  weight: 1,
+  glyphTint: '#c0c7d1',
 });

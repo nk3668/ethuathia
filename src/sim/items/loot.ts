@@ -12,7 +12,7 @@ import { baseEnchantmentFor, ITEMS, specialEnchantmentsFor } from '../../content
 import type { EnchantmentDef, ItemBlessing, ItemDef } from '../../content';
 import { readParams } from '../gen/params';
 import { defineGenStep, rectTiles } from '../gen/types';
-import type { FloorDraft } from '../gen/types';
+import type { FloorDraft, FloorRisk } from '../gen/types';
 import { Terrain } from '../state';
 import type { ItemEnchantment, ItemInstance } from './instance';
 
@@ -41,7 +41,7 @@ export function lootTable(depth: number): ItemDef[] {
 }
 
 /** One def from `table`, by `loot.weight`. Exactly one draw. */
-function pickWeighted(table: readonly ItemDef[], rng: Rng): ItemDef {
+export function pickLootDef(table: readonly ItemDef[], rng: Rng): ItemDef {
   const total = table.reduce((n, d) => n + (d.loot?.weight ?? 0), 0);
   let roll = rng.float() * total;
   for (const def of table) {
@@ -51,7 +51,7 @@ function pickWeighted(table: readonly ItemDef[], rng: Rng): ItemDef {
   return table[table.length - 1] as ItemDef;
 }
 
-function pickWeightedEnchant(pool: readonly EnchantmentDef[], rng: Rng): EnchantmentDef {
+function pickLootDefEnchant(pool: readonly EnchantmentDef[], rng: Rng): EnchantmentDef {
   const total = pool.reduce((n, e) => n + e.weight, 0);
   let roll = rng.float() * total;
   for (const e of pool) {
@@ -64,8 +64,11 @@ function pickWeightedEnchant(pool: readonly EnchantmentDef[], rng: Rng): Enchant
 /**
  * Rolls enchantment (`+N`/`-N`), beatitude (`blessed`/`cursed`), special enchantments and initial
  * `identified: false` for one loot item at `depth`, drawing exclusively from `rng` (the loot stream).
+ * `risk` (Cursed Hoards, ETH-186) moves the curse and enchantment thresholds. It adds no draws, but a
+ * different outcome can skip a later draw, so the loot after it may differ (never the layout). Nothing it changes shows on the item,
+ * so the unidentified flag still says nothing.
  */
-export function rollItemProperties(def: ItemDef, depth: number, rng: Rng): Partial<ItemInstance> {
+export function rollItemProperties(def: ItemDef, depth: number, rng: Rng, risk?: FloorRisk): Partial<ItemInstance> {
   if (def.category === 'gold' || def.category === 'junk' || def.category === 'relic') return {};
 
   const out: Partial<ItemInstance> = {};
@@ -74,7 +77,7 @@ export function rollItemProperties(def: ItemDef, depth: number, rng: Rng): Parti
     const bRoll = rng.float();
     let blessing: ItemBlessing | undefined;
     if (bRoll < LOOT_BLESS_CHANCE) blessing = 'blessed';
-    else if (bRoll < LOOT_BLESS_CHANCE + LOOT_CURSE_CHANCE) blessing = 'cursed';
+    else if (bRoll < LOOT_BLESS_CHANCE + LOOT_CURSE_CHANCE + (risk?.curseBonus ?? 0)) blessing = 'cursed';
     if (blessing !== undefined) out.blessing = blessing;
 
     const base = baseEnchantmentFor(def);
@@ -82,8 +85,8 @@ export function rollItemProperties(def: ItemDef, depth: number, rng: Rng): Parti
       let enchant = 0;
       if (blessing === 'cursed') {
         enchant = rng.chance(CURSED_MILD_CHANCE) ? -1 : -2;
-      } else if ((blessing === 'blessed' && rng.chance(BLESSED_ENCHANT_CHANCE)) || rng.chance(LOOT_ENCHANT_CHANCE)) {
-        const cap = Math.min(base.maxLevel, depth >= 6 ? 3 : depth >= 3 ? 2 : 1);
+      } else if ((blessing === 'blessed' && rng.chance(BLESSED_ENCHANT_CHANCE)) || rng.chance(LOOT_ENCHANT_CHANCE + (risk?.enchantBonus ?? 0))) {
+        const cap = Math.min(base.maxLevel, (depth >= 6 ? 3 : depth >= 3 ? 2 : 1) + (risk?.enchantCapBonus ?? 0));
         enchant = cap <= 1 ? 1 : rng.chance(ENCHANT_MILD_CHANCE) ? 1 : rng.int(2, cap);
       }
       if (enchant !== 0) out.enchant = Math.max(base.minLevel, Math.min(base.maxLevel, enchant));
@@ -93,7 +96,7 @@ export function rollItemProperties(def: ItemDef, depth: number, rng: Rng): Parti
     if (specials.length > 0) {
       const chance = Math.min(LOOT_SPECIAL_MAX_CHANCE, LOOT_SPECIAL_BASE_CHANCE + Math.max(0, depth - 2) * LOOT_SPECIAL_PER_DEPTH);
       if (rng.chance(chance)) {
-        const picked = pickWeightedEnchant(specials, rng);
+        const picked = pickLootDefEnchant(specials, rng);
         const level = picked.maxLevel >= 2 && depth >= 5 && rng.chance(0.25) ? 2 : picked.minLevel;
         const entry: ItemEnchantment = { id: picked.id, level };
         out.enchantments = [entry];
@@ -108,7 +111,7 @@ export function rollItemProperties(def: ItemDef, depth: number, rng: Rng): Parti
   if (def.category === 'potion' || def.category === 'scroll') {
     const bRoll = rng.float();
     if (bRoll < LOOT_BLESS_CHANCE) out.blessing = 'blessed';
-    else if (bRoll < LOOT_BLESS_CHANCE + LOOT_CONSUMABLE_CURSE_CHANCE) out.blessing = 'cursed';
+    else if (bRoll < LOOT_BLESS_CHANCE + LOOT_CONSUMABLE_CURSE_CHANCE + (risk?.consumableCurseBonus ?? 0)) out.blessing = 'cursed';
     out.identified = false;
   }
   return out;
@@ -149,12 +152,12 @@ export const GEN_LOOT = defineGenStep({
     const tiles = freeTiles(draft);
     const count = rng.int(p.minItems, p.maxItems);
     for (let n = 0; n < count && table.length > 0 && tiles.length > 0; n++) {
-      const def = pickWeighted(table, rng);
+      const def = pickLootDef(table, rng);
       const [pos] = tiles.splice(rng.int(0, tiles.length - 1), 1) as [Pos];
       const range = def.loot?.qty;
       let qty = range === undefined ? 1 : rng.int(range.min, range.max);
       if (def.category === 'gold') qty = Math.min(qty * draft.depth, def.stack ?? 1);
-      const props = rollItemProperties(def, draft.depth, rng);
+      const props = rollItemProperties(def, draft.depth, rng, draft.risk);
       draft.items.push({ pos, item: { def: def.id, qty, ...props } });
     }
   },

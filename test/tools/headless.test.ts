@@ -184,6 +184,7 @@ describe('tools/headless', () => {
       classId: null,
       raceId: null,
       contract: null,
+      omens: [],
       recruits: false,
       partySweep: false,
       jobs: defaultJobs(),
@@ -204,6 +205,7 @@ describe('tools/headless', () => {
       classId: null,
       raceId: null,
       contract: null,
+      omens: [],
       recruits: false,
       partySweep: false,
       jobs: defaultJobs(),
@@ -219,6 +221,13 @@ describe('tools/headless', () => {
       upgrades: [],
       optIns: true,
     });
+    expect(parseSimArgs(['--omens', 'deep_surge:3,omen.cursed_hoards:1']).omens).toEqual([
+      { id: 'omen.deep_surge', rank: 3 },
+      { id: 'omen.cursed_hoards', rank: 1 },
+    ]);
+    expect(() => parseSimArgs(['--omens', 'deep_surge:4'])).toThrow(/rank for omen.deep_surge/);
+    expect(() => parseSimArgs(['--omens', 'nothing:1'])).toThrow(/not an Omen/);
+    expect(() => parseSimArgs(['--omens', 'deep_surge'])).toThrow(/id:rank/);
     expect(parseSimArgs(['--preset', 'progressed', '--party', '2'])).toMatchObject({
       preset: 'progressed',
       party: 2,

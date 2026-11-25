@@ -70,6 +70,8 @@ describe('Town tab', () => {
       'Second Contract Board',
       'Rule Clerk',
       "Quartermaster's Mystery Crate",
+      "Stalker's Ledger",
+      'Deep Surge',
     ]);
     // Status is in words, not color alone.
     expect(nodeButton('Second Berth').textContent).toContain('Too expensive');

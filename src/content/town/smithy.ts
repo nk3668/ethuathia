@@ -6,12 +6,14 @@
  * Tiers I and II of the approved town-tree page (ETH-159). Rows 1 to 3 are open once the Smithy is;
  * rows 4 to 6 open with the tier quest *Star-Iron* (ETH-170): bring star-iron back from floor 5.
  * Maker's Marks, the class-tier kit pick, Forge Stamps, Apprentice Trinket and Field Salvage Kit
- * (ETH-188) fill out the grid alongside the Smithy's core nodes.
+ * (ETH-188) and the two Omen unlocks (ETH-186, at the end of the file) fill out the grid alongside
+ * the Smithy's core nodes.
  *
  * Costs are a starting shape for the pacing work (ETH-161).
  */
 import { CONTRACT_COLD_ANVIL, CONTRACT_STAR_IRON } from '../buildingQuests';
 import { ITEM_SCROLL_OF_IDENTIFY, ITEM_SCROLL_OF_UNCURSING } from '../items';
+import { OMEN_ARMED_WARBANDS, OMEN_CURSED_HOARDS } from '../townOmens';
 import { defineBuilding, defineUpgrade } from '../upgrades';
 
 /** The first node row that the *Star-Iron* quest opens (Tier II). */
@@ -289,4 +291,40 @@ export const UPGRADE_APPRENTICE_TRINKET = defineUpgrade({
   requires: [UPGRADE_SCROLL_CASE.id],
   exclusiveGroup: 'smithy.tier6',
   grants: [{ kind: 'start', start: { perk: 'trinket' } }],
+});
+
+// --- Omen unlocks (ETH-186) -------------------------------------------------------------------
+// A node here only unlocks an Omen: it never makes a run harder and never pays a bonus of its own.
+
+export const UPGRADE_CURSED_HOARDS = defineUpgrade({
+  id: 'upgrade.cursed_hoards',
+  name: 'Cursed Hoards',
+  description:
+    'The smiths know a trick or two about gear that fights back. Unlocks the Cursed Hoards Omen, which you switch on for a run on ' +
+    'the Prepare screen: more of the gear and the draughts and scrolls on the floors is cursed, but gear that is not is likelier ' +
+    'to be enchanted, and higher. Nothing says which is which until it is identified. The node changes nothing by itself; ' +
+    'only the Omen does, and it pays more for each rank.',
+  tags: ['omen', 'capability', 'risky'],
+  building,
+  tier: 3,
+  column: 2,
+  cost: { trophies: 75 },
+  requires: [],
+  grants: [{ kind: 'unlock', id: OMEN_CURSED_HOARDS.id }],
+});
+
+export const UPGRADE_ARMED_WARBANDS = defineUpgrade({
+  id: 'upgrade.armed_warbands',
+  name: 'Armed Warbands',
+  description:
+    'The smiths can tell you what a well-armed warband is worth, as a trophy. Unlocks the Armed Warbands Omen, which you switch on ' +
+    'for a run on the Prepare screen: tougher monsters may spawn armored and carrying an enchanted weapon or armor, which they drop when slain. ' +
+    'The node changes nothing by itself; only the Omen does, and it pays more for each rank.',
+  tags: ['omen', 'capability', 'risky'],
+  building,
+  tier: SMITHY_TIER_TWO_ROW,
+  column: 2,
+  cost: { trophies: 450 },
+  requires: [],
+  grants: [{ kind: 'unlock', id: OMEN_ARMED_WARBANDS.id }],
 });

@@ -276,6 +276,20 @@ describe('log text', () => {
     expect(lines[1]?.text).toBe('Mira: Explore: heading for unexplored ground; skipped fountain (brackish water is harmful) (baseline #7)');
     expect(lines[1]?.repeat).toEqual({ count: 2, lastTurn: 12 });
   });
+
+  it('omits scope wording for flag-only Omens while keeping it for scoped modifiers', () => {
+    const flagOnly = describeEvent(
+      { type: 'runModifierAdded', turn: 0, key: 'omen.cursed_hoards', source: { id: 'omen.cursed_hoards', label: 'Cursed Hoards (Omen, rank 1)' }, scope: 'all', rewardBonus: 0.1, atStart: true },
+      () => 'Mira',
+    );
+    expect(flagOnly.text).toBe('This run is under Cursed Hoards (Omen, rank 1) (rewards +10%).');
+
+    const scoped = describeEvent(
+      { type: 'runModifierAdded', turn: 0, key: 'upgrade.waymark_lanterns', source: { id: 'upgrade.waymark_lanterns', label: 'Waymark Lanterns, returning' }, scope: 'party', atStart: true },
+      () => 'Mira',
+    );
+    expect(scoped.text).toBe('This run is under Waymark Lanterns, returning, affecting the party.');
+  });
 });
 
 describe('non-spoiling unidentified item sweep (ETH-131)', () => {

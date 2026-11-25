@@ -45,6 +45,7 @@ import {
 import { GEN_MONSTERS } from './monsters';
 import type { MonsterPart } from './monsters';
 import { CHRONICLE_OOD_SIGHTED } from './ood';
+import { RISK_PLAN_HOOK } from './risk';
 import { namesOf, overlayProblems, PROVIDER_OVERLAY, SOURCE_MONSTER_INNATE, SOURCE_TEMPLATES, templateMetKey, templatesField } from './overlay';
 import type { ShownName } from './overlay';
 import { boltable, canSee, isAlly, rolePowers, ROLE_CONDITIONS, ROLE_RULE_ACTIONS } from './roles';
@@ -58,6 +59,7 @@ export * from './groupAi';
 export * from './monsters';
 export * from './ood';
 export * from './overlay';
+export * from './risk';
 export * from './roles';
 export * from './rules';
 export * from './threat';
@@ -540,6 +542,7 @@ export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
   conditions: [...COMBAT_CONDITIONS, ...ROLE_CONDITIONS, ...GROUP_CONDITIONS],
   ruleActions: [...COMBAT_RULE_ACTIONS, ...ROLE_RULE_ACTIONS, ...GROUP_RULE_ACTIONS],
   genSteps: [GEN_MONSTERS],
+  floorPlanHooks: [RISK_PLAN_HOOK],
   triggers: [TRIGGER_HIT, TRIGGER_STRUCK],
   statProviders: [PROVIDER_OVERLAY],
   bundleSources: [SOURCE_MONSTER_INNATE, SOURCE_TEMPLATES],

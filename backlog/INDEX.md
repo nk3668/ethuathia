@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-190**
+**Next ID: ETH-191**
 
 **Current milestone: M2 (Meta loop).** M2's remaining work runs as M2.1 (town trees), then M2.2 (minimal Omens), then the ETH-161 capstone.
 
@@ -161,8 +161,8 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-187](town-meta/ETH-187-guild-hall-mechanic-nodes.md) | Guild Hall nodes that need new mechanics - Field Rations, Extraction Drills, Waymark Lanterns, Mystery Crate | town-meta | M2.1 | P1 | done | M |
 | [ETH-188](town-meta/ETH-188-smithy-mechanic-nodes.md) | Smithy nodes that need new mechanics - Maker's Marks, class-tier kits, Forge Stamps, Apprentice Trinket, Field Salvage Kit | town-meta | M2.1 | P1 | done | M |
 | [ETH-189](adventurer-ai/ETH-189-flee-return-oscillation.md) | Break the flee-and-return loop against a ranged foe | adventurer-ai | M2 | P2 | idea | S |
-| [ETH-185](risk-omens/ETH-185-minimal-omen-system.md) | Minimal Omen system with ranks, one reward multiplier and a Prepare toggle, unlocked by town nodes | risk-omens | M2.2 | P1 | ready | M |
-| [ETH-186](risk-omens/ETH-186-first-town-omens.md) | The first four Omens and their town-tree unlock nodes | risk-omens | M2.2 | P1 | idea | M |
+| [ETH-185](risk-omens/ETH-185-minimal-omen-system.md) | Minimal Omen system with ranks, one reward multiplier and a Prepare toggle, unlocked by town nodes | risk-omens | M2.2 | P1 | done | M |
+| [ETH-186](risk-omens/ETH-186-first-town-omens.md) | The first four Omens and their town-tree unlock nodes | risk-omens | M2.2 | P1 | done | M |
 | [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Rules editor and the rule data model | behavior-rules | M3 | P1 | idea | M |
 | [ETH-163](behavior-rules/ETH-163-library-tree.md) | Library tree unlocks rule conditions, actions and slots | behavior-rules | M3 | P1 | idea | M |
 | [ETH-164](behavior-rules/ETH-164-rule-presets.md) | Shipped rule presets, plus saving and loading your own | behavior-rules | M3 | P1 | idea | S |
@@ -228,6 +228,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-128](saves-platform/ETH-128-time-away-catch-up.md) | Time-away catch-up simulation and summary | saves-platform | M8 | P2 | idea | M |
 | [ETH-169](tools-balance/ETH-169-gods-and-world-balance-pass.md) | Deities, merchants and themed dungeons balance pass (M8 capstone) | tools-balance | M8 | P2 | idea | M |
 | [ETH-174](town-meta/ETH-174-cartographer.md) | The Cartographer building | town-meta | M8 | P2 | idea | M |
+| [ETH-190](town-meta/ETH-190-better-loot-nodes.md) | Cartographer Tier I node that raises the quality of dungeon loot | town-meta | M8 | P2 | idea | S |
 | [ETH-049](dungeon-gen/ETH-049-dungeon-merchants.md) | Dungeon merchants | dungeon-gen | M8 | P3 | idea | M |
 | [ETH-098](dungeon-gen/ETH-098-hand-made-vaults.md) | Hand-made room vaults | dungeon-gen | M8 | P3 | idea | M |
 | [ETH-107](dungeon-gen/ETH-107-dungeon-events.md) | Rare floor-wide dungeon events | dungeon-gen | M8 | P3 | idea | M |

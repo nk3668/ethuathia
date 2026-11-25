@@ -209,7 +209,7 @@ export function populatePatrols(
     };
 
     for (let m = 0; m < squadSize; m++) {
-      const oodRoll = rollOodDanger(draft.dungeon, baseDanger, rng);
+      const oodRoll = rollOodDanger(draft.dungeon, baseDanger, rng, draft.risk);
       const spawnDanger = oodRoll.danger;
       const activePool = poolForOodRoll(baseDanger, basePool, oodRoll, ecology);
       const def = pickMonsterForSlot(patrolRoles, activePool, spawnDanger, rng, ecology);
@@ -218,7 +218,7 @@ export function populatePatrols(
       const pos = pickClusteredTile(draft.terrain, occ, def, nearbyTiles, m === 0 ? undefined : anchor, rng);
       if (pos === undefined) break;
 
-      const tChance = templateChanceFor(draft.dungeon, baseDanger, templateFallback);
+      const tChance = templateChanceFor(draft.dungeon, baseDanger, templateFallback, draft.risk);
       const templates = rollTemplates(def, rng, tChance);
       const overlay = templates.length === 0 ? undefined : { templates };
       const ood = oodRoll.ood && def.danger.min > baseDanger ? (true as const) : undefined;

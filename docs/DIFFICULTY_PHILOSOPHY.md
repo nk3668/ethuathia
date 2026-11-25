@@ -12,7 +12,7 @@ The living design and tuning guide for difficulty, danger progression, bestiary 
 4. **Readable danger.** Out-of-depth spawns, templated/elite variants, return-trip surges, and killer identities are surfaced clearly in the log, highlights, Codex, and tooltips. Never balance through hidden luck values or silent scaling (`ROGUELIKE-SURVEY.md`).
 5. **Extensible as pure data.** Adding a new monster, template, encounter pattern, or themed dungeon must be a data entry in `src/content/`, not a rewrite of spawning or difficulty logic (`ARCHITECTURE.md`).
 6. **Solo is the hardest way to play.** On the same profile and dungeon, win rate rises with party size: 1 < 2 < 3 < 4, and a party of 4 should win at least twice as often as a solo adventurer (the strict ordering is checked by `ETH-145`; clearing the 2x target is `ETH-080`'s job). Bigger parties pay for their safety through shared XP, shared floor loot and consumables, crowding in narrow corridors, and the small encounter-budget surcharge from Principle 1. They never face stronger monsters because of their size. A solo adventurer must never out-level the dungeon by hoarding XP. The harness checks this ordering (`ETH-145`).
-7. **Balance is re-checked, not finished.** Every milestone, and every major content addition (a class, a dungeon, a bestiary expansion, a new item family, a town tree), ends with a balance check against §2 using the §9 procedure. A milestone isn't done until its check passes or the targets are deliberately changed in this document (§9.1).
+7. **Balance is re-checked, not finished.** Every milestone ends with a balance check against §2 using the §9 procedure, and that check also covers the milestone's major content additions (a class, a dungeon, a bestiary expansion, a new item family, a town tree). A milestone isn't done until its check passes or the targets are deliberately changed in this document (§9.1).
 8. **Composition and synergy beat headcount.** Once more classes exist, a mixed party whose classes cover each other (frontline, ranged, support, with matching rules) is clearly stronger than the same number of Vanguards. A single-class party is the floor, not the ceiling. Each new class must make at least one party it joins stronger than its single-class equivalent, and no one composition may be best everywhere (Principle 13). This is measured from M3 on (`ETH-146`).
 9. **The best gear is found, not bought.** Smithy kits, starting enchantments and other starting gear raise the floor: modest and reliable, roughly what a typical run finds by floor 2–3 **(default)**. The strongest items (high enchantments, affixes, artifacts, heirlooms) come from inside runs: floor loot, elites, mini-bosses and graves. On a typical delve, the starting kit should be outclassed by mid-run finds.
 10. **Meta power adds consistency more than ceiling.** Town and roster progression (Guild Hall, Smithy, Temple, Tavern, unlocks) gives small, permanent stat boosts. Its bigger job is making runs **more consistent**: fewer early deaths, more reliable floor reach, better recruits and more options. The ceiling comes from what happens in the run: found gear, in-run levels, party composition and rules. In-run levels matter, but they never overshadow gear and party makeup (target end level in §7).
@@ -42,6 +42,7 @@ Targets are measured with the headless balance harness (`npm run sim -- --seeds 
 
 - **Themed dungeons (Cartographer / M8+):** Each new dungeon shifts its starting Danger curve upward (for example, starting at Danger 3+ or Danger 6+) and swaps in harsher monster tags and denser encounter budgets. Late dungeons remain dangerous to upgraded 4-person parties while *The Old Delve* naturally becomes a reliable training ground for fresh recruits or heirloom recovery.
 - **Opt-in risk:** Once a player reliably clears a dungeon above ~65%, **Omens** (`ETH-067`) and **extra Contract slots** (`ETH-028`) raise difficulty voluntarily in exchange for higher reward multipliers and payouts.
+- **Where the Omen multiplier sits (`ETH-185`):** all Omens share one reward multiplier, `1 + Σ` of each chosen rank's `reward` (a content number per rank; `ETH-161` tunes them). It is applied to Renown, Trophies and Favor as they are earned in the run, before the wipe loss (base → ×Omen → −25%). It is **not** applied to exit conversions (leftover gold, sold items, Field Salvage scrap) or to the Smithy's trade bonus, so hoarding loot can't inflate an Omen run. A town node never pays its own risk bonus: it only unlocks an Omen, and the Omen's rank is the only thing that adds danger and the only thing that pays for it.
 
 ---
 
@@ -234,7 +235,7 @@ Decide by what the change can affect, not by its size.
 
 | Kind of change | Harness? | Tier |
 |---|---|---|
-| **Balance-affecting:** monster, item, loot or enchantment numbers; XP and leveling; recovery and healing; combat formulas; encounter generation, spawn budgets, templates and patrols; baseline AI decisions (rules, conditions, actions, their order); run-end and return-trip rules; rewards and currency formulas; anything party size or upgrades change inside a run | **Yes** | T2 gate, or T3 if the item has to hit a §2 band; a piece of a milestone runs only T0 and a smoke run (below) |
+| **Balance-affecting:** monster, item, loot or enchantment numbers; XP and leveling; recovery and healing; combat formulas; encounter generation, spawn budgets, templates and patrols; baseline AI decisions (rules, conditions, actions, their order); run-end and return-trip rules; rewards and currency formulas; anything party size or upgrades change inside a run | **Yes** | T0 with the new content off, plus a smoke run (below); T2 and T3 run only in the milestone's balance capstone |
 | **Behavior-neutral sim changes:** refactors, performance work, serialization and state-shape changes that don't alter decisions, new events, trace or log text | **Identity check only** | T0 |
 | **Not sim-related:** anything only in `src/ui/` (it can't change the sim; layer rule, `CLAUDE.md` §9), Codex and tooltip text, content names, descriptions and glyphs, docs, backlog, tests only, tooling that doesn't touch the sim | **No** | `npm run check` (+ a look at the running app for UI) |
 
@@ -247,20 +248,22 @@ All comparisons run the **same seeds** on both commits (`--compare REF`, or `--b
 | Tier | Seeds | Use it for | Passes when |
 |---|---|---|---|
 | **T0 Identity** | 20, paired | Behavior-neutral sim changes | 0 seeds end in a different state hash |
-| **T1 Direction** | 50 | Iterating while tuning; interim numbers mid-item | No pass mark: it only shows which way a lever moves things |
-| **T2 Gate** | 100, paired against the item's base | Finishing a balance-affecting item that isn't aiming at a §2 band | Every delta is explained as intended; no new stalls, stuck runs or unattributed deaths |
-| **T3 Acceptance** | 200 per configuration | Checking a §2 band, the Principle 6 party-size ordering, and a milestone baseline (§9.1–9.2) | Each target band or ordering holds |
+| **T1 Direction** | 50 | Iterating while tuning in a capstone | No pass mark: it only shows which way a lever moves things |
+| **T2 Gate** | 100, paired against a base | Capstone only: attributing a moved number to one piece's commit, and checking a retune before the final sweep | Every delta is explained as intended; no new stalls, stuck runs or unattributed deaths |
+| **T3 Acceptance** | 200 per configuration | Capstone only: checking a §2 band, the Principle 6 party-size ordering, and a milestone baseline (§9.1–9.2) | Each target band or ordering holds |
+
+T1, T2 and T3 are the larger suites, and they wait until the milestone's work is finished (Nate, 2026-11-25). Work items run only T0 and a smoke run, as the next section says.
 
 Why 200 for acceptance: at 100 seeds the 95% interval on a ~20% win rate is about ±8 points, as wide as the bands in §2. At 200 it is about ±5.5. The party-size ordering compares two noisy rates (e.g. 20% vs 40%), so it needs T3 as well. Below 200 a true 2× can fail by chance.
 
 ### Pieces of a larger deliverable
 
-When an item is one piece of a larger initiative that ends in its own balance check (each milestone's capstone, §9.1, such as `ETH-080` for M1.5), the piece doesn't run T1, T2 or T3 (Nate, 2026-11-25). Absolute bands and deltas are the capstone's job, and measuring a piece is mostly wasted once the next piece moves the numbers again. A piece runs:
+Every work item is a piece of its milestone, which ends in a balance capstone (§9.1, such as `ETH-080` for M1.5), so no work item runs T1, T2 or T3 (Nate, 2026-11-25). Absolute bands and deltas are the capstone's job, and measuring a piece is mostly wasted once the next piece moves the numbers again. A piece runs:
 
 - **T0** with its new content unowned or switched off, against its base: 0 hash diffs, so nothing changed for a player who doesn't use it. A piece that is meant to change every run (a formula or baseline AI change) records that T0 fails and why.
 - **A smoke run** (20 seeds) with its content on, showing no stalls, stuck runs, crashes, or a collapse in win rate or depth.
 
-It records both with the commit hash in its item Log. The capstone measures the milestone as a whole against the milestone's base; if a number moved unexpectedly, it attributes it by running the pieces' commits with `--compare`. An item whose own purpose is tuning (a balance item, not a piece) still runs T2 or T3 as the table above says.
+It records both with the commit hash in its item Log. The capstone measures the milestone as a whole against the milestone's base; if a number moved unexpectedly, it attributes it by running the pieces' commits with `--compare`. Tuning work found along the way (a stat that looks off, a node that seems too strong) is noted for the capstone rather than measured on its own.
 
 ### Measure on a clean tree
 
@@ -289,7 +292,7 @@ Track these metrics together:
 
 ### 9.1 Milestone balance checks
 
-Per Principle 7, every milestone ends with a balance check, and so does any major content addition within a milestone. Each check is a backlog item in `tools-balance` that:
+Per Principle 7, every milestone ends with a balance check, its capstone, which also measures the milestone's major content additions. It is the only place the larger suites (T1–T3) run. Each check is a backlog item in `tools-balance` that:
 
 1. Runs the full §9 sweep at T3 (presets × party sizes 1–4, 200 seeds each) on the milestone's integration branch.
 2. Compares against the previous baseline in §9.2 and explains every target that moved.
