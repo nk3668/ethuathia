@@ -41,6 +41,7 @@ const metReq = (req: Requirement, depth = 1, outcome: RunResult['outcome'] = 're
   ...reached(depth, outcome),
   extras: { 'track.requirements': { met: [requirementKey(req)] } },
 });
+const hallTwoOpen = (p: Profile): Profile => ({ ...p, milestones: { unlocked: [...p.milestones.unlocked, { id: 'building.guild_hall_t4', run: 1 }] } });
 const smithyOpen = (p: Profile): Profile => ({ ...p, milestones: { unlocked: [...p.milestones.unlocked, { id: SMITHY, run: 1 }] } });
 const classIds = (p: Profile) => availableClasses(p).map((d) => d.id);
 const raceIds = (p: Profile) => availableRaces(p).map((d) => d.id);
@@ -61,7 +62,7 @@ describe('revealing a class or race', () => {
     expect(p.milestones.unlocked).toEqual([{ id: OUTRIDER, run: 2 }]);
     expect(latestUnlocks(p)).toEqual([{ id: OUTRIDER, run: 2 }]);
     const lines = unlockLines(p);
-    expect(lines).toEqual([{ id: OUTRIDER, name: 'Outrider Training', why: 'you reached floor 4', reveals: { building: 'Guild Hall' } }]);
+    expect(lines).toEqual([{ id: OUTRIDER, name: "Scout's Charter", why: 'you reached floor 4', reveals: { building: 'Guild Hall' } }]);
     expect(checkProfile(p)).toEqual([]);
 
     p = applyRunResult(p, reached(6));
@@ -97,7 +98,9 @@ describe('revealing a class or race', () => {
   });
 
   it('reveals the Lorekeeper at 5 identifications in one run, words sealed/Codex/summary text, and keeps old fallback saves (ETH-184)', () => {
-    expect(canPurchase(rich(), LOREKEEPER)).toMatchObject({
+    // Library Ties sits in the Guild Hall's Tier II: gated first, then sealed until the reveal.
+    expect(canPurchase(rich(), LOREKEEPER)).toMatchObject({ ok: false, status: 'locked', reason: expect.stringContaining('Tier 4 and up open') });
+    expect(canPurchase(hallTwoOpen(rich()), LOREKEEPER)).toMatchObject({
       ok: false,
       status: 'locked',
       reason: 'Revealed when you achieve in one run: identified 5 items.',
@@ -115,11 +118,11 @@ describe('revealing a class or race', () => {
     let p = applyRunResult(rich(), metReq(LOREKEEPER_REQ, 1));
     expect(isMilestoneOpen(p, LOREKEEPER)).toBe(true);
     expect(unlockLines(p)).toEqual([
-      { id: LOREKEEPER, name: 'Lorekeeper Training', why: 'you achieved in one run: identified 5 items', reveals: { building: 'Guild Hall' } },
+      { id: LOREKEEPER, name: 'Library Ties', why: 'you achieved in one run: identified 5 items', reveals: { building: 'Guild Hall' } },
     ]);
     p = applyRunResult(p, metReq(LOREKEEPER_REQ, 1));
     expect(p.milestones.unlocked.filter((u) => u.id === LOREKEEPER)).toHaveLength(1);
-    expect(classIds(purchase(p, LOREKEEPER))).toContain('class.lorekeeper');
+    expect(classIds(purchase(hallTwoOpen(p), LOREKEEPER))).toContain('class.lorekeeper');
 
     // Old fallback saves that already recorded Reaver (floor 5) or Lorekeeper (5 runs) keep the reveal.
     const legacy: Profile = {
@@ -129,6 +132,7 @@ describe('revealing a class or race', () => {
           { id: SMITHY, run: 1 },
           { id: REAVER, run: 2 },
           { id: LOREKEEPER, run: 5 },
+          { id: 'building.guild_hall_t4', run: 5 },
         ],
       },
     };

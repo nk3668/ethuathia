@@ -57,6 +57,10 @@ export interface RunModifierConfig {
   flags?: string[];
   /** Added to the reward multiplier: 0.2 is +20% on every at-risk currency. */
   rewardBonus?: number;
+  /** Added to the in-run XP multiplier (ETH-132): 0.1 is +10% on every XP grant. Class Mastery follows, as it counts the XP earned. */
+  xpBonus?: number;
+  /** Added to the pay of every completed contract (ETH-132): 0.1 is +10%, before the reward multiplier. */
+  contractBonus?: number;
   until?: RunModifierUntil;
 }
 
@@ -80,6 +84,8 @@ export type RunModifierEvent =
       source: RunModifierSource;
       scope: RunModifierScope;
       rewardBonus?: number;
+      xpBonus?: number;
+      contractBonus?: number;
       atStart?: boolean;
       replaced?: boolean;
     }
@@ -97,6 +103,8 @@ export function toRunModifier(config: RunModifierConfig): RunModifier {
   if (config.bundle !== undefined) mod.bundle = config.bundle;
   if (config.flags !== undefined) mod.flags = [...config.flags];
   if (config.rewardBonus !== undefined) mod.rewardBonus = config.rewardBonus;
+  if (config.xpBonus !== undefined) mod.xpBonus = config.xpBonus;
+  if (config.contractBonus !== undefined) mod.contractBonus = config.contractBonus;
   if (config.until !== undefined) mod.until = 'floor' in config.until ? { floor: config.until.floor } : { turn: config.until.turn };
   return mod;
 }
@@ -135,6 +143,8 @@ export function runModifierProblems(mod: RunModifierConfig): string[] {
   if (mod.potency !== undefined && (!Number.isFinite(mod.potency) || mod.potency <= 0)) problems.push(`has potency ${mod.potency}`);
   for (const flag of mod.flags ?? []) if (!nonEmpty(flag)) problems.push('has an empty flag');
   if (mod.rewardBonus !== undefined && !Number.isFinite(mod.rewardBonus)) problems.push(`has reward bonus ${mod.rewardBonus}`);
+  if (mod.xpBonus !== undefined && !Number.isFinite(mod.xpBonus)) problems.push(`has XP bonus ${mod.xpBonus}`);
+  if (mod.contractBonus !== undefined && !Number.isFinite(mod.contractBonus)) problems.push(`has contract bonus ${mod.contractBonus}`);
   const until = mod.until;
   if (until !== undefined) {
     if ('floor' in until) {
@@ -190,6 +200,20 @@ export function rewardMultiplier(state: RunState): number {
   return Math.max(0, 1 + sum);
 }
 
+/** The in-run XP multiplier: 1 + the sum of every run modifier's `xpBonus`, never below 0. Exactly 1 with none. */
+export function xpMultiplier(state: RunState): number {
+  let sum = 0;
+  for (const m of runModifiers(state)) sum += m.xpBonus ?? 0;
+  return Math.max(0, 1 + sum);
+}
+
+/** The contract pay multiplier: 1 + the sum of every run modifier's `contractBonus`, never below 0. Exactly 1 with none. */
+export function contractMultiplier(state: RunState): number {
+  let sum = 0;
+  for (const m of runModifiers(state)) sum += m.contractBonus ?? 0;
+  return Math.max(0, 1 + sum);
+}
+
 /** `amount` at `multiplier`, rounded down to a whole number. Exactly `amount` at 1. */
 export function applyRewardMultiplier(amount: number, multiplier: number): number {
   if (multiplier === 1) return amount;
@@ -223,6 +247,8 @@ export function addRunModifier(state: RunState, config: RunModifierConfig, emit:
     source: { ...mod.source },
     scope: mod.scope,
     ...(mod.rewardBonus === undefined ? {} : { rewardBonus: mod.rewardBonus }),
+    ...(mod.xpBonus === undefined ? {} : { xpBonus: mod.xpBonus }),
+    ...(mod.contractBonus === undefined ? {} : { contractBonus: mod.contractBonus }),
     ...(old === undefined ? {} : { replaced: true }),
   });
   if (old !== undefined) clampEveryone(state, old.scope);
@@ -257,6 +283,8 @@ export function announceRunModifiers(state: RunState, emit: Emit): void {
       source: { ...mod.source },
       scope: mod.scope,
       ...(mod.rewardBonus === undefined ? {} : { rewardBonus: mod.rewardBonus }),
+      ...(mod.xpBonus === undefined ? {} : { xpBonus: mod.xpBonus }),
+      ...(mod.contractBonus === undefined ? {} : { contractBonus: mod.contractBonus }),
       atStart: true,
     });
   }
@@ -348,6 +376,8 @@ export function describeRunModifier(mod: RunModifier, state?: RunState): string 
   }
   if (mod.flags !== undefined && mod.flags.length > 0) parts.push(`Sets ${mod.flags.join(', ')}.`);
   if (mod.rewardBonus !== undefined && mod.rewardBonus !== 0) parts.push(`Rewards ${rewardBonusText(mod.rewardBonus)}.`);
+  if (mod.xpBonus !== undefined && mod.xpBonus !== 0) parts.push(`XP ${rewardBonusText(mod.xpBonus)}.`);
+  if (mod.contractBonus !== undefined && mod.contractBonus !== 0) parts.push(`Contract pay ${rewardBonusText(mod.contractBonus)}.`);
   if (mod.until !== undefined) {
     if ('turn' in mod.until) parts.push(`Ends on turn ${mod.until.turn}.`);
     else {

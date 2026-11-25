@@ -718,7 +718,7 @@ describe('App', () => {
     });
     expect(screen.getByRole('dialog', { name: /Victory/ })).toBeTruthy();
 
-    // Buy upgrades between runs (second party slot + Hardy Recruits +2 HP).
+    // Buy upgrades between runs (second party slot + Hardy Recruits +3 HP).
     act(() => {
       // Ensure enough Renown for both tier-1 and tier-2 Guild Hall upgrades.
       useProfileStore.getState().applyRunResult({ ...emptyRunResult('retreat'), atRisk: { renown: 200 } });
@@ -735,7 +735,7 @@ describe('App', () => {
     expect(layoutOf(second.config, second.seed)).toEqual(firstLayout);
     expect(second.config.party).toHaveLength(2);
     expect(second.config.partyBundles).toContain('upgrade.hardy_recruits');
-    expect(useSimStore.getState().snapshot?.party[0]?.maxHp).toBe(firstHp + 2);
+    expect(useSimStore.getState().snapshot?.party[0]?.maxHp).toBe(firstHp + 3);
 
     // Rematch from the closed-summary banner keeps replaying the seed.
     act(() => {

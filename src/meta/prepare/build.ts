@@ -52,6 +52,32 @@ export function upgradeRunModifiers(profile: Profile): RunModifierConfig[] {
 }
 
 /**
+ * The run modifiers owned upgrades give through the `xpBonus` and `contractRewardBonus` capacities
+ * (ETH-132: Guild Chronicles, Contract Bounty): one per owned node that has either, keyed and
+ * credited by the node, with every rank summed. The percent becomes a fraction (10 is 0.1).
+ */
+export function upgradeBonusModifiers(profile: Profile): RunModifierConfig[] {
+  const out: RunModifierConfig[] = [];
+  for (const node of ownedNodes(profile)) {
+    const ranks = rankOf(profile, node.id);
+    const sum = (key: string) =>
+      node.grants.reduce((total, g) => (g.kind === 'capacity' && g.key === key ? total + g.amount * ranks : total), 0);
+    const xp = sum('xpBonus');
+    const contract = sum('contractRewardBonus');
+    if (xp === 0 && contract === 0) continue;
+    out.push({
+      key: node.id,
+      source: { id: node.id, label: node.name },
+      scope: 'party',
+      ...(xp === 0 ? {} : { xpBonus: xp / 100 }),
+      ...(contract === 0 ? {} : { contractBonus: contract / 100 }),
+    });
+  }
+  return out;
+}
+
+
+/**
  * The run config for `choices` on this profile: each `RUN_CHOICES` section applies its choice in
  * order (random recruits draw from `seed`, so the same seed gives the same party), then the
  * owned upgrades' party bundles are added to `partyBundles`, their run-scope bundle grants
@@ -66,7 +92,7 @@ export function buildRunConfig(profile: Profile, choices: RunChoices, seed: numb
   for (const [key, section] of CHOICE_ENTRIES) section.apply(ctx, choices[key]);
   const bundles = upgradePartyBundles(profile);
   if (bundles.length > 0) config.partyBundles = [...(config.partyBundles ?? []), ...bundles];
-  const mods = upgradeRunModifiers(profile);
+  const mods = [...upgradeRunModifiers(profile), ...upgradeBonusModifiers(profile)];
   if (mods.length > 0) config.runModifiers = [...(config.runModifiers ?? []), ...mods];
   // The Smithy's start perks and trade bonus (ETH-159).
   Object.assign(config, upgradeStartConfig(profile));

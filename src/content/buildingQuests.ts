@@ -72,3 +72,21 @@ export const CONTRACT_STAR_IRON = defineContract({
   opens: { building: 'building.smithy', fromTier: 4 },
   openedText: 'you brought the star-iron home',
 });
+
+/**
+ * The Guild Hall's Tier II quest (ETH-132): reach floor 6 and walk back out. Offered once half of the
+ * hall's open upgrades are bought (the tier quest share), and it opens the hall's rows 4 to 6.
+ */
+export const CONTRACT_LONG_MUSTER = defineContract({
+  id: 'contract.long_muster',
+  name: 'The Long Muster',
+  description:
+    'The guild keeps its best postings for companies that have proved they can go deep and come home. Reach the sixth ' +
+    'floor, then walk back out of the dungeon, and the hall will open its senior desks. It does not matter what you carry.',
+  hint: 'A guild muster call: reach the sixth floor and return, to open the hall\'s senior desks.',
+  tags: ['contract', 'building'],
+  objective: { kind: 'reach', depth: 6 },
+  reward: { renown: 150 },
+  opens: { building: 'building.guild_hall', fromTier: 4 },
+  openedText: 'you proved the company can go deep and come home',
+});

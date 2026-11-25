@@ -19,7 +19,7 @@ export function upgradeStartConfig(profile: Profile): Pick<RunConfig, 'startKnow
     const perk = grant.start;
     if (perk.perk === 'know') known.add(perk.category);
     else if (perk.perk === 'enchant') enchant.add(perk.piece);
-    else stock.push({ item: perk.item, qty: perk.qty });
+    else stock.push({ item: perk.item, qty: perk.qty, ...(perk.each === true ? { each: true as const } : {}) });
   }
   const bonus = capacity(profile, 'tradeBonus', 0);
   return {
@@ -33,7 +33,11 @@ export function upgradeStartConfig(profile: Profile): Pick<RunConfig, 'startKnow
 
 /** The same item listed twice becomes one entry with the summed quantity, in first-seen order. */
 function mergeStock(stock: readonly StartStock[]): StartStock[] {
-  const totals = new Map<string, number>();
-  for (const { item, qty } of stock) totals.set(item, (totals.get(item) ?? 0) + qty);
-  return [...totals].map(([item, qty]) => ({ item, qty }));
+  const totals = new Map<string, StartStock>();
+  for (const s of stock) {
+    const key = `${s.item}|${s.each === true}`;
+    const had = totals.get(key);
+    totals.set(key, had === undefined ? s : { ...had, qty: had.qty + s.qty });
+  }
+  return [...totals.values()];
 }

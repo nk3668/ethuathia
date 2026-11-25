@@ -54,7 +54,7 @@ describe('PrepareScreen', () => {
     expect(within(screen.getByTestId('prepare-party')).getAllByRole('combobox')).toHaveLength(4);
     const town = within(screen.getByTestId('prepare-town'));
     expect(town.getByText('Hardy Recruits')).toBeTruthy();
-    expect(town.getByText(/\+2 max HP for each adventurer/)).toBeTruthy();
+    expect(town.getByText(/\+3 max HP for each adventurer/)).toBeTruthy();
   });
 
   it('says why a run could not start', () => {

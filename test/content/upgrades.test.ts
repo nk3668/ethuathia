@@ -189,22 +189,59 @@ describe('upgrade node content', () => {
   });
 });
 
-describe('the Guild Hall tree', () => {
+describe('the Guild Hall tree (ETH-132)', () => {
   const nodes = buildingNodes('building.guild_hall');
+  const hasCapacity = (n: UpgradeNodeDef, key: string) => n.grants.some((g) => g.kind === 'capacity' && g.key === key);
 
-  it('raises party size by one three times and has a roster size node', () => {
-    const party = nodes.filter((n) => n.grants.some((g) => g.kind === 'capacity' && g.key === 'partySize' && g.amount === 1));
-    expect(party).toHaveLength(3);
-    expect(nodes.some((n) => n.grants.some((g) => g.kind === 'capacity' && g.key === 'rosterSize'))).toBe(true);
+  it('has no roster upgrades: the roster is a flat 50, and only the Second Berth widens the party here', () => {
+    expect(nodes.some((n) => n.grants.some((g) => g.kind === 'capacity' && (g.key as string) === 'rosterSize'))).toBe(false);
+    expect(nodes.filter((n) => hasCapacity(n, 'partySize')).map((n) => n.id)).toEqual(['upgrade.second_berth']);
+    for (const id of ['upgrade.roster_ledger', 'upgrade.open_muster', 'upgrade.drill_yard', 'upgrade.third_berth', 'upgrade.fourth_berth']) {
+      expect(UPGRADES.has(id), id).toBe(false);
+    }
   });
 
-  it('pairs a numeric node with a capability node in every pick-one tier', () => {
-    const groups = new Set(nodes.map((n) => n.exclusiveGroup).filter((g) => g !== undefined));
-    expect(groups.size).toBeGreaterThan(0);
-    for (const group of groups) {
-      const members = UPGRADES.all().filter((n) => n.exclusiveGroup === group);
-      expect(members.some((n) => n.grants.some((g) => g.kind === 'bundle')), group).toBe(true);
-      expect(members.some((n) => n.grants.some((g) => g.kind !== 'bundle')), group).toBe(true);
+  it('is two tiers of three rows, with Tier II gated by The Long Muster', () => {
+    const hall = BUILDINGS.get('building.guild_hall');
+    expect(hall.tierGates).toHaveLength(1);
+    expect(hall.tierGates?.[0]?.fromTier).toBe(4);
+    expect(Math.min(...nodes.map((n) => n.tier))).toBe(1);
+    expect(Math.max(...nodes.map((n) => n.tier))).toBe(6);
+    expect(hall.tierGates?.[0]?.unlock).toMatchObject({ kind: 'objectiveDone', owner: { kind: 'contract', id: 'contract.long_muster' }, exited: true });
+  });
+
+  it('offers a capability beside the numeric nodes in each tier', () => {
+    for (const [from, to] of [
+      [1, 3],
+      [4, 6],
+    ] as const) {
+      const tier = nodes.filter((n) => n.tier >= from && n.tier <= to);
+      expect(tier.some((n) => n.tags.includes('numeric')), `rows ${from}-${to} numeric`).toBe(true);
+      expect(tier.some((n) => n.tags.includes('capability') || n.grants.some((g) => g.kind === 'unlock')), `rows ${from}-${to} capability`).toBe(true);
     }
+  });
+
+  it('puts the row 6 pick between a contract slot and an inert rule slot, and says the rule slot does nothing yet', () => {
+    const pick = nodes.filter((n) => n.exclusiveGroup === 'guild_hall.row6');
+    expect(pick.map((n) => n.id).sort()).toEqual(['upgrade.rule_clerk', 'upgrade.second_contract_board']);
+    expect(pick.every((n) => n.tier === 6 && n.cost.renown === 1200)).toBe(true);
+    expect(UPGRADES.get('upgrade.rule_clerk').description).toMatch(/does nothing until/);
+  });
+
+  it('ranks the numeric nodes at the specced prices', () => {
+    const ranks = (id: string) => UPGRADES.get(id).ranks;
+    expect(ranks('upgrade.hardy_recruits')).toEqual({ max: 5, costGrowth: 1.5 });
+    expect(ranks('upgrade.contract_bounty')).toEqual({ max: 3, costGrowth: 1.5 });
+    expect(ranks('upgrade.guild_chronicles')).toEqual({ max: 3, costGrowth: 1.6 });
+    expect(ranks('upgrade.seasoned_constitution')).toEqual({ max: 3, costGrowth: 1.5 });
+    expect(UPGRADES.get('upgrade.hardy_recruits').cost).toEqual({ renown: 40 });
+    expect(UPGRADES.get('upgrade.second_berth').cost).toEqual({ renown: 60 });
+  });
+
+  it('keeps the ids of surviving nodes under their new names', () => {
+    expect(UPGRADES.get('upgrade.outrider_training').name).toBe("Scout's Charter");
+    expect(UPGRADES.get('upgrade.lorekeeper_training').name).toBe('Library Ties');
+    expect(UPGRADES.get('upgrade.fenling_recruitment').name).toBe('Marsh Envoy');
+    expect(UPGRADES.get('upgrade.contract_board').exclusiveGroup).toBeUndefined();
   });
 });

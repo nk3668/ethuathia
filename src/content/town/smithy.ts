@@ -79,7 +79,7 @@ export const UPGRADE_REINFORCED_WAGON = defineUpgrade({
   tier: 3,
   column: 0,
   cost: { trophies: 300 },
-  requires: [UPGRADE_APPRAISERS_EYE.id],
+  requires: [],
   grants: [{ kind: 'capacity', key: 'partySize', amount: 1 }],
 });
 

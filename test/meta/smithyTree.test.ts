@@ -192,7 +192,7 @@ describe('what the nodes give a run', () => {
     expect(words('assayers_ledger')).toEqual(['Knows every ring and amulet kind from the first turn']);
     expect(words('runed_implements')).toEqual(["Starts with the main-hand item of each adventurer's kit at +1"]);
     expect(words('warded_attire')).toEqual(["Starts with the defensive piece of each adventurer's kit at +1"]);
-    expect(words('scroll_case')).toEqual(['Starts with 1 Scroll of identify', 'Starts with 1 Scroll of uncursing']);
+    expect(words('scroll_case')).toEqual(['The party starts with 1 Scroll of identify', 'The party starts with 1 Scroll of uncursing']);
     expect(words('smelting_pit')).toEqual(['Trade bonus (%) +15']);
   });
 });

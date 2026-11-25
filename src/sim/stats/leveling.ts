@@ -27,6 +27,7 @@ import type { RunTracker } from '../domain';
 import type { Emit } from '../events';
 import type { Entity, EntityId, RunState } from '../state';
 import { statValue } from './getStat';
+import { applyRewardMultiplier, xpMultiplier } from './runModifiers';
 
 /** XP a kill is worth per point of the victim's threat (a gloam rat is threat 1). */
 export const XP_PER_THREAT = 1;
@@ -161,7 +162,8 @@ export function levelView(entity: Entity): LevelView {
 export function grantXp(state: RunState, entity: Entity, amount: number, reason: XpReason, source: string, emit: Emit): void {
   const adventurer = entity.adventurer;
   if (adventurer === undefined || entity.actor === undefined || entity.actor.hp <= 0) return;
-  const xpAmount = Math.floor(amount);
+  // The run's XP bonus (Guild Chronicles, ETH-132): every grant, kills and depth alike; Mastery follows from `xpGained`.
+  const xpAmount = applyRewardMultiplier(Math.floor(amount), xpMultiplier(state));
   if (xpAmount <= 0) return;
   const growth = entity.growth ?? (entity.growth = { level: 1, xp: 0, gained: {} });
   growth.xp += xpAmount;

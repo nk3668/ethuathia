@@ -23,6 +23,15 @@ function gainsText(gains: Partial<Record<AttributeId, number>>): string {
   return parts.length === 0 ? '' : `: ${parts.join(', ')}`;
 }
 
+/** ` (rewards +20%, XP +10%, contract pay +10%)` for a run modifier's bonuses; nothing if it has none. */
+function bonusesText(e: { rewardBonus?: number; xpBonus?: number; contractBonus?: number }): string {
+  const parts: string[] = [];
+  if (e.rewardBonus !== undefined && e.rewardBonus !== 0) parts.push(`rewards ${rewardBonusText(e.rewardBonus)}`);
+  if (e.xpBonus !== undefined && e.xpBonus !== 0) parts.push(`XP ${rewardBonusText(e.xpBonus)}`);
+  if (e.contractBonus !== undefined && e.contractBonus !== 0) parts.push(`contract pay ${rewardBonusText(e.contractBonus)}`);
+  return parts.length === 0 ? '' : ` (${parts.join(', ')})`;
+}
+
 /** A content id's display name, or the id itself. */
 function nameOfDef(id: string): string {
   return findDef(id)?.name ?? id;
@@ -73,7 +82,7 @@ export const STATS_LOG_TEXT: LogTextRecord<StatsEvent> = {
     category: 'system',
     text: (e) =>
       `${e.atStart === true ? 'This run is under' : e.replaced === true ? 'Renewed:' : 'Now in force:'} ${e.source.label}, ` +
-      `affecting ${scopeWords(e.scope)}${e.rewardBonus === undefined || e.rewardBonus === 0 ? '' : ` (rewards ${rewardBonusText(e.rewardBonus)})`}.`,
+      `affecting ${scopeWords(e.scope)}${bonusesText(e)}.`,
   },
   runModifierRemoved: {
     category: 'system',

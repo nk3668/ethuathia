@@ -134,7 +134,7 @@ export function questsSnapshot({ state }: SnapshotCtx): QuestsSnapshot {
       current: c.progress.current,
       target: c.progress.target,
       complete: c.complete,
-      reward: contractReward(c.contract),
+      reward: contractReward(c.contract, state),
     })),
   };
 }

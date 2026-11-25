@@ -1066,7 +1066,10 @@ doctrine (ETH-071) and Tavern veterans add a run modifier, not their own `Bundle
 store or reward math.**
 
 - **Shape:** `RunModifier = { key, source: { id, label }, scope: 'party' | 'monsters' | 'all',
-  bundle?, potency, flags?, rewardBonus?, until? }`, plain data. `key` is unique in the run.
+  bundle?, potency, flags?, rewardBonus?, xpBonus?, contractBonus?, until? }`, plain data. `key` is unique in the run.
+  `xpBonus` (ETH-132) adds to the in-run XP multiplier (`xpMultiplier`, read by `grantXp`) and `contractBonus`
+  to the pay of completed contracts (`contractMultiplier`, read by `contractReward(id, state)`), both
+  additive across sources and before the reward multiplier.
   `source.id` is credited in stat tooltips and discovered in the Codex (when it is a content id);
   `source.label` is the tooltip text ("Gloom (Omen, rank 2)"). `bundle` is any def with a bundle
   (`bundleOf`) or an upgrade node id, whose `run`-scope grants are used (`runBundleOf`).
@@ -2101,7 +2104,7 @@ As built (ETH-063):
   `{ kind: 'unlock', id }` and `{ kind: 'capacity', key, amount }`. `bundle` is the shared
   `Bundle` (§2.2, `bundleSchema` plus a check that it has a modifier or trigger; its refs come
   from `bundleRefs`). Capacity keys and their tooltip names are `CAPACITY_INFO` (`partySize`,
-  `rosterSize`, `contractSlots`, `ruleSlots`); a new capacity is one entry there.
+  `contractSlots`, `ruleSlots`, and the run bonuses `contractRewardBonus`, `xpBonus`); a new capacity is one entry there.
 - **Doctrine choices** (e.g. "Prioritize clearing floors" vs "Prioritize the stairs") are
   `unlock` grants of `doctrine.*` ids in a pick-one group, with no separate grant kind. The
   placeholder `doctrine` kind exists so those ids validate. The doctrine item adds the defs
@@ -2157,7 +2160,7 @@ As built (ETH-063):
   closed gate over a row (or `null`), `closedGates` lists them, and `canPurchase` refuses such a
   node as `locked` with `describeGate` ("Tier 4 and up open when you reach floor 6."). A node's
   `tier` stays its row; the UI numbers bands I, II, III from the gates (`tierBand`). The Smithy (ETH-159) ships the first ranks and gate; ETH-132 adds the Guild Hall's.
-- **Start perks (ETH-159):** a fourth grant kind, `{ kind: 'start', start }` (`src/content/startPerks.ts`), changes how a run begins: `know` (every potion or jewelry kind is known from the first turn), `enchant` (the `weapon` or first `defense` piece of each class kit is worn at +1 through `giveKit`, using that gear type's own base enchantment, so a staff gains Max MP through `enchant.channeled`) and `stock` (extra kit items for the first party member). A ranked node may not have one, like `unlock`. `upgradeStartConfig` (`src/meta/prepare/startPerks.ts`) reads the owned grants into `RunConfig.startKnown`, `kitEnchant` and `startStock`; `createRun` applies them (`knowKinds`, `giveKit`, `giveStock`), `kitIssued` lists the issued items and `startKnown` is logged once. `PROP_KIT` may mark gear or a scroll. The `tradeBonus` capacity (percent, 15 per Smelting Pit rank) becomes `RunConfig.tradeBonus`, which `itemSale` and the gold conversion add before their one rounding down; it is never Omen-multiplied.
+- **Start perks (ETH-159):** a fourth grant kind, `{ kind: 'start', start }` (`src/content/startPerks.ts`), changes how a run begins: `know` (every potion or jewelry kind is known from the first turn), `enchant` (the `weapon` or first `defense` piece of each class kit is worn at +1 through `giveKit`, using that gear type's own base enchantment, so a staff gains Max MP through `enchant.channeled`) and `stock` (extra kit items for the first party member, or for each adventurer with `each`, as the Medic's Satchel does). A ranked node may not have one, like `unlock`. `upgradeStartConfig` (`src/meta/prepare/startPerks.ts`) reads the owned grants into `RunConfig.startKnown`, `kitEnchant` and `startStock`; `createRun` applies them (`knowKinds`, `giveKit`, `giveStock`), `kitIssued` lists the issued items and `startKnown` is logged once. `PROP_KIT` may mark gear or a scroll. The `tradeBonus` capacity (percent, 15 per Smelting Pit rank) becomes `RunConfig.tradeBonus`, which `itemSale` and the gold conversion add before their one rounding down; it is never Omen-multiplied.
 - **Tier quests (ETH-170):** `ContractDef.opens` is a building id (a building quest, ETH-093) or
   `{ building, fromTier }` (a tier quest); `opensBuilding`, `opensTier` and `opensTarget` read
   it. The gate's `unlock` is the `objectiveDone` milestone with `exited: true` on the contract,
@@ -2277,6 +2280,8 @@ As built (ETH-059, ETH-095):
   then its schema; it never throws and returns `{ ok: false, error }` for a save it can't read
   (not a save, from a newer game, damaged, invalid). A missing slice starts at its default and
   an unknown one is dropped, both with a note. The mid-run `activeRun` is not saved yet.
+  Envelope v2 (ETH-132, `slices/legacyUpgrades.ts`) refunds owned upgrade nodes that left the tree at
+  their old price: it needs two slices (`upgrades` and `currencies`), so it is an envelope step.
 - `profileStore` (§8) loads on start; while loading, or after a failed load, it writes nothing,
   so an unreadable save is never overwritten until the player imports a save or resets. The
   Options tab's Save section has save now, export as text or to a file, import from text or a

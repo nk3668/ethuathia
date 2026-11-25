@@ -83,10 +83,12 @@ export function createRun(config: RunConfig, seed: number): RunState {
     giveKit(entity, member.classId, config.kitEnchant);
     state.party.push(entity.id);
   });
-  // Smithy start perks (ETH-159): kinds known from the first turn, and extra starting items for the first member.
+  // Start perks (ETH-159): kinds known from the first turn, and starting items for the first member or for each.
   knowKinds(state, config.startKnown ?? []);
-  const first = state.entities[state.party[0] as number];
-  if (first !== undefined && config.startStock !== undefined) giveStock(state, first, config.startStock);
+  state.party.forEach((id, i) => {
+    const entity = state.entities[id];
+    if (entity !== undefined) giveStock(state, entity, (config.startStock ?? []).filter((s) => s.each === true || i === 0));
+  });
   // The run starts before turn 0's step, so events from setting up are not reported.
   startPartyStats(state, () => undefined);
   perceiveParty(state);

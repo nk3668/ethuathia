@@ -235,7 +235,7 @@ export interface ItemsConfig {
   startKnown?: StartKnownCategory[];
   /** Kit pieces worn at +1 (Smithy `enchant` perks, ETH-159). Leave out for none. */
   kitEnchant?: StartEnchantPiece[];
-  /** Extra starting items carried by the first party member, never sold (Smithy `stock` perks, ETH-159). Leave out for none. */
+  /** Extra starting items, never sold: carried by the first party member, or by every member when `each` (Smithy `stock` perks, ETH-159, and the Guild Hall's Medic's Satchel, ETH-132). Leave out for none. */
   startStock?: StartStock[];
   /** Percent added to the Trophies the party's gold and carried items convert to on exit (`tradeBonus`, ETH-159). Leave out for none. */
   tradeBonus?: number;

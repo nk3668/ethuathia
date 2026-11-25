@@ -1,23 +1,42 @@
 /**
- * The Guild Hall (CLAUDE.md §4): party size, roster size and contract slots, paid in Renown.
- * The Outrider, Lorekeeper and Fenling are bought here too (ETH-036), revealed by a milestone.
+ * The Guild Hall (CLAUDE.md §4), Tiers I and II of the approved town-tree page (ETH-132): party
+ * size, contract slots and pay, recruit toughness, the recruit unlocks of ETH-036, in-run XP and
+ * a starting mending draught, paid in Renown. The roster is a flat 50 adventurers, so there are
+ * no roster upgrades. ETH-187 adds the nodes that need further mechanics (Field Rations, the
+ * pick-one partners, the Mystery Crate) and ETH-186 the Omen unlocks, so some columns are left free.
  *
- * Layout: the berths and the roster ledger form the left column; each pick-one tier sits to
- * their right and pairs a numeric node with one that adds a capability (CLAUDE.md §4).
+ * Rows 1 to 3 are Tier I and open from the start. Rows 4 to 6 are Tier II and stay locked until
+ * *The Long Muster* (`buildingQuests.ts`) is done: reach floor 6 and walk out.
+ *
+ * Layout: columns are the node graph's lanes. Costs are a starting shape for ETH-161.
  */
+import { CONTRACT_LONG_MUSTER } from '../buildingQuests';
+import { ITEM_MENDING_DRAUGHT } from '../items';
 import { defineBuilding, defineUpgrade } from '../upgrades';
+
+/** The first row of Tier II: the row the Long Muster opens. */
+export const GUILD_HALL_TIER_TWO_ROW = 4;
 
 export const BUILDING_GUILD_HALL = defineBuilding({
   id: 'building.guild_hall',
   name: 'Guild Hall',
   description:
     'Where adventurers sign their names and take their contracts. Its upgrades let more of them ' +
-    'descend together and keep more of them on the books.',
+    'descend together, pay them better and send them down tougher.',
   tags: ['town'],
   kind: 'foundations',
+  tierGates: [
+    {
+      fromTier: GUILD_HALL_TIER_TWO_ROW,
+      name: 'Guild Hall Tier II',
+      unlock: { kind: 'objectiveDone', owner: { kind: 'contract', id: CONTRACT_LONG_MUSTER.id }, exited: true },
+    },
+  ],
 });
 
 const building = BUILDING_GUILD_HALL.id;
+
+// --- Tier I ----------------------------------------------------------------------------------
 
 export const UPGRADE_SECOND_BERTH = defineUpgrade({
   id: 'upgrade.second_berth',
@@ -27,36 +46,56 @@ export const UPGRADE_SECOND_BERTH = defineUpgrade({
   building,
   tier: 1,
   column: 0,
-  cost: { renown: 50 },
+  cost: { renown: 60 },
   requires: [],
   grants: [{ kind: 'capacity', key: 'partySize', amount: 1 }],
-});
-
-export const UPGRADE_ROSTER_LEDGER = defineUpgrade({
-  id: 'upgrade.roster_ledger',
-  name: 'Roster Ledger',
-  description: 'A bound book of names and deeds. The guild keeps track of more adventurers between runs.',
-  tags: ['roster'],
-  building,
-  tier: 2,
-  column: 0,
-  cost: { renown: 80 },
-  requires: [UPGRADE_SECOND_BERTH.id],
-  grants: [{ kind: 'capacity', key: 'rosterSize', amount: 2 }],
 });
 
 export const UPGRADE_HARDY_RECRUITS = defineUpgrade({
   id: 'upgrade.hardy_recruits',
   name: 'Hardy Recruits',
-  description: 'The guild turns away anyone who winces at a cold night. Every adventurer starts tougher.',
+  description:
+    'The guild turns away anyone who winces at a cold night. Every adventurer starts with 3 more max HP per rank, up to 5 ranks. ' +
+    'Each rank costs more than the one before.',
   tags: ['party', 'numeric'],
+  building,
+  tier: 1,
+  column: 1,
+  cost: { renown: 40 },
+  requires: [],
+  ranks: { max: 5, costGrowth: 1.5 },
+  grants: [{ kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat: 'hp', op: 'add', value: 3 }] } }],
+});
+
+export const UPGRADE_CONTRACT_BOUNTY = defineUpgrade({
+  id: 'upgrade.contract_bounty',
+  name: 'Contract Bounty',
+  description:
+    'The hall sweetens its writs. Every contract you complete pays 10% more per rank, up to 3 ranks, before any Omen multiplier. ' +
+    'It adds to the base pay, so a run with several contracts gains the most.',
+  tags: ['contracts', 'numeric'],
+  building,
+  tier: 2,
+  column: 0,
+  cost: { renown: 80 },
+  requires: [],
+  ranks: { max: 3, costGrowth: 1.5 },
+  grants: [{ kind: 'capacity', key: 'contractRewardBonus', amount: 10 }],
+});
+
+export const UPGRADE_OUTRIDER_TRAINING = defineUpgrade({
+  id: 'upgrade.outrider_training',
+  name: "Scout's Charter",
+  description:
+    'A charter for the wild-path riders takes a post at the hall. Outriders can be recruited, and a random recruit may be one.',
+  tags: ['roster', 'class'],
   building,
   tier: 2,
   column: 1,
-  cost: { renown: 120 },
-  requires: [UPGRADE_SECOND_BERTH.id],
-  exclusiveGroup: 'guild_hall.tier2',
-  grants: [{ kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat: 'hp', op: 'add', value: 2 }] } }],
+  cost: { renown: 150 },
+  requires: [],
+  reveal: { kind: 'reachDepth', depth: 4 },
+  grants: [{ kind: 'unlock', id: 'class.outrider' }],
 });
 
 export const UPGRADE_CONTRACT_BOARD = defineUpgrade({
@@ -65,106 +104,120 @@ export const UPGRADE_CONTRACT_BOARD = defineUpgrade({
   description: 'A second pinboard by the door. A run can take on one more contract at once.',
   tags: ['contracts', 'capability'],
   building,
-  tier: 2,
-  column: 2,
-  cost: { renown: 120 },
-  requires: [UPGRADE_SECOND_BERTH.id],
-  exclusiveGroup: 'guild_hall.tier2',
-  grants: [{ kind: 'capacity', key: 'contractSlots', amount: 1 }],
-});
-
-export const UPGRADE_THIRD_BERTH = defineUpgrade({
-  id: 'upgrade.third_berth',
-  name: 'Third Berth',
-  description: 'A bigger wagon and a mule to pull it. Three adventurers can descend together.',
-  tags: ['party'],
-  building,
   tier: 3,
   column: 0,
   cost: { renown: 250 },
-  requires: [UPGRADE_ROSTER_LEDGER.id],
-  grants: [{ kind: 'capacity', key: 'partySize', amount: 1 }],
+  requires: [UPGRADE_SECOND_BERTH.id],
+  grants: [{ kind: 'capacity', key: 'contractSlots', amount: 1 }],
 });
 
-export const UPGRADE_FOURTH_BERTH = defineUpgrade({
-  id: 'upgrade.fourth_berth',
-  name: 'Fourth Berth',
-  description: 'A full company. Four adventurers can descend together.',
-  tags: ['party'],
+export const UPGRADE_FENLING_RECRUITMENT = defineUpgrade({
+  id: 'upgrade.fenling_recruitment',
+  name: 'Marsh Envoy',
+  description:
+    'An envoy carries word to the marsh villages that the hall pays well. Fenlings can be recruited, and a random recruit may be one.',
+  tags: ['roster', 'race'],
   building,
-  tier: 4,
-  column: 0,
-  cost: { renown: 600 },
-  requires: [UPGRADE_THIRD_BERTH.id],
-  grants: [{ kind: 'capacity', key: 'partySize', amount: 1 }],
-});
-
-export const UPGRADE_DRILL_YARD = defineUpgrade({
-  id: 'upgrade.drill_yard',
-  name: 'Drill Yard',
-  description: 'Mornings of footwork and feints behind the hall. Every adventurer strikes truer.',
-  tags: ['party', 'numeric'],
-  building,
-  tier: 4,
-  column: 1,
-  cost: { renown: 400 },
-  requires: [UPGRADE_THIRD_BERTH.id],
-  exclusiveGroup: 'guild_hall.tier4',
-  grants: [{ kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat: 'accuracy', op: 'add', value: 1 }] } }],
-});
-
-export const UPGRADE_OPEN_MUSTER = defineUpgrade({
-  id: 'upgrade.open_muster',
-  name: 'Open Muster',
-  description: 'The doors open to every hopeful in the valley. The guild keeps many more adventurers on its books.',
-  tags: ['roster', 'capability'],
-  building,
-  tier: 4,
+  tier: 3,
   column: 2,
-  cost: { renown: 400 },
-  requires: [UPGRADE_THIRD_BERTH.id],
-  exclusiveGroup: 'guild_hall.tier4',
-  grants: [{ kind: 'capacity', key: 'rosterSize', amount: 4 }],
+  cost: { renown: 200 },
+  requires: [],
+  reveal: { kind: 'finishRuns', count: 8 },
+  grants: [{ kind: 'unlock', id: 'race.fenling' }],
 });
 
-export const UPGRADE_OUTRIDER_TRAINING = defineUpgrade({
-  id: 'upgrade.outrider_training',
-  name: 'Outrider Training',
-  description: 'A rider of the wild paths takes a post at the hall. Outriders can be recruited, and a random recruit may be one.',
-  tags: ['roster', 'class'],
-  building,
-  tier: 1,
-  column: 1,
-  cost: { renown: 150 },
-  requires: [],
-  reveal: { kind: 'reachDepth', depth: 4 },
-  grants: [{ kind: 'unlock', id: 'class.outrider' }],
-});
+// --- Tier II (opens with The Long Muster) ----------------------------------------------------
 
 export const UPGRADE_LOREKEEPER_TRAINING = defineUpgrade({
   id: 'upgrade.lorekeeper_training',
-  name: 'Lorekeeper Training',
-  description: 'A reading room opens off the hall. Lorekeepers can be recruited, and a random recruit may be one.',
+  name: 'Library Ties',
+  description:
+    'A reading room opens off the hall, with a standing agreement with the scholars. Lorekeepers can be recruited, and a random recruit may be one.',
   tags: ['roster', 'class'],
   building,
-  tier: 1,
-  column: 2,
+  tier: GUILD_HALL_TIER_TWO_ROW,
+  column: 0,
   cost: { renown: 250 },
   requires: [],
   reveal: { kind: 'metInRun', requirement: { cond: 'cond.run_identified', params: { min: 5 } } },
   grants: [{ kind: 'unlock', id: 'class.lorekeeper' }],
 });
 
-export const UPGRADE_FENLING_RECRUITMENT = defineUpgrade({
-  id: 'upgrade.fenling_recruitment',
-  name: 'Fenling Recruitment',
-  description: 'Word reaches the marsh villages that the hall pays well. Fenlings can be recruited, and a random recruit may be one.',
-  tags: ['roster', 'race'],
+export const UPGRADE_MEDICS_SATCHEL = defineUpgrade({
+  id: 'upgrade.medics_satchel',
+  name: "Medic's Satchel",
+  description:
+    'A field medic packs every adventurer a vial before they go down. Each starts the run with one mending draught. ' +
+    'It is starting kit: never sold on the way out, even if it is not drunk.',
+  tags: ['party', 'capability'],
   building,
-  tier: 3,
+  tier: GUILD_HALL_TIER_TWO_ROW,
   column: 1,
+  cost: { renown: 450 },
+  requires: [],
+  grants: [{ kind: 'start', start: { perk: 'stock', item: ITEM_MENDING_DRAUGHT.id, qty: 1, each: true } }],
+});
+
+export const UPGRADE_GUILD_CHRONICLES = defineUpgrade({
+  id: 'upgrade.guild_chronicles',
+  name: 'Guild Chronicles',
+  description:
+    'The guild records its deeds and studies them. Every adventurer earns 10% more XP per rank during a run, up to 3 ranks. ' +
+    'It changes in-run XP only (kills and depth), not the Mastery bonus at the end of a run; class Mastery still rises, ' +
+    'because Mastery counts the XP each adventurer earned.',
+  tags: ['party', 'numeric'],
+  building,
+  tier: 5,
+  column: 0,
+  cost: { renown: 250 },
+  requires: [],
+  ranks: { max: 3, costGrowth: 1.6 },
+  grants: [{ kind: 'capacity', key: 'xpBonus', amount: 10 }],
+});
+
+export const UPGRADE_SEASONED_CONSTITUTION = defineUpgrade({
+  id: 'upgrade.seasoned_constitution',
+  name: 'Seasoned Constitution',
+  description:
+    'Old hands of the hall teach the young to shrug off poison and fear. Every adventurer gains 8 status resistance per rank, ' +
+    'up to 3 ranks. It shortens harmful statuses, up to a cap of 75%.',
+  tags: ['party', 'numeric'],
+  building,
+  tier: 5,
+  column: 2,
   cost: { renown: 200 },
   requires: [],
-  reveal: { kind: 'finishRuns', count: 8 },
-  grants: [{ kind: 'unlock', id: 'race.fenling' }],
+  ranks: { max: 3, costGrowth: 1.5 },
+  grants: [{ kind: 'bundle', scope: 'party', bundle: { modifiers: [{ stat: 'statusResist', op: 'add', value: 8 }] } }],
+});
+
+export const UPGRADE_SECOND_CONTRACT_BOARD = defineUpgrade({
+  id: 'upgrade.second_contract_board',
+  name: 'Second Contract Board',
+  description:
+    'A whole wall of writs and a clerk to sort them. A run can take on one more contract at once. Pick this or the Rule Clerk; respec to change.',
+  tags: ['contracts', 'capability'],
+  building,
+  tier: 6,
+  column: 0,
+  cost: { renown: 1200 },
+  requires: [UPGRADE_CONTRACT_BOARD.id],
+  exclusiveGroup: 'guild_hall.row6',
+  grants: [{ kind: 'capacity', key: 'contractSlots', amount: 1 }],
+});
+
+export const UPGRADE_RULE_CLERK = defineUpgrade({
+  id: 'upgrade.rule_clerk',
+  name: 'Rule Clerk',
+  description:
+    'A clerk who writes down how each adventurer likes to fight. It adds a rule slot per adventurer, but behavior rules arrive in a ' +
+    'later update: this does nothing until then. Pick this or the Second Contract Board; respec to change.',
+  tags: ['rules', 'capability'],
+  building,
+  tier: 6,
+  column: 1,
+  cost: { renown: 1200 },
+  requires: [],
+  exclusiveGroup: 'guild_hall.row6',
+  grants: [{ kind: 'capacity', key: 'ruleSlots', amount: 1 }],
 });

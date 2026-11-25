@@ -20,10 +20,12 @@ import { slotFor } from './equipment';
 /** The enchantment level a Smithy kit upgrade (`enchant` start perk, ETH-159) gives a kit piece. */
 export const KIT_ENCHANT_LEVEL = 1;
 
-/** A starting item the party carries (`stock` start perk, ETH-159). */
+/** A starting item the party carries (`stock` start perk, ETH-159, and the Medic's Satchel, ETH-132). */
 export interface StartStock {
   readonly item: string;
   readonly qty: number;
+  /** Given to every adventurer instead of only the first (the Guild Hall's Medic's Satchel, ETH-132). */
+  readonly each?: true;
 }
 
 /** True if `item` is part of a class's starting kit: it is never sold for Trophies. */

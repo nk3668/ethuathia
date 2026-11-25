@@ -38,7 +38,7 @@ export function describeStartPerk(perk: StartPerk): string {
     case 'enchant':
       return `Starts with the ${START_PERK_INFO[perk.piece].name} of each adventurer's kit at +1`;
     case 'stock':
-      return `Starts with ${perk.qty} ${findDef(perk.item)?.name ?? perk.item}`;
+      return `${perk.each === true ? 'Each adventurer starts' : 'The party starts'} with ${perk.qty} ${findDef(perk.item)?.name ?? perk.item}`;
   }
 }
 

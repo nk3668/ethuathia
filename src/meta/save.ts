@@ -19,13 +19,14 @@
  */
 import { assertPlainData } from '../core';
 import { SLICE_ENTRIES } from './profile';
+import { refundRemovedNodes } from './slices/legacyUpgrades';
 import type { Profile } from './profile';
 import type { ProfileSlice } from './slice';
 
 export const SAVE_FORMAT = 'ethuathia.save';
 
 /** The envelope layout's version. */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 /** Largest save text `decodeSave` accepts, so a wrong file can't hang the game. */
 export const MAX_SAVE_LENGTH = 16 * 1024 * 1024;
@@ -33,7 +34,10 @@ export const MAX_SAVE_LENGTH = 16 * 1024 * 1024;
 type Envelope = Record<string, unknown>;
 
 /** `ENVELOPE_MIGRATIONS[n]` turns an envelope at version `n - 1` into version `n`. */
-const ENVELOPE_MIGRATIONS: Readonly<Record<number, (old: Envelope) => Envelope>> = {};
+const ENVELOPE_MIGRATIONS: Readonly<Record<number, (old: Envelope) => Envelope>> = {
+  // v2 (ETH-132): the Guild Hall rebuild removed nodes; each owned one is refunded at its old price.
+  2: refundRemovedNodes,
+};
 
 export interface StoredSlice {
   readonly version: number;
