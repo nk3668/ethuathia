@@ -2,7 +2,7 @@
 epic: town-meta
 title: Town, currencies and upgrades
 status: active
-milestones: [M2, M3, M7, M8, later]
+milestones: [M2, M2.1, M3, M6, M7, M8, later]
 ---
 
 ## Goal
@@ -45,6 +45,8 @@ More items are added when M2 becomes the current milestone.
 - [ ] [ETH-129 Guild Hall upgrade: constant floor respawns on revisit](ETH-129-guild-hall-constant-respawn.md)
 - [ ] [ETH-132 Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs](ETH-132-rescale-guild-hall-renown-costs.md)
 - [ ] [ETH-159 Smithy upgrade tree spent in Trophies](ETH-159-smithy-tree.md)
+- [ ] [ETH-187 Guild Hall nodes that need new mechanics](ETH-187-guild-hall-mechanic-nodes.md)
+- [ ] [ETH-188 Smithy nodes that need new mechanics](ETH-188-smithy-mechanic-nodes.md)
 - [x] [ETH-170 Building-tier quests open each building's next tier](ETH-170-building-tier-quests.md)
 - [x] [ETH-171 Items carried out of the dungeon sell for Trophies](ETH-171-sell-carried-items.md)
 - [x] [ETH-172 Upgrade engine supports ranked nodes and quest-locked tiers](ETH-172-upgrade-ranks-and-tiers.md)

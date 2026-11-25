@@ -1,8 +1,8 @@
 # Backlog Index
 
-**Next ID: ETH-185**
+**Next ID: ETH-189**
 
-**Current milestone: M2 (Meta loop).**
+**Current milestone: M2 (Meta loop).** M2's remaining work runs as M2.1 (town trees), then M2.2 (minimal Omens), then the ETH-161 capstone.
 
 **Assigned to Gemini (Antigravity)**; All assigned items (ETH-083, ETH-095, ETH-157, ETH-158, ETH-175) are reviewed and merged.
 
@@ -16,6 +16,8 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 |---|---|---|
 | M0–M1.6 | Skeleton, a full run, living dungeon, review follow-ups | done |
 | M2 | Meta loop: town economy, unlocks, records, desktop saves | ETH-161 |
+| M2.1 | Town trees: the Guild Hall and Smithy trees from the town-tree page (v4) | ETH-161 |
+| M2.2 | Minimal Omens: ranks, one reward multiplier, unlocked by town nodes | ETH-161 |
 | M3 | Behavior rules and AI | ETH-165 |
 | M4 | Classes and roles | ETH-146 |
 | M5 | Foes and loot | ETH-166 |
@@ -34,9 +36,9 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [behavior-rules](behavior-rules/_epic.md) | Behavior rules | active | M2, M3 |
 | [combat-items](combat-items/_epic.md) | Combat, items and statuses | active | M1, M1.6, M5, M7, later |
 | [content](content/_epic.md) | Content definitions | active | M0, M7 |
-| [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M3, M7, M8, later |
+| [town-meta](town-meta/_epic.md) | Town, currencies and upgrades | active | M2, M2.1, M3, M6, M7, M8, later |
 | [saves-platform](saves-platform/_epic.md) | Saves, desktop packaging and time-away | active | M2, M8 |
-| [risk-omens](risk-omens/_epic.md) | Omens and conducts | active | M2, M6 |
+| [risk-omens](risk-omens/_epic.md) | Omens and conducts | active | M2, M2.2, M6 |
 | [lineage](lineage/_epic.md) | Lineage | active | M2, M7, M8 |
 | [deities](deities/_epic.md) | Deities and altars | active | M8 |
 | [ui-shell](ui-shell/_epic.md) | UI shell and kit | active | M0, M1, M2, later |
@@ -128,7 +130,6 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-119](lineage/ETH-119-adventurer-records.md) | Persistent adventurer records: a profile slice with identity, history, traits, peak level and death | lineage | M2 | P1 | done | M |
 | [ETH-120](sim-core/ETH-120-run-chronicle.md) | Run chronicle: a durable list of a run's notable events, kept apart from the event buffer | sim-core | M2 | P1 | done | M |
 | [ETH-121](behavior-rules/ETH-121-shared-conditions-requirements.md) | Shared conditions: run-scope conditions and a Requirement type usable outside rules | behavior-rules | M2 | P1 | done | M |
-| [ETH-159](town-meta/ETH-159-smithy-tree.md) | Smithy upgrade tree spent in Trophies | town-meta | M2 | P1 | idea | M |
 | [ETH-160](characters/ETH-160-starter-classes-and-races.md) | Starter set of unlockable classes and races | characters | M2 | P1 | done | M |
 | [ETH-161](tools-balance/ETH-161-meta-loop-economy-balance.md) | Meta-loop economy balance pass (M2 capstone) | tools-balance | M2 | P1 | idea | M |
 | [ETH-172](town-meta/ETH-172-upgrade-ranks-and-tiers.md) | Upgrade engine supports ranked nodes and quest-locked tiers | town-meta | M2 | P1 | done | M |
@@ -139,9 +140,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-091](codex-tooltips/ETH-091-codex-hints-kill-tiers.md) | Codex hints for undiscovered entries and kill-count tiers | codex-tooltips | M2 | P2 | done | M |
 | [ETH-092](codex-tooltips/ETH-092-codex-two-pane-modal.md) | Codex as a wide two-pane modal | codex-tooltips | M2 | P2 | done | M |
 | [ETH-093](town-meta/ETH-093-building-unlock-quests.md) | Unlock town buildings by finishing a quest for each | town-meta | M2 | P2 | done | M |
-| [ETH-129](town-meta/ETH-129-guild-hall-constant-respawn.md) | Guild Hall upgrade: constant floor respawns on revisit | town-meta | M2 | P2 | idea | S |
 | [ETH-131](tools-balance/ETH-131-contract-and-property-guards.md) | Cross-domain contract and property-based test guards (honesty, secrecy, potency, discoverability) | tools-balance | M2 | P2 | done | S |
-| [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs | town-meta | M2 | P2 | idea | M |
 | [ETH-157](dungeon-gen/ETH-157-split-encounters-module.md) | Split src/sim/combat/encounters.ts into focused modules | dungeon-gen | M2 | P2 | done | M |
 | [ETH-158](tools-balance/ETH-158-split-headless-tool.md) | Split tools/headless.ts into focused modules | tools-balance | M2 | P2 | done | M |
 | [ETH-170](town-meta/ETH-170-building-tier-quests.md) | Building-tier quests open each building's next tier | town-meta | M2 | P2 | done | M |
@@ -157,6 +156,12 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-048](town-meta/ETH-048-run-history.md) | Run history list | town-meta | M2 | P3 | done | S |
 | [ETH-074](town-meta/ETH-074-locked-buildings.md) | Town buildings unlocked by milestones | town-meta | M2 | P3 | done | S |
 | [ETH-077](ui-shell/ETH-077-prepare-attribute-previews.md) | Show attribute previews in the Prepare screen's class and race selects | ui-shell | M2 | P3 | done | S |
+| [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs | town-meta | M2.1 | P1 | ready | M |
+| [ETH-159](town-meta/ETH-159-smithy-tree.md) | Smithy upgrade tree spent in Trophies | town-meta | M2.1 | P1 | ready | M |
+| [ETH-187](town-meta/ETH-187-guild-hall-mechanic-nodes.md) | Guild Hall nodes that need new mechanics - Field Rations, Extraction Drills, Waymark Lanterns, Mystery Crate | town-meta | M2.1 | P1 | idea | M |
+| [ETH-188](town-meta/ETH-188-smithy-mechanic-nodes.md) | Smithy nodes that need new mechanics - Maker's Marks, class-tier kits, Forge Stamps, Apprentice Trinket, Field Salvage Kit | town-meta | M2.1 | P1 | idea | M |
+| [ETH-185](risk-omens/ETH-185-minimal-omen-system.md) | Minimal Omen system with ranks, one reward multiplier and a Prepare toggle, unlocked by town nodes | risk-omens | M2.2 | P1 | ready | M |
+| [ETH-186](risk-omens/ETH-186-first-town-omens.md) | The first four Omens and their town-tree unlock nodes | risk-omens | M2.2 | P1 | idea | M |
 | [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Rules editor and the rule data model | behavior-rules | M3 | P1 | idea | M |
 | [ETH-163](behavior-rules/ETH-163-library-tree.md) | Library tree unlocks rule conditions, actions and slots | behavior-rules | M3 | P1 | idea | M |
 | [ETH-164](behavior-rules/ETH-164-rule-presets.md) | Shipped rule presets, plus saving and loading your own | behavior-rules | M3 | P1 | idea | S |
@@ -192,7 +197,8 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-028](quests/ETH-028-contract-slots-upgrade.md) | Contract slots as a Guild Hall upgrade | quests | M6 | P2 | idea | S |
 | [ETH-029](quests/ETH-029-bounty-board.md) | Bounty board on the Prepare screen; bounty rewards are at risk | quests | M6 | P2 | idea | M |
 | [ETH-031](quests/ETH-031-quest-rule-conditions-ai.md) | Quest rule conditions and objective weighting in the AI | quests | M6 | P2 | idea | M |
-| [ETH-067](risk-omens/ETH-067-omens-conducts-core.md) | Omens with ranks, the reward multiplier and conduct tracking | risk-omens | M6 | P2 | idea | M |
+| [ETH-067](risk-omens/ETH-067-omens-conducts-core.md) | More starter Omens and conduct tracking | risk-omens | M6 | P2 | idea | M |
+| [ETH-129](town-meta/ETH-129-guild-hall-constant-respawn.md) | Guild Hall upgrade: constant floor respawns on revisit | town-meta | M6 | P2 | idea | S |
 | [ETH-072](dungeon-gen/ETH-072-fountains.md) | Fountains with a documented effect table and a drink action | dungeon-gen | M6 | P2 | done | M |
 | [ETH-167](tools-balance/ETH-167-quests-and-risk-balance-pass.md) | Quests, Omens and reward multiplier balance pass (M6 capstone) | tools-balance | M6 | P2 | idea | M |
 | [ETH-030](quests/ETH-030-bounty-encounters.md) | Bounty encounters inside the dungeon | quests | M6 | P3 | idea | M |

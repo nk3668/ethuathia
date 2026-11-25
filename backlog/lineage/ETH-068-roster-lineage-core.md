@@ -19,7 +19,7 @@ Adventurers persist between runs: survivors return to the roster with their XP a
 See `CLAUDE.md` §7 (Roster, Graveyard tab) and principle 4 (Attachment).
 
 ## Acceptance criteria
-- [ ] The roster lists active ETH-119 records: name, class, race, peak level, traits, titles, history; capacity from the Guild Hall
+- [ ] The roster lists active ETH-119 records: name, class, race, peak level, traits, titles, history; a flat capacity of `ROSTER_SIZE` = 50 (Nate, 2026-11-24: no roster-size upgrades)
 - [ ] The Prepare party panel picks from the roster; recruits join the roster
 - [ ] `applyRunResult` returns survivors (levels reset to 1 each run) and moves the dead to the graveyard with floor, cause, killer, best item and a generated epitaph
 - [ ] Graveyard tab: memorial list with epitaphs
