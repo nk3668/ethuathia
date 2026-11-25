@@ -1,5 +1,5 @@
 /** Wording for upgrade grants, for tooltips and the Codex. */
-import { CAPACITY_INFO, findDef, START_PERK_INFO } from '../content';
+import { CAPACITY_INFO, findDef, RUN_GATE_INFO, START_PERK_INFO } from '../content';
 import type { StartPerk, UpgradeGrant } from '../content';
 
 /**
@@ -16,6 +16,7 @@ export function describeGrant(grant: UpgradeGrant, times = 1): string {
       return describeStartPerk(grant.start);
     case 'bundle': {
       const who = grant.scope === 'party' ? 'each adventurer' : 'the run';
+      const gate = grant.when === undefined ? '' : ` ${RUN_GATE_INFO[grant.when].name}`;
       const parts = (grant.bundle.modifiers ?? []).map((m) => {
         if (m.op === 'add') {
           const value = m.value * times;
@@ -25,7 +26,7 @@ export function describeGrant(grant: UpgradeGrant, times = 1): string {
       });
       const triggers = (grant.bundle.triggers?.length ?? 0) * times;
       if (triggers > 0) parts.push(`${triggers} triggered effect${triggers === 1 ? '' : 's'}`);
-      return `${parts.join(', ')} for ${who}`;
+      return `${parts.join(', ')} for ${who}${gate}`;
     }
   }
 }
@@ -45,6 +46,8 @@ export function describeStartPerk(perk: StartPerk): string {
       return 'Each adventurer\'s kit carries a Forge Stamp (Keen, Warding or Nimble), chosen on the Prepare screen';
     case 'salvage':
       return 'Overloaded adventurers break plain, identified gear into scrap worth Trophies instead of dropping it (switch it on in the Prepare screen)';
+    case 'crate':
+      return 'The first adventurer carries a sealed, unidentified crate from the Quartermaster: a blessed find or a cursed dud';
     case 'stock':
       return `${perk.each === true ? 'Each adventurer starts' : 'The party starts'} with ${perk.qty} ${findDef(perk.item)?.name ?? perk.item}`;
   }

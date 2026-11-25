@@ -86,10 +86,10 @@ describe('a class kit at run start', () => {
     expect(checkInvariants(state)).toEqual([]);
   });
 
-  it('rejects a kit mark on something that is not gear', () => {
+  it('rejects a kit mark on something that is not gear, a potion, a scroll or food', () => {
     const { state, hero } = setup();
-    hero.inventory = { items: [{ def: 'item.trail_biscuit', qty: 1, kit: true }] };
-    expect(checkInvariants(state).join('\n')).toContain('marked as kit but is not gear, a potion or a scroll');
+    hero.inventory = { items: [{ def: 'item.bent_nail', qty: 1, kit: true }] };
+    expect(checkInvariants(state).join('\n')).toContain('marked as kit but is not gear, a potion, a scroll or food');
   });
 });
 

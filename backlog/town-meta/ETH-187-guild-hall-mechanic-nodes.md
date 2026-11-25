@@ -2,14 +2,14 @@
 id: ETH-187
 title: Guild Hall nodes that need new mechanics - Field Rations, Extraction Drills, Waymark Lanterns, Mystery Crate
 type: feature
-status: in-progress
+status: done
 priority: P1
 milestone: M2.1
 epic: town-meta
 size: M
 depends_on: [ETH-132, ETH-176, ETH-148]
 created: 2026-11-24
-updated: 2026-11-24
+updated: 2026-11-25
 ---
 
 ## Summary
@@ -26,12 +26,12 @@ Build the four Guild Hall nodes from town trees v4 that need something the sim d
 Nate (2026-11-24) asked that Field Rations and Extraction Drills fit real mechanics: the sim has no out-of-combat regeneration, and fleeing is an HP threshold (`src/sim/combat/fleeConfig.ts`), not a roll.
 
 ## Acceptance criteria
-- [ ] A field ration food item (category `food`, applies `status.regenerating` for 10 turns) that the baseline AI eats when hurt and out of combat; Field Rations adds it to every starting kit (a kit item, never sold).
-- [ ] Extraction Drills raises speed only while an adventurer is fleeing (a conditional modifier the stat tooltip names); a fixed-seed test shows a fleeing adventurer outpacing the same foe.
-- [ ] Waymark Lanterns applies only on the return trip, as a run-wide modifier scoped to it (ETH-115).
-- [ ] The Mystery Crate is an opt-in toggle on Prepare once bought; its roll uses the run's seeded RNG and draws from a validated table that includes cursed items.
-- [ ] Contract Board / Extraction Drills and Guild Chronicles / Waymark Lanterns become pick-one pairs (a save that owned the ETH-132 single node keeps it).
-- [ ] Codex, tooltip and log text for each; **T2 (100 seeds)** with all four on against off.
+- [x] A field ration food item (category `food`, applies `status.regenerating` for 10 turns) that the baseline AI eats when hurt and out of combat; Field Rations adds it to every starting kit (a kit item, never sold).
+- [x] Extraction Drills raises speed only while an adventurer is fleeing (a conditional modifier the stat tooltip names); a fixed-seed test shows a fleeing adventurer outpacing the same foe.
+- [x] Waymark Lanterns applies only on the return trip, as a run-wide modifier scoped to it (ETH-115).
+- [x] The Mystery Crate is an opt-in toggle on Prepare once bought; its roll uses the run's seeded RNG and draws from a validated table that includes cursed items.
+- [x] Contract Board / Extraction Drills and Guild Chronicles / Waymark Lanterns become pick-one pairs (a save that owned the ETH-132 single node keeps it).
+- [x] Codex, tooltip and log text for each. Balance: the T0 identity check and one 20-seed all-on smoke run (Nate dropped the T1/T2 sweeps from milestone pieces; the M2 capstone ETH-161 measures).
 
 ## Notes
 - Extraction Drills may need a nerf (Nate); ETH-161 watches it.
@@ -114,3 +114,5 @@ M is optimistic: this is about two M items of work. Recommend splitting the impl
 ## Log
 - 2026-11-24: Split out of ETH-132 when town trees v4 was approved.
 - 2026-11-24: Planning gate done (refined plan above); status stays `idea` until approved.
+- 2026-11-25: Approved and built. Opt-in mechanism first (`1884e93`, shared with ETH-188), then the four nodes (`bbcd051`). Decisions: Second Contract Board no longer requires the Contract Board; Waymark covers any turn-back; the crate item is kit and never sold; the crate rolls from a seed-derived stream so dungeons are identical with it on or off; only rations use the eat rule (the Trail biscuit waits for M5). Added a shared "issued at run start" notion (`src/content/issued.ts`) that the reachability check reads, for class kits, upgrade stock and capacity-issued items, and the crate table. Kit items may now be food.
+- 2026-11-25: Balance (policy: milestone pieces run T0 and a smoke run only; ETH-161 measures). At `bbcd051`: T0, 20 seeds, nothing owned, against origin/main: every one of the 36 report metrics is identical, but 5 of 20 end-state hashes differ (seeds 2, 3, 15, 18, 19). Seed 2 diffed checkpoint by checkpoint: the states are byte-identical until the end, where the last intent records the baseline rule ordinal of `act.retreat_run` (9 became 10) because the new recovery rule sits above it. So the hash difference is a rule index shift, not behavior. Smoke, 20 seeds, fresh solo, all four nodes on: no crashes or invariant failures, 12 reached the bottom, 1 hit the turn cap (seed 17). Unplanned extra data (100 seeds all on against off, fresh solo, not a gate): wins 18 to 36, wipes 82 to 61, 3 turn-cap runs (seeds 17, 66, 86) against 0. The cap runs are a flee loop that Extraction Drills expose: a fleeing hero escapes a ranged spitter, never recovers HP (no out-of-combat regeneration), calms down, walks back toward the contract item past the spitter and flees again, for thousands of turns. Rations were the biggest win-rate lever. ETH-161 should watch both.

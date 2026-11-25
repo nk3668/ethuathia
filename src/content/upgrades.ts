@@ -145,11 +145,16 @@ export const CAPACITY_INFO = {
     name: 'Contract reward bonus (%)',
     about: 'Extra pay on every contract completed, in percent, before any Omen multiplier.',
   },
+  fieldRations: {
+    issues: 'item.field_ration',
+    name: 'Field rations',
+    about: 'Field rations every adventurer starts a run with. Eating one starts Regenerating (1 HP a turn for 10 turns).',
+  },
   xpBonus: {
     name: 'In-run XP bonus (%)',
     about: 'Extra XP every adventurer earns during a run, in percent. Class Mastery follows, as it counts that XP.',
   },
-} as const satisfies Record<string, { name: string; about: string }>;
+} as const satisfies Record<string, { name: string; about: string; issues?: string }>;
 
 export type CapacityKey = keyof typeof CAPACITY_INFO;
 
@@ -161,13 +166,27 @@ export function isCapacityKey(value: unknown): value is CapacityKey {
 
 // --- Grants ----------------------------------------------------------------------------------
 
+/**
+ * When a run-scope bundle grant applies (ETH-187): only for an actor that is fleeing, or only
+ * once the party has turned back for the surface. Its modifiers are then part of the stat only
+ * while the gate holds, and the stat tooltip names the gate.
+ */
+export const RUN_GATE_INFO = {
+  fleeing: { name: 'while fleeing', about: 'Applies only while an adventurer is running from a threat, and ends when the flight does.' },
+  returning: { name: 'on the return trip', about: 'Applies only once the party has turned back for the surface, retreat or victory alike.' },
+} as const satisfies Record<string, { name: string; about: string }>;
+
+export type RunGate = keyof typeof RUN_GATE_INFO;
+
+export const RUN_GATES = Object.keys(RUN_GATE_INFO) as RunGate[];
+
 /** What owning an upgrade node gives every later run. */
 export type UpgradeGrant =
   /**
    * A bundle (docs/ARCHITECTURE.md §2.2: stat modifiers, effects, triggers) for each adventurer
-   * (`party`) or for the run as a whole (`run`).
+   * (`party`) or for the run as a whole (`run`). A `run` bundle may be gated by `when`.
    */
-  | { readonly kind: 'bundle'; readonly scope: 'party' | 'run'; readonly bundle: Bundle }
+  | { readonly kind: 'bundle'; readonly scope: 'party' | 'run'; readonly bundle: Bundle; readonly when?: RunGate }
   /** Makes a content def available: a class, race, rule condition, floor type, Omen… */
   | { readonly kind: 'unlock'; readonly id: string }
   /** Raises a named limit by `amount`. */
@@ -192,6 +211,12 @@ export function upgradeBundle(node: UpgradeNodeDef, scope: 'party' | 'run'): Bun
     effects: bundles.flatMap((b) => b.effects ?? []),
     triggers: bundles.flatMap((b) => b.triggers ?? []),
   };
+}
+
+/** The gate of `node`'s run-scope bundle grants (they share one, see `checkUpgradeTrees`), or `undefined` if ungated. */
+export function upgradeRunGate(node: UpgradeNodeDef): RunGate | undefined {
+  for (const g of node.grants) if (g.kind === 'bundle' && g.scope === 'run' && g.when !== undefined) return g.when;
+  return undefined;
 }
 
 // --- Upgrade nodes ---------------------------------------------------------------------------
@@ -307,6 +332,7 @@ const grantSchema = z.discriminatedUnion('kind', [
     kind: z.literal('bundle'),
     scope: z.enum(['party', 'run']),
     bundle: grantBundleSchema,
+    when: z.enum(RUN_GATES as [RunGate, ...RunGate[]]).optional(),
   }),
   z.strictObject({
     kind: z.literal('unlock'),
@@ -402,6 +428,15 @@ export function checkUpgradeTrees(defs: readonly UpgradeNodeDef[]): string[] {
     if (def.ranks !== undefined && def.grants.some((g) => g.kind === 'unlock' || g.kind === 'start')) {
       problems.push(`${label(def)}: a ranked node may only have capacity and bundle grants, as an unlock or a start perk can't stack`);
     }
+  }
+
+  for (const def of defs) {
+    const runBundles = def.grants.filter((g) => g.kind === 'bundle' && g.scope === 'run');
+    if (def.grants.some((g) => g.kind === 'bundle' && g.scope === 'party' && g.when !== undefined)) {
+      problems.push(`${label(def)}: a party bundle can't have a "when" gate; only run-scope bundles can`);
+    }
+    const gates = new Set(runBundles.map((g) => (g.kind === 'bundle' ? (g.when ?? '') : '')));
+    if (gates.size > 1) problems.push(`${label(def)}: all of a node's run-scope bundle grants must share one "when" gate`);
   }
 
   for (const def of defs) {

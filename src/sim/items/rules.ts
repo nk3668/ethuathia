@@ -6,7 +6,7 @@
  * hand each one to the player's own rules.
  */
 import type { Pos } from '../../core';
-import { EQUIP_SLOT_INFO, gearSlots, hasEffectKind, healAmount, ITEMS } from '../../content';
+import { EQUIP_SLOT_INFO, gearSlots, hasEffectKind, healAmount, ITEMS, STATUS_REGENERATING } from '../../content';
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams, parseMinCount } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } from '../ai/types';
@@ -64,6 +64,27 @@ export const COND_WOUNDED = defineCondition({
     return hp > 0 && hp * 100 < max * percent ? { ok: true, detail: `HP ${hp}/${max}, below ${percent}%` } : { ok: false, detail: '' };
   },
   describe: ({ percent }) => `HP below ${percent}%`,
+});
+
+/** The baseline eats a ration when HP is below this share of the maximum and nothing threatening is in sight, in percent (ETH-187). */
+export const RATION_EAT_BELOW_PERCENT = 70;
+/** A ration is not eaten while this many turns of Regenerating remain, so a refresh is not wasted. */
+export const RATION_REFRESH_TURNS = 5;
+
+/** True while HP is below `percent` of the maximum and no threat is in sight: a calm moment to recover. */
+export const COND_HURT_CALM = defineCondition({
+  id: 'cond.hurt_calm',
+  name: 'Hurt, with nothing in sight',
+  description: 'True while HP is below a share of the maximum (70% unless set) and no threat is in sight: a calm moment to eat a ration and recover.',
+  parse: numberParam('percent', RATION_EAT_BELOW_PERCENT, 1, 99),
+  evaluate({ state, actor }, { percent }) {
+    const max = statValue(state, actor, 'hp');
+    const hp = actor.actor.hp;
+    if (hp <= 0 || hp * 100 >= max * percent) return { ok: false, detail: '' };
+    if (visibleThreats(state, actor).length > 0) return { ok: false, detail: '' };
+    return { ok: true, detail: `HP ${hp}/${max}, below ${percent}%, no threat in sight` };
+  },
+  describe: ({ percent }) => `HP below ${percent}% with no threat in sight`,
 });
 
 /** True while the actor carries more than its `carry` stat allows. */
@@ -191,6 +212,31 @@ export const ACT_QUAFF_HEALING = defineRuleAction({
     return { request: { id: 'use', index: best.index }, detail: `quaffing a ${name}` };
   },
   describe: () => 'quaff the best healing potion',
+});
+
+/** True if eating the item starts Regenerating: a ration (ETH-187). Only such food is eaten by the baseline for now. */
+function isRation(item: ItemInstance): boolean {
+  const def = itemDef(item);
+  return def.category === 'food' && (def.bundle?.effects ?? []).some((e) => e.kind === 'applyStatus' && e.status === STATUS_REGENERATING.id);
+}
+
+/** Eat a ration: food that starts Regenerating, unless the adventurer is already regenerating for a while yet. */
+export const ACT_EAT_RATION = defineRuleAction({
+  id: 'act.eat_ration',
+  name: 'Eat a ration',
+  description:
+    'Eat a field ration from the pack: it starts Regenerating, healing 1 HP a turn for 10 turns. Skipped while 5 or more turns of ' +
+    'Regenerating remain, and can’t be done without one.',
+  parse: noParams,
+  resolve({ state, actor }): Resolved | null {
+    const index = inventoryOf(actor).findIndex(isRation);
+    if (index < 0) return null;
+    const running = actor.stats?.statuses.find((s) => s.status === STATUS_REGENERATING.id);
+    if (running !== undefined && running.remaining >= RATION_REFRESH_TURNS) return null;
+    const name = itemName(state, inventoryOf(actor)[index] as ItemInstance, actor);
+    return { request: { id: 'use', index }, detail: `eating a ${name}` };
+  },
+  describe: () => 'eat a ration',
 });
 
 /** Drop the least valuable droppable thing carried: as many of that stack as needed to get within carry. */
@@ -395,11 +441,12 @@ function gearSlotsCount(item: ItemInstance): number {
 }
 
 /** The items domain's conditions, in registration order. */
-export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED, COND_WEARING_CURSED, COND_SAFE_TO_TEST, COND_RUN_IDENTIFIED];
+export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_HURT_CALM, COND_OVERLOADED, COND_WEARING_CURSED, COND_SAFE_TO_TEST, COND_RUN_IDENTIFIED];
 
 /** The items domain's rule actions, in registration order. */
 export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [
   ACT_QUAFF_HEALING,
+  ACT_EAT_RATION,
   ACT_DROP_LOWEST,
   ACT_SALVAGE_LOWEST,
   ACT_PICK_UP,
@@ -421,6 +468,15 @@ export const ITEMS_BASELINE_URGENT: readonly Rule[] = [
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.equip_upgrade' }, enabled: true },
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.salvage_lowest' }, enabled: true },
   { condition: { id: 'cond.overloaded' }, action: { id: 'act.drop_lowest' }, enabled: true },
+];
+
+/**
+ * The baseline's recovery rule (ETH-187), checked once fleeing and fighting have had their say: a
+ * hurt adventurer with nothing in sight eats a ration. It never fires in combat or while a threat
+ * is in view, so it can't slow a flight.
+ */
+export const ITEMS_BASELINE_RECOVER: readonly Rule[] = [
+  { condition: { id: 'cond.hurt_calm', params: { percent: RATION_EAT_BELOW_PERCENT } }, action: { id: 'act.eat_ration' }, enabled: true },
 ];
 
 /**

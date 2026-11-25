@@ -14,7 +14,6 @@
  * not counted, so a def that only appears through them is reported rather than silently passing.
  */
 import {
-  CLASSES,
   CONTRACTS,
   DUNGEONS,
   ENCHANTMENTS,
@@ -22,11 +21,11 @@ import {
   MONSTER_TEMPLATES,
   MONSTERS,
   baseEnchantmentFor,
+  issuedItemIds,
   enchantmentFits,
   templateFits,
-  UPGRADES,
 } from '../src/content';
-import type { ClassDef, ContractDef, DungeonDef, EnchantmentDef, ItemDef, MonsterDef, MonsterTemplateDef, UpgradeNodeDef } from '../src/content';
+import type { ContractDef, DungeonDef, EnchantmentDef, ItemDef, MonsterDef, MonsterTemplateDef } from '../src/content';
 // The sim's entry point first: its modules import each other in a cycle that only resolves from there.
 import '../src/sim';
 import { monsterWeightAt } from '../src/sim/combat/monsters';
@@ -44,30 +43,8 @@ export interface ReachabilityInput {
   enchantments?: readonly EnchantmentDef[];
   dungeons?: readonly DungeonDef[];
   contracts?: readonly ContractDef[];
-  classes?: readonly ClassDef[];
-  upgrades?: readonly UpgradeNodeDef[];
 }
 
-/**
- * The items a run hands out at its start instead of dropping them (ETH-188): a class's kit, its Tier-1
- * kit upgrades and its trinket, and the starting items a town upgrade stocks. A def named here needs
- * no loot entry. It is not a blanket exemption: only these named sources count.
- */
-export function issuedItemIds(classes: readonly ClassDef[] = CLASSES.all(), upgrades: readonly UpgradeNodeDef[] = UPGRADES.all()): Set<string> {
-  const ids = new Set<string>();
-  for (const c of classes) {
-    for (const id of c.kit ?? []) ids.add(id);
-    if (c.kitUpgrade !== undefined) {
-      if (c.kitUpgrade.weapon !== undefined) ids.add(c.kitUpgrade.weapon);
-      if (c.kitUpgrade.defense !== undefined) ids.add(c.kitUpgrade.defense);
-    }
-    if (c.trinket !== undefined) ids.add(c.trinket);
-  }
-  for (const u of upgrades) {
-    for (const g of u.grants) if (g.kind === 'start' && g.start.perk === 'stock') ids.add(g.start.item);
-  }
-  return ids;
-}
 
 interface Floor {
   readonly dungeon: DungeonDef;
@@ -131,7 +108,8 @@ export function reachabilityProblems(input: ReachabilityInput = {}): string[] {
 
   // Items: a loot entry on some reachable floor, or named as a contract's recover item.
   const relics = new Set(contracts.flatMap((c) => (c.objective.kind === 'recover' ? [c.objective.item] : [])));
-  const issued = issuedItemIds(input.classes, input.upgrades);
+  // Items a class kit or an upgrade issues at the start of a run (ETH-187) need no loot entry.
+  const issued = issuedItemIds();
   const lootable = new Set<string>();
   for (let depth = 1; depth <= maxDepth; depth++) for (const d of lootTable(depth)) lootable.add(d.id);
   for (const item of items) {

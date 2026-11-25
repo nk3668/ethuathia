@@ -13,7 +13,7 @@ import { deathPredicate, killerOf } from '../combat/death';
 import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
 import { depthRevealed, dungeonDepth, floorNode, floorTypeOf } from '../floors/dungeon';
-import { enchantedKitIds, issuedKitIds, stampedKitIds } from '../items/kit';
+import { carriesCrate, enchantedKitIds, issuedKitIds, stampedKitIds } from '../items/kit';
 import { itemSale, tradeBonusOf } from '../items/sale';
 import { VICTORY_CHECKS } from '../registries';
 import type { EntityId, RunState } from '../state';
@@ -94,6 +94,8 @@ export function announceStart(state: RunState, emit: Emit): void {
   });
   for (const m of partyRecords(state)) {
     const entity = state.entities[m.actor];
+    // The Mystery Crate (ETH-187) is announced on its own, without naming what is inside.
+    if (entity !== undefined && state.config.startCrate === true && carriesCrate(entity)) emit({ type: 'crateIssued', actor: m.actor, name: m.name });
     const items = entity === undefined ? [] : issuedKitIds(entity);
     if (items.length === 0 || entity === undefined) continue;
     const enchanted = enchantedKitIds(entity);

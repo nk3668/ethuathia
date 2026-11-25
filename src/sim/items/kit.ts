@@ -105,8 +105,10 @@ export function giveKit(entity: Entity, classId: string, enchant: readonly Start
 
 /** Every kit item `entity` set out with as def ids: the worn pieces, then the kit items in its pack (one per stack). */
 export function issuedKitIds(entity: Entity): string[] {
-  const worn = Object.values(entity.inventory?.equipped ?? {}).filter(isKitItem);
-  const carried = (entity.inventory?.items ?? []).filter(isKitItem);
+  // An unidentified kit item is the Mystery Crate's (ETH-187): its own event announces it without naming it.
+  const known = (item: ItemInstance) => isKitItem(item) && item.identified !== false;
+  const worn = Object.values(entity.inventory?.equipped ?? {}).filter(known);
+  const carried = (entity.inventory?.items ?? []).filter(known);
   return [...worn, ...carried].map((item) => item.def);
 }
 
@@ -121,6 +123,11 @@ export function stampedKitIds(entity: Entity): { item: string; stamp: StampId }[
     }
   }
   return out;
+}
+
+/** True if `entity` carries the Mystery Crate's item: a kit item that is still unidentified (ETH-187). */
+export function carriesCrate(entity: Entity): boolean {
+  return (entity.inventory?.items ?? []).some((item) => isKitItem(item) && item.identified === false);
 }
 
 /** The kit pieces `entity` wears at +1 from a Smithy upgrade, as def ids (for the log). */

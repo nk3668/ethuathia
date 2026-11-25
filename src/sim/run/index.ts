@@ -60,6 +60,11 @@ export type RunDomainEvent =
    */
   | { type: 'kitIssued'; actor: EntityId; name: string; items: string[]; enchanted?: string[]; stamped?: { item: string; stamp: string }[] }
   /**
+   * Just before that adventurer's `kitIssued` (ETH-187): they carry the Quartermaster's Mystery Crate, one
+   * sealed unidentified item. It never says what is inside, and the item is left out of `kitIssued`.
+   */
+  | { type: 'crateIssued'; actor: EntityId; name: string }
+  /**
    * Once, after the `kitIssued` events and only when a Smithy upgrade did it (ETH-159): the party
    * knows every kind in `categories` (`potion`, `jewelry`) from the first turn.
    */

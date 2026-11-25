@@ -63,6 +63,7 @@ export * from './identify';
 export * from './mix';
 export * from './enchant';
 export * from './properties';
+export * from './crate';
 export * from './kit';
 export * from './sale';
 export * from './salvage';
@@ -252,6 +253,8 @@ export interface ItemsConfig {
   salvage?: true;
   /** Extra starting items, never sold: carried by the first party member, or by every member when `each` (Smithy `stock` perks, ETH-159, and the Guild Hall's Medic's Satchel, ETH-132). Leave out for none. */
   startStock?: StartStock[];
+  /** The first party member carries one unidentified item rolled from the crate table, never sold (the Mystery Crate, ETH-187). Leave out for none. */
+  startCrate?: true;
   /** Percent added to the Trophies the party's gold and carried items convert to on exit (`tradeBonus`, ETH-159). Leave out for none. */
   tradeBonus?: number;
 }

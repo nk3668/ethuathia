@@ -42,7 +42,9 @@ export type StartPerk =
   /** Field Salvage Kit (ETH-188, an opt-in node): overloaded adventurers salvage plain identified gear into at-risk Trophies instead of dropping it. */
   | { readonly perk: 'salvage' }
   /** The party starts with `qty` of `item`, carried by its first member (or by each adventurer with `each`). Known on sight, never sold. */
-  | { readonly perk: 'stock'; readonly item: string; readonly qty: number; readonly each?: true };
+  | { readonly perk: 'stock'; readonly item: string; readonly qty: number; readonly each?: true }
+  /** The first party member carries one unidentified item rolled from `CRATE_TABLE` (the Mystery Crate, ETH-187), kit that is never sold. */
+  | { readonly perk: 'crate' };
 
 export const startPerkSchema = z.discriminatedUnion('perk', [
   z.strictObject({ perk: z.literal('know'), category: z.enum(START_KNOWN_CATEGORIES) }),
@@ -52,6 +54,7 @@ export const startPerkSchema = z.discriminatedUnion('perk', [
   z.strictObject({ perk: z.literal('trinket') }),
   z.strictObject({ perk: z.literal('stamps') }),
   z.strictObject({ perk: z.literal('salvage') }),
+  z.strictObject({ perk: z.literal('crate') }),
 ]);
 
 /** The content ids a start perk names, for reference checks. */
