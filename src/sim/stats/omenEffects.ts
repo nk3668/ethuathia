@@ -26,9 +26,9 @@ export function omenRankOn(state: RunState, id: string): number {
 
 /** What Stalker's Ledger does at a rank (index 0 is rank 1). */
 export const STALKER_RANKS = [
-  { shift: 1, oodBonus: 0.05, carry: 0.3, findDepth: 1 },
-  { shift: 2, oodBonus: 0.1, carry: 0.5, findDepth: 2 },
-  { shift: 3, oodBonus: 0.15, carry: 0.7, findDepth: 3 },
+  { shift: 1, oodBonus: 0.08, carry: 0.1, findDepth: 1 },
+  { shift: 2, oodBonus: 0.2, carry: 0.1, findDepth: 1 },
+  { shift: 2, oodBonus: 0.3, carry: 0.1, findDepth: 1 },
 ] as const;
 
 /** What Deep Surge does at a rank. */
@@ -40,16 +40,16 @@ export const SURGE_RANKS = [
 
 /** What Cursed Hoards does at a rank. */
 export const HOARD_RANKS = [
-  { curse: 0.1, consumableCurse: 0.04, enchant: 0.15, enchantCap: 0 },
-  { curse: 0.2, consumableCurse: 0.08, enchant: 0.3, enchantCap: 1 },
-  { curse: 0.3, consumableCurse: 0.12, enchant: 0.45, enchantCap: 2 },
+  { curse: 0.35, lootCut: 1, consumableCurse: 0.15, enchant: 0, enchantCap: 0 },
+  { curse: 0.4, lootCut: 2, consumableCurse: 0.2, enchant: 0, enchantCap: 0 },
+  { curse: 0.5, lootCut: 3, consumableCurse: 0.25, enchant: 0, enchantCap: 0 },
 ] as const;
 
-/** What Armed Warbands does at a rank. `armor` is on top of the Armed template's own +1. */
+/** What Armed Warbands does at a rank. `armor` is on top of the Armed template's own +1; `damage` is added to its attacks. */
 export const WARBAND_RANKS = [
-  { chance: 0.25, armor: 0, enchant: 1 },
-  { chance: 0.45, armor: 1, enchant: 2 },
-  { chance: 0.65, armor: 2, enchant: 3 },
+  { chance: 0.2, armor: 0, damage: 1, enchant: 0 },
+  { chance: 0.35, armor: 0, damage: 1, enchant: 0 },
+  { chance: 0.55, armor: 0, damage: 1, enchant: 0 },
 ] as const;
 
 /** The monsters this tough (`MonsterDef.threat`) can be armed by Armed Warbands. */
@@ -96,6 +96,6 @@ export function floorRisk(state: RunState): FloorRisk | undefined {
     ...(stalker === undefined ? {} : { templateShift: stalker.shift, oodBonus: stalker.oodBonus }),
     ...(hoard === undefined
       ? {}
-      : { curseBonus: hoard.curse, consumableCurseBonus: hoard.consumableCurse, enchantBonus: hoard.enchant, enchantCapBonus: hoard.enchantCap }),
+      : { curseBonus: hoard.curse, lootCut: hoard.lootCut, consumableCurseBonus: hoard.consumableCurse, enchantBonus: hoard.enchant, enchantCapBonus: hoard.enchantCap }),
   };
 }

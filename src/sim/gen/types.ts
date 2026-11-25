@@ -27,6 +27,8 @@ export interface FloorRisk {
   curseBonus?: number;
   /** Added to the chance a potion or scroll is cursed (Cursed Hoards). */
   consumableCurseBonus?: number;
+  /** Items left off each floor's loot (Cursed Hoards). */
+  lootCut?: number;
   /** Added to the chance un-cursed gear is enchanted (Cursed Hoards). */
   enchantBonus?: number;
   /** Added to the highest enchantment loot can roll (Cursed Hoards). */

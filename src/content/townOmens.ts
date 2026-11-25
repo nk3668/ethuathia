@@ -19,23 +19,23 @@ export const OMEN_STALKERS_LEDGER = defineOmen({
   name: "Stalker's Ledger",
   description:
     'Something in the dungeon keeps a tally of who has come down. Stronger variants (Venomous, Swift and the rest) turn up ' +
-    'on shallower floors and more often, and more creatures from deeper down wander up. Both carry something worth taking.',
+    'on shallower floors and more often, and more creatures from deeper down wander up. Few of either carry anything worth taking.',
   hint: 'A ledger of names, kept by a hand that is not yours.',
   tags: ['monsters', 'spawns'],
   ranks: [
     {
       reward: 0.1,
-      text: 'Variant and wandering deep monsters draw as if 1 floor deeper (wanderers 5 points likelier), and either carries a find 30% of the time.',
+      text: 'Variant and wandering deep monsters draw as if 1 floor deeper (wanderers 8 points likelier), and either carries a find 10% of the time.',
       flags: [omenRankFlag('omen.stalkers_ledger', 1)],
     },
     {
       reward: 0.2,
-      text: 'Variant and wandering deep monsters draw as if 2 floors deeper (wanderers 10 points likelier), and either carries a find half the time.',
+      text: 'Variant and wandering deep monsters draw as if 2 floors deeper (wanderers 20 points likelier), and either carries a find 10% of the time.',
       flags: [omenRankFlag('omen.stalkers_ledger', 2)],
     },
     {
       reward: 0.3,
-      text: 'Variant and wandering deep monsters draw as if 3 floors deeper (wanderers 15 points likelier), and either carries a find 70% of the time.',
+      text: 'Variant and wandering deep monsters draw as if 2 floors deeper (wanderers 30 points likelier), and either carries a find 10% of the time.',
       flags: [omenRankFlag('omen.stalkers_ledger', 3)],
     },
   ],
@@ -72,27 +72,27 @@ export const OMEN_CURSED_HOARDS = defineOmen({
   id: 'omen.cursed_hoards',
   name: 'Cursed Hoards',
   description:
-    'The dungeon’s hoards are richer and fouler. More of the gear and the draughts and scrolls on the floors is cursed, and the ' +
-    'gear that is not cursed is likelier to be enchanted, and to a higher level. Nothing says which is which until it is identified.',
+    'The dungeon’s hoards are thinner and fouler. Each floor holds fewer items, and more of the gear and the draughts and ' +
+    'scrolls left on them is cursed. Nothing says which is which until it is identified.',
   hint: 'Treasure that wants to be found.',
   tags: ['loot', 'curses'],
   ranks: [
     {
       reward: 0.1,
       scope: 'all',
-      text: 'Floor gear is cursed 10 points more often (potions and scrolls 4 points) and un-cursed gear is enchanted 15 points more often.',
+      text: 'Each floor holds 1 fewer item, and floor gear is cursed 35 points more often (potions and scrolls 15 points).',
       flags: [omenRankFlag('omen.cursed_hoards', 1)],
     },
     {
       reward: 0.2,
       scope: 'all',
-      text: 'Floor gear is cursed 20 points more often (potions and scrolls 8 points), un-cursed gear is enchanted 30 points more often, and its enchantments can reach one level higher.',
+      text: 'Each floor holds 2 fewer items, and floor gear is cursed 40 points more often (potions and scrolls 20 points).',
       flags: [omenRankFlag('omen.cursed_hoards', 2)],
     },
     {
       reward: 0.3,
       scope: 'all',
-      text: 'Floor gear is cursed 30 points more often (potions and scrolls 12 points), un-cursed gear is enchanted 45 points more often, and its enchantments can reach two levels higher.',
+      text: 'Each floor holds 3 fewer items, and floor gear is cursed 50 points more often (potions and scrolls 25 points).',
       flags: [omenRankFlag('omen.cursed_hoards', 3)],
     },
   ],
@@ -102,24 +102,24 @@ export const OMEN_ARMED_WARBANDS = defineOmen({
   id: 'omen.armed_warbands',
   name: 'Armed Warbands',
   description:
-    'The dungeon’s tougher creatures have taken up arms. Some spawn armored and carrying an enchanted weapon or armor, ' +
-    'which they drop where they fall. The gear is as unidentified as anything else on the floor.',
+    'The dungeon’s tougher creatures have taken up arms. Some spawn armored and hitting harder, carrying a weapon or ' +
+    'armor they drop where they fall. The gear is as unidentified as anything else on the floor.',
   hint: 'Things down there have taken to wearing what they killed.',
   tags: ['monsters', 'loot'],
   ranks: [
     {
       reward: 0.12,
-      text: 'A quarter of the tougher monsters (threat 3 or more) are Armed: 1 more armor, and a +1 weapon or armor piece dropped when slain.',
+      text: '20% of the tougher monsters (threat 3 or more) are Armed: 1 more damage, and a plain weapon or armor piece dropped when slain.',
       flags: [omenRankFlag('omen.armed_warbands', 1)],
     },
     {
       reward: 0.24,
-      text: '45% of the tougher monsters (threat 3 or more) are Armed: 2 more armor, and a +2 weapon or armor piece dropped when slain.',
+      text: '35% of the tougher monsters (threat 3 or more) are Armed: 1 more damage, and a plain weapon or armor piece dropped when slain.',
       flags: [omenRankFlag('omen.armed_warbands', 2)],
     },
     {
       reward: 0.36,
-      text: '65% of the tougher monsters (threat 3 or more) are Armed: 3 more armor, and a +3 weapon or armor piece dropped when slain.',
+      text: '55% of the tougher monsters (threat 3 or more) are Armed: 1 more damage, and a plain weapon or armor piece dropped when slain.',
       flags: [omenRankFlag('omen.armed_warbands', 3)],
     },
   ],

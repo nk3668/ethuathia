@@ -2267,12 +2267,12 @@ As built (ETH-064, `src/meta/prepare/`):
   text in step with the tables). Three hooks read them, and with no such Omen on none draws from an RNG, so
   seeds replay as before: `planFloor` passes `floorRisk(state)` into generation (`FloorDraft.risk`, a
   `FloorRisk`: `templateChanceFor` and `rollOodDanger` shift the ramp and the out-of-depth chance, and
-  `rollItemProperties` shifts the curse and enchantment thresholds); the combat domain's `RISK_PLAN_HOOK`
+  `rollItemProperties` shifts the curse and enchantment thresholds, and `gen.loot` leaves `lootCut` items off the floor); the combat domain's `RISK_PLAN_HOOK`
   runs `monsterRiskOverlay` over the plan's spawns from its own stream `risk/<floor>` (finds carried by variants
-  and wanderers, the Armed template with extra armor and an enchanted weapon or armor piece, never jewelry, `OMEN_ONLY_TAG` keeps that
+  and wanderers, the Armed template with extra damage and a plain weapon or armor piece, never jewelry, `OMEN_ONLY_TAG` keeps that
   template out of `rollTemplates`); and `surgeFloor` reads `surgeEffect` for a larger wave, more variants,
   more patrolling monsters (twice the rank's patrol count) split into at least that many extra patrol groups, and carried
-  finds. Cursed Hoards' higher enchantment cap can push floor gear to +4 and +5: the base enchantments
+  finds. The enchantment cap bonus (zero since ETH-191) could push floor gear to +4 and +5: the base enchantments
   (`enchant.honed`, `reinforced`, `attuned`, `channeled`) allow up to +5, while ordinary loot still caps at +3. The unlock nodes are ordinary `unlock` grants (Guild Hall row 1 and row 4,
   Smithy row 3 and row 4, column 2); `reachabilityProblems` reports an Omen no node unlocks. `npm run sim --
   --omens id:rank,...` fields them without owning the nodes.
