@@ -47,3 +47,4 @@ The tree shape comes from the approved town-tree page (v4); ETH-132 and ETH-159 
   - Flagged nodes (same base): Artisan Implements 63.0%, Extraction Drills III 47.5%, Field Rations III 42.5%, Forge Stamps 41.0%. Not changed pending Nate.
   - Misses: return-trip lethality 2.6% fresh solo / 5.4% progressed x3 against 15-25%; progressed x4 47.5% is at the band's bottom. Mastery XP: victory median 820 (fresh solo); points per run is set with the M4 trees. Building-quest shares (0.3 / 0.5) kept.
   - Open for Nate before done: the three free Omens (cut rewards or make them bite), the Artisan Implements nerf, return-trip lethality, the ETH-189 milestone.
+- 2026-11-25: Nate's answers. Omens: make them more dangerous, filed as ETH-191 (M2.2). Return-trip lethality: left for M5, with new and harder monsters for the return trip. ETH-189 moved to M3. Artisan Implements: explained, decision pending.
