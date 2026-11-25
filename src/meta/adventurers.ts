@@ -4,6 +4,8 @@
  * here (or `applyRunResult`), which return a new slice and never edit one in place. Reads take
  * the `Profile`, mutations the `Adventurers` slice.
  */
+import { picksProblems } from '../content';
+import type { AdventurerPicks } from '../content';
 import type { Profile } from './profile';
 import type { AdventurerId, AdventurerOrigin, AdventurerRecord, Adventurers } from './slices/adventurers';
 
@@ -91,6 +93,23 @@ export function addTrait(slice: Adventurers, id: AdventurerId, trait: string): A
   const record = existing(slice, id);
   if (record.traits.includes(trait)) return slice;
   return { ...slice, records: { ...slice.records, [id]: { ...record, traits: [...record.traits, trait] } } };
+}
+
+/**
+ * Stores an adventurer's own tactics picks on their record (ETH-162), or clears them with `null` so
+ * the class's default build applies again. Throws on an unknown id or on picks that can't be
+ * played (`picksProblems`). Works on a record of any status: a veteran keeps their picks.
+ */
+export function setRecordTactics(slice: Adventurers, id: AdventurerId, picks: AdventurerPicks | null): Adventurers {
+  const record = existing(slice, id);
+  if (picks === null) {
+    const { tactics, ...rest } = record;
+    void tactics;
+    return { ...slice, records: { ...slice.records, [id]: rest } };
+  }
+  const problems = picksProblems(picks);
+  if (problems.length > 0) throw new RangeError(`Invalid tactics for "${id}": ${problems.join('; ')}`);
+  return { ...slice, records: { ...slice.records, [id]: { ...record, tactics: { ...picks, habits: [...picks.habits] } } } };
 }
 
 /**

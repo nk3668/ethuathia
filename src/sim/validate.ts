@@ -4,7 +4,7 @@
  * registries. The app runs `validateGame` before it starts, and `tools/validate-content` runs
  * `checkGame` as part of `npm test`.
  */
-import { checkContent, ContentError, crateTableProblems, FEATURES, FLOOR_TYPES, TERRAIN } from '../content';
+import { checkContent, ContentError, crateTableProblems, FEATURES, FLOOR_TYPES, TACTICS, TERRAIN } from '../content';
 import type { FloorTypeDef } from '../content';
 import { BASELINE_RULES } from './ai/engine';
 import { CONDITION_TARGET } from './ai/requirements';
@@ -22,7 +22,7 @@ import { DEFS, TERRAIN_IDS } from './state';
  *   checked (`CONDITION_TARGET`, ETH-121);
  * - each floor type's step parameters, when all its steps exist;
  * - the content ids the sim names in code: `TERRAIN_IDS` and the feature ids in `DEFS`;
- * - the conditions and rule actions the baseline rules name.
+ * - the conditions and rule actions the baseline rules name, and the params of every tactic option's rows.
  */
 export function checkGame(): string[] {
   const problems = checkContent([GEN_STEPS, STAT_REFS, CONDITION_TARGET, RULE_ACTIONS, TRIGGERS]);
@@ -44,6 +44,20 @@ export function checkGame(): string[] {
       problems.push(`baseline rule #${i + 1}: unknown rule action "${rule.action.id}"`);
     }
   });
+  // Tactic rows (ETH-162): each row's condition and rule action must accept the row's params.
+  for (const def of TACTICS.all()) {
+    (def.rows ?? []).forEach((row, i) => {
+      const at = `tactic "${def.id}" rows[${i}]`;
+      if (CONDITIONS.has(row.condition.id)) {
+        const why = CONDITIONS.get(row.condition.id).check(row.condition.params);
+        if (why !== null) problems.push(`${at}: condition "${row.condition.id}": ${why}`);
+      }
+      if (RULE_ACTIONS.has(row.action.id)) {
+        const why = RULE_ACTIONS.get(row.action.id).check(row.action.params);
+        if (why !== null) problems.push(`${at}: rule action "${row.action.id}": ${why}`);
+      }
+    });
+  }
   return problems;
 }
 

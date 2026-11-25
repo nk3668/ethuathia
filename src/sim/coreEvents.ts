@@ -5,6 +5,7 @@
  */
 import type { Pos } from '../core';
 import { FEATURE_DOOR } from '../content';
+import type { TacticAxis } from '../content';
 import type { RuleRef } from './ai/types';
 import { defineChronicleKind, momentAt } from './run/chronicle';
 import type { ChronicleKind, ChronicleRules } from './run/chronicle';
@@ -55,6 +56,11 @@ export type CoreEvent =
   | { type: 'possessed'; actor: EntityId }
   /** The player handed party member `actor` back to the AI. */
   | { type: 'released'; actor: EntityId }
+  /**
+   * The player changed tactics (ETH-162): `actor` is the adventurer whose pick on `axis` changed,
+   * or `null` for the party's stance or formation. `options` are the new option ids (several for habits).
+   */
+  | { type: 'tacticsSet'; actor: EntityId | null; axis: TacticAxis; options: string[] }
   /** A command was ignored. `command` is its `type`, or `"?"` if it had none. Nothing changed. */
   | { type: 'commandRejected'; command: string; reason: string };
 

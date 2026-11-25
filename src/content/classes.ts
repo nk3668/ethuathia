@@ -16,6 +16,8 @@ import { isStampId, STAMP_IDS, STAMPS } from './stamps';
 import type { StampId } from './stamps';
 import type { ContentKind } from './kind';
 import { defShape } from './schema';
+import { NEUTRAL_PICKS, picksProblems, picksRefs, picksSchema } from './tactics';
+import type { AdventurerPicks } from './tactics';
 
 /**
  * How one attribute grows on a level-up (ETH-110): with probability `chance` (default 1) it gains
@@ -60,6 +62,18 @@ export interface ClassDef extends Def {
   readonly trinket?: string;
   /** The class's default Forge Stamp (ETH-188), used for random recruits and a slot left on the default. Required of every class with a `kit`. */
   readonly stamp?: StampId;
+  /**
+   * The class's default build on each tactics axis but the party's (ETH-162, CLAUDE.md §5.2):
+   * role, range, focus and habits. Random recruits use it, and a roster adventurer who has made
+   * no picks of their own does. Left out, the class plays the neutral option on every axis
+   * (`NEUTRAL_PICKS`), which behaves as the baseline always has.
+   */
+  readonly tactics?: AdventurerPicks;
+}
+
+/** The default tactics picks of the class `classId`: its own build, or the neutral one. */
+export function classTactics(def: Pick<ClassDef, 'tactics'>): AdventurerPicks {
+  return def.tactics ?? NEUTRAL_PICKS;
 }
 
 /**
@@ -170,6 +184,7 @@ export const CLASS_KIND: ContentKind<ClassDef> = {
     kitUpgrade: z.strictObject({ weapon: z.string().min(1).optional(), defense: z.string().min(1).optional() }).optional(),
     trinket: z.string().min(1).optional(),
     stamp: z.enum(STAMP_IDS).optional(),
+    tactics: picksSchema.optional(),
   }),
   refs: (def) => [
     ...(def.kit ?? []).map((id, i) => ({ path: `kit[${i}]`, kind: 'item' as const, id })),
@@ -178,8 +193,14 @@ export const CLASS_KIND: ContentKind<ClassDef> = {
       return id === undefined ? [] : [{ path: `kitUpgrade.${part}`, kind: 'item' as const, id }];
     }),
     ...(def.trinket === undefined ? [] : [{ path: 'trinket', kind: 'item' as const, id: def.trinket }]),
+    ...(def.tactics === undefined ? [] : picksRefs('tactics', def.tactics)),
   ],
-  check: (defs) => defs.flatMap((d) => [...kitProblems(d.kit ?? []), ...smithyKitProblems(d)].map((p) => `class "${d.id}": ${p}`)),
+  check: (defs) =>
+    defs.flatMap((d) =>
+      [...kitProblems(d.kit ?? []), ...smithyKitProblems(d), ...(d.tactics === undefined ? [] : picksProblems(d.tactics).map((p) => `tactics: ${p}`))].map(
+        (p) => `class "${d.id}": ${p}`,
+      ),
+    ),
 };
 
 /** Registers a class def and returns it. Its shape is checked by `validateContent`. */
@@ -207,6 +228,8 @@ export const CLASS_VANGUARD = defineClass({
   kitUpgrade: { weapon: 'item.flanged_mace', defense: 'item.banded_shield' },
   trinket: 'item.copper_band',
   stamp: 'warding',
+  // The neutral build until the role, range and focus items give each class its own (ETH-193).
+  tactics: { ...NEUTRAL_PICKS },
 });
 
 export const CLASS_OUTRIDER = defineClass({
@@ -230,6 +253,8 @@ export const CLASS_OUTRIDER = defineClass({
   kitUpgrade: { weapon: 'item.trail_dirk', defense: 'item.ridge_boots' },
   trinket: 'item.knotwork_pendant',
   stamp: 'nimble',
+  // The neutral build until the role, range and focus items give each class its own (ETH-193).
+  tactics: { ...NEUTRAL_PICKS },
 });
 
 export const CLASS_LOREKEEPER = defineClass({
@@ -254,6 +279,8 @@ export const CLASS_LOREKEEPER = defineClass({
   kitUpgrade: { weapon: 'item.ironshod_staff', defense: 'item.scribes_coat' },
   trinket: 'item.hearthstone_amulet',
   stamp: 'warding',
+  // The neutral build until the role, range and focus items give each class its own (ETH-193).
+  tactics: { ...NEUTRAL_PICKS },
 });
 
 export const CLASS_REAVER = defineClass({
@@ -276,4 +303,6 @@ export const CLASS_REAVER = defineClass({
   kitUpgrade: { weapon: 'item.bearded_axe', defense: 'item.brow_helm' },
   trinket: 'item.garnet_signet',
   stamp: 'keen',
+  // The neutral build until the role, range and focus items give each class its own (ETH-193).
+  tactics: { ...NEUTRAL_PICKS },
 });

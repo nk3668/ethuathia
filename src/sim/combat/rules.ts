@@ -6,6 +6,7 @@
  */
 import type { Pos } from '../../core';
 import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
+import { focusPreference } from '../ai/tactics';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, RuleActionDef } from '../ai/types';
 import { stepBlocker } from '../coreActions';
@@ -181,15 +182,18 @@ export const ACT_ATTACK_ADJACENT = defineRuleAction({
   id: 'act.attack_adjacent',
   name: 'Attack',
   description:
-    'Strike an enemy on a neighboring tile, picking the one with the least HP left. Standing to fight counts as ' +
+    'Strike an enemy on a neighboring tile, picking the one with the least HP left (or the most, with the Strongest focus). Standing to fight counts as ' +
     'progress, so stuck detection leaves it alone.',
   // Fighting in place is the point: stuck detection must not drop it.
   idle: true,
   parse: noParams,
-  resolve({ state, actor }): Resolved | null {
+  resolve(ctx): Resolved | null {
+    const { state, actor } = ctx;
     const enemies = adjacentEnemies(state, actor);
     if (enemies.length === 0) return null;
-    const target = [...enemies].sort((a, b) => a.actor.hp - b.actor.hp || a.id - b.id)[0] as ActorEntity;
+    // The focus tactic (ETH-162) picks whom to strike: the weakest (the default) or the strongest.
+    const strongest = focusPreference(ctx) === 'strongest';
+    const target = [...enemies].sort((a, b) => (strongest ? b.actor.hp - a.actor.hp : a.actor.hp - b.actor.hp) || a.id - b.id)[0] as ActorEntity;
     const dir = { x: target.pos.x - actor.pos.x, y: target.pos.y - actor.pos.y };
     return { request: { id: 'attack', dir }, detail: `attacking ${nameOf(target)}`, goal: { x: target.pos.x, y: target.pos.y } };
   },
