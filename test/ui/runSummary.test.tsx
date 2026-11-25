@@ -757,7 +757,7 @@ describe('App', () => {
     // Buy upgrades between runs (second party slot + Hardy Recruits +3 HP).
     act(() => {
       // Ensure enough Renown for both tier-1 and tier-2 Guild Hall upgrades.
-      useProfileStore.getState().applyRunResult({ ...emptyRunResult('retreat'), atRisk: { renown: 200 } });
+      useProfileStore.getState().applyRunResult({ ...emptyRunResult('retreat'), atRisk: { renown: 1500 } });
       expect(useProfileStore.getState().purchase('upgrade.second_berth')).toBe(true);
       expect(useProfileStore.getState().purchase('upgrade.hardy_recruits')).toBe(true);
     });

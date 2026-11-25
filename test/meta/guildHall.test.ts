@@ -248,7 +248,7 @@ describe('the roster ledger refund (save migration)', () => {
   });
 
   it('leaves a current save alone, and a save with none of the removed nodes', () => {
-    const p = purchase(rich(1000), 'upgrade.second_berth');
+    const p = purchase(rich(3000), 'upgrade.second_berth');
     const current = decodeSave(encodeSave(p, 1));
     expect(current.ok && current.profile).toEqual(p);
     const envelope = JSON.parse(encodeSave(p, 1)) as { version: number };

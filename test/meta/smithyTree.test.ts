@@ -74,16 +74,16 @@ describe('the tree', () => {
 
   it('is paid in Trophies at the specced prices, with ranks on straps and the pit', () => {
     const cost = (name: string) => UPGRADES.get(id(name)).cost;
-    expect(cost('fitted_straps')).toEqual({ trophies: 25 });
+    expect(cost('fitted_straps')).toEqual({ trophies: 75 });
     expect(UPGRADES.get(id('fitted_straps')).ranks).toEqual({ max: 3, costGrowth: 1.5 });
-    expect(cost('appraisers_eye')).toEqual({ trophies: 150 });
-    expect(cost('reinforced_wagon')).toEqual({ trophies: 300 });
-    expect(cost('smelting_pit')).toEqual({ trophies: 120 });
+    expect(cost('appraisers_eye')).toEqual({ trophies: 450 });
+    expect(cost('reinforced_wagon')).toEqual({ trophies: 2400 });
+    expect(cost('smelting_pit')).toEqual({ trophies: 360 });
     expect(UPGRADES.get(id('smelting_pit')).ranks).toEqual({ max: 3, costGrowth: 1.6 });
-    expect(cost('runed_implements')).toEqual({ trophies: 400 });
-    expect(cost('warded_attire')).toEqual({ trophies: 400 });
-    expect(cost('scroll_case')).toEqual({ trophies: 350 });
-    expect(cost('assayers_ledger')).toEqual({ trophies: 500 });
+    expect(cost('runed_implements')).toEqual({ trophies: 1200 });
+    expect(cost('warded_attire')).toEqual({ trophies: 1200 });
+    expect(cost('scroll_case')).toEqual({ trophies: 1050 });
+    expect(cost('assayers_ledger')).toEqual({ trophies: 1500 });
   });
 
   it('has no placeholder left', () => {

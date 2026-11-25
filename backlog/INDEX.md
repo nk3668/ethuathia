@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-191**
+**Next ID: ETH-192**
 
 **Current milestone: M2 (Meta loop).** M2's remaining work runs as M2.1 (town trees), then M2.2 (minimal Omens), then the ETH-161 capstone.
 
@@ -131,7 +131,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-120](sim-core/ETH-120-run-chronicle.md) | Run chronicle: a durable list of a run's notable events, kept apart from the event buffer | sim-core | M2 | P1 | done | M |
 | [ETH-121](behavior-rules/ETH-121-shared-conditions-requirements.md) | Shared conditions: run-scope conditions and a Requirement type usable outside rules | behavior-rules | M2 | P1 | done | M |
 | [ETH-160](characters/ETH-160-starter-classes-and-races.md) | Starter set of unlockable classes and races | characters | M2 | P1 | done | M |
-| [ETH-161](tools-balance/ETH-161-meta-loop-economy-balance.md) | Meta-loop economy balance pass (M2 capstone) | tools-balance | M2 | P1 | idea | M |
+| [ETH-161](tools-balance/ETH-161-meta-loop-economy-balance.md) | Meta-loop economy balance pass (M2 capstone) | tools-balance | M2 | P1 | pending-review | M |
 | [ETH-172](town-meta/ETH-172-upgrade-ranks-and-tiers.md) | Upgrade engine supports ranked nodes and quest-locked tiers | town-meta | M2 | P1 | done | M |
 | [ETH-047](ui-shell/ETH-047-highlights-auto-pause.md) | Highlights feed and optional auto-pause | ui-shell | M2 | P2 | done | M |
 | [ETH-083](town-meta/ETH-083-gold-to-trophies.md) | Leftover gold converts to Trophies when the party exits | town-meta | M2 | P2 | done | S |
@@ -160,13 +160,14 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-159](town-meta/ETH-159-smithy-tree.md) | Smithy upgrade tree spent in Trophies | town-meta | M2.1 | P1 | done | M |
 | [ETH-187](town-meta/ETH-187-guild-hall-mechanic-nodes.md) | Guild Hall nodes that need new mechanics - Field Rations, Extraction Drills, Waymark Lanterns, Mystery Crate | town-meta | M2.1 | P1 | done | M |
 | [ETH-188](town-meta/ETH-188-smithy-mechanic-nodes.md) | Smithy nodes that need new mechanics - Maker's Marks, class-tier kits, Forge Stamps, Apprentice Trinket, Field Salvage Kit | town-meta | M2.1 | P1 | done | M |
-| [ETH-189](adventurer-ai/ETH-189-flee-return-oscillation.md) | Break the flee-and-return loop against a ranged foe | adventurer-ai | M2 | P2 | idea | S |
 | [ETH-185](risk-omens/ETH-185-minimal-omen-system.md) | Minimal Omen system with ranks, one reward multiplier and a Prepare toggle, unlocked by town nodes | risk-omens | M2.2 | P1 | done | M |
 | [ETH-186](risk-omens/ETH-186-first-town-omens.md) | The first four Omens and their town-tree unlock nodes | risk-omens | M2.2 | P1 | done | M |
+| [ETH-191](risk-omens/ETH-191-omens-that-bite.md) | Make Stalker's Ledger, Cursed Hoards and Armed Warbands cost win rate | risk-omens | M2.2 | P1 | ready | S |
 | [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Rules editor and the rule data model | behavior-rules | M3 | P1 | idea | M |
 | [ETH-163](behavior-rules/ETH-163-library-tree.md) | Library tree unlocks rule conditions, actions and slots | behavior-rules | M3 | P1 | idea | M |
 | [ETH-164](behavior-rules/ETH-164-rule-presets.md) | Shipped rule presets, plus saving and loading your own | behavior-rules | M3 | P1 | idea | S |
 | [ETH-165](tools-balance/ETH-165-rules-balance-pass.md) | Rules and presets balance pass (M3 capstone) | tools-balance | M3 | P1 | idea | M |
+| [ETH-189](adventurer-ai/ETH-189-flee-return-oscillation.md) | Break the flee-and-return loop against a ranged foe | adventurer-ai | M3 | P2 | idea | S |
 | [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Guild Hall doctrine: prioritize clearing floors or prioritize the stairs | town-meta | M3 | P2 | ready | S |
 | [ETH-151](behavior-rules/ETH-151-formation-doctrine.md) | Formation doctrine: stick together or spread out | behavior-rules | M3 | P2 | idea | M |
 | [ETH-154](adventurer-ai/ETH-154-smarter-escape-direction.md) | Smarter escape direction: flee toward allies, stairs or home instead of just away | adventurer-ai | M3 | P2 | idea | M |

@@ -33,6 +33,7 @@ export type { MixedRow, MixedSummary } from './headless/mixed';
 
 export {
   bankedRenown,
+  bankedTrophies,
   flagReason,
   floorTurns,
   median,
@@ -42,10 +43,14 @@ export {
   renownPerHour,
   STEPS_PER_HOUR_AT_1X,
   summarizeReport,
+  trophiesPerHour,
 } from './headless/summary';
 export type { PartySweepRow, ReportSummary } from './headless/summary';
 
 export { formatPartySweep, formatReport } from './headless/format';
+
+export { formatPacing } from './headless/pacing';
+export type { PacingIncome } from './headless/pacing';
 
 export { int, parseSimArgs, USAGE } from './headless/args';
 export type { SimArgs } from './headless/args';

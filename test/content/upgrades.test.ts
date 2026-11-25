@@ -224,7 +224,7 @@ describe('the Guild Hall tree (ETH-132)', () => {
   it('puts the row 6 pick between a contract slot and an inert rule slot, and says the rule slot does nothing yet', () => {
     const pick = nodes.filter((n) => n.exclusiveGroup === 'guild_hall.row6');
     expect(pick.map((n) => n.id).sort()).toEqual(['upgrade.rule_clerk', 'upgrade.second_contract_board']);
-    expect(pick.every((n) => n.tier === 6 && n.cost.renown === 1200)).toBe(true);
+    expect(pick.every((n) => n.tier === 6 && n.cost.renown === 3600)).toBe(true);
     expect(UPGRADES.get('upgrade.rule_clerk').description).toMatch(/does nothing until/);
   });
 
@@ -234,8 +234,8 @@ describe('the Guild Hall tree (ETH-132)', () => {
     expect(ranks('upgrade.contract_bounty')).toEqual({ max: 3, costGrowth: 1.5 });
     expect(ranks('upgrade.guild_chronicles')).toEqual({ max: 3, costGrowth: 1.6 });
     expect(ranks('upgrade.seasoned_constitution')).toEqual({ max: 3, costGrowth: 1.5 });
-    expect(UPGRADES.get('upgrade.hardy_recruits').cost).toEqual({ renown: 40 });
-    expect(UPGRADES.get('upgrade.second_berth').cost).toEqual({ renown: 60 });
+    expect(UPGRADES.get('upgrade.hardy_recruits').cost).toEqual({ renown: 120 });
+    expect(UPGRADES.get('upgrade.second_berth').cost).toEqual({ renown: 1200 });
   });
 
   it('keeps the ids of surviving nodes under their new names', () => {

@@ -89,20 +89,20 @@ describe('Town tab', () => {
     const tip = await screen.findByRole('tooltip');
     expect(tip.textContent).toContain('Contract Board · Locked');
     expect(tip.textContent).toContain('Contract slots +1');
-    expect(tip.textContent).toContain('250 Renown');
+    expect(tip.textContent).toContain('750 Renown');
     expect(tip.textContent).toContain('Second Berth (not owned)');
     expect(tip.textContent).toContain('Needs Second Berth first.');
   });
 
   it('buys a node from its detail card and marks it owned', async () => {
     const user = userEvent.setup();
-    setRenown(400);
+    setRenown(2000);
     render(<TownPanel />);
     await user.click(nodeButton('Second Berth'));
     const detail = screen.getByRole('region', { name: 'Second Berth details' });
-    await user.click(within(detail).getByRole('button', { name: 'Buy for 60 Renown' }));
+    await user.click(within(detail).getByRole('button', { name: 'Buy for 1.2k Renown' }));
     expect(useProfileStore.getState().profile.upgrades.owned).toEqual(['upgrade.second_berth']);
-    expect(useProfileStore.getState().profile.currencies.renown).toBe(340);
+    expect(useProfileStore.getState().profile.currencies.renown).toBe(800);
     expect(useProfileStore.getState().dirty).toBe(true);
     expect(nodeButton('Second Berth').textContent).toContain('Owned');
     expect(nodeButton('Contract Board').textContent).toContain('Available');
@@ -110,15 +110,15 @@ describe('Town tab', () => {
 
   it('disables Buy and says why when the node is too expensive', async () => {
     const user = userEvent.setup();
-    setRenown(10);
+    setRenown(1000);
     render(<TownPanel />);
     await user.click(nodeButton('Second Berth'));
     const detail = screen.getByRole('region', { name: 'Second Berth details' });
     const buy = within(detail).getByRole('button', { name: /Buy/ });
     expect(buy).toHaveProperty('disabled', true);
-    expect(detail.textContent).toContain('Needs 50 Renown more.');
+    expect(detail.textContent).toContain('Needs 200 Renown more.');
     await act(async () => (buy.parentElement as HTMLElement).focus());
-    expect((await screen.findByRole('tooltip')).textContent).toContain('Needs 50 Renown more.');
+    expect((await screen.findByRole('tooltip')).textContent).toContain('Needs 200 Renown more.');
   });
 
   it('shows the pick-one choice and respecs it', async () => {
@@ -134,7 +134,7 @@ describe('Town tab', () => {
     await user.click(within(detail).getByRole('button', { name: 'Respec: give up Rule Clerk' }));
     const { profile } = useProfileStore.getState();
     expect(profile.upgrades.owned).toEqual(['upgrade.second_berth', 'upgrade.contract_board']);
-    expect(profile.currencies.renown).toBe(1300);
+    expect(profile.currencies.renown).toBe(3700);
     expect(nodeButton('Second Contract Board').textContent).toContain('Available');
   });
 
@@ -153,7 +153,7 @@ describe('Town tab', () => {
     await user.click(screen.getByRole('button', { name: 'Reset tree' }));
     const { profile } = useProfileStore.getState();
     expect(profile.upgrades.owned).toEqual([]);
-    expect(profile.currencies.renown).toBe(200);
+    expect(profile.currencies.renown).toBe(1420);
     expect(screen.getByRole('button', { name: 'Reset tree' })).toHaveProperty('disabled', true);
   });
 

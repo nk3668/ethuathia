@@ -18,7 +18,7 @@ The living design and tuning guide for difficulty, danger progression, bestiary 
 10. **Meta power adds consistency more than ceiling.** Town and roster progression (Guild Hall, Smithy, Temple, Tavern, unlocks) gives small, permanent stat boosts. Its bigger job is making runs **more consistent**: fewer early deaths, more reliable floor reach, better recruits and more options. The ceiling comes from what happens in the run: found gear, in-run levels, party composition and rules. In-run levels matter, but they never overshadow gear and party makeup (target end level in §7).
 11. **Balanced for the hands-off player.** The player may simply watch. Every target in §2 is measured on AI-only runs, using the baseline AI and the rule presets available at that stage of progression. Manual control (possession, possibly unlocked later rather than available from the start) is a bonus. No target may depend on it.
 12. **Retreating always pays.** A retreat banks everything earned, so it should rarely be worse than pushing on. Retreat rules must have a real payoff, never only a cost.
-13. **No dead runs, and no dominant strategy.** Even a lost run moves the player toward their next unlock. A fresh player should unlock something within about **3–5 runs (default)** at a ~20% win rate. No single rule preset, party makeup or Omen combination should be best in every dungeon.
+13. **No dead runs, and no dominant strategy.** Even a lost run moves the player toward their next unlock. A fresh player buys a cheap rank after almost every run and saves up for a milestone such as the Second Berth in about **4 runs** at a ~20% win rate (§9.3). No single rule preset, party makeup or Omen combination should be best in every dungeon.
 14. **Risk is priced fairly.** Every Omen and extra contract must pay more than the win rate it costs, as the harness measures it. Opting into risk should be a good bet for a strong party, never a trap.
 
 ---
@@ -306,6 +306,7 @@ Lever order when retuning (fix the earliest one that's off first, since each dis
 | Milestone | Commit | Fresh solo win | Progressed ×4 win | Floor 3+ (fresh) | Return-trip lethality | Mean end level (solo / ×4) |
 |---|---|---|---|---|---|---|
 | M1.5 (`ETH-080`) | `a669cc3` (sim state; later commits are tests and docs only) | 18.0% (fresh, 200 seeds) | 54.5% (progressed, 200 seeds) | 90.0% | 20.0% (9/45 relic runs, fresh solo) | 5.5 fresh solo / 7.2 progressed ×4 (6.8 member mean) |
+| M2 (`ETH-161`) | `4f1dcfd` (the pass changed only town prices and the harness, not the sim) | 18.5% (fresh, 200 seeds) | 47.5% (progressed, 200 seeds) | 100% | 2.6% (1/38 relic runs, fresh solo) | 6.5 fresh solo / 7.4 progressed ×4 (7.2 member mean) |
 
 Full party sweep behind the M1.5 row (200 seeds per cell, win % / mean highest level):
 
@@ -315,6 +316,52 @@ Full party sweep behind the M1.5 row (200 seeds per cell, win % / mean highest l
 | Progressed | 26.5 / 6.08 | 37.0 / 6.71 | 45.0 / 6.99 | 54.5 / 7.21 | 2.06× |
 
 Before `ETH-080` (base `d7fca44`): fresh 28.5 / 35.5 / 38.5 / 46.5, progressed 33.0 / 40.0 / 43.5 / 50.0 (ratios 1.63× and 1.52×). `PARTY_SIZE_BUDGET_STEP` stays **0**: at 0.03 party 4 fell to 33.0% (fresh, below party 3) and 39.5% (progressed), breaking both the ordering and the 2× ratio. A 200-seed cell has a 95% interval of about ±5.5 points, so the progressed 2.06× has little margin: re-check it whenever solo or party 4 moves.
+
+M2 party sweep (`ETH-161`, `4f1dcfd`, 200 seeds per cell, win % / mean highest level). Since M2.1 the progressed preset is the Second Berth, Hardy Recruits I and the Reinforced Wagon from the new trees, so its row is not comparable with M1.5's:
+
+| Preset | Party 1 | Party 2 | Party 3 | Party 4 | Party 4 ÷ solo |
+|---|---|---|---|---|---|
+| Fresh | 18.5 / 6.51 | 29.5 / 7.06 | 41.5 / 7.24 | 45.0 / 7.34 | 2.43× |
+| Progressed | 21.5 / 6.50 | 33.0 / 7.09 | 39.5 / 7.21 | 47.5 / 7.37 | 2.21× |
+
+Two M2 bands miss and are open questions for Nate: return-trip lethality is 2.6% (fresh solo) and 5.4% (progressed ×3) against the 15–25% target, and progressed ×4 sits at the bottom of the 45–60% band.
+
+### 9.3 Town pacing
+
+`npm run sim -- --pacing` prints, after the report, how many runs at the report's mean banked Renown and Trophies each Guild Hall and Smithy node takes: alone, and cumulatively when every rank is bought cheapest first within each tier band (a pick-one group counts its cheapest node). Income is held flat, so bracket it with a fresh solo run and a progressed party run. Tier quests and reveal milestones are assumed met.
+
+**Targets (`ETH-161`, Nate 2026-11-24: slower than the strawman of a first unlock at run 5 and a full party at run 15; every run that gets anywhere buys something):**
+
+- **Every run moves a bar.** The cheapest rank in each building costs under half of a fresh solo run's income, so a run that reaches floor 3 buys something.
+- **The berths are milestones.** Saving for it, a fresh solo player affords the Second Berth around **run 4**, and the Reinforced Wagon (third berth) around **run 10**. The Library's fourth berth (later) should land past **run 15**.
+- **Tier I of the Guild Hall and the Smithy done** around **run 15–25**; **both tiers done** around **run 45–75**. More buildings come in later milestones, so the trees need not outlast the whole game.
+- `BUILDING_QUEST_SHARE` (0.3) and `TIER_QUEST_SHARE` (0.5) stay as they are.
+
+**Measured (`4f1dcfd` income, prices after `ETH-161`):** fresh solo earns 354 Renown and 197 Trophies a run (2,960 and 1,640 an hour at 1×); progressed ×3 earns 480 and 318. Before the pass the first run bought five or more nodes and both trees were done after about 24 fresh runs (17 progressed), so every Guild Hall and Smithy price was tripled, with the Second Berth at 1,200 Renown (3.4 fresh runs alone) and the Reinforced Wagon at 2,400 Trophies. Cheapest first, Tier I is done after 26 (Guild Hall) and 25 (Smithy) fresh-income runs, 20 and 15 at progressed income; both tiers after about 75 and 50.
+
+**Omen risk pricing (progressed ×3, 200 seeds, base 39.5% win):**
+
+| Omen | Rank 1 win % / reward | Rank 3 win % / reward | Verdict |
+|---|---|---|---|
+| Deep Surge | 38.5 / +10% | 30.0 / +30% (return-trip deaths 23%) | Priced: the only real risk |
+| Stalker's Ledger | 43.5 / +10% | 42.0 / +30% | Free: its finds outweigh the danger |
+| Cursed Hoards | 39.5 / +10% | 39.0 / +30% | Free |
+| Armed Warbands | 48.5 / +12% | 42.5 / +36% | Free, a buff at rank 1: the dropped gear arms the party |
+
+Three of the four break "risk is a choice and pays for it": they pay without costing. Not changed in this pass; see the `ETH-161` Log.
+
+**Town nodes flagged during M2 (progressed ×3, 200 seeds, base 39.5%):** Artisan Implements 63.0% (+23.5, far the strongest node), Extraction Drills III 47.5% (+8), Field Rations III 42.5% (+3), Forge Stamps 41.0% (+1.5).
+
+Artisan Implements was strong only for the Vanguard: its Tier-1 weapon gave +2 damage over the starter where every other class gets +1. The Flanged mace dropped from +3 to +2 damage (still −1 accuracy). After that, the Smithy's Tier I pick-one, by class (progressed ×3, 200 seeds, win %):
+
+| Class | Base | Artisan Implements | Tailored Attire |
+|---|---|---|---|
+| Vanguard | 39.5 | 48.0 (+8.5) | 53.5 (+14.0) |
+| Outrider | 57.0 | 68.0 (+11.0) | 60.5 (+3.5) |
+| Reaver | 54.5 | 62.0 (+7.5) | 66.0 (+11.5) |
+| Lorekeeper | 36.5 | 49.5 (+13.0) | 51.5 (+15.0) |
+
+Each class leans a different way, which is intended. The base column shows a class spread at party size 3 (Outrider and Reaver well ahead of Vanguard and Lorekeeper) that solo play hides; that is for the M4 composition capstone.
 
 ## 10. Open questions
 

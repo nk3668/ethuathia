@@ -213,7 +213,7 @@ export const ITEM_FLANGED_MACE = defineItem({
   gear: { type: 'mace' },
   bundle: {
     modifiers: [
-      { stat: 'damage', op: 'add', value: 3 },
+      { stat: 'damage', op: 'add', value: 2 },
       { stat: 'accuracy', op: 'add', value: -1 },
     ],
   },

@@ -4,6 +4,7 @@ import { CONDITIONS as SIM_CONDITIONS, createRun, getStat, RULE_ACTIONS as SIM_R
 import type { Entity, Rule } from '../../src/sim';
 import {
   bankedRenown,
+  bankedTrophies,
   buildHeadlessConfig,
   buildHeadlessProfile,
   CAUTIOUS_RULES,
@@ -13,6 +14,7 @@ import {
   formatReport,
   headlessParty,
   median,
+  formatPacing,
   formatPartySweep,
   parseSimArgs,
   partySweepWarnings,
@@ -23,6 +25,7 @@ import {
   runSeeds,
   STEPS_PER_HOUR_AT_1X,
   summarizeReport,
+  trophiesPerHour,
 } from '../../tools/headless';
 import type { SeedResult } from '../../tools/headless';
 
@@ -165,6 +168,25 @@ describe('tools/headless', () => {
     expect(formatReport(runs)).toContain('Renown banked per run: mean 225.0, 900.0/hr at 1x (5 steps/s).');
   });
 
+  it('reports banked Trophies with exit conversions, and runs to afford each town node (ETH-161)', () => {
+    expect(bankedTrophies(result(1))).toBeNull();
+    const runs = [
+      result(1, { steps: 1800, atRisk: { trophies: 100 }, lost: { trophies: 25 }, convertedTrophies: 0 }),
+      result(2, { steps: 7200, atRisk: { trophies: 200 }, lost: {}, convertedTrophies: 50 }),
+    ];
+    expect(bankedTrophies(runs[1] as SeedResult)).toBe(250);
+    // (75 + 250) banked over 0.5 hr.
+    expect(trophiesPerHour(runs)).toBeCloseTo(650, 6);
+    expect(formatReport(runs)).toContain('Trophies banked per run: mean 162.5, 650.0/hr at 1x.');
+
+    const table = formatPacing({ renown: 100, trophies: 100 });
+    expect(table).toContain('Guild Hall:');
+    expect(table).toContain('Smithy:');
+    // Every building's table closes each tier band with a cumulative run count.
+    expect(table).toMatch(/-- band 1 done after \d+\.\d runs/);
+    expect(table).toMatch(/Second Berth +\d+ renown +alone/);
+  });
+
   it('says so when no seed needs a look', () => {
     const report = formatReport([result(1)]);
     expect(report).toContain('1 run: 1 reached the bottom, 0 hit the turn cap, 0 triggered stuck detection.');
@@ -187,6 +209,7 @@ describe('tools/headless', () => {
       omens: [],
       recruits: false,
       partySweep: false,
+      pacing: false,
       jobs: defaultJobs(),
       json: null,
       compare: null,
@@ -208,6 +231,7 @@ describe('tools/headless', () => {
       omens: [],
       recruits: false,
       partySweep: false,
+      pacing: false,
       jobs: defaultJobs(),
       json: null,
       compare: null,

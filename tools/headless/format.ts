@@ -97,7 +97,10 @@ export function formatReport(results: readonly SeedResult[], cap = DEFAULT_TURN_
   const renownLine =
     s.renownBankedMean === null || s.renownPerHour1x === null
       ? ''
-      : `Renown banked per run: mean ${s.renownBankedMean.toFixed(1)}, ${s.renownPerHour1x.toFixed(1)}/hr at 1x (${TURNS_PER_SECOND} steps/s).`;
+      : `Renown banked per run: mean ${s.renownBankedMean.toFixed(1)}, ${s.renownPerHour1x.toFixed(1)}/hr at 1x (${TURNS_PER_SECOND} steps/s).` +
+        (s.trophiesBankedMean === null || s.trophiesPerHour1x === null
+          ? ''
+          : `\nTrophies banked per run: mean ${s.trophiesBankedMean.toFixed(1)}, ${s.trophiesPerHour1x.toFixed(1)}/hr at 1x.`);
 
   const mixedText = formatMixed(s.mixed);
 

@@ -4,7 +4,7 @@ title: Break the flee-and-return loop against a ranged foe
 type: bug
 status: idea
 priority: P2
-milestone: M2
+milestone: M3
 epic: adventurer-ai
 size: S
 depends_on: [ETH-148, ETH-187]
@@ -29,3 +29,4 @@ Found while building ETH-187: with Extraction Drills the fleeing hero always esc
 
 ## Log
 - 2026-11-25: Created from the ETH-187 implementer's trace of seed 66.
+- 2026-11-25: Moved to M3 (Nate, ETH-161 wrap-up): it is AI behavior, M3's theme.

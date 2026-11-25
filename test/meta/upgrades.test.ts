@@ -24,7 +24,7 @@ import {
 } from '../../src/meta';
 import type { Profile } from '../../src/meta';
 
-// The shipped Guild Hall (ETH-132): second_berth (T1, 60 Renown) then contract_board (row 3, needs it);
+// The shipped Guild Hall (ETH-132): second_berth (T1, 1200 Renown) then contract_board (row 3, needs it);
 // its only pick-one pair (row 6) is behind the Long Muster gate, so pick-one tests use fixtures.
 
 // A test-only building with a Favor cost and an unlock grant.
@@ -105,23 +105,23 @@ function buy(profile: Profile, ...ids: string[]): Profile {
 
 describe('purchase', () => {
   it('pays the cost, records the node and leaves the input untouched', () => {
-    const before = rich(100);
+    const before = rich(1500);
     const after = purchase(before, 'upgrade.second_berth');
-    expect(after.currencies.renown).toBe(40);
+    expect(after.currencies.renown).toBe(300);
     expect(after.upgrades.owned).toEqual(['upgrade.second_berth']);
     expect(before.upgrades.owned).toEqual([]);
-    expect(before.currencies.renown).toBe(100);
+    expect(before.currencies.renown).toBe(1500);
     expect(checkProfile(after)).toEqual([]);
   });
 
   it('explains why a node cannot be bought', () => {
-    const poor = rich(10);
+    const poor = rich(1000);
     expect(canPurchase(poor, 'upgrade.nope')).toMatchObject({ ok: false, status: 'unknown' });
     expect(canPurchase(poor, 'upgrade.second_berth')).toMatchObject({
       ok: false,
       status: 'expensive',
-      reason: 'Needs 50 Renown more.',
-      short: { renown: 50, trophies: 0, favor: {} },
+      reason: 'Needs 200 Renown more.',
+      short: { renown: 200, trophies: 0, favor: {} },
     });
     expect(canPurchase(poor, 'upgrade.contract_board')).toMatchObject({
       ok: false,
@@ -132,7 +132,7 @@ describe('purchase', () => {
     const owned = buy(rich(), 'upgrade.second_berth');
     expect(canPurchase(owned, 'upgrade.second_berth')).toMatchObject({ ok: false, status: 'owned' });
     expect(canPurchase(owned, 'upgrade.contract_board')).toEqual({ ok: true });
-    expect(() => purchase(poor, 'upgrade.second_berth')).toThrow(/Cannot buy Second Berth: Needs 50 Renown more/);
+    expect(() => purchase(poor, 'upgrade.second_berth')).toThrow(/Cannot buy Second Berth: Needs 200 Renown more/);
   });
 
   it('checks Favor per deity', () => {
@@ -242,7 +242,7 @@ describe('respec', () => {
   });
 
   it('is refused during a run, for both kinds, changing nothing', () => {
-    const f = buy(rich(1000), 'upgrade.second_berth', 'upgrade.test_forge_pick_a');
+    const f = buy(rich(3000), 'upgrade.second_berth', 'upgrade.test_forge_pick_a');
     const t = buy(rich(1000), 'upgrade.test_left');
     expect(respecBlock({ runActive: true })).toBe(RUN_ACTIVE_REASON);
     expect(respecBlock({ runActive: false })).toBeNull();
@@ -257,9 +257,9 @@ describe('resetTree', () => {
   const OWNED_HALL = ['upgrade.second_berth', 'upgrade.contract_board', 'upgrade.hardy_recruits'];
 
   it('gives up the whole tree and refunds everything, free by default', () => {
-    const start = rich(1000);
+    const start = rich(3000);
     const p = buy(start, ...OWNED_HALL);
-    expect(p.currencies.renown).toBeLessThan(1000);
+    expect(p.currencies.renown).toBeLessThan(3000);
     const plan = resetPlan(p, 'building.guild_hall');
     expect(plan?.removed).toEqual(OWNED_HALL);
     expect(plan?.fee.renown).toBe(0);
@@ -269,17 +269,17 @@ describe('resetTree', () => {
   });
 
   it('only touches the named building', () => {
-    const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.test_left');
+    const p = buy(rich(3000), 'upgrade.second_berth', 'upgrade.test_left');
     const after = resetTree(p, 'building.test_shrine');
     expect(after.upgrades.owned).toEqual(['upgrade.second_berth']);
-    expect(after.currencies.renown).toBe(1000 - 60);
+    expect(after.currencies.renown).toBe(3000 - 1200);
   });
 
   it('charges a Foundations fee on the whole refund when the constant is nonzero, never Tactics', () => {
-    const p = buy(rich(1000), ...OWNED_HALL);
+    const p = buy(rich(3000), ...OWNED_HALL);
     const plan = resetPlan(p, 'building.guild_hall', FEE_HALF);
     expect(plan?.fee.renown).toBe(Math.ceil((plan?.refund.renown ?? 0) / 2));
-    expect(resetTree(p, 'building.guild_hall', FEE_HALF).currencies.renown).toBe(1000 - (plan?.fee.renown ?? 0));
+    expect(resetTree(p, 'building.guild_hall', FEE_HALF).currencies.renown).toBe(3000 - (plan?.fee.renown ?? 0));
     const t = buy(rich(1000), 'upgrade.test_left', 'upgrade.test_after');
     expect(resetPlan(t, 'building.test_shrine', FEE_HALF)?.fee.renown).toBe(0);
     expect(resetTree(t, 'building.test_shrine', FEE_HALF).currencies.renown).toBe(1000);
@@ -295,7 +295,7 @@ describe('resetTree', () => {
 
 describe('saves from before tree kinds', () => {
   it('load unchanged: kinds live in content, so the owned list is unchanged, and v1 saves gain empty ranks', () => {
-    const p = buy(rich(1000), 'upgrade.second_berth', 'upgrade.test_forge_pick_a');
+    const p = buy(rich(3000), 'upgrade.second_berth', 'upgrade.test_forge_pick_a');
     const old = JSON.parse(encodeSave(p, 1)) as { slices: { upgrades: { version: number; data: unknown } } };
     old.slices.upgrades = { version: 1, data: { owned: ['upgrade.second_berth', 'upgrade.test_forge_pick_a'] } };
     const decoded = decodeSave(JSON.stringify(old));

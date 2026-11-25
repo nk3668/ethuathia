@@ -51,7 +51,7 @@ describe('revealing a class or race', () => {
     const p = rich();
     expect(canPurchase(p, OUTRIDER)).toMatchObject({ ok: false, status: 'locked', reason: 'Revealed when you reach floor 4.' });
     expect(() => purchase(p, OUTRIDER)).toThrow(/Revealed when you reach floor 4/);
-    expect(UPGRADES.get(OUTRIDER).cost).toEqual({ renown: 150 });
+    expect(UPGRADES.get(OUTRIDER).cost).toEqual({ renown: 450 });
     expect(isMilestoneOpen(p, OUTRIDER)).toBe(false);
   });
 
@@ -75,8 +75,8 @@ describe('revealing a class or race', () => {
   });
 
   it('keeps the Smithy classes behind the Smithy and the milestone, and prices them in Trophies', () => {
-    expect(UPGRADES.get(REAVER).cost).toEqual({ trophies: 200 });
-    expect(UPGRADES.get(STONEKIN).cost).toEqual({ trophies: 200 });
+    expect(UPGRADES.get(REAVER).cost).toEqual({ trophies: 600 });
+    expect(UPGRADES.get(STONEKIN).cost).toEqual({ trophies: 600 });
     expect(canPurchase(smithyOpen(rich()), REAVER)).toMatchObject({
       ok: false,
       status: 'locked',
@@ -105,9 +105,9 @@ describe('revealing a class or race', () => {
       status: 'locked',
       reason: 'Revealed when you achieve in one run: identified 5 items.',
     });
-    expect(trainingFields('class.reaver')[0]?.value).toBe('Achieve in one run: killed 40 monsters. Then bought at the Smithy for 200 Trophies.');
+    expect(trainingFields('class.reaver')[0]?.value).toBe('Achieve in one run: killed 40 monsters. Then bought at the Smithy for 600 Trophies.');
     expect(trainingFields('class.lorekeeper')[0]?.value).toBe(
-      'Achieve in one run: identified 5 items. Then bought at the Guild Hall for 250 Renown.',
+      'Achieve in one run: identified 5 items. Then bought at the Guild Hall for 750 Renown.',
     );
 
     const afterReaver = applyRunResult(rich(), metReq(REAVER_REQ, 1));

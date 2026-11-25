@@ -45,8 +45,8 @@ function party(extra: Partial<RunConfig>, classes: readonly string[] = CLASS_IDS
 
 describe('Artisan Implements and Tailored Attire', () => {
   it('are a pick-one at the specced price, and put kitTier in the run config', () => {
-    expect(UPGRADES.get(id('artisan_implements')).cost).toEqual({ trophies: 120 });
-    expect(UPGRADES.get(id('tailored_attire')).cost).toEqual({ trophies: 120 });
+    expect(UPGRADES.get(id('artisan_implements')).cost).toEqual({ trophies: 360 });
+    expect(UPGRADES.get(id('tailored_attire')).cost).toEqual({ trophies: 360 });
     const base = buy(rich(), id('fitted_straps'));
     expect(config(base)).not.toHaveProperty('kitTier');
     const artisan = purchase(base, id('artisan_implements'));
@@ -79,7 +79,7 @@ describe('Artisan Implements and Tailored Attire', () => {
 
 describe('Apprentice Trinket', () => {
   it('is a pick-one with Forge Stamps and gives each class its ring or amulet as kit', () => {
-    expect(UPGRADES.get(id('apprentice_trinket')).cost).toEqual({ trophies: 550 });
+    expect(UPGRADES.get(id('apprentice_trinket')).cost).toEqual({ trophies: 1650 });
     const trinket = purchase(withCase(), id('apprentice_trinket'));
     expect(config(trinket).trinket).toBe(true);
     expect(canPurchase(trinket, id('forge_stamps'))).toMatchObject({ ok: false, status: 'excluded' });
@@ -98,7 +98,7 @@ describe('Apprentice Trinket', () => {
 describe('Forge Stamps', () => {
   it('are off without the node and stamp the right piece with it', () => {
     expect(config(withCase())).not.toHaveProperty('stamps');
-    expect(UPGRADES.get(id('forge_stamps')).cost).toEqual({ trophies: 550 });
+    expect(UPGRADES.get(id('forge_stamps')).cost).toEqual({ trophies: 1650 });
     const cfg = config(purchase(withCase(), id('forge_stamps')));
     expect(cfg.stamps).toBe(true);
     expect(cfg.party.every((m) => m.stamp === CLASSES.get(m.classId).stamp)).toBe(true);
@@ -165,7 +165,7 @@ describe('Forge Stamps', () => {
 describe('Field Salvage Kit', () => {
   const NODE = id('field_salvage_kit');
   it('is an opt-in node at the specced price that sets config.salvage only when switched on', () => {
-    expect(UPGRADES.get(NODE).cost).toEqual({ trophies: 350 });
+    expect(UPGRADES.get(NODE).cost).toEqual({ trophies: 1050 });
     expect(UPGRADES.get(NODE).optIn).toBe(true);
     const owned = purchase(withCase(), NODE);
     expect(config(owned)).not.toHaveProperty('salvage');
