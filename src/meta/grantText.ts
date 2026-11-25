@@ -43,6 +43,8 @@ export function describeStartPerk(perk: StartPerk): string {
       return "Each adventurer wears their class's ring or amulet from the first turn";
     case 'stamps':
       return 'Each adventurer\'s kit carries a Forge Stamp (Keen, Warding or Nimble), chosen on the Prepare screen';
+    case 'salvage':
+      return 'Overloaded adventurers break plain, identified gear into scrap worth Trophies instead of dropping it (switch it on in the Prepare screen)';
     case 'stock':
       return `${perk.each === true ? 'Each adventurer starts' : 'The party starts'} with ${perk.qty} ${findDef(perk.item)?.name ?? perk.item}`;
   }

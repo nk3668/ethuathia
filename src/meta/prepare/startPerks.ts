@@ -12,12 +12,13 @@ import { capacity, profileGrants } from '../upgrades';
 /** The run config fields the owned upgrades' start perks and trade bonus set, with unset ones left out. */
 export function upgradeStartConfig(
   profile: Profile,
-): Pick<RunConfig, 'startKnown' | 'kitEnchant' | 'kitTier' | 'trinket' | 'stamps' | 'startStock' | 'tradeBonus'> {
+): Pick<RunConfig, 'startKnown' | 'kitEnchant' | 'kitTier' | 'trinket' | 'stamps' | 'salvage' | 'startStock' | 'tradeBonus'> {
   const known = new Set<StartKnownCategory>();
   const enchant = new Set<StartEnchantPiece>();
   const tier = new Set<StartEnchantPiece>();
   let trinket = false;
   let stamps = false;
+  let salvage = false;
   const stock: StartStock[] = [];
   for (const { grant } of profileGrants(profile)) {
     if (grant.kind !== 'start') continue;
@@ -27,6 +28,7 @@ export function upgradeStartConfig(
     else if (perk.perk === 'tier') tier.add(perk.piece);
     else if (perk.perk === 'trinket') trinket = true;
     else if (perk.perk === 'stamps') stamps = true;
+    else if (perk.perk === 'salvage') salvage = true;
     else stock.push({ item: perk.item, qty: perk.qty, ...(perk.each === true ? { each: true as const } : {}) });
   }
   const bonus = capacity(profile, 'tradeBonus', 0);
@@ -37,6 +39,7 @@ export function upgradeStartConfig(
     ...(tier.size > 0 ? { kitTier: START_ENCHANT_PIECES.filter((p) => tier.has(p)) } : {}),
     ...(trinket ? { trinket: true as const } : {}),
     ...(stamps ? { stamps: true as const } : {}),
+    ...(salvage ? { salvage: true as const } : {}),
     ...(stock.length > 0 ? { startStock: mergeStock(stock) } : {}),
     ...(bonus > 0 ? { tradeBonus: bonus } : {}),
   };

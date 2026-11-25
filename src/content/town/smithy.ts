@@ -242,6 +242,24 @@ export const UPGRADE_ASSAYERS_LEDGER = defineUpgrade({
   grants: [{ kind: 'start', start: { perk: 'know', category: 'jewelry' } }],
 });
 
+export const UPGRADE_FIELD_SALVAGE_KIT = defineUpgrade({
+  id: 'upgrade.field_salvage_kit',
+  name: 'Field Salvage Kit',
+  description:
+    'A roll of tongs, chisels and a portable anvil. Switch it on in the Prepare screen: an overloaded adventurer whose least ' +
+    'valuable item is plain, identified gear breaks it down into scrap instead of dropping it. Scrap weighs nothing and pays ' +
+    'Trophies at the exit sale rate (1 per 10 value) as the run goes. Those Trophies are at risk like any earning, but Omens ' +
+    'do not multiply them. Never enchanted, cursed, unidentified or kit items, and never an upgrade.',
+  tags: ['economy', 'capability', 'opt_in'],
+  building,
+  tier: 6,
+  column: 3,
+  cost: { trophies: 350 },
+  requires: [UPGRADE_SCROLL_CASE.id],
+  optIn: true,
+  grants: [{ kind: 'start', start: { perk: 'salvage' } }],
+});
+
 export const UPGRADE_FORGE_STAMPS = defineUpgrade({
   id: 'upgrade.forge_stamps',
   name: 'Forge Stamps',

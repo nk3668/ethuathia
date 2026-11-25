@@ -130,20 +130,23 @@ export function projectedRewards(state: RunState, events: readonly SimEvent[]): 
  */
 function sumTrackerRewards(stateOf: (tracker: RunTracker<unknown>) => unknown, multiplier: number): RewardAmounts {
   const total: RewardAmounts = {};
+  // Conversions (`unmultiplied` trackers) are added after the multiplier.
+  const flat: RewardAmounts = {};
   for (const tracker of TRACKER_LIST) {
     if (tracker.rewards === undefined) continue;
     const s = stateOf(tracker);
     if (s === undefined) continue;
+    const into = tracker.unmultiplied === true ? flat : total;
     for (const [currency, amount] of Object.entries(tracker.rewards(s))) {
-      if (amount !== 0) total[currency] = (total[currency] ?? 0) + amount;
+      if (amount !== 0) into[currency] = (into[currency] ?? 0) + amount;
     }
   }
-  if (multiplier === 1) return total;
   const out: RewardAmounts = {};
   for (const [currency, amount] of Object.entries(total)) {
-    const scaled = applyRewardMultiplier(amount, multiplier);
+    const scaled = multiplier === 1 ? amount : applyRewardMultiplier(amount, multiplier);
     if (scaled !== 0) out[currency] = scaled;
   }
+  for (const [currency, amount] of Object.entries(flat)) out[currency] = (out[currency] ?? 0) + amount;
   return out;
 }
 

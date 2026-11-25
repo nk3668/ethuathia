@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { BUILDING_SMITHY, CLASSES, ITEMS, smithyKitProblems, tierGateId, UPGRADES } from '../../src/content';
-import { buildRunConfig, canPurchase, defaultRunChoices, newProfile, purchase } from '../../src/meta';
+import { buildRunConfig, canPurchase, defaultRunChoices, describeGrant, newProfile, purchase } from '../../src/meta';
 import type { Profile } from '../../src/meta';
 import { PARTY_CHOICE } from '../../src/meta/prepare/party';
 import { createRun, getEntity, soldOnExit, step, waitDecide, wornItems } from '../../src/sim';
@@ -144,6 +144,19 @@ describe('Forge Stamps', () => {
     const parts = RUN_DOMAIN_LOG_TEXT.kitIssued.text(issued as never, () => 'Mira');
     const text = (Array.isArray(parts) ? parts : [parts]).map((p) => (typeof p === 'string' ? p : ((p as { label?: string; ref: string }).label ?? (p as { ref: string }).ref))).join('');
     expect(text).toContain('a keen');
+  });
+});
+
+describe('Field Salvage Kit', () => {
+  const NODE = id('field_salvage_kit');
+  it('is an opt-in node at the specced price that sets config.salvage only when switched on', () => {
+    expect(UPGRADES.get(NODE).cost).toEqual({ trophies: 350 });
+    expect(UPGRADES.get(NODE).optIn).toBe(true);
+    const owned = purchase(withCase(), NODE);
+    expect(config(owned)).not.toHaveProperty('salvage');
+    const on = buildRunConfig(owned, { ...defaultRunChoices(), optIns: { enabled: [NODE] } }, 7);
+    expect(on.salvage).toBe(true);
+    expect(describeGrant(UPGRADES.get(NODE).grants[0] as never)).toMatch(/break plain, identified gear/);
   });
 });
 

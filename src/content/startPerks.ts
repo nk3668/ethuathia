@@ -39,6 +39,8 @@ export type StartPerk =
   | { readonly perk: 'trinket' }
   /** Each adventurer's kit carries a Forge Stamp: the class default, or the one picked on Prepare (ETH-188). */
   | { readonly perk: 'stamps' }
+  /** Field Salvage Kit (ETH-188, an opt-in node): overloaded adventurers salvage plain identified gear into at-risk Trophies instead of dropping it. */
+  | { readonly perk: 'salvage' }
   /** The party starts with `qty` of `item`, carried by its first member (or by each adventurer with `each`). Known on sight, never sold. */
   | { readonly perk: 'stock'; readonly item: string; readonly qty: number; readonly each?: true };
 
@@ -49,6 +51,7 @@ export const startPerkSchema = z.discriminatedUnion('perk', [
   z.strictObject({ perk: z.literal('tier'), piece: z.enum(START_ENCHANT_PIECES) }),
   z.strictObject({ perk: z.literal('trinket') }),
   z.strictObject({ perk: z.literal('stamps') }),
+  z.strictObject({ perk: z.literal('salvage') }),
 ]);
 
 /** The content ids a start perk names, for reference checks. */

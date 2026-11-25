@@ -15,6 +15,7 @@ import { equippedIn, slotFor } from './equipment';
 import { isInstanceTypeKnown } from './identify';
 import { itemDef } from './instance';
 import { itemName, nameField } from './name';
+import { canSalvage } from './salvage';
 import { addToInventory, ensureInventory, inventoryOf, itemsAt, placeItem, rememberTile, takeFromInventory } from './inventory';
 import { itemValue } from './value';
 
@@ -54,7 +55,13 @@ export interface UnequipRequest {
   slot: EquipSlot;
 }
 
-export type ItemsRequest = PickupRequest | DropRequest | UseRequest | EquipRequest | UnequipRequest;
+/** Break the pack entry at `index` down into scrap (Field Salvage Kit, ETH-188): plain identified gear only. */
+export interface SalvageRequest {
+  id: 'salvage';
+  index: number;
+}
+
+export type ItemsRequest = PickupRequest | DropRequest | SalvageRequest | UseRequest | EquipRequest | UnequipRequest;
 
 const isIndex = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 1;
@@ -147,6 +154,35 @@ export const ITEMS_ACTIONS: ActionRecord<ItemsRequest> = {
         qty: taken.qty,
         floor: actor.floor,
         pos,
+      });
+    },
+  },
+  salvage: {
+    id: 'salvage',
+    name: 'Salvage',
+    description:
+      'Break a piece of plain, identified gear from your pack down into weightless scrap worth Trophies. Needs the Smithy’s Field Salvage Kit; never enchanted, cursed, unidentified or kit items.',
+    tags: [],
+    cost: 100,
+    parse: (raw) => (isIndex(raw.index) ? { id: 'salvage', index: raw.index } : 'The pack index must be a whole number from 0'),
+    validate: ({ state, actor }, { index }) => {
+      const entry = inventoryOf(actor)[index];
+      if (entry === undefined) return 'There is no such item in the pack';
+      return canSalvage(state, actor, entry) ? null : 'That can’t be salvaged';
+    },
+    execute: ({ state, actor, emit }, { index }) => {
+      const entry = inventoryOf(actor)[index];
+      if (entry === undefined) return;
+      const taken = takeFromInventory(actor, index, 1, state);
+      emit({
+        type: 'itemSalvaged',
+        actor: actor.id,
+        item: taken.def,
+        ...nameField(state, taken, actor),
+        qty: 1,
+        value: itemDef(taken).value,
+        floor: actor.floor,
+        pos: { x: actor.pos.x, y: actor.pos.y },
       });
     },
   },
