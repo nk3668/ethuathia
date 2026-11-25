@@ -12,7 +12,7 @@
  * The list lives in the stats slice, `state.domains.stats.runModifiers`. Change it only through
  * `addRunModifier` and `removeRunModifier`, which emit `runModifierAdded` / `runModifierRemoved`.
  */
-import { RUN_GATE_INFO, RUN_GATES, UPGRADES, upgradeBundle } from '../../content';
+import { OMENS, omenRank, RUN_GATE_INFO, RUN_GATES, UPGRADES, upgradeBundle } from '../../content';
 import type { Bundle, RunGate } from '../../content';
 import { defineCondition } from '../ai/types';
 import type { ParamParser } from '../ai/types';
@@ -120,6 +120,14 @@ export function toRunModifier(config: RunModifierConfig): RunModifier {
  * other def's bundle (`bundleOf`). Throws on an unknown id or one without a bundle.
  */
 export function runBundleOf(id: string): Bundle {
+  // An Omen rank's bundle (ETH-185): `omen.gloom#2`.
+  const hash = id.indexOf('#');
+  if (hash > 0 && id.startsWith('omen.')) {
+    const base = id.slice(0, hash);
+    const bundle = OMENS.has(base) ? omenRank(OMENS.get(base), Number(id.slice(hash + 1)))?.bundle : undefined;
+    if (bundle === undefined) throw new Error(`Omen rank "${id}" has no bundle`);
+    return bundle;
+  }
   if (UPGRADES.has(id)) {
     const bundle = upgradeBundle(UPGRADES.get(id), 'run');
     if (bundle === undefined) throw new Error(`Upgrade "${id}" has no run-scope bundle grant`);
@@ -373,6 +381,16 @@ function statWord(stat: string): string {
   return isStatId(stat) ? STAT_INFO[stat].label : stat;
 }
 
+/** The `OmenRankDef` that created `mod`, when `mod.source.id` names an Omen and its rank is in config or source label. */
+function omenRankFor(mod: RunModifier, state?: RunState) {
+  if (!OMENS.has(mod.source.id)) return undefined;
+  const def = OMENS.get(mod.source.id);
+  const fromConfig = state?.config.omens?.find((o) => o.id === mod.source.id)?.rank;
+  if (fromConfig !== undefined) return omenRank(def, fromConfig);
+  const match = /\(Omen, rank (\d+)\)$/.exec(mod.source.label);
+  return match === null ? undefined : omenRank(def, Number(match[1]));
+}
+
 /**
  * One line describing a modifier for its tooltip: what it does, to whom, the reward bonus and
  * when it ends. "Monsters: Sight −2. Rewards +20%. Ends when the party leaves floor 3."
@@ -394,7 +412,11 @@ export function describeRunModifier(mod: RunModifier, state?: RunState): string 
     }
   }
   if (mod.when !== undefined) parts.push(`Only ${RUN_GATE_INFO[mod.when].name}.`);
-  if (mod.flags !== undefined && mod.flags.length > 0) parts.push(`Sets ${mod.flags.join(', ')}.`);
+  if (mod.flags !== undefined && mod.flags.length > 0) {
+    const rank = omenRankFor(mod, state);
+    if (rank === undefined) parts.push(`Sets ${mod.flags.join(', ')}.`);
+    else if (mod.bundle === undefined) parts.push(rank.text.endsWith('.') ? rank.text : `${rank.text}.`);
+  }
   if (mod.rewardBonus !== undefined && mod.rewardBonus !== 0) parts.push(`Rewards ${rewardBonusText(mod.rewardBonus)}.`);
   if (mod.xpBonus !== undefined && mod.xpBonus !== 0) parts.push(`XP ${rewardBonusText(mod.xpBonus)}.`);
   if (mod.contractBonus !== undefined && mod.contractBonus !== 0) parts.push(`Contract pay ${rewardBonusText(mod.contractBonus)}.`);

@@ -1104,8 +1104,9 @@ store or reward math.**
   floor 3.") and `rewardMultiplier`, for a HUD strip and its tooltips. Helpers for wording:
   `scopeWords`, `rewardBonusText`.
 - **Meta:** `upgradeRunModifiers(profile)` (`meta/prepare/build.ts`), used by `buildRunConfig`.
-- **For later items:** an Omen rank is a modifier with `source.label` naming the rank, a bundle
-  and/or a flag, and a `rewardBonus`; a blessing a `party` modifier credited to the deity; a curse
+- **Omens (ETH-185):** an Omen rank is a modifier with `source.label` naming the rank, a bundle
+  and/or a flag, and a `rewardBonus` (§6.3, Omens).
+- **For later items:** a blessing a `party` modifier credited to the deity; a curse
   `addRunModifier` from an encounter outcome; a dungeon event a modifier with `until: { floor }`;
   doctrine a flag-only modifier read with `runFlag`; a veteran a `party` modifier.
 
@@ -2235,6 +2236,30 @@ As built (ETH-064, `src/meta/prepare/`):
   plus its grant. The Prepare panel `opt-ins` lists them (hidden while none is owned). The headless
   harness counts owned opt-in nodes as on unless `--opt-ins off`; `--upgrades` takes `id*N` for a
   rank and a trailing `!` to attach a node behind a closed building tier.
+- **Omens (ETH-185):** an `OmenDef` (`src/content/omens.ts`) has 1 to `MAX_OMEN_RANKS` (5) ranks. Each rank is
+  the *whole* effect at that rank, not a step up from the one below: a `bundle` and/or `flags`, an optional
+  `scope` (default `monsters`), a `text` for tooltips and the Codex, and `reward`, the total reward bonus
+  at that rank (strictly rising). Omens start locked: unlike classes, an Omen no node unlocks is never
+  available (`availableOmens` needs an owned `unlock` grant), and a node only unlocks, it never turns
+  anything on or pays a bonus. The `omens` section (`{ ranks: { omenId: rank } }`, default `{}`, rank 0 or
+  absent is off) holds the player's picks; `activeOmens` keeps only unlocked Omens at a rank they have, and
+  `apply` writes `RunConfig.omens: { id, rank }[]` (the list the run record keeps, so a seed replays
+  identically). In the sim, `initStats` turns the list into run modifiers after `config.runModifiers`
+  (`omenModifiers`, `src/sim/stats/omens.ts`): key = the Omen id, source label "Gloom (Omen, rank 2)", the
+  rank's `reward` as `rewardBonus`, and the rank's bundle reached through the id `omen.gloom#2`
+  (`runBundleOf`). `createRun` throws on an unknown Omen, a rank out of range or an Omen twice
+  (`omenProblems`, also in `checkRunConfig`, which then validates the Omens' run modifiers with
+  `runModifierListProblems` like any other). A respec or tree reset that gives up an Omen's unlock node
+  also drops that Omen from the saved `omens` picks (`applyGiveUp`, `src/meta/respec.ts`); the highest
+  rank a pick may hold is `MAX_OMEN_RANKS`. A flag-only rank's tooltip line is its `text`, not the
+  flag id. The one multiplier is `rewardMultiplier` (1 + Σ bonuses), so
+  conversions at the exit (gold, sold items, salvage: `unmultiplied` trackers) stay outside it. When a run
+  has Omens, `RunResult.extras['run.omens']` = `{ omens, multiplier }` (absent otherwise) and the run
+  history record keeps it as `omens`; the run summary shows an "Omen multiplier" line under the currency
+  table. The Prepare panel `omens` (column risk, hidden while none is unlocked) has a rank radio per Omen
+  and the total multiplier with an itemizing tooltip (`omenBreakdown`, `omenMultiplier`). The log line is
+  the run modifier's `atStart` announcement ("This run is under Gloom (Omen, rank 2), …"), and the Codex
+  marks the Omen `seen` from the same event.
 - **Availability:** `isAvailable(profile, id)`: content that some upgrade node unlocks is locked
   until that node is owned; everything else is open from the start (`availableClasses`,
   `availableRaces`, `availableDungeons`).

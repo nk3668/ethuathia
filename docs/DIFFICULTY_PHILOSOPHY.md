@@ -42,6 +42,7 @@ Targets are measured with the headless balance harness (`npm run sim -- --seeds 
 
 - **Themed dungeons (Cartographer / M8+):** Each new dungeon shifts its starting Danger curve upward (for example, starting at Danger 3+ or Danger 6+) and swaps in harsher monster tags and denser encounter budgets. Late dungeons remain dangerous to upgraded 4-person parties while *The Old Delve* naturally becomes a reliable training ground for fresh recruits or heirloom recovery.
 - **Opt-in risk:** Once a player reliably clears a dungeon above ~65%, **Omens** (`ETH-067`) and **extra Contract slots** (`ETH-028`) raise difficulty voluntarily in exchange for higher reward multipliers and payouts.
+- **Where the Omen multiplier sits (`ETH-185`):** all Omens share one reward multiplier, `1 + Σ` of each chosen rank's `reward` (a content number per rank; `ETH-161` tunes them). It is applied to Renown, Trophies and Favor as they are earned in the run, before the wipe loss (base → ×Omen → −25%). It is **not** applied to exit conversions (leftover gold, sold items, Field Salvage scrap) or to the Smithy's trade bonus, so hoarding loot can't inflate an Omen run. A town node never pays its own risk bonus: it only unlocks an Omen, and the Omen's rank is the only thing that adds danger and the only thing that pays for it.
 
 ---
 

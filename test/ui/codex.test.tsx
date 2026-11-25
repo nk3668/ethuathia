@@ -575,6 +575,8 @@ describe('Codex discoverability / reachability (ETH-131)', () => {
           ? [{ type: 'goldPickedUp', turn: 1, actor: 1, item: id, amount: 10, floor: 'd1', pos }]
           : [{ type: 'pickedUp', turn: 1, actor: 1, item: id, qty: 1, value: 10, floor: 'd1', pos }],
       enchantment: (_id, def) => eventsForEnchantment(def as EnchantmentDef),
+      // An Omen is met when a run starts under it (ETH-185): its run modifier is announced.
+      omen: (id) => [{ type: 'runModifierAdded', turn: 0, key: id, source: { id, label: id }, scope: 'monsters', atStart: true }],
     };
 
     for (const renderer of ALL_RENDERERS) {

@@ -7,7 +7,7 @@
  * files only compose what is exported here. Never import `domains.ts` or `index.ts` from this folder.
  */
 import { findDef, isAttributeId, RACES, STATUSES } from '../../content';
-import type { AttributeId } from '../../content';
+import type { AttributeId, OmenSelection } from '../../content';
 import type { ActionRecord } from '../actions';
 import type { CommandRecord } from '../commands';
 import type { RunTracker, SimDomain, SnapshotCtx, TurnCtx } from '../domain';
@@ -24,6 +24,7 @@ import { fireTrigger } from './effects';
 import { bundleOf, fillVitals, getStats, hasBundle, statValue } from './getStat';
 import { isStatId, STAT_IDS, STAT_INFO } from './statIds';
 import type { StatId } from './statIds';
+import { omenModifiers, omenProblems } from './omens';
 import { growthProblems, levelView, XP_TRACKER } from './leveling';
 import type { GrowthPart, LevelingEvent, LevelView } from './leveling';
 import {
@@ -120,6 +121,7 @@ export {
   SOURCE_RUN,
   toRunModifier,
 } from './runModifiers';
+export { omenBundleId, omenLabel, omenModifiers, omenProblems, omenShortLabel } from './omens';
 export type {
   RunFlagParams,
   RunModifier,
@@ -243,6 +245,11 @@ export interface StatsConfig {
    * owned upgrades' `run`-scope bundle grants. Keys must be unique.
    */
   runModifiers?: RunModifierConfig[];
+  /**
+   * The Omens switched on, with their ranks (ETH-185). Each becomes a run modifier after the
+   * `runModifiers` above (`omenModifiers`); the list itself is what the run record keeps.
+   */
+  omens?: OmenSelection[];
 }
 
 /** This domain's row in `DomainTypes` (`src/sim/domain.ts`). */
@@ -260,7 +267,7 @@ export const STATS_COMMANDS: CommandRecord<StatsCommand> = {};
 
 /** The state slice for a new run. */
 export function initStats(config: RunConfig): StatsState {
-  return { runModifiers: (config.runModifiers ?? []).map(toRunModifier), runModifiersAnnounced: false };
+  return { runModifiers: [...(config.runModifiers ?? []), ...omenModifiers(config.omens)].map(toRunModifier), runModifiersAnnounced: false };
 }
 
 /**
@@ -272,6 +279,8 @@ export function startPartyStats(state: RunState, emit: Emit): void {
   const { partyBundles = [], partyStatuses = [] } = state.config;
   for (const id of partyBundles) if (!hasBundle(id)) throw new Error(`Unknown party bundle "${id}"`);
   for (const s of partyStatuses) if (!STATUSES.has(s.status)) throw new Error(`Unknown party status "${s.status}"`);
+  const omenIssues = omenProblems(state.config.omens);
+  if (omenIssues.length > 0) throw new Error(`Invalid Omens: ${omenIssues.join('; ')}`);
   const modProblems = runModifierListProblems(state.domains.stats.runModifiers);
   if (modProblems.length > 0) throw new Error(`Invalid run modifiers: ${modProblems.join('; ')}`);
   for (const id of state.party) {

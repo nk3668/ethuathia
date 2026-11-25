@@ -33,7 +33,7 @@ export function itemSaleText(rate = VALUE_PER_TROPHY): string {
   return `Items the surviving party carries or wears sell on exit at their value, ${rate} value = 1 Trophy (summed, then rounded down). Starting kit, quest relics and worthless items are not sold, the fallen's items are lost with them, and on a wipe everything is lost.`;
 }
 
-export const TROPHIES_OMEN_TEXT = 'Omens multiply what kills earn, but not the Trophies from gold and items.';
+export const TROPHIES_OMEN_TEXT = 'Omens multiply what kills earn, but not the Trophies from gold, sold items or salvage.';
 
 export const TROPHIES_SPENT_TEXT = 'Spent in the Smithy.';
 
