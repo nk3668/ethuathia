@@ -8,7 +8,7 @@
 import type { Pos } from '../../core';
 import { EQUIP_SLOT_INFO, gearSlots, hasEffectKind, healAmount, ITEMS } from '../../content';
 import { aiPathGrid, followMap } from '../ai/navigate';
-import { defineCondition, defineRuleAction, noParams } from '../ai/types';
+import { defineCondition, defineRuleAction, noParams, parseMinCount } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } from '../ai/types';
 import { getFloor } from '../entities';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
@@ -18,7 +18,7 @@ import { isCursed } from './enchant';
 import { avoidThreats, visibleThreats } from '../combat/threat';
 import { knownStairs } from '../floors/rules';
 import { bestUpgrade, gearStatsText, wornItems } from './equipment';
-import { appearanceName, isInstanceTypeKnown, isItemIdentified, isTypeIdentified } from './identify';
+import { appearanceName, isInstanceTypeKnown, isItemIdentified, isTypeIdentified, runIdentified } from './identify';
 import { itemDef } from './instance';
 import type { ItemInstance } from './instance';
 import { itemName } from './name';
@@ -126,6 +126,22 @@ export const COND_WEARING_CURSED = defineCondition({
     return cursed === undefined ? { ok: false, detail: '' } : { ok: true, detail: `cursed gear in ${EQUIP_SLOT_INFO[cursed.slot].label.toLowerCase()}` };
   },
   describe: () => 'wearing cursed gear',
+});
+
+/** True once the party has identified at least `min` items in this run (ETH-184). */
+export const COND_RUN_IDENTIFIED = defineCondition({
+  id: 'cond.run_identified',
+  name: 'Items identified this run',
+  scope: 'run',
+  description: 'True once the party has identified at least the given number of items in this run.',
+  parse: parseMinCount,
+  evaluate({ state }, { min }) {
+    const count = runIdentified(state);
+    return count >= min
+      ? { ok: true, detail: `${count} ${count === 1 ? 'item' : 'items'} identified this run` }
+      : { ok: false, detail: '' };
+  },
+  describe: ({ min }) => (min === 1 ? 'identified an item' : `identified ${min} items`),
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -357,7 +373,7 @@ function gearSlotsCount(item: ItemInstance): number {
 }
 
 /** The items domain's conditions, in registration order. */
-export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED, COND_WEARING_CURSED, COND_SAFE_TO_TEST];
+export const ITEMS_CONDITIONS: readonly ConditionDef[] = [COND_WOUNDED, COND_OVERLOADED, COND_WEARING_CURSED, COND_SAFE_TO_TEST, COND_RUN_IDENTIFIED];
 
 /** The items domain's rule actions, in registration order. */
 export const ITEMS_RULE_ACTIONS: readonly RuleActionDef[] = [

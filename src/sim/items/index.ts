@@ -36,7 +36,15 @@ import { CURSED_GEAR_TRACKER, lockedReason } from './cursedGear';
 import { ITEMS_EFFECT_HANDLERS } from './effects';
 import { isCursed, itemStateNote } from './enchant';
 import { heldUpgradeNotes, SOURCE_EQUIPPED, wornItems } from './equipment';
-import { appearanceName, isInstanceTypeKnown, isItemIdentified, isTypeIdentified } from './identify';
+import {
+  appearanceName,
+  IDENTIFIED_TRACKER,
+  IDENTIFIED_TRACKER_ID,
+  isInstanceTypeKnown,
+  isItemIdentified,
+  isTypeIdentified,
+} from './identify';
+import type { IdentifiedTrackerState } from './identify';
 import { instanceProblem, itemDef, itemWeight } from './instance';
 import { itemName } from './name';
 import { propertyProblems } from './properties';
@@ -441,6 +449,15 @@ registerInvariant('items.state', (state) => {
   return problems;
 });
 
+/** The identified-item count is a whole number of 0 or more (`track.identified`, ETH-184). */
+registerInvariant('items.identified', (state) => {
+  const s = state.domains.run.trackers[IDENTIFIED_TRACKER_ID] as Partial<IdentifiedTrackerState> | undefined;
+  if (s === undefined) return [];
+  return typeof s.count === 'number' && Number.isSafeInteger(s.count) && s.count >= 0
+    ? []
+    : [`the identified tracker count is ${String(s.count)}, not a whole number of 0 or more`];
+});
+
 /** A run chronicle moment (ETH-120): a valuable find. `ids` is the item, `amount` its value. */
 export const CHRONICLE_VALUABLE_FIND = defineChronicleKind({ id: 'valuableFind', priority: 40 });
 
@@ -461,7 +478,7 @@ export const ITEMS_DOMAIN: SimDomain<ItemsTypes> = {
   genSteps: [GEN_LOOT],
   bundleSources: [SOURCE_EQUIPPED],
   effectHandlers: ITEMS_EFFECT_HANDLERS,
-  trackers: [CURSED_GEAR_TRACKER as RunTracker<unknown>],
+  trackers: [CURSED_GEAR_TRACKER as RunTracker<unknown>, IDENTIFIED_TRACKER as RunTracker<unknown>],
   turnStart: itemsTurnStart,
   discoveries: {
     itemSighted: (e) => (e.identified !== false && ITEMS.has(e.item) ? [{ id: e.item, mark: 'seen' }] : []),

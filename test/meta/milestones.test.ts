@@ -133,8 +133,8 @@ describe('milestone unlocks', () => {
     // A lifetime total no longer opens the Smithy; only its quest does.
     const opened = unlockMilestones(many).milestones.unlocked.map((u) => u.id);
     expect(opened).not.toContain(SMITHY);
-    // The depth reveals (ETH-036) do read lifetime totals: floors 4 and 5 are reached.
-    expect(opened).toEqual(['upgrade.outrider_training', 'upgrade.reaver_training']);
+    // The depth reveals (ETH-036) do read lifetime totals: floor 4 is reached (Outrider); Reaver now watches 40 kills in one run (ETH-184).
+    expect(opened).toEqual(['upgrade.outrider_training']);
     expect(milestoneMet({ kind: 'finishRuns', count: 4 }, milestoneProgress(many))).toBe(true);
     expect(milestoneMet({ kind: 'reachDepth', depth: 6 }, milestoneProgress(many))).toBe(false);
   });

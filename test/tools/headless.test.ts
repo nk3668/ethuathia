@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { milestoneRequirements, newProfile } from '../../src/meta';
 import { CONDITIONS as SIM_CONDITIONS, createRun, getStat, RULE_ACTIONS as SIM_RULE_ACTIONS } from '../../src/sim';
 import type { Entity, Rule } from '../../src/sim';
 import {
@@ -248,6 +249,7 @@ describe('tools/headless', () => {
     expect(freshConfig).toEqual({
       party: headlessParty(1),
       contracts: ['contract.recover_relic'],
+      watchRequirements: milestoneRequirements(newProfile()),
     });
 
     const progressedProfile = buildHeadlessProfile('progressed');

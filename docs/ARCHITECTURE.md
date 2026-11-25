@@ -645,7 +645,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`), and ETH-147 36 (the `mix` item field: hidden blessing counts in a stack of unidentified potions or scrolls), then ETH-148 37 (`AiMemory.fleeing`, `AiMemory.threats`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`), and ETH-147 36 (the `mix` item field: hidden blessing counts in a stack of unidentified potions or scrolls), then ETH-148 37 (`AiMemory.fleeing`, `AiMemory.threats`), ETH-119 38 (`AdventurerPart.recordId` and `track.kills.byActor`), and ETH-184 39 (`track.identified`).
 
 ### Contracts in the run (ETH-024)
 
@@ -1020,8 +1020,10 @@ vocabulary.
   so a run condition can't read an actor by mistake; an actor condition given a ctx with no actor
   doesn't hold ("needs an adventurer to check"; `hasActor(ctx)`). Run-scope so far: `cond.always`,
   `cond.heading_out`, `cond.contracts_complete`, `cond.bottom_floor` (now "a living party member
-  stands on the bottom floor", not the deciding actor's floor) and `cond.at_depth { depth }` (a
-  living party member is on floor `depth` or deeper). A run-scope condition gives the same answer
+  stands on the bottom floor", not the deciding actor's floor), `cond.at_depth { depth }` (a
+  living party member is on floor `depth` or deeper), `cond.run_kills { min }` (party monster
+  kills this run, from `track.kills`) and `cond.run_identified { min }` (items identified this
+  run, from `track.identified` over `itemIdentified` events). A run-scope condition gives the same answer
   in a rule and in a requirement.
 - **`Requirement`** (`src/content/requirements.ts`, plain data, `requirementSchema`):
   `{ cond, params? } | { all: Requirement[] } | { any: Requirement[] } | { not: Requirement }`.

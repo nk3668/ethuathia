@@ -14,9 +14,37 @@
 import { APPEARANCE_POOLS, isAppearanceCategory, ITEMS } from '../../content';
 import type { AppearanceCategory, ItemDef } from '../../content';
 import { Rng } from '../../core';
+import type { RunTracker } from '../domain';
 import type { RunState } from '../state';
 import type { ItemInstance } from './instance';
 import { groupBlessing, hiddenCounts, isSecretConsumable, MIX_GROUPS, setHiddenCounts } from './mix';
+
+export const IDENTIFIED_TRACKER_ID = 'track.identified';
+
+/** State of `IDENTIFIED_TRACKER` (`track.identified`): items the party has identified this run (ETH-184). */
+export interface IdentifiedTrackerState {
+  readonly count: number;
+}
+
+/** `track.identified`: counts `itemIdentified` events this run (Wits on pickup, use, equip or Scroll of Identify). */
+export const IDENTIFIED_TRACKER: RunTracker<IdentifiedTrackerState> = {
+  id: IDENTIFIED_TRACKER_ID,
+  init: () => ({ count: 0 }),
+  reduce: (s, e) => (e.type === 'itemIdentified' ? { count: s.count + 1 } : s),
+};
+
+/** Items the party has identified so far this run, from `track.identified` (0 if absent). */
+export function runIdentified(state: RunState): number {
+  const s = state.domains.run.trackers[IDENTIFIED_TRACKER_ID] as Partial<IdentifiedTrackerState> | undefined;
+  return typeof s?.count === 'number' && Number.isFinite(s.count) ? s.count : 0;
+}
+
+/** Items identified in a finished run's extras (`extras['track.identified']`), or 0 if absent. */
+export function identifiedCount(extras: Readonly<Record<string, unknown>>): number {
+  const value = extras[IDENTIFIED_TRACKER_ID];
+  const count = typeof value === 'object' && value !== null ? (value as { count?: unknown }).count : undefined;
+  return typeof count === 'number' && Number.isFinite(count) ? count : 0;
+}
 
 /** True if `def`'s base type is hidden behind a per-run generic appearance while unidentified. */
 export function needsTypeId(def: ItemDef): boolean {

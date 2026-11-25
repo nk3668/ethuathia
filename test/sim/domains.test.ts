@@ -53,7 +53,7 @@ describe('domain modules', () => {
     expect(CONDITIONS.all().slice(0, 2).map((d) => d.id)).toEqual(['cond.always', 'cond.stuck']);
     expect(RULE_ACTIONS.all().slice(0, 3).map((d) => d.id)).toEqual(['act.explore', 'act.back_off', 'act.wait']);
     expect(GEN_STEPS.all().slice(0, 4).map((d) => d.id)).toEqual(['gen.rooms', 'gen.corridors', 'gen.doors', 'gen.stairs']);
-    expect(RUN_TRACKERS.map((t) => t.id)).toEqual(['track.xp', 'track.cursedGear', 'track.contracts', 'quests.objectives', 'track.depth', 'track.turns', 'track.kills', 'track.deaths', 'track.codex', 'track.requirements', 'track.chronicle']);
+    expect(RUN_TRACKERS.map((t) => t.id)).toEqual(['track.xp', 'track.cursedGear', 'track.identified', 'track.contracts', 'quests.objectives', 'track.depth', 'track.turns', 'track.kills', 'track.deaths', 'track.codex', 'track.requirements', 'track.chronicle']);
   });
 
   it('keep ACTIONS and COMMANDS exhaustive at compile time', () => {

@@ -214,6 +214,12 @@ export const KILLS_TRACKER: RunTracker<KillsTrackerState> = {
   rewards: (s) => ({ [TROPHIES]: s.trophies }),
 };
 
+/** Monsters the party has killed so far this run, from `track.kills` (0 if absent). */
+export function runKills(state: RunState): number {
+  const s = state.domains.run.trackers[KILLS_TRACKER.id] as Partial<KillsTrackerState> | undefined;
+  return typeof s?.kills === 'number' && Number.isFinite(s.kills) ? s.kills : 0;
+}
+
 /** One party member who fell, for the run summary and the graveyard (M5). */
 export interface FallenRecord {
   actor: EntityId;

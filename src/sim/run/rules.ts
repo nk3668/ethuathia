@@ -8,11 +8,12 @@
  * down again.
  */
 import { aiPathGrid, followMap } from '../ai/navigate';
-import { defineCondition, defineRuleAction, noParams } from '../ai/types';
+import { defineCondition, defineRuleAction, noParams, parseMinCount } from '../ai/types';
 import type { ConditionDef, Resolved, RuleActionDef } from '../ai/types';
 import { floorNode, stairsTarget } from '../floors/dungeon';
 import { knownStairs, partyMemberAt, stairsGathering } from '../floors/rules';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
+import { runKills } from './trackers';
 
 /** True once the party has turned back for the surface. */
 export const COND_HEADING_OUT = defineCondition({
@@ -28,6 +29,22 @@ export const COND_HEADING_OUT = defineCondition({
     return { ok: true, detail: leaving.reason === 'ordered' ? 'retreat ordered' : 'the party has turned back' };
   },
   describe: () => 'heading out of the dungeon',
+});
+
+/** True once the party has killed at least `min` monsters in this run (ETH-184). */
+export const COND_RUN_KILLS = defineCondition({
+  id: 'cond.run_kills',
+  name: 'Monsters killed this run',
+  scope: 'run',
+  description: 'True once the party has killed at least the given number of monsters in this run.',
+  parse: parseMinCount,
+  evaluate({ state }, { min }) {
+    const kills = runKills(state);
+    return kills >= min
+      ? { ok: true, detail: `${kills} ${kills === 1 ? 'monster' : 'monsters'} killed this run` }
+      : { ok: false, detail: '' };
+  },
+  describe: ({ min }) => (min === 1 ? 'killed a monster' : `killed ${min} monsters`),
 });
 
 /**
@@ -72,7 +89,7 @@ export const ACT_RETREAT_RUN = defineRuleAction({
 });
 
 /** The run domain's conditions, in registration order. */
-export const RUN_DOMAIN_CONDITIONS: readonly ConditionDef[] = [COND_HEADING_OUT];
+export const RUN_DOMAIN_CONDITIONS: readonly ConditionDef[] = [COND_HEADING_OUT, COND_RUN_KILLS];
 
 /** The run domain's rule actions, in registration order. */
 export const RUN_DOMAIN_RULE_ACTIONS: readonly RuleActionDef[] = [ACT_RETREAT_RUN];
