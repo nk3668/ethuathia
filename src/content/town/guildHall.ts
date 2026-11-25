@@ -13,6 +13,7 @@
  */
 import { CONTRACT_LONG_MUSTER } from '../buildingQuests';
 import { ITEM_MENDING_DRAUGHT } from '../items';
+import { OMEN_DEEP_SURGE, OMEN_STALKERS_LEDGER } from '../townOmens';
 import { defineBuilding, defineUpgrade } from '../upgrades';
 
 /** The first row of Tier II: the row the Long Muster opens. */
@@ -307,4 +308,40 @@ export const UPGRADE_MYSTERY_CRATE = defineUpgrade({
   requires: [],
   optIn: true,
   grants: [{ kind: 'start', start: { perk: 'crate' } }],
+});
+
+// --- Omen unlocks (ETH-186) -------------------------------------------------------------------
+// A node here only unlocks an Omen: it never makes a run harder and never pays a bonus of its own.
+// The Omen is switched on, at a rank, on the Prepare screen, and its rank pays the reward multiplier.
+
+export const UPGRADE_STALKERS_LEDGER = defineUpgrade({
+  id: 'upgrade.stalkers_ledger',
+  name: "Stalker's Ledger",
+  description:
+    "A clerk's ledger of the things the dungeon has kept. Unlocks the Stalker's Ledger Omen, which you switch on for a run on the " +
+    'Prepare screen: stronger variants of monsters turn up earlier and more often, creatures from deeper down wander up, and ' +
+    'both carry something worth taking. The node changes nothing by itself; only the Omen does, and it pays more for each rank.',
+  tags: ['omen', 'capability', 'risky'],
+  building,
+  tier: 1,
+  column: 2,
+  cost: { renown: 100 },
+  requires: [],
+  grants: [{ kind: 'unlock', id: OMEN_STALKERS_LEDGER.id }],
+});
+
+export const UPGRADE_DEEP_SURGE = defineUpgrade({
+  id: 'upgrade.deep_surge',
+  name: 'Deep Surge',
+  description:
+    'A chart of how the dungeon answers when the party turns back. Unlocks the Deep Surge Omen, which you switch on for a run on ' +
+    'the Prepare screen: the surge on the way out is larger, with more variants and more hunting patrols, and its pursuers carry ' +
+    'spoils. The node changes nothing by itself; only the Omen does, and it pays more for each rank.',
+  tags: ['omen', 'capability', 'risky'],
+  building,
+  tier: GUILD_HALL_TIER_TWO_ROW,
+  column: 2,
+  cost: { renown: 500 },
+  requires: [],
+  grants: [{ kind: 'unlock', id: OMEN_DEEP_SURGE.id }],
 });

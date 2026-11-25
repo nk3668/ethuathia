@@ -22,6 +22,7 @@ import {
   MONSTER_TEMPLATES,
   MONSTERS,
   monsterDisplayName,
+  OMEN_ONLY_TAG,
   templateDefs,
   templateFits,
 } from '../../content';
@@ -288,7 +289,7 @@ export function rollTemplates(def: MonsterDef, rng: Rng, chance: number): string
   if (chance <= 0) return [];
   const picked: string[] = [];
   while (picked.length < MAX_TEMPLATES && rng.chance(chance)) {
-    const options = MONSTER_TEMPLATES.all().filter((t) => templateFits(t, def) && !picked.includes(t.id));
+    const options = MONSTER_TEMPLATES.all().filter((t) => !t.tags.includes(OMEN_ONLY_TAG) && templateFits(t, def) && !picked.includes(t.id));
     const total = options.reduce((n, t) => n + t.weight, 0);
     if (total === 0) break;
     let roll = rng.int(1, total);

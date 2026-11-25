@@ -38,6 +38,7 @@ export * from './contracts';
 export * from './buildingQuests';
 export * from './bounties';
 export * from './omens';
+export * from './townOmens';
 export * from './deities';
 export * from './doctrines';
 export * from './milestones';

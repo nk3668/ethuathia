@@ -12,7 +12,7 @@ import { floorDanger, runDungeon } from '../floors/dungeon';
 import type { NewEntity } from '../entities';
 import { readParams } from '../gen/params';
 import { defineGenStep } from '../gen/types';
-import type { Rect } from '../gen/types';
+import type { FloorRisk, Rect } from '../gen/types';
 import { Terrain } from '../state';
 import type { Entity, FloorId, RunState } from '../state';
 import { fillVitals, newStatsPart } from '../stats/getStat';
@@ -185,8 +185,8 @@ export function pickWeightedForDanger(
  * Pure Wave-2 extension hook: resolves template spawn probability from `dungeon.encounters.templateRamp`
  * at `danger`, or returns `fallback` (default `0`) when no ramp is configured.
  */
-export function templateChanceFor(dungeon: DungeonDef | undefined, danger: number, fallback = 0): number {
-  return computeTemplateChance(dungeon, danger, fallback);
+export function templateChanceFor(dungeon: DungeonDef | undefined, danger: number, fallback = 0, risk?: FloorRisk): number {
+  return computeTemplateChance(dungeon, danger, fallback, risk);
 }
 
 /**
@@ -196,8 +196,9 @@ export function rollOodDanger(
   dungeon: DungeonDef | undefined,
   danger: number,
   rng: Rng,
+  risk?: FloorRisk,
 ): { danger: number; ood: boolean } {
-  return computeOodDanger(dungeon, danger, rng);
+  return computeOodDanger(dungeon, danger, rng, risk);
 }
 
 /** Tunable options for repopulating an already-visited floor (ETH-025). */

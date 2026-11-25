@@ -15,10 +15,12 @@ import { actorAt, addFloor, featureAt, getFloor } from '../entities';
 import { parseFloorText } from '../floorText';
 import type { FloorPlan } from '../floorText';
 import { generateFloor } from '../gen/generate';
+import type { FloorRisk } from '../gen/types';
 import { capFountains, configMaxFountains } from './fountains';
 import { FLOOR_PLAN_HOOKS } from '../registries';
 import { Terrain } from '../state';
 import type { DungeonGraph, Entity, Floor, FloorId, FloorNode, RunConfig, RunState } from '../state';
+import { floorRisk } from '../stats/omenEffects';
 import { runFlag } from '../stats/runModifiers';
 
 /** How many floors a run's dungeon has when the config doesn't say (CLAUDE.md §2). */
@@ -182,6 +184,12 @@ export function lootRngState(seed: number, floorId: FloorId): RngState {
   return seedState(seed, `loot/${floorId}`);
 }
 
+/** `{ risk }` for `generateFloor` when an Omen changes how floors are built (ETH-186), else nothing. */
+function riskOption(state: RunState): { risk?: FloorRisk } {
+  const risk = floorRisk(state);
+  return risk === undefined ? {} : { risk };
+}
+
 /**
  * The plan for floor `floorId`, before it is built: the config's hand-built text for that depth
  * (`floorText` for the first floor, else `floorTexts[depth - 1]`), or a generated
@@ -199,6 +207,7 @@ export function planFloor(state: RunState, floorId: FloorId): FloorPlan {
           depth: node.depth,
           danger: floorDanger(state, node.depth),
           dungeon: runDungeon(state),
+          ...riskOption(state),
           partySize: state.config.party.length,
           loot: new Rng(lootRngState(state.seed, floorId)),
         });
