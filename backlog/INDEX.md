@@ -158,8 +158,8 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-077](ui-shell/ETH-077-prepare-attribute-previews.md) | Show attribute previews in the Prepare screen's class and race selects | ui-shell | M2 | P3 | done | S |
 | [ETH-132](town-meta/ETH-132-rescale-guild-hall-renown-costs.md) | Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs | town-meta | M2.1 | P1 | done | M |
 | [ETH-159](town-meta/ETH-159-smithy-tree.md) | Smithy upgrade tree spent in Trophies | town-meta | M2.1 | P1 | done | M |
-| [ETH-188](town-meta/ETH-188-smithy-mechanic-nodes.md) | Smithy nodes that need new mechanics - Maker's Marks, class-tier kits, Forge Stamps, Apprentice Trinket, Field Salvage Kit | town-meta | M2.1 | P1 | in-progress | M |
-| [ETH-187](town-meta/ETH-187-guild-hall-mechanic-nodes.md) | Guild Hall nodes that need new mechanics - Field Rations, Extraction Drills, Waymark Lanterns, Mystery Crate | town-meta | M2.1 | P1 | in-progress | M |
+| [ETH-188](town-meta/ETH-188-smithy-mechanic-nodes.md) | Smithy nodes that need new mechanics - Maker's Marks, class-tier kits, Forge Stamps, Apprentice Trinket, Field Salvage Kit | town-meta | M2.1 | P1 | done | M |
+| [ETH-187](town-meta/ETH-187-guild-hall-mechanic-nodes.md) | Guild Hall nodes that need new mechanics - Field Rations, Extraction Drills, Waymark Lanterns, Mystery Crate | town-meta | M2.1 | P1 | done | M |
 | [ETH-185](risk-omens/ETH-185-minimal-omen-system.md) | Minimal Omen system with ranks, one reward multiplier and a Prepare toggle, unlocked by town nodes | risk-omens | M2.2 | P1 | ready | M |
 | [ETH-186](risk-omens/ETH-186-first-town-omens.md) | The first four Omens and their town-tree unlock nodes | risk-omens | M2.2 | P1 | idea | M |
 | [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Rules editor and the rule data model | behavior-rules | M3 | P1 | idea | M |

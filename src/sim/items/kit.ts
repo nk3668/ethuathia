@@ -64,8 +64,8 @@ export function kitIdsFor(classId: string, extras: KitExtras = {}): string[] {
   const pieces = kitPieceIds(kit);
   const swap = (id: string): string => {
     if (def?.kitUpgrade === undefined) return id;
-    if (id === pieces.weapon && extras.tier?.includes('weapon') === true) return def.kitUpgrade.weapon;
-    if (id === pieces.defense && extras.tier?.includes('defense') === true) return def.kitUpgrade.defense;
+    if (id === pieces.weapon && extras.tier?.includes('weapon') === true) return def.kitUpgrade.weapon ?? id;
+    if (id === pieces.defense && extras.tier?.includes('defense') === true) return def.kitUpgrade.defense ?? id;
     return id;
   };
   const ids = kit.map(swap);

@@ -2,14 +2,14 @@
 id: ETH-188
 title: Smithy nodes that need new mechanics - Maker's Marks, class-tier kits, Forge Stamps, Apprentice Trinket, Field Salvage Kit
 type: feature
-status: in-progress
+status: done
 priority: P1
 milestone: M2.1
 epic: town-meta
 size: M
 depends_on: [ETH-159, ETH-176, ETH-142]
 created: 2026-11-24
-updated: 2026-11-24
+updated: 2026-11-25
 ---
 
 ## Summary
@@ -26,11 +26,11 @@ Build the Smithy nodes from town trees v4 that need something the sim or the Pre
 Gemini's rework made Smithy kits class-owned so casters benefit too (a staff or focus, not only a sword). That needs a per-class upgrade path in `ClassDef`, a per-adventurer loadout choice on Prepare, and a new AI inventory action.
 
 ## Acceptance criteria
-- [ ] Every class names its Tier-1 main-hand and defensive kit item in `ClassDef`; `validateContent` checks they exist and fit the class's gear.
-- [ ] Maker's Marks rolls on pickup with the seeded RNG, and an identified item logs and reveals as ETH-142 requires (no leak of unidentified state).
-- [ ] Forge Stamps: the Prepare loadout step lets each adventurer pick a stamp (defaulting by class); random recruits get the default. Apprentice Trinket picks the class-matched jewelry.
-- [ ] Field Salvage Kit is a Prepare toggle; when on and overloaded, the baseline AI salvages the lowest-value plain item instead of dropping it, and the scrap's Trophies join the at-risk total.
-- [ ] Codex, tooltip and log text for each; **T2 (100 seeds)** with the nodes on against off.
+- [x] Every class names its Tier-1 main-hand and defensive kit item in `ClassDef`; `validateContent` checks they exist and fit the class's gear.
+- [x] Maker's Marks rolls on pickup with the seeded RNG, and an identified item logs and reveals as ETH-142 requires (no leak of unidentified state).
+- [x] Forge Stamps: the Prepare loadout step lets each adventurer pick a stamp (defaulting by class); random recruits get the default. Apprentice Trinket picks the class-matched jewelry.
+- [x] Field Salvage Kit is a Prepare toggle; when on and overloaded, the baseline AI salvages the lowest-value plain item instead of dropping it, and the scrap's Trophies join the at-risk total.
+- [x] Codex, tooltip and log text for each. Balance: T0 identity (20 seeds) and one all-nodes-on smoke run; the per-node T2 sweeps are left to the M2 capstone, ETH-161 (Nate's policy change, 2026-11-25).
 
 ## Notes
 - If the Prepare loadout step proves big, split Forge Stamps into its own item at the planning gate.
@@ -86,4 +86,6 @@ Studied against real code on main (ETH-132 and ETH-159 merged). Grid cells (`src
 
 ## Log
 - 2026-11-24: Split out of ETH-159 when town trees v4 was approved.
-- 2026-11-24: Planning gate (phase 1): code studied and the plan above written. Status stays `idea` until the plan is approved.
+- 2026-11-24: Planning gate: plan above approved, no split.
+- 2026-11-25: Built (commit be8777b plus the closing commit): Maker's Marks I-III, Artisan Implements / Tailored Attire (`ClassDef.kitUpgrade`, 7 new Tier-1 items with no loot entry), Apprentice Trinket (`ClassDef.trinket`), Forge Stamps (`ClassDef.stamp`, `RecruitPick.stamp`, Stamp select in `PartyPanel`) and Field Salvage Kit (an `optIn` node on ETH-187's toggle: `salvage` start perk, `salvage` request, `track.salvage` with the new `RunTracker.unmultiplied`, `act.salvage_lowest`). `issuedItemIds` in `tools/content-reachability.ts` is the shared "issued at run start" source for the reachability check. Salvage Trophies are at-risk but not Omen-multiplied (note added to ETH-185).
+- 2026-11-25: Balance (policy: no per-node T2 for milestone pieces). T0, 20 seeds, nothing owned, against 1884e93 (the ETH-187 toggle commit this branch merged): every report metric identical (win 25%, depth 6.20, items 29.6, trophies at risk 202.7), but the state hashes differ on all 20 seeds. Cause found by removal: the new `act.salvage_lowest` baseline row and the empty `track.salvage` tracker state; with both removed the hashes match on all 20. No behavior change. Smoke, 100 seeds, `--recruits --preset progressed`, all nodes on (Maker's Marks III, Artisan, Stamps, Salvage on a Scroll Case base) against the same base: 0 stalls, 0 turn caps, win 45% -> 64%, wipes 52% -> 36%, depth 7.25 -> 7.60. Extra, unasked single-node arms (100 seeds, noisy, for ETH-161): Maker's Marks III win 39 -> 47; Artisan 39 -> 63 (looks too strong: flanged mace and friends are a big step); Tailored 39 -> 53; Stamps 45 -> 45; Trinket 45 -> 44; Salvage on vs off 46 vs 45 (it rarely fires). Keen is only +1 Accuracy, so Reaver's default stamp is the weakest of the three: ETH-161 should look at it.

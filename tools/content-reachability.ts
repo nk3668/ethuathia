@@ -58,8 +58,8 @@ export function issuedItemIds(classes: readonly ClassDef[] = CLASSES.all(), upgr
   for (const c of classes) {
     for (const id of c.kit ?? []) ids.add(id);
     if (c.kitUpgrade !== undefined) {
-      ids.add(c.kitUpgrade.weapon);
-      ids.add(c.kitUpgrade.defense);
+      if (c.kitUpgrade.weapon !== undefined) ids.add(c.kitUpgrade.weapon);
+      if (c.kitUpgrade.defense !== undefined) ids.add(c.kitUpgrade.defense);
     }
     if (c.trinket !== undefined) ids.add(c.trinket);
   }
