@@ -2,7 +2,7 @@
 id: ETH-186
 title: The first four Omens and their town-tree unlock nodes
 type: content
-status: in-progress
+status: done
 priority: P1
 milestone: M2.2
 epic: risk-omens
@@ -26,11 +26,11 @@ Add four Omens and the Guild Hall and Smithy nodes that unlock them, from the ap
 The town trees pay for risk through Omens (`CLAUDE.md` §6, principle 3). These four use systems that already exist: monster templates (ETH-117), the return-trip surge, curses (ETH-044) and enchantments.
 
 ## Acceptance criteria
-- [ ] Four Omen defs with 3 ranks each, built on ETH-185; each rank's effect is a run-wide modifier or run parameter, with no bonus percentages of their own beyond the Omen multiplier.
-- [ ] The four unlock nodes sit in the tiers and rows above in `guildHall.ts` and `smithy.ts`.
-- [ ] Each Omen's effect is measured: a fixed-seed test shows the change (more templated spawns, denser surge, more curses, armed foes dropping gear).
-- [ ] Codex, tooltip and log text for each Omen and node.
-- [ ] **T2 (100 seeds)** per Omen at rank 3 against Omens off, pasted in the PR.
+- [x] Four Omen defs with 3 ranks each, built on ETH-185; each rank's effect is a run-wide modifier or run parameter, with no bonus percentages of their own beyond the Omen multiplier.
+- [x] The four unlock nodes sit in the tiers and rows above in `guildHall.ts` and `smithy.ts`.
+- [x] Each Omen's effect is measured: a fixed-seed test shows the change (more templated spawns, denser surge, more curses, armed foes dropping gear).
+- [x] Codex, tooltip and log text for each Omen and node.
+- [x] **Sim policy (Nate 2026-11-25) instead of T2:** T0 (20 seeds, no Omens) identical, and a 20-seed smoke run per Omen at rank 3; T2 is left to ETH-161. Results in the Log.
 
 ## Notes
 - Cursed Hoards replaces the Cursed Hoard Omen that ETH-067 listed for M6.
@@ -55,3 +55,5 @@ Sim policy (Nate 2026-11-25) replaces the T2 criterion for this item: T0, 20 see
 ## Log
 - 2026-11-24: Created from town trees v4 (Nate approved): Gemini's risk toggles became Omen unlocks.
 - 2026-11-25: Started (branch eth-186-first-town-omens, stacked on ETH-185). Planning gate done: see Plan.
+- 2026-11-25: Done (commit 2a04a76, stacked on ETH-185 f95c8ca). Four Omens with three ranks each in `src/content/townOmens.ts`, one flag per rank, numbers in `src/sim/stats/omenEffects.ts`. Decisions: nodes sit in the free cells (Guild Hall row 1 and row 4, Smithy row 3 and row 4, column 2); rewards +10/20/30% (Stalker's Ledger, Deep Surge, Cursed Hoards) and +12/24/36% (Armed Warbands); "Armed" is a new `template.armed` with the `omen` tag, which `rollTemplates` skips so seeds with no Omen are unchanged; the Armed Warbands skip a monster that already has two templates; a find is one item from the loot table 1 to 3 floors deeper (gear, potions, scrolls, anything but gold, junk and relics); Cursed Hoards moves thresholds in the same draw sequence, so gear on a floor can differ once a roll changes (the layout never does); the baseline AI's hidden-gear margin still assumes the 10% base curse chance. Added the content check (`reachabilityProblems` names an Omen no node unlocks) and `--omens id:rank,...` for `npm run sim` (also in `--compare` and `--json`). Docs: ARCHITECTURE "The first four Omens". Tests: `test/sim/townOmens.test.ts` (content, per-Omen effect on fixed seeds, secrecy of finds and gear, surge wave), reachability and CLI tests.
+- 2026-11-25: Sim (commit 2a04a76): T0, 20 seeds, no Omens, `--compare f95c8ca`: every metric identical, all 20 state hashes the same. Smoke, 20 seeds each, rank 3, fresh preset (Omens off: depth 6.20, win 25%, wipe 75%, 5 victories): Stalker's Ledger depth 6.3, win 20%, wipe 80%, items picked up 41.6 (29.6 off); Deep Surge depth 6.2, win 20%, wipe 80%, relic-run return-trip lethality 20% (1/5); Cursed Hoards depth 6.7, win 20%, wipe 80%; Armed Warbands depth 4.9, win 15%, wipe 85%, kills 62 (90 off). No stalls, no crashes, no turn-cap hits. Notes for ETH-161: Cursed Hoards did not cost depth (the enchantments help more than the curses hurt the baseline AI), so it looks underpriced; Armed Warbands is the hardest by far at the same reward bracket.
