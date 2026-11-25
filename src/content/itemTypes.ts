@@ -8,6 +8,8 @@ import { Registry } from '../core';
 import type { Def } from '../core';
 import type { AttributeId } from './attributes';
 import type { Bundle, EffectKind } from './bundles';
+import type { AbilityTag } from './abilityTags';
+import { abilityTagsSchema } from './abilityTags';
 import { bundleRefs, bundleSchema } from './bundles';
 import type { ContentKind } from './kind';
 import { defShape, glyphSchema, positiveInt } from './schema';
@@ -161,6 +163,11 @@ export interface ItemDef extends Def {
   readonly gear?: ItemGear;
   /** Left out, the item is never placed by loot generation. */
   readonly loot?: ItemLoot;
+  /**
+   * What using the item does, in the closed `AbilityTag` vocabulary (ETH-192). Required exactly
+   * when the item is usable (its bundle has effects); `bestByTag` finds a source by these.
+   */
+  readonly abilityTags?: readonly AbilityTag[];
 }
 
 export const ITEMS = new Registry<ItemDef>('item');
@@ -195,6 +202,11 @@ export const ITEM_KIND: ContentKind<ItemDef> = {
       bundle: bundleSchema.optional(),
       gear: z.strictObject({ type: z.enum(GEAR_TYPES) }).optional(),
       loot: lootSchema.optional(),
+      abilityTags: abilityTagsSchema.optional(),
+    })
+    .refine((d) => ((d.bundle?.effects?.length ?? 0) > 0) === ((d.abilityTags?.length ?? 0) > 0), {
+      message: 'a usable item needs at least one ability tag, and an item that cannot be used may not have any',
+      path: ['abilityTags'],
     })
     .refine((d) => (d.loot?.qty?.max ?? 1) <= (d.stack ?? 1), {
       message: 'a loot pile must fit in one stack',

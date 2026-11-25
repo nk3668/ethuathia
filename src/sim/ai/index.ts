@@ -1,6 +1,8 @@
 /**
  * The decision engine and the baseline AI (docs/ARCHITECTURE.md §4).
  */
+export { bestByTag, sourcesByTag } from './abilities';
+export type { SourceFilter, TaggedSource } from './abilities';
 export { COND_ALWAYS, COND_STUCK, CORE_CONDITIONS } from './conditions';
 export { BASELINE_RULES, chooseRule, DROP_TURNS, ruleDecide, STUCK_TURNS, WAIT_STUCK_TURNS } from './engine';
 export type { Choice } from './engine';

@@ -6,7 +6,8 @@
  * hand each one to the player's own rules.
  */
 import type { Pos } from '../../core';
-import { EQUIP_SLOT_INFO, gearSlots, hasEffectKind, healAmount, ITEMS, STATUS_REGENERATING } from '../../content';
+import { EQUIP_SLOT_INFO, gearSlots, hasEffectKind, ITEMS, STATUS_REGENERATING } from '../../content';
+import { bestByTag } from '../ai/abilities';
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams, parseMinCount } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } from '../ai/types';
@@ -176,25 +177,11 @@ export const COND_RUN_IDENTIFIED = defineCondition({
  */
 export function bestHealing(ctx: AiCtx): { index: number; heal: number } | null {
   const { state, actor } = ctx;
-  const missing = statValue(state, actor, 'hp') - actor.actor.hp;
-  let cover: { index: number; heal: number } | null = null;
-  let strongest: { index: number; heal: number } | null = null;
-  let unknownPotion: number | null = null;
-  for (const [index, item] of inventoryOf(actor).entries()) {
-    const def = itemDef(item);
-    if (def.category !== 'potion') continue;
-    if (!isInstanceTypeKnown(state, item)) {
-      if (unknownPotion === null) unknownPotion = index;
-      continue;
-    }
-    const heal = healAmount(def);
-    if (heal <= 0) continue;
-    if (heal >= missing && (cover === null || heal < cover.heal)) cover = { index, heal };
-    if (strongest === null || heal > strongest.heal) strongest = { index, heal };
-  }
-  if (cover !== null) return cover;
-  if (strongest !== null) return strongest;
-  return unknownPotion === null ? null : { index: unknownPotion, heal: 0 };
+  // Known healing potions come from the ability-tag resolver (ETH-192); the rest is the emergency gamble.
+  const known = bestByTag(ctx, 'heal', undefined, (_item, def) => def.category === 'potion');
+  if (known !== null && known.power > 0) return { index: known.index, heal: known.power };
+  const unknown = inventoryOf(actor).findIndex((item) => itemDef(item).category === 'potion' && !isInstanceTypeKnown(state, item));
+  return unknown < 0 ? null : { index: unknown, heal: 0 };
 }
 
 /** Quaff the healing potion that best fits the missing HP. */

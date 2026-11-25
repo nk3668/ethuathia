@@ -2,6 +2,7 @@
  * content: typed data definitions and their validation.
  * May import: core. See docs/ARCHITECTURE.md §1 and §5.
  */
+export * from './abilityTags';
 export * from './attributes';
 export { CLASS_KIND, CLASS_LOREKEEPER, CLASS_OUTRIDER, CLASS_REAVER, CLASS_VANGUARD, CLASSES, defineClass, expectedGrowth, kitPieceIds, MAX_GROWTH_RATE, smithyKitProblems } from './classes';
 export type { AttributeGrowth, ClassDef, GrowthRoll } from './classes';
