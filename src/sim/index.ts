@@ -94,6 +94,7 @@ export {
   defaultPicks,
   focusPreference,
   optionName,
+  partyCohesionOf,
   resolveTactics,
   startingPicks,
   tacticPickProblems,

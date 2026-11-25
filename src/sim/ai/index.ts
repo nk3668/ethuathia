@@ -4,6 +4,8 @@
 export { bestByTag, sourcesByTag } from './abilities';
 export { ACT_USE_ABILITY, TACTIC_RULE_ACTIONS } from './tacticActions';
 export { applyTactics, buildTacticRules, defaultPicks, focusPreference, optionName, resolveTactics, startingPicks, tacticPickProblems, tacticsOf } from './tactics';
+export { partyCohesionOf } from './stanceParams';
+export type { PartyCohesion } from './stanceParams';
 export { TACTICS_COMMANDS } from './tacticsCommand';
 export type { SetTacticsCommand } from './tacticsCommand';
 export type { SourceFilter, TaggedSource } from './abilities';

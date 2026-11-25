@@ -7,7 +7,7 @@
  *   baseline has nothing urgent to do (no fight, no flight, no healing needed), because a stance's
  *   rows sit ahead of the whole baseline.
  * - Parameters replace a baseline constant (the flee thresholds, the pickup detour, the turn cap,
- *   the leash). A stance with no key plays the baseline's number.
+ *   the share of the formation's leash). A stance with no key plays the baseline's number.
  *
  * Every number is a named constant here, and each description reads from them, so the text and the
  * rules cannot drift apart. The values are first guesses for the smoke runs, to be tuned in the M3
@@ -20,16 +20,16 @@ export const CAUTIOUS_WORN_PERCENT = 40;
 /** Cautious: starts fleeing below this HP percent, and stops at `CAUTIOUS_FLEE_RELEASE`. */
 export const CAUTIOUS_FLEE_BELOW = 50;
 export const CAUTIOUS_FLEE_RELEASE = 75;
-/** Cautious: tiles from the party's lead before walking back (the baseline's is 8). Until ETH-151 folds it into formation. */
-export const CAUTIOUS_LEASH = 5;
+/** Cautious: the share of the formation's leash and close it allows (60% of Stick together's 8 is 5). */
+export const CAUTIOUS_LEASH_PERCENT = 60;
 /** Cautious, Delve and Reckless: tiles walked for an item (the baseline's is 8). */
 export const HURRIED_PICKUP_DETOUR = 4;
 
 /** Reckless: flees only below this HP percent, and stops at `RECKLESS_FLEE_RELEASE`. */
 export const RECKLESS_FLEE_BELOW = 20;
 export const RECKLESS_FLEE_RELEASE = 40;
-/** Reckless: tiles from the lead before walking back. */
-export const RECKLESS_LEASH = 14;
+/** Reckless: the share of the formation's leash and close it allows (175% of Stick together's 8 is 14). */
+export const RECKLESS_LEASH_PERCENT = 175;
 /** Reckless: descends once the stairs are known and this percent of the floor has been seen. */
 export const RECKLESS_DESCEND_PERCENT = 60;
 
@@ -44,7 +44,7 @@ export const STANCE_CAUTIOUS = defineTactic({
   id: 'tactic.cautious',
   name: 'Cautious',
   description:
-    `Flees at ${CAUTIOUS_FLEE_BELOW}% HP and runs until ${CAUTIOUS_FLEE_RELEASE}%, stays within ${CAUTIOUS_LEASH} tiles of the party’s lead, ` +
+    `Flees at ${CAUTIOUS_FLEE_BELOW}% HP and runs until ${CAUTIOUS_FLEE_RELEASE}%, tightens whatever formation is picked to ${CAUTIOUS_LEASH_PERCENT}% of its leash, ` +
     `and detours only ${HURRIED_PICKUP_DETOUR} steps for loot. When the party’s combined HP falls below ${CAUTIOUS_WORN_PERCENT}% with ` +
     'nothing in sight, everyone turns for home: the run ends as a retreat and the party keeps what it earned. ' +
     'Once the party turns for home it doesn’t turn back.',
@@ -52,15 +52,15 @@ export const STANCE_CAUTIOUS = defineTactic({
   tags: [],
   axis: 'stance',
   rows: [{ condition: { id: 'cond.party_worn', params: { percent: CAUTIOUS_WORN_PERCENT } }, action: { id: 'act.retreat_run' } }],
-  params: { fleeBelow: CAUTIOUS_FLEE_BELOW, fleeRelease: CAUTIOUS_FLEE_RELEASE, pickupDetour: HURRIED_PICKUP_DETOUR, leash: CAUTIOUS_LEASH },
+  params: { fleeBelow: CAUTIOUS_FLEE_BELOW, fleeRelease: CAUTIOUS_FLEE_RELEASE, pickupDetour: HURRIED_PICKUP_DETOUR, leashPercent: CAUTIOUS_LEASH_PERCENT },
 });
 
 export const STANCE_RECKLESS = defineTactic({
   id: 'tactic.reckless',
   name: 'Reckless',
   description:
-    `Walks up to every enemy in sight, flees only below ${RECKLESS_FLEE_BELOW}% HP (and stops at ${RECKLESS_FLEE_RELEASE}%), may drift ` +
-    `${RECKLESS_LEASH} tiles from the party’s lead, and heads down once the stairs are known and ${RECKLESS_DESCEND_PERCENT}% of the ` +
+    `Walks up to every enemy in sight, flees only below ${RECKLESS_FLEE_BELOW}% HP (and stops at ${RECKLESS_FLEE_RELEASE}%), loosens ` +
+    `whatever formation is picked to ${RECKLESS_LEASH_PERCENT}% of its leash, and heads down once the stairs are known and ${RECKLESS_DESCEND_PERCENT}% of the ` +
     `floor has been seen. Loot is picked up only within ${HURRIED_PICKUP_DETOUR} steps.`,
   hint: 'Deeper, faster, and ask questions later.',
   tags: [],
@@ -70,7 +70,7 @@ export const STANCE_RECKLESS = defineTactic({
     { condition: { id: 'cond.delve_ready', params: { percent: RECKLESS_DESCEND_PERCENT } }, action: { id: 'act.descend' } },
     { condition: { id: 'cond.delve_ready', params: { percent: RECKLESS_DESCEND_PERCENT } }, action: { id: 'act.gather' } },
   ],
-  params: { fleeBelow: RECKLESS_FLEE_BELOW, fleeRelease: RECKLESS_FLEE_RELEASE, pickupDetour: HURRIED_PICKUP_DETOUR, leash: RECKLESS_LEASH },
+  params: { fleeBelow: RECKLESS_FLEE_BELOW, fleeRelease: RECKLESS_FLEE_RELEASE, pickupDetour: HURRIED_PICKUP_DETOUR, leashPercent: RECKLESS_LEASH_PERCENT },
 });
 
 export const STANCE_DELVE = defineTactic({
