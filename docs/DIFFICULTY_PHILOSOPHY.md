@@ -352,6 +352,17 @@ Three of the four break "risk is a choice and pays for it": they pay without cos
 
 **Town nodes flagged during M2 (progressed ×3, 200 seeds, base 39.5%):** Artisan Implements 63.0% (+23.5, far the strongest node), Extraction Drills III 47.5% (+8), Field Rations III 42.5% (+3), Forge Stamps 41.0% (+1.5).
 
+Artisan Implements was strong only for the Vanguard: its Tier-1 weapon gave +2 damage over the starter where every other class gets +1. The Flanged mace dropped from +3 to +2 damage (still −1 accuracy). After that, the Smithy's Tier I pick-one, by class (progressed ×3, 200 seeds, win %):
+
+| Class | Base | Artisan Implements | Tailored Attire |
+|---|---|---|---|
+| Vanguard | 39.5 | 48.0 (+8.5) | 53.5 (+14.0) |
+| Outrider | 57.0 | 68.0 (+11.0) | 60.5 (+3.5) |
+| Reaver | 54.5 | 62.0 (+7.5) | 66.0 (+11.5) |
+| Lorekeeper | 36.5 | 49.5 (+13.0) | 51.5 (+15.0) |
+
+Each class leans a different way, which is intended. The base column shows a class spread at party size 3 (Outrider and Reaver well ahead of Vanguard and Lorekeeper) that solo play hides; that is for the M4 composition capstone.
+
 ## 10. Open questions
 
 - **Does every threat need a counter the player already has?** One candidate principle: whenever a threat first appears, a counter to it (a rule, an item or an upgrade) is already available, so every death teaches "I could have done X". It is undecided because the player may be hands-off and possession may come later as an unlock, so any counter would have to come from the built-in AI, rule presets or upgrades. Revisit once the rules editor lands (M3).

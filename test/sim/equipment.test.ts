@@ -176,7 +176,7 @@ describe('comparing gear', () => {
     expect(compareGear(state, undefined, one(CUDGEL), one(HATCHET))).toBe('worse');
     expect(compareGear(state, undefined, one(HATCHET), one(HATCHET))).toBe('same');
     // More damage for less accuracy is a tradeoff, left to the player's rules.
-    expect(compareGear(state, undefined, one(MACE), one(HATCHET))).toBe('mixed');
+    expect(compareGear(state, undefined, one(MACE), one(CUDGEL))).toBe('mixed');
     expect(compareGear(state, undefined, one(MAIL), one(JERKIN))).toBe('mixed');
     expect(compareGear(state, undefined, one(MAIL), null)).toBe('mixed');
   });
