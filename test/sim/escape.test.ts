@@ -1,11 +1,11 @@
 /**
  * Smarter escape direction (ETH-154): a fleeing adventurer breaks ties between equal escapes
  * toward a living ally, then toward the stairs up; and a wounded adventurer with no healing whose
- * every way forward is near a remembered threat heads home instead of walking past it.
+ * every way forward is near a remembered threat rests instead of walking past it.
  */
 import { describe, expect, it } from 'vitest';
 import { checkInvariants, chooseRule, createRun, FLEE_RELEASE_PERCENT, getEntity, getFloor, getMemory, isWounded, spawnMonster, step } from '../../src/sim';
-import type { ActorEntity, AiActor, EntityId, RunState } from '../../src/sim';
+import type { ActorEntity, AiActor, EntityId, RunState, SimEvent } from '../../src/sim';
 
 const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
 const ALLY = { name: 'Isolde', classId: 'class.vanguard', raceId: 'race.human' };
@@ -113,31 +113,51 @@ function guardShaft(state: RunState, hero: AiActor): void {
   hero.ai.memory.threats = [{ id: badger.id, name: 'the pit badger', floor: 'd1', pos: { x: 29, y: 1 }, seen: state.turn }];
 }
 
+type Stuck = Extract<SimEvent, { type: 'stuck' }>;
+const stucks = (events: SimEvent[]): Stuck[] => events.filter((e): e is Stuck => e.type === 'stuck');
+
 describe('boxed in', () => {
-  it('a wounded adventurer with no healing and a threat on every way forward heads home', () => {
+  it('a wounded adventurer with no healing and a threat on every way forward rests, says so once, and never ends the run', () => {
     const { state, hero } = hall();
     guardShaft(state, hero);
     hpTo(hero, FLEE_RELEASE_PERCENT - 20);
     expect(isWounded(state, hero)).toBe(true);
-    const choice = chooseRule({ state, actor: hero });
-    expect(choice?.action).toBe('act.retreat_run');
-    expect(choice?.detail).toContain('heading home: wounded, no healing, threats on every way forward');
-    // It is the whole party's retreat: the run turns back when the rule fires.
-    for (let i = 0; i < 5; i++) step(state, []);
-    expect(state.domains.run.leaving).not.toBeNull();
+    const lines: Stuck[] = [];
+    const rules: string[] = [];
+    for (let i = 0; i < 40; i++) {
+      const events = step(state, []);
+      lines.push(...stucks(events));
+      for (const e of events) if (e.type === 'ruleFired' && e.actor === hero.id) rules.push(e.action);
+    }
+    // One player-facing line, naming the adventurer, the cause and the Fall back stance.
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.detail).toContain('Brannoc is wounded with no healing and threats on every way forward: resting');
+    expect(lines[0]?.detail).toContain('Fall back stance');
+    expect(rules.length).toBeGreaterThan(0);
+    expect(rules.every((a) => a === 'act.rest')).toBe(true);
+    expect(hero.pos.x).toBe(10);
+    expect(state.domains.run.leaving).toBeNull();
     expect(checkInvariants(state)).toEqual([]);
+    // Recovered: the rest ends and the adventurer carries on.
+    expect(hero.ai.memory.boxedIn).toBeDefined();
+    hero.actor.hp = Math.round(hero.actor.hp * 3);
+    const after: string[] = [];
+    for (let i = 0; i < 3; i++) for (const e of step(state, [])) if (e.type === 'ruleFired' && e.actor === hero.id) after.push(e.action);
+    expect(hero.ai.memory.boxedIn).toBeUndefined();
+    expect(after).not.toContain('act.rest');
+    expect(state.domains.run.leaving).toBeNull();
   });
 
   it('a healthy adventurer in the same spot goes on exploring', () => {
     const { state, hero } = hall();
     guardShaft(state, hero);
-    expect(isWounded(state, hero)).toBe(false);
-    const choice = chooseRule({ state, actor: hero });
-    expect(choice?.action).not.toBe('act.retreat_run');
-    expect(choice?.condition).not.toBe('cond.boxed_in');
+    const lines: Stuck[] = [];
+    for (let i = 0; i < 5; i++) lines.push(...stucks(step(state, [])));
+    expect(lines).toHaveLength(0);
+    expect(hero.ai.memory.boxedIn).toBeUndefined();
   });
 
-  it('a wounded adventurer with a safe way forward does not turn back', () => {
+  it('a wounded adventurer with a safe way forward does not rest for it', () => {
     const { state, hero } = hall();
     guardShaft(state, hero);
     // Unexplored ground in the far west too, well away from the badger.
@@ -145,7 +165,8 @@ describe('boxed in', () => {
     memory[1 * W + 1] = 0;
     memory[1 * W + 2] = 0;
     hpTo(hero, FLEE_RELEASE_PERCENT - 20);
-    const choice = chooseRule({ state, actor: hero });
-    expect(choice?.condition).not.toBe('cond.boxed_in');
+    for (let i = 0; i < 1; i++) step(state, []);
+    expect(hero.ai.memory.boxedIn).toBeUndefined();
   });
 });
+

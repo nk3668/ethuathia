@@ -34,15 +34,15 @@ help, wastes it.
 ## Acceptance criteria
 - [x] The flee map breaks ties toward a living ally on the same floor, then toward the stairs up.
       This builds on the existing flee map, not a new pathing system.
-- [x] A wounded adventurer heads home via `act.retreat_run` when every unexplored tile and every way
+- [x] A wounded adventurer rests (`act.rest`, never a retreat: Nate, 2026-11-25) when every unexplored tile and every way
       down is near a remembered threat. Wounded means below `FLEE_RELEASE_PERCENT` with no healing
       potion. Any new threshold is a named constant in `src/sim/combat/fleeConfig.ts`.
-- [x] The trace says why: "fleeing toward Mira", "fleeing toward the stairs up", "heading home:
+- [x] The trace says why: "fleeing toward Mira", "fleeing toward the stairs up", "resting:
       wounded, no healing, threats on every way forward".
 - [x] The Codex and tooltip text for flee and retreat mention the new preferences.
 - [x] Sim tests on a fixed seed with a hand-built map:
   - an adventurer flees toward an ally when two escapes are otherwise equal;
-  - a boxed-in, wounded adventurer retreats home;
+  - a boxed-in, wounded adventurer rests where it is and never ends the run;
   - a healthy one in the same spot doesn't.
 - [x] Sim gate per `docs/DIFFICULTY_PHILOSOPHY.md` §9 as tightened 2026-11-25 (work items run T0
       and a 20-seed smoke run only; T1–T3 wait for the capstone): a 20-seed smoke run for party 1
@@ -56,4 +56,5 @@ help, wastes it.
 - 2026-11-24: Created (Nate approved filing).
 - 2026-11-24: Moved from M2 to M3 in the backlog reorganization by theme.
 - 2026-11-25: Now `ready` (M3 kickoff). The sim gate now matches the 2026-11-25 policy (no T2 in work items).
-- 2026-11-25: Implemented, `pending-review`. `src/sim/combat/escape.ts`: `escapeStep` (tie-break among flee steps within `ESCAPE_TIE_MARGIN`, toward an ally, then the stairs up) and `cond.boxed_in → act.retreat_run` (baseline rule after `act.rest`; `GUARDED_RADIUS` = `AVOID_RADIUS`). Tests in `test/sim/escape.test.ts`. Gate against ETH-189, solo, 20 seeds: 0 turn caps; wins 6 → 5, retreats 2 → 0, wipes 13 → 15 (single runs move around; at 60 seeds with the boxed-in rule off the outcomes equal the base, and with it on retreats go 2 → 5, wipes 47 → 45, wins 11 → 10). Party 3 and 4, 20 seeds: no turn caps, fewer deaths, more retreats.
+- 2026-11-25: Implemented, `pending-review`. `src/sim/combat/escape.ts`: `escapeStep` (tie-break among flee steps within `ESCAPE_TIE_MARGIN`, toward an ally, then the stairs up) and `cond.boxed_in`. Tests in `test/sim/escape.test.ts`.
+- 2026-11-25: Nate decided that one adventurer must never send the whole party home; ending a run early is the player's decision (a picked stance such as Fall back). Rebased on ETH-189 (e7cc372). `cond.boxed_in` now rests (`act.rest`, latch `AiMemory.boxedIn`) and logs one line per episode ending "Consider the Fall back stance", instead of retreating. Also added `cond.cycle_blocked_leaving → act.rest` above `act.retreat_run`: on the way out, flee and retreat_run looped to the turn cap in party-3 seeds 6 and 27 (60-seed run). Party 3 seed 30 still caps at 60 seeds: chronically wounded party on floor 9, ETH-189 rest/flee cycles never recover (see the PR).

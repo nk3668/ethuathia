@@ -96,23 +96,33 @@ function guarded(pos: Pos, marks: readonly { pos: Pos }[]): boolean {
  * True when a wounded adventurer with no healing has no way forward that isn't near a remembered
  * threat: every unexplored tile and every known way down. Needs at least one way forward to judge.
  */
+export function isBoxedIn(ctx: AiCtx): boolean {
+  const { state, actor } = ctx;
+  if (actor.actor.faction !== 'party' || !isWounded(state, actor)) return false;
+  const marks = freshThreats(state, actor);
+  if (marks.length === 0) return false;
+  const ways = frontier(ctx, aiPathGrid(ctx));
+  const down = knownStairs(state, actor.floor, 'down');
+  if (down !== null) ways.push(down);
+  return ways.length > 0 && ways.every((p) => guarded(p, marks));
+}
+
+/**
+ * True from the moment the adventurer finds itself boxed in (`checkBoxedIn` in `ai/engine.ts` latches
+ * `AiMemory.boxedIn`) until it has recovered or found a healing potion: the baseline rests rather than
+ * walk back past the threats. This never ends the run; that is the player's call.
+ */
 export const COND_BOXED_IN = defineCondition({
   id: 'cond.boxed_in',
   name: 'Boxed in',
   description:
     `True when HP is below ${FLEE_RELEASE_PERCENT}%, there is no healing potion, and every unexplored tile and every known way down ` +
-    `is within ${GUARDED_RADIUS} tiles of a threat the adventurer remembers: going on means walking back past it, so the party heads home.`,
+    `is within ${GUARDED_RADIUS} tiles of a threat the adventurer remembers: going on means walking back past it, so it rests where it is ` +
+    `until HP is back to ${FLEE_RELEASE_PERCENT}%. Ending the run is the player's call (the Fall back stance).`,
   parse: noParams,
-  evaluate(ctx) {
-    const { state, actor } = ctx;
-    if (actor.actor.faction !== 'party' || !isWounded(state, actor)) return { ok: false, detail: '' };
-    const marks = freshThreats(state, actor);
-    if (marks.length === 0) return { ok: false, detail: '' };
-    const ways = frontier(ctx, aiPathGrid(ctx));
-    const down = knownStairs(state, actor.floor, 'down');
-    if (down !== null) ways.push(down);
-    if (ways.length === 0 || !ways.every((p) => guarded(p, marks))) return { ok: false, detail: '' };
-    return { ok: true, detail: 'heading home: wounded, no healing, threats on every way forward' };
+  evaluate({ state, actor }) {
+    if (actor.ai.memory.boxedIn === undefined || !isWounded(state, actor)) return { ok: false, detail: '' };
+    return { ok: true, detail: 'wounded, no healing, threats on every way forward' };
   },
   describe: () => 'wounded, with threats on every way forward',
 });
