@@ -20,7 +20,7 @@
 import { Grid } from '../../core';
 import type { Pos } from '../../core';
 import { ENCHANTMENTS, gearSlots, isEquipSlot, isUsable, ITEMS } from '../../content';
-import type { EquipSlot } from '../../content';
+import type { EquipSlot, StartEnchantPiece, StartKnownCategory } from '../../content';
 import type { CommandRecord } from '../commands';
 import type { RunTracker, SimDomain, SnapshotCtx, TurnCtx } from '../domain';
 import type { Emit } from '../events';
@@ -46,6 +46,7 @@ import {
 } from './identify';
 import type { IdentifiedTrackerState } from './identify';
 import { instanceProblem, itemDef, itemWeight } from './instance';
+import type { StartStock } from './kit';
 import { itemName } from './name';
 import { propertyProblems } from './properties';
 import { weaponScalingText } from './scaling';
@@ -229,7 +230,16 @@ export interface ItemsParts {
 }
 
 /** Fields this domain adds to `RunConfig`. */
-export interface ItemsConfig {}
+export interface ItemsConfig {
+  /** Item kinds the party knows from the first turn (Smithy `know` perks, ETH-159). Leave out for none. */
+  startKnown?: StartKnownCategory[];
+  /** Kit pieces worn at +1 (Smithy `enchant` perks, ETH-159). Leave out for none. */
+  kitEnchant?: StartEnchantPiece[];
+  /** Extra starting items carried by the first party member, never sold (Smithy `stock` perks, ETH-159). Leave out for none. */
+  startStock?: StartStock[];
+  /** Percent added to the Trophies the party's gold and carried items convert to on exit (`tradeBonus`, ETH-159). Leave out for none. */
+  tradeBonus?: number;
+}
 
 /** This domain's row in `DomainTypes` (`src/sim/domain.ts`). */
 export interface ItemsTypes {

@@ -6,7 +6,7 @@ import type { Pos } from '../core';
 import { CLASSES, RACES } from '../content';
 import { newAiPart } from './ai/types';
 import { initDomains } from './domains';
-import { giveKit } from './items/kit';
+import { giveKit, giveStock, knowKinds } from './items/kit';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { buildDungeon, DEFAULT_FLOOR_TYPE, planFloor, resolveRunDepth } from './floors';
 import type { FloorPlan } from './floorText';
@@ -80,9 +80,13 @@ export function createRun(config: RunConfig, seed: number): RunState {
       stats: newStatsPart(),
       ai: newAiPart(),
     });
-    giveKit(entity, member.classId);
+    giveKit(entity, member.classId, config.kitEnchant);
     state.party.push(entity.id);
   });
+  // Smithy start perks (ETH-159): kinds known from the first turn, and extra starting items for the first member.
+  knowKinds(state, config.startKnown ?? []);
+  const first = state.entities[state.party[0] as number];
+  if (first !== undefined && config.startStock !== undefined) giveStock(state, first, config.startStock);
   // The run starts before turn 0's step, so events from setting up are not reported.
   startPartyStats(state, () => undefined);
   perceiveParty(state);

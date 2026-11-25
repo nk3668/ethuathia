@@ -15,7 +15,7 @@
  */
 import type { Pos } from '../../core';
 import { requirementKey } from '../../content';
-import type { Requirement } from '../../content';
+import type { Requirement, StartKnownCategory } from '../../content';
 import type { ActionRecord } from '../actions';
 import type { Killer } from '../combat/death';
 import type { CommandRecord } from '../commands';
@@ -53,10 +53,16 @@ export type RunDomainEvent =
    */
   | { type: 'runStarted'; party: { actor: EntityId; name: string; classId: string; raceId: string }[]; depth: number | null; floorType: string | null }
   /**
-   * Right after `runStarted`, once per adventurer whose class has a kit (ETH-176): the item defs
-   * they set out wearing, in kit order.
+   * Right after `runStarted`, once per adventurer who sets out with kit (ETH-176): the item defs
+   * they wear in kit order, then any starting items they carry (Smithy `stock` perks, ETH-159).
+   * `enchanted` lists the worn pieces that came at +1 from a Smithy upgrade, by def id.
    */
-  | { type: 'kitIssued'; actor: EntityId; name: string; items: string[] }
+  | { type: 'kitIssued'; actor: EntityId; name: string; items: string[]; enchanted?: string[] }
+  /**
+   * Once, after the `kitIssued` events and only when a Smithy upgrade did it (ETH-159): the party
+   * knows every kind in `categories` (`potion`, `jewelry`) from the first turn.
+   */
+  | { type: 'startKnown'; categories: StartKnownCategory[] }
   /** The party turned back for the surface: ordered (`actor` null) or by `actor`'s retreat rule. */
   | { type: 'turnedBack'; actor: EntityId | null; reason: LeavingReason }
   /**
@@ -76,13 +82,13 @@ export type RunDomainEvent =
    * victory or retreat, or `lost` (`true`, `trophies: 0`) on a wipe. Emitted only when `gold > 0`,
    * right before `runEnded` (and after `earningsLost` on a wipe).
    */
-  | { type: 'goldSettled'; gold: number; trophies: number; lost: boolean }
+  | { type: 'goldSettled'; gold: number; trophies: number; lost: boolean; bonus?: number }
   /**
    * The party's carried items were settled when the run ended (ETH-171): `items` of them, worth
    * `value`, sold for `trophies` on victory or retreat, or `lost` (`true`, `trophies: 0`) on a wipe.
    * Emitted only when `items > 0`, right before `runEnded` (after `goldSettled`).
    */
-  | { type: 'itemsSettled'; items: number; value: number; trophies: number; lost: boolean }
+  | { type: 'itemsSettled'; items: number; value: number; trophies: number; lost: boolean; bonus?: number }
   /** The run is over. Always the last event of a run. */
   | { type: 'runEnded'; outcome: RunOutcome; cause: string; depth: number };
 

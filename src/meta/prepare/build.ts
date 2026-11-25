@@ -3,7 +3,7 @@
  * `RunConfig` out. The app's Descend, auto-restart and every later way of starting a run go
  * through it, so what the town bought always reaches the run.
  */
-import { CLASSES, CONTRACTS, isBuildingQuest, RACES, upgradeBundle } from '../../content';
+import { CLASSES, CONTRACTS, isBuildingQuest, ITEMS, RACES, upgradeBundle } from '../../content';
 import { Rng } from '../../core';
 import { configDepth, hasBundle, requirementProblems, runModifierListProblems } from '../../sim';
 import type { AdventurerConfig, RunConfig, RunModifierConfig } from '../../sim';
@@ -14,6 +14,7 @@ import { ownedNodes, rankOf } from '../upgrades';
 import { CHOICE_ENTRIES } from './index';
 import type { RunChoices } from './index';
 import { fillParty, MAX_PARTY_SIZE, partySize } from './party';
+import { upgradeStartConfig } from './startPerks';
 
 /** The RNG stream name recruits and other setup draws use, seeded from the run's seed. */
 export const PREPARE_STREAM = 'prepare';
@@ -53,8 +54,9 @@ export function upgradeRunModifiers(profile: Profile): RunModifierConfig[] {
 /**
  * The run config for `choices` on this profile: each `RUN_CHOICES` section applies its choice in
  * order (random recruits draw from `seed`, so the same seed gives the same party), then the
- * owned upgrades' party bundles are added to `partyBundles` and their run-scope bundle grants
- * become run modifiers (`upgradeRunModifiers`, ETH-115). The requirements of locked
+ * owned upgrades' party bundles are added to `partyBundles`, their run-scope bundle grants
+ * become run modifiers (`upgradeRunModifiers`, ETH-115) and their start perks and trade bonus
+ * fill the item config fields (`upgradeStartConfig`, ETH-159). The requirements of locked
  * `metInRun` milestones go into `watchRequirements` (ETH-121). Throws a `RangeError` listing
  * the problems if the result fails `checkRunConfig`.
  */
@@ -66,6 +68,8 @@ export function buildRunConfig(profile: Profile, choices: RunChoices, seed: numb
   if (bundles.length > 0) config.partyBundles = [...(config.partyBundles ?? []), ...bundles];
   const mods = upgradeRunModifiers(profile);
   if (mods.length > 0) config.runModifiers = [...(config.runModifiers ?? []), ...mods];
+  // The Smithy's start perks and trade bonus (ETH-159).
+  Object.assign(config, upgradeStartConfig(profile));
   // The locked `metInRun` milestones' requirements, for `track.requirements` (ETH-121).
   const watch = milestoneRequirements(profile);
   if (watch.length > 0) config.watchRequirements = watch;
@@ -140,6 +144,7 @@ export function checkRunConfig(config: RunConfig): string[] {
   });
   for (const id of config.partyBundles ?? []) if (!hasBundle(id)) problems.push(`unknown party bundle "${id}"`);
   problems.push(...runModifierListProblems(config.runModifiers ?? []));
+  for (const { item } of config.startStock ?? []) if (!ITEMS.has(item)) problems.push(`unknown starting item "${item}"`);
   const contracts = config.contracts ?? [];
   for (const id of contracts) if (!CONTRACTS.has(id)) problems.push(`unknown contract "${id}"`);
   if (new Set(contracts).size !== contracts.length) problems.push('a contract is taken twice');

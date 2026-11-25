@@ -2156,8 +2156,8 @@ As built (ETH-063):
   `milestones` slice and never closes again. `tierGate(profile, building, tier)` returns the
   closed gate over a row (or `null`), `closedGates` lists them, and `canPurchase` refuses such a
   node as `locked` with `describeGate` ("Tier 4 and up open when you reach floor 6."). A node's
-  `tier` stays its row; the UI numbers bands I, II, III from the gates (`tierBand`). No shipped
-  building has gates or ranks yet (ETH-132 and ETH-159 add content).
+  `tier` stays its row; the UI numbers bands I, II, III from the gates (`tierBand`). The Smithy (ETH-159) ships the first ranks and gate; ETH-132 adds the Guild Hall's.
+- **Start perks (ETH-159):** a fourth grant kind, `{ kind: 'start', start }` (`src/content/startPerks.ts`), changes how a run begins: `know` (every potion or jewelry kind is known from the first turn), `enchant` (the `weapon` or first `defense` piece of each class kit is worn at +1 through `giveKit`, using that gear type's own base enchantment, so a staff gains Max MP through `enchant.channeled`) and `stock` (extra kit items for the first party member). A ranked node may not have one, like `unlock`. `upgradeStartConfig` (`src/meta/prepare/startPerks.ts`) reads the owned grants into `RunConfig.startKnown`, `kitEnchant` and `startStock`; `createRun` applies them (`knowKinds`, `giveKit`, `giveStock`), `kitIssued` lists the issued items and `startKnown` is logged once. `PROP_KIT` may mark gear or a scroll. The `tradeBonus` capacity (percent, 15 per Smelting Pit rank) becomes `RunConfig.tradeBonus`, which `itemSale` and the gold conversion add before their one rounding down; it is never Omen-multiplied.
 - **Tier quests (ETH-170):** `ContractDef.opens` is a building id (a building quest, ETH-093) or
   `{ building, fromTier }` (a tier quest); `opensBuilding`, `opensTier` and `opensTarget` read
   it. The gate's `unlock` is the `objectiveDone` milestone with `exited: true` on the contract,

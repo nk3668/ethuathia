@@ -89,7 +89,7 @@ describe('a class kit at run start', () => {
   it('rejects a kit mark on something that is not gear', () => {
     const { state, hero } = setup();
     hero.inventory = { items: [{ def: 'item.mending_draught', qty: 1, kit: true }] };
-    expect(checkInvariants(state).join('\n')).toContain('marked as kit but is not gear');
+    expect(checkInvariants(state).join('\n')).toContain('marked as kit but is not gear or a scroll');
   });
 });
 

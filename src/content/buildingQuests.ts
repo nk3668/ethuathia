@@ -26,6 +26,21 @@ export const ITEM_GUILD_ANVIL = defineItem({
   value: 0,
 });
 
+/** The ore the Smithy's Tier II quest asks for (ETH-159). Placed only by that quest, never by loot. */
+export const ITEM_STAR_IRON = defineItem({
+  id: 'item.star_iron',
+  name: 'Star-iron',
+  description:
+    'A fist-sized lump of dark metal that fell from the sky and was swallowed by the fifth floor. It rings like a bell ' +
+    'when struck, and the smiths say nothing else will take the edge a deep-forged blade needs. It is never dropped.',
+  hint: 'A dark, ringing lump of fallen metal on the fifth floor.',
+  tags: ['relic', 'contract'],
+  glyph: { ch: '&', color: '#9fb4d9', bold: true },
+  category: 'relic',
+  weight: 6,
+  value: 0,
+});
+
 /** The Smithy's quest: bring the guild's lost anvil back from floor 3. Offered from the first run. */
 export const CONTRACT_COLD_ANVIL = defineContract({
   id: 'contract.cold_anvil',
@@ -40,4 +55,20 @@ export const CONTRACT_COLD_ANVIL = defineContract({
   opens: 'building.smithy',
   offerAt: 0,
   openedText: 'you brought the anvil home',
+});
+
+/** The Smithy's Tier II quest (ETH-159): bring star-iron back from floor 5 and walk out. Opens rows 4 to 6 of its tree (ETH-170). */
+export const CONTRACT_STAR_IRON = defineContract({
+  id: 'contract.star_iron',
+  name: 'Star-Iron',
+  description:
+    'The smiths want star-iron for their deeper work, and the only seam anyone has found lies on the fifth floor. ' +
+    'Find it, carry it, and walk back out of the dungeon with it, and the Smithy will open its second tier. If its ' +
+    'bearer falls, the contract is no longer complete.',
+  hint: 'A smith’s order to bring a lump of fallen metal back from the fifth floor.',
+  tags: ['contract', 'building'],
+  objective: { kind: 'recover', item: ITEM_STAR_IRON.id, depth: 5 },
+  reward: { trophies: 250 },
+  opens: { building: 'building.smithy', fromTier: 4 },
+  openedText: 'you brought the star-iron home',
 });

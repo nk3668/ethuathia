@@ -13,8 +13,8 @@ import { deathPredicate, killerOf } from '../combat/death';
 import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
 import { depthRevealed, dungeonDepth, floorNode, floorTypeOf } from '../floors/dungeon';
-import { kitOf } from '../items/kit';
-import { itemSale } from '../items/sale';
+import { enchantedKitIds, issuedKitIds } from '../items/kit';
+import { itemSale, tradeBonusOf } from '../items/sale';
 import { VICTORY_CHECKS } from '../registries';
 import type { EntityId, RunState } from '../state';
 import { TROPHIES } from './result';
@@ -74,6 +74,8 @@ export interface GoldConversionRecord {
   readonly gold: number;
   readonly trophies: number;
   readonly rate: number;
+  /** The Smithy's trade bonus in percent (ETH-159), already in `trophies`; absent when there is none. */
+  readonly bonus?: number;
 }
 
 /**
@@ -91,9 +93,14 @@ export function announceStart(state: RunState, emit: Emit): void {
     floorType: floorTypeOf(state, state.dungeon.entry),
   });
   for (const m of partyRecords(state)) {
-    const items = kitOf(m.classId);
-    if (items.length > 0) emit({ type: 'kitIssued', actor: m.actor, name: m.name, items: [...items] });
+    const entity = state.entities[m.actor];
+    const items = entity === undefined ? [] : issuedKitIds(entity);
+    if (items.length === 0 || entity === undefined) continue;
+    const enchanted = enchantedKitIds(entity);
+    emit({ type: 'kitIssued', actor: m.actor, name: m.name, items, ...(enchanted.length > 0 ? { enchanted } : {}) });
   }
+  const known = state.config.startKnown ?? [];
+  if (known.length > 0) emit({ type: 'startKnown', categories: [...known] });
 }
 
 /** True once the run has ended. */
@@ -186,17 +193,19 @@ function end(state: RunState, stepEvents: readonly SimEvent[], emit: Emit, outco
     if (Object.keys(lost).length > 0) emit({ type: 'earningsLost', lost, atRisk, share: WIPE_LOSS_SHARE, depth });
   }
   const gold = state.domains.items.gold;
+  const bonus = tradeBonusOf(state);
   if (gold > 0) {
     emit({
       type: 'goldSettled',
       gold,
-      trophies: outcome === 'wipe' ? 0 : goldToTrophies(gold),
+      trophies: outcome === 'wipe' ? 0 : goldToTrophies(gold, GOLD_PER_TROPHY, bonus),
+      ...(bonus > 0 ? { bonus } : {}),
       lost: outcome === 'wipe',
     });
   }
   const sale = itemSale(state, outcome);
   if (sale.items > 0) {
-    emit({ type: 'itemsSettled', items: sale.items, value: sale.value, trophies: sale.trophies, lost: outcome === 'wipe' });
+    emit({ type: 'itemsSettled', items: sale.items, value: sale.value, trophies: sale.trophies, lost: outcome === 'wipe', ...(sale.bonus === undefined ? {} : { bonus: sale.bonus }) });
   }
   emit(ended);
 }
@@ -250,8 +259,9 @@ export function runResult(state: RunState): RunResult {
   if (runEnd === null) throw new Error('The run has not ended');
   const atRisk = state.domains.run.rewards.atRisk;
   const gold = state.domains.items.gold;
-  const trophies = runEnd.outcome === 'wipe' ? 0 : goldToTrophies(gold);
-  const goldRecord: GoldConversionRecord = { gold, trophies, rate: GOLD_PER_TROPHY };
+  const bonus = tradeBonusOf(state);
+  const trophies = runEnd.outcome === 'wipe' ? 0 : goldToTrophies(gold, GOLD_PER_TROPHY, bonus);
+  const goldRecord: GoldConversionRecord = { gold, trophies, rate: GOLD_PER_TROPHY, ...(bonus > 0 ? { bonus } : {}) };
   const sale = itemSale(state, runEnd.outcome);
   const converted = trophies + sale.trophies;
   return clonePlain({

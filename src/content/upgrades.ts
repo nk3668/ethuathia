@@ -12,7 +12,7 @@
  * - a prerequisite is a node of the same building on an earlier tier, so trees have no cycles;
  * - a pick-one group (`exclusiveGroup`) has two or more nodes, all on one tier of one building;
  * - no two nodes of a building share a tier and column;
- * - a ranked node (ETH-172) may only have `capacity` and `bundle` grants, as an `unlock` can't stack.
+ * - a ranked node (ETH-172) may only have `capacity` and `bundle` grants, as an `unlock` or a `start` perk can't stack.
  *
  * **Ranks** let a node be bought several times (`ranks`); **tier gates** keep a building's higher
  * rows locked until a milestone is met (`BuildingDef.tierGates`). Both are engine features with
@@ -27,6 +27,8 @@ import type { ContentKind, ContentRef } from './kind';
 import { milestoneRefs, milestoneSchema } from './milestones';
 import type { Milestone } from './milestones';
 import { defShape, idSchema, positiveInt } from './schema';
+import { startPerkRefs, startPerkSchema } from './startPerks';
+import type { StartPerk } from './startPerks';
 
 // --- Buildings -------------------------------------------------------------------------------
 
@@ -135,6 +137,10 @@ export const CAPACITY_INFO = {
   rosterSize: { name: 'Roster size', about: 'How many named adventurers the guild keeps between runs.' },
   contractSlots: { name: 'Contract slots', about: 'How many contracts a run can take on at once.' },
   ruleSlots: { name: 'Rule slots', about: 'How many behavior rules each adventurer can hold.' },
+  tradeBonus: {
+    name: 'Trade bonus (%)',
+    about: 'Extra Trophies, in percent, from the gold and carried items the party brings out of the dungeon. Omens do not multiply it.',
+  },
 } as const satisfies Record<string, { name: string; about: string }>;
 
 export type CapacityKey = keyof typeof CAPACITY_INFO;
@@ -157,7 +163,9 @@ export type UpgradeGrant =
   /** Makes a content def available: a class, race, rule condition, floor type, Omen… */
   | { readonly kind: 'unlock'; readonly id: string }
   /** Raises a named limit by `amount`. */
-  | { readonly kind: 'capacity'; readonly key: CapacityKey; readonly amount: number };
+  | { readonly kind: 'capacity'; readonly key: CapacityKey; readonly amount: number }
+  /** Changes how every run begins: known item kinds, enchanted kit pieces or extra starting items (ETH-159, `startPerks.ts`). */
+  | { readonly kind: 'start'; readonly start: StartPerk };
 
 export type UpgradeGrantKind = UpgradeGrant['kind'];
 
@@ -295,6 +303,7 @@ const grantSchema = z.discriminatedUnion('kind', [
     key: z.enum(CAPACITY_KEYS as [CapacityKey, ...CapacityKey[]]),
     amount: positiveInt,
   }),
+  z.strictObject({ kind: z.literal('start'), start: startPerkSchema }),
 ]);
 
 const upgradeSchema = z.strictObject({
@@ -342,6 +351,7 @@ function upgradeRefs(def: UpgradeNodeDef): ContentRef[] {
   def.grants.forEach((grant, i) => {
     if (grant.kind === 'unlock') refs.push({ path: `grants[${i}].id`, kind: unlockKind(grant.id), id: grant.id });
     if (grant.kind === 'bundle') refs.push(...bundleRefs(`grants[${i}].bundle`, grant.bundle));
+    if (grant.kind === 'start') refs.push(...startPerkRefs(`grants[${i}].start`, grant.start));
   });
   return refs;
 }
@@ -374,8 +384,8 @@ export function checkUpgradeTrees(defs: readonly UpgradeNodeDef[]): string[] {
   }
 
   for (const def of defs) {
-    if (def.ranks !== undefined && def.grants.some((g) => g.kind === 'unlock')) {
-      problems.push(`${label(def)}: a ranked node may only have capacity and bundle grants, as an unlock can't stack`);
+    if (def.ranks !== undefined && def.grants.some((g) => g.kind === 'unlock' || g.kind === 'start')) {
+      problems.push(`${label(def)}: a ranked node may only have capacity and bundle grants, as an unlock or a start perk can't stack`);
     }
   }
 

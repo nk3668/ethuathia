@@ -2,7 +2,7 @@
 id: ETH-159
 title: Smithy upgrade tree spent in Trophies
 type: feature
-status: ready
+status: done
 priority: P1
 milestone: M2.1
 epic: town-meta
@@ -47,11 +47,11 @@ The source is the Smithy panel of the town-tree page (https://claude.ai/artifact
 Tier III (Tinker's Workshop, Scroll Lore, Reforged Echo, Loadout Bench) and the Gear trust doctrine are later milestones.
 
 ## Acceptance criteria
-- [ ] `src/content/town/smithy.ts` holds the "here" nodes above on ETH-172 ranks, with the Tier II gate (*Star-Iron*, its contract def ships here) via ETH-170. The Reaver and Stonekin unlock nodes from ETH-036 keep their ids.
-- [ ] Kit nodes (Runed Implements, Warded Attire, Scroll Case) change the starting kit of new runs through the ETH-176 kit path; kit items are never sold (ETH-171).
-- [ ] Runed Implements uses each gear type's own enchantment, so a staff or focus gains its MP enchantment rather than damage.
-- [ ] Identification nodes mark those kinds known at run start, respecting ETH-142's identification secrecy.
-- [ ] Every node has tooltip and Codex text; `validateContent` passes; a test covers each kit node and the Tier II lock.
+- [x] `src/content/town/smithy.ts` holds the "here" nodes above on ETH-172 ranks, with the Tier II gate (*Star-Iron*, its contract def ships here) via ETH-170. The Reaver and Stonekin unlock nodes from ETH-036 keep their ids.
+- [x] Kit nodes (Runed Implements, Warded Attire, Scroll Case) change the starting kit of new runs through the ETH-176 kit path; kit items are never sold (ETH-171).
+- [x] Runed Implements uses each gear type's own enchantment, so a staff or focus gains its MP enchantment rather than damage.
+- [x] Identification nodes mark those kinds known at run start, respecting ETH-142's identification secrecy.
+- [x] Every node has tooltip and Codex text; `validateContent` passes; a test covers each kit node and the Tier II lock.
 
 ## Notes
 - The starting-loadout plumbing (the Prepare screen's loadout step, `CLAUDE.md` §2 step 2) grows in ETH-188 with Forge Stamps.
@@ -60,3 +60,4 @@ Tier III (Tinker's Workshop, Scroll Lore, Reforged Echo, Loadout Bench) and the 
 - 2026-11-24: Created in the backlog reorganization by theme (gap: Trophies had no sink).
 - 2026-11-24: Progression discussion with Nate: deeper tree on ranks and tiers; gear does not carry over, so Smithy kits are the gear progression.
 - 2026-11-24: Town trees v4 approved. Specced from the Smithy panel, moved to M2.1 and `ready`; nodes needing new mechanics split out to ETH-188, Omen nodes to ETH-186.
+- 2026-11-24: Started and finished. `smithy.ts` holds the "here" nodes on ETH-172 ranks (Fitted Straps I-III, Smelting Pit I-III) with the Tier II gate at row 4 and the *Star-Iron* quest (`contract.star_iron`, floor 5, 250 Trophies, ETH-170). Reaver and Stonekin keep their ids (now Ironmonger Contract, tier 3, and Quarry Pact, tier 4). A new `start` upgrade grant (`know`, `enchant`, `stock`) and a `tradeBonus` capacity feed `RunConfig` (`startKnown`, `kitEnchant`, `startStock`, `tradeBonus`); `createRun` applies them through the ETH-176 kit path, so kit items are never sold (`PROP_KIT` now also allows a scroll). Added the staff's own base enchantment (`enchant.channeled`, +2 Max MP per level) so Runed Implements gives a staff mana, not damage. Star-Iron on floor 5 needed the hidden-depth test dungeon raised to 5-7 floors (a quest may not be deeper than the shallowest dungeon). T1 harness (20 seeds, fresh profile, no Smithy nodes): 5 wins, 15 wipes, depth mean 6.2, 0 turn caps.

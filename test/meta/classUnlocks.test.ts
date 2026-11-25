@@ -1,6 +1,6 @@
 /** ETH-036: classes and races are revealed by a milestone, bought in the town, and teased as random recruits. */
 import { describe, expect, it } from 'vitest';
-import { requirementKey, UPGRADES } from '../../src/content';
+import { requirementKey, tierGateId, UPGRADES } from '../../src/content';
 import type { Requirement } from '../../src/content';
 import {
   applyRunResult,
@@ -88,9 +88,11 @@ describe('revealing a class or race', () => {
     const open = smithyOpen(shut);
     expect(canPurchase(open, REAVER)).toEqual({ ok: true });
     expect(raceIds(purchase(open, REAVER))).not.toContain('race.stonekin');
-    // The Stonekin want a victory.
-    expect(canPurchase(open, STONEKIN)).toMatchObject({ ok: false, reason: 'Revealed when you win a run.' });
-    const won = smithyOpen(applyRunResult(rich(), reached(1, 'victory')));
+    // The Stonekin sit in the Smithy's Tier II (ETH-159): shut until Star-Iron is done, then they want a victory.
+    expect(canPurchase(open, STONEKIN)).toMatchObject({ ok: false, status: 'locked', reason: expect.stringContaining('Tier 4 and up open') });
+    const tierTwo = (p: Profile): Profile => ({ ...p, milestones: { unlocked: [...p.milestones.unlocked, { id: tierGateId(SMITHY, 4), run: 1 }] } });
+    expect(canPurchase(tierTwo(open), STONEKIN)).toMatchObject({ ok: false, reason: 'Revealed when you win a run.' });
+    const won = tierTwo(smithyOpen(applyRunResult(rich(), reached(1, 'victory'))));
     expect(raceIds(purchase(won, STONEKIN))).toContain('race.stonekin');
   });
 
@@ -107,7 +109,7 @@ describe('revealing a class or race', () => {
 
     const afterReaver = applyRunResult(rich(), metReq(REAVER_REQ, 1));
     expect(unlockLines(afterReaver)).toEqual([
-      { id: REAVER, name: 'Reaver Training', why: 'you achieved in one run: killed 40 monsters', reveals: { building: 'Smithy' } },
+      { id: REAVER, name: 'Ironmonger Contract', why: 'you achieved in one run: killed 40 monsters', reveals: { building: 'Smithy' } },
     ]);
 
     let p = applyRunResult(rich(), metReq(LOREKEEPER_REQ, 1));

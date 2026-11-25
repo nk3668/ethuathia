@@ -26,6 +26,14 @@ export interface ItemSaleRecord {
   readonly trophies: number;
   /** Value per Trophy (`VALUE_PER_TROPHY`). */
   readonly rate: number;
+  /** The Smithy's trade bonus in percent (ETH-159), already in `trophies`; absent when there is none. */
+  readonly bonus?: number;
+}
+
+/** The trade bonus (percent) the run's config carries (Smithy Smelting Pit, ETH-159): 0 when none. Not Omen-multiplied. */
+export function tradeBonusOf(state: RunState): number {
+  const bonus = state.config.tradeBonus;
+  return typeof bonus === 'number' && Number.isFinite(bonus) && bonus > 0 ? bonus : 0;
 }
 
 /** True if `item` is sold for Trophies when the party leaves. The hook for later exceptions (heirlooms, M7). */
@@ -41,6 +49,7 @@ export function soldOnExit(item: ItemInstance): boolean {
  * lost and `trophies` is `0`. The Trophies are rounded down once, over the whole sum.
  */
 export function itemSale(state: RunState, outcome: RunOutcome): ItemSaleRecord {
+  const bonus = tradeBonusOf(state);
   let items = 0;
   let value = 0;
   for (const id of state.party) {
@@ -54,5 +63,5 @@ export function itemSale(state: RunState, outcome: RunOutcome): ItemSaleRecord {
       value += itemDef(item).value * item.qty;
     }
   }
-  return { items, value, trophies: outcome === 'wipe' ? 0 : itemValueToTrophies(value), rate: VALUE_PER_TROPHY };
+  return { items, value, trophies: outcome === 'wipe' ? 0 : itemValueToTrophies(value, VALUE_PER_TROPHY, bonus), rate: VALUE_PER_TROPHY, ...(bonus > 0 ? { bonus } : {}) };
 }

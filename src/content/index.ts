@@ -40,6 +40,7 @@ export * from './deities';
 export * from './doctrines';
 export * from './milestones';
 export * from './requirements';
+export * from './startPerks';
 export * from './upgrades';
 export * from './town';
 export * from './bundles';
