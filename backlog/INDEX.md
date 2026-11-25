@@ -164,7 +164,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-186](risk-omens/ETH-186-first-town-omens.md) | The first four Omens and their town-tree unlock nodes | risk-omens | M2.2 | P1 | done | M |
 | [ETH-191](risk-omens/ETH-191-omens-that-bite.md) | Make Stalker's Ledger, Cursed Hoards and Armed Warbands cost win rate | risk-omens | M2.2 | P1 | done | S |
 | [ETH-192](behavior-rules/ETH-192-ability-tags.md) | Ability tags - abilities, consumables and wands declare what they do, and the AI picks the best of a tag | behavior-rules | M3 | P1 | pending-review | M |
-| [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Tactics engine - tactic options as content that build each adventurer's rules | behavior-rules | M3 | P1 | ready | M |
+| [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Tactics engine - tactic options as content that build each adventurer's rules | behavior-rules | M3 | P1 | pending-review | M |
 | [ETH-193](behavior-rules/ETH-193-roles-ranges-focuses.md) | Roles, ranges and focuses - Tank, Healer, Damage and Scout; engagement distance; target choice | behavior-rules | M3 | P1 | idea | M |
 | [ETH-194](behavior-rules/ETH-194-habits-and-slots.md) | Habits and habit slots - several per adventurer, with exclusive pairs | behavior-rules | M3 | P1 | idea | M |
 | [ETH-196](behavior-rules/ETH-196-tactics-panel.md) | Tactics panel, party-card intent and the Prepare tactics column | behavior-rules | M3 | P1 | idea | M |
