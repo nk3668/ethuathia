@@ -56,6 +56,7 @@ describe('content reachability (ETH-143)', () => {
     expect(problems).toEqual([
       expect.stringContaining('item "item.ember_reliquary": has no loot entry'),
       expect.stringContaining('item "item.guild_anvil": has no loot entry'),
+      expect.stringContaining('item "item.star_iron": has no loot entry'),
     ]);
   });
 

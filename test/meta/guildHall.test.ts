@@ -19,7 +19,7 @@ import {
   purchase,
   questOffer,
   upgradeBonusModifiers,
-  upgradeStartingItems,
+  upgradeStartConfig,
 } from '../../src/meta';
 import type { Profile } from '../../src/meta';
 import { checkInvariants, createRun, emptyRunResult, getStat, grantXp, snapshot, XP_TRACKER } from '../../src/sim';
@@ -154,8 +154,8 @@ describe('Seasoned Constitution', () => {
 describe("Medic's Satchel", () => {
   it('starts every adventurer with a mending draught that is kit, so it is never sold', () => {
     const profile = own(newProfile(), ['upgrade.medics_satchel']);
-    expect(upgradeStartingItems(newProfile())).toEqual([]);
-    expect(upgradeStartingItems(profile)).toEqual([{ item: 'item.mending_draught', qty: 1 }]);
+    expect(upgradeStartConfig(newProfile()).startStock).toBeUndefined();
+    expect(upgradeStartConfig(profile).startStock).toEqual([{ item: 'item.mending_draught', qty: 1, each: true }]);
     const state = createRun(buildRunConfig({ ...profile, upgrades: { ...profile.upgrades, owned: [...profile.upgrades.owned, 'upgrade.second_berth'] } }, defaultRunChoices(), 4), 4);
     expect(state.party.length).toBeGreaterThan(0);
     for (const id of state.party) {

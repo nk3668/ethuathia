@@ -3,10 +3,12 @@
  */
 import { availableParallelism } from 'node:os';
 import {
+  BUILDING_SMITHY,
   CLASS_VANGUARD,
   CONTRACT_RECOVER_RELIC,
   RACE_HUMAN,
   UPGRADE_HARDY_RECRUITS,
+  UPGRADE_REINFORCED_WAGON,
   UPGRADE_SECOND_BERTH,
   UPGRADES,
 } from '../../src/content';
@@ -26,7 +28,7 @@ import {
   upgradeBonusModifiers,
   upgradePartyBundles,
   upgradeRunModifiers,
-  upgradeStartingItems,
+  upgradeStartConfig,
 } from '../../src/meta';
 import type { Profile } from '../../src/meta';
 import { CONDITIONS, RULE_ACTIONS } from '../../src/sim';
@@ -73,12 +75,13 @@ export type HeadlessPreset = 'fresh' | 'progressed';
 export const HEADLESS_PRESETS: readonly HeadlessPreset[] = ['fresh', 'progressed'];
 
 /**
- * Valid Guild Hall progression path for `--preset progressed`: the second berth (party of two) and
- * Hardy Recruits (+3 max HP), verified through `purchase`. The wider berths moved to other buildings (ETH-132).
+ * Valid progression path for `--preset progressed`: the second berth, the Smithy's Reinforced Wagon (party of three) and
+ * Hardy Recruits (+3 max HP), verified through `purchase`. The wider berths moved to other buildings (ETH-132, ETH-159).
  */
 export const PROGRESSED_UPGRADES: readonly string[] = [
   UPGRADE_SECOND_BERTH.id,
   UPGRADE_HARDY_RECRUITS.id,
+  UPGRADE_REINFORCED_WAGON.id,
 ];
 
 export type HeadlessRulesPreset = 'baseline' | 'cautious';
@@ -141,6 +144,8 @@ export function buildHeadlessProfile(preset: HeadlessPreset = 'fresh', upgrades:
   let profile: Profile = { ...base, currencies: { renown: 1_000_000, trophies: 1_000_000, favor: {} } };
 
   if (preset === 'progressed') {
+    // The Smithy's Reinforced Wagon (the third berth) needs the Smithy open, which its quest does in a real game.
+    profile = { ...profile, milestones: { unlocked: [...profile.milestones.unlocked, { id: BUILDING_SMITHY.id, run: 1 }] } };
     for (const id of PROGRESSED_UPGRADES) profile = purchase(profile, id);
   }
 
@@ -191,7 +196,6 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): Ru
   const hasUpgrades = profile.upgrades.owned.length > 0;
   const partyBundles = upgradePartyBundles(profile);
   const runModifiers = [...upgradeRunModifiers(profile), ...upgradeBonusModifiers(profile)];
-  const startingItems = upgradeStartingItems(profile);
   const watchRequirements = milestoneRequirements(profile);
   const contracts =
     options.contracts ??
@@ -205,7 +209,7 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): Ru
     ...(options.depth === undefined ? {} : { depth: options.depth }),
     ...(partyBundles.length === 0 ? {} : { partyBundles }),
     ...(runModifiers.length === 0 ? {} : { runModifiers }),
-    ...(startingItems.length === 0 ? {} : { startingItems }),
+    ...upgradeStartConfig(profile),
     ...(watchRequirements.length === 0 ? {} : { watchRequirements }),
   };
   const problems = checkRunConfig(config);

@@ -212,7 +212,7 @@ describe('tools/headless', () => {
     });
     expect(parseSimArgs(['--preset', 'progressed', '--rules', 'cautious'])).toMatchObject({
       preset: 'progressed',
-      party: 2,
+      party: 3,
       rules: 'cautious',
       upgrades: [],
     });
@@ -256,7 +256,7 @@ describe('tools/headless', () => {
     const progressedProfile = buildHeadlessProfile('progressed');
     expect(progressedProfile.upgrades.owned).toEqual(PROGRESSED_UPGRADES);
     const progressedConfig = buildHeadlessConfig({ preset: 'progressed' });
-    expect(progressedConfig.party).toHaveLength(2);
+    expect(progressedConfig.party).toHaveLength(3);
     expect(progressedConfig.partyBundles).toEqual(['upgrade.hardy_recruits']);
 
     const upgradedConfig = buildHeadlessConfig({ upgrades: ['upgrade.hardy_recruits', 'upgrade.contract_bounty'] });

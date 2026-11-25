@@ -202,6 +202,22 @@ export const ENCHANT_ATTUNED = defineEnchantment({
   valuePerLevel: 15,
 });
 
+/** A staff's own base enchantment (ETH-159): a gear type's match wins over the weapon category's Honed, so a staff gains Max MP, not damage. */
+export const ENCHANT_CHANNELED = defineEnchantment({
+  id: 'enchant.channeled',
+  name: 'Channeled',
+  description: 'A staff worked to carry more of its wielder’s power: adds +2 Max MP per level (or subtracts it when negatively enchanted).',
+  hint: 'Basic temper on staves; positive ranks widen the well of magic, while negative ranks let it leak.',
+  tags: ['base', 'weapon'],
+  kind: 'base',
+  appliesTo: ['staff'],
+  bundle: { modifiers: [{ stat: 'mp', op: 'add', value: 2 }] },
+  minLevel: -2,
+  maxLevel: 3,
+  weight: 0,
+  valuePerLevel: 15,
+});
+
 // ---------------------------------------------------------------------------------------------
 // Starter special enchantments (pure data; add more in future backlog items)
 

@@ -11,6 +11,7 @@
  * Layout: columns are the node graph's lanes. Costs are a starting shape for ETH-161.
  */
 import { CONTRACT_LONG_MUSTER } from '../buildingQuests';
+import { ITEM_MENDING_DRAUGHT } from '../items';
 import { defineBuilding, defineUpgrade } from '../upgrades';
 
 /** The first row of Tier II: the row the Long Muster opens. */
@@ -154,7 +155,7 @@ export const UPGRADE_MEDICS_SATCHEL = defineUpgrade({
   column: 1,
   cost: { renown: 450 },
   requires: [],
-  grants: [{ kind: 'capacity', key: 'startingDraughts', amount: 1 }],
+  grants: [{ kind: 'start', start: { perk: 'stock', item: ITEM_MENDING_DRAUGHT.id, qty: 1, each: true } }],
 });
 
 export const UPGRADE_GUILD_CHRONICLES = defineUpgrade({

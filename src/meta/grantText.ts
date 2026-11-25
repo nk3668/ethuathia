@@ -1,6 +1,6 @@
 /** Wording for upgrade grants, for tooltips and the Codex. */
-import { CAPACITY_INFO, findDef } from '../content';
-import type { UpgradeGrant } from '../content';
+import { CAPACITY_INFO, findDef, START_PERK_INFO } from '../content';
+import type { StartPerk, UpgradeGrant } from '../content';
 
 /**
  * A grant in words: "Party size +1", "Unlocks Vanguard". `times` is how many ranks of its node
@@ -12,6 +12,8 @@ export function describeGrant(grant: UpgradeGrant, times = 1): string {
       return `${CAPACITY_INFO[grant.key].name} +${grant.amount * times}`;
     case 'unlock':
       return `Unlocks ${findDef(grant.id)?.name ?? grant.id}`;
+    case 'start':
+      return describeStartPerk(grant.start);
     case 'bundle': {
       const who = grant.scope === 'party' ? 'each adventurer' : 'the run';
       const parts = (grant.bundle.modifiers ?? []).map((m) => {
@@ -25,6 +27,18 @@ export function describeGrant(grant: UpgradeGrant, times = 1): string {
       if (triggers > 0) parts.push(`${triggers} triggered effect${triggers === 1 ? '' : 's'}`);
       return `${parts.join(', ')} for ${who}`;
     }
+  }
+}
+
+/** A start perk in words (ETH-159): "Knows every potion kind from the first turn". */
+export function describeStartPerk(perk: StartPerk): string {
+  switch (perk.perk) {
+    case 'know':
+      return `Knows every ${START_PERK_INFO[perk.category].name} kind from the first turn`;
+    case 'enchant':
+      return `Starts with the ${START_PERK_INFO[perk.piece].name} of each adventurer's kit at +1`;
+    case 'stock':
+      return `${perk.each === true ? 'Each adventurer starts' : 'The party starts'} with ${perk.qty} ${findDef(perk.item)?.name ?? perk.item}`;
   }
 }
 

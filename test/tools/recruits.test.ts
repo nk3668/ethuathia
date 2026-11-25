@@ -28,7 +28,7 @@ describe('--recruits (ETH-178)', () => {
 
     // The same code path as the game: a party of the profile's size is buildRunConfig's party.
     const profile = buildHeadlessProfile('progressed');
-    expect(partySize(profile)).toBe(2);
+    expect(partySize(profile)).toBe(3);
     const viaPrepare = buildRunConfig(profile, defaultRunChoices(), 11).party;
     expect(recruitParty(profile, 11)).toEqual(viaPrepare);
     expect(buildHeadlessConfig({ recruits: true, preset: 'progressed' }, 11).party).toEqual(viaPrepare);

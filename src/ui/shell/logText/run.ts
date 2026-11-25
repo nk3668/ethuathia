@@ -1,6 +1,6 @@
 /** Log wording for the run domain's events (`src/sim/run/`). One entry per event type. */
 import { formatNumber } from '../../../core';
-import { ITEMS, MONSTERS, STATUSES } from '../../../content';
+import { ITEMS, MONSTERS, START_PERK_INFO, STATUSES } from '../../../content';
 import { deathLine } from '../../../sim';
 import type { RunDomainEvent } from '../../../sim';
 import { currencyName } from '../runSummaryText';
@@ -26,6 +26,11 @@ export const MOMENT_EARNINGS_LOST = defineHighlight({
 });
 
 const OUTCOME_TEXT = { victory: 'Victory!', retreat: 'The party is out: a retreat.', wipe: 'The party is lost.' } as const;
+
+/** ", with the Smelting Pit's +15%" when the Smithy's trade bonus applied (ETH-159). */
+function tradeBonusNote(bonus: number | undefined): string {
+  return bonus === undefined ? '' : `, with the Smithy’s +${bonus}%`;
+}
 
 function list(names: readonly string[]): string {
   return names.length <= 1 ? (names[0] ?? 'Nobody') : `${names.slice(0, -1).join(', ')} and ${names.at(-1) as string}`;
@@ -72,12 +77,19 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
       const parts: LogPart[] = [`${e.name} shoulders `];
       e.items.forEach((id, i) => {
         const name = ITEMS.has(id) ? ITEMS.get(id).name.toLowerCase() : 'an item';
+        // A piece a Smithy upgrade made +1 (ETH-159) says so: "a +1 oak cudgel".
+        const plus = e.enchanted?.includes(id) === true;
         if (i > 0) parts.push(i === e.items.length - 1 ? ' and ' : ', ');
-        parts.push(`${/^[aeiou]/.test(name) ? 'an' : 'a'} `, mention(id, name));
+        parts.push(`${plus ? 'a +1' : /^[aeiou]/.test(name) ? 'an' : 'a'} `, mention(id, name));
       });
       parts.push('.');
       return parts;
     },
+  },
+  // "The party sets out knowing every kind of potion on sight." (ETH-159)
+  startKnown: {
+    category: 'discovery',
+    text: (e) => `The party sets out knowing every kind of ${e.categories.map((c) => START_PERK_INFO[c].plural).join(', ')} on sight.`,
   },
   turnedBack: {
     category: 'ai',
@@ -102,7 +114,7 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
     text: (e) =>
       e.lost
         ? `All ${formatNumber(e.gold)} leftover gold is lost in the wipe.`
-        : `${formatNumber(e.gold)} leftover gold converts to ${formatNumber(e.trophies)} ${e.trophies === 1 ? 'Trophy' : 'Trophies'}.`,
+        : `${formatNumber(e.gold)} leftover gold converts to ${formatNumber(e.trophies)} ${e.trophies === 1 ? 'Trophy' : 'Trophies'}${tradeBonusNote(e.bonus)}.`,
   },
   itemsSettled: {
     category: 'system',
@@ -110,7 +122,7 @@ export const RUN_DOMAIN_LOG_TEXT: LogTextRecord<RunDomainEvent> = {
       const things = `${formatNumber(e.items)} carried ${e.items === 1 ? 'item' : 'items'}`;
       return e.lost
         ? `${things} (worth ${formatNumber(e.value)}) ${e.items === 1 ? 'is' : 'are'} lost in the wipe.`
-        : `${things} ${e.items === 1 ? 'sells' : 'sell'} for ${formatNumber(e.trophies)} ${e.trophies === 1 ? 'Trophy' : 'Trophies'} (value ${formatNumber(e.value)}).`;
+        : `${things} ${e.items === 1 ? 'sells' : 'sell'} for ${formatNumber(e.trophies)} ${e.trophies === 1 ? 'Trophy' : 'Trophies'} (value ${formatNumber(e.value)}${tradeBonusNote(e.bonus)}).`;
     },
   },
   runEnded: {

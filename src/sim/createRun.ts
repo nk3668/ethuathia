@@ -3,11 +3,10 @@
  */
 import { clonePlain, Grid, seedStreams } from '../core';
 import type { Pos } from '../core';
-import { CLASSES, ITEMS, RACES } from '../content';
+import { CLASSES, RACES } from '../content';
 import { newAiPart } from './ai/types';
 import { initDomains } from './domains';
-import { addToInventory } from './items/inventory';
-import { giveKit, newKitItem } from './items/kit';
+import { giveKit, giveStock, knowKinds } from './items/kit';
 import { actorAt, addEntity, addFloor, featureAt, getFloor } from './entities';
 import { buildDungeon, DEFAULT_FLOOR_TYPE, planFloor, resolveRunDepth } from './floors';
 import type { FloorPlan } from './floorText';
@@ -81,12 +80,14 @@ export function createRun(config: RunConfig, seed: number): RunState {
       stats: newStatsPart(),
       ai: newAiPart(),
     });
-    giveKit(entity, member.classId);
-    for (const start of config.startingItems ?? []) {
-      if (!ITEMS.has(start.item)) throw new Error(`Starting item "${start.item}" is not an item`);
-      addToInventory(entity, { ...newKitItem(start.item), qty: start.qty });
-    }
+    giveKit(entity, member.classId, config.kitEnchant);
     state.party.push(entity.id);
+  });
+  // Start perks (ETH-159): kinds known from the first turn, and starting items for the first member or for each.
+  knowKinds(state, config.startKnown ?? []);
+  state.party.forEach((id, i) => {
+    const entity = state.entities[id];
+    if (entity !== undefined) giveStock(state, entity, (config.startStock ?? []).filter((s) => s.each === true || i === 0));
   });
   // The run starts before turn 0's step, so events from setting up are not reported.
   startPartyStats(state, () => undefined);
