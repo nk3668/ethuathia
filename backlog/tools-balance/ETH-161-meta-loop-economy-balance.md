@@ -2,7 +2,7 @@
 id: ETH-161
 title: Meta-loop economy balance pass (M2 capstone)
 type: chore
-status: pending-review
+status: done
 priority: P1
 milestone: M2
 epic: tools-balance
@@ -49,3 +49,4 @@ The tree shape comes from the approved town-tree page (v4); ETH-132 and ETH-159 
   - Open for Nate before done: the three free Omens (cut rewards or make them bite), the Artisan Implements nerf, return-trip lethality, the ETH-189 milestone.
 - 2026-11-25: Nate's answers. Omens: make them more dangerous, filed as ETH-191 (M2.2). Return-trip lethality: left for M5, with new and harder monsters for the return trip. ETH-189 moved to M3. Artisan Implements: nerf.
 - 2026-11-25: Artisan Implements was a Vanguard-only outlier: the Flanged mace gave +2 damage over the Oak cudgel, every other class's Tier-1 weapon +1. Mace +3 -> +2 damage (keeps -1 accuracy). Progressed x3, 200 seeds: Vanguard Artisan 63.0 -> 48.0% (base 39.5). Per-class table in DIFFICULTY_PHILOSOPHY 9.3 (Artisan +7.5 to +13, Tailored +3.5 to +15). Class spread at party 3 (Outrider 57%, Reaver 54.5%, Vanguard 39.5%, Lorekeeper 36.5%) noted for M4. Closes when ETH-191 is done.
+- 2026-11-25: Done. PR #130 (pacing, harness, mace nerf) and #131 (ETH-191, Omens that bite) merged to main (d5bcb80). M2 is complete.
