@@ -191,10 +191,10 @@ Each Omen has ranks, and each rank adds to the reward multiplier. Examples:
 - *Thriving Dark*: monsters regenerate.
 - *Dry Wells*: no fountains.
 - *Elite Spawns*: elite monsters appear more often.
-- *Cursed Hoard*: more cursed items.
+- *Cursed Hoards*: more cursed items, with stronger enchantments.
 - *Short Leash*: turn limit per floor.
 
-Clearing a run at a high Omen level unlocks new Omens and cosmetics.
+Omens start locked. Town-tree nodes unlock most of them (each building has a few themed ones, e.g. the Smithy's *Cursed Hoards* and *Armed Warbands*), and clearing a run at a high Omen level unlocks more Omens and cosmetics. A tree node never turns on extra danger by itself and never pays its own risk bonus: all opt-in risk goes through an Omen and its one reward multiplier.
 
 ### Conducts
 Tracked automatically each run (pacifist, never wore armor, never changed gear, no prayers, and so on). Keeping a conduct grants Favor. Some deities **require** certain conducts as taboos.
@@ -311,7 +311,9 @@ The milestones are broken down into work items in the backlog (§11). Every mile
 4. **M1.6 – Review follow-ups:** fixes found while reviewing merged items. Identification secrecy and curse safety for the idle player (`ETH-142`), a content check that every discoverable def can appear in a run (`ETH-143`), and per-monster Codex kill tiers (`ETH-144`).
 From M2 on, each milestone is one theme, so a milestone delivers one capability the player can feel. Work is ordered by that capability, not by which epic it touches. (The shared foundations, such as the objective engine, run-wide modifiers, monster templates, the chronicle and the Codex, were built early and are already done.)
 
-5. **M2 – Meta loop:** a run's earnings buy choices in town that change the next run. deeper Guild Hall and Smithy trees with ranked nodes, Foundations vs. Tactics, a starter set of classes and races to unlock, building and building-tier quests, gold and carried items to Trophies, persistent adventurer records, Class Mastery XP tracking, desktop packaging with file saves; economy pacing capstone.
+5. **M2 – Meta loop:** a run's earnings buy choices in town that change the next run. deeper Guild Hall and Smithy trees with ranked nodes, Foundations vs. Tactics, a starter set of classes and races to unlock, building and building-tier quests, gold and carried items to Trophies, persistent adventurer records, Class Mastery XP tracking, desktop packaging with file saves; economy pacing capstone. Its remaining work runs in two stages before the capstone:
+   - **M2.1 – Town trees:** the Guild Hall and Smithy trees (Tiers I–II) from the approved town-tree page, including the nodes that need new mechanics.
+   - **M2.2 – Minimal Omens:** Omen ranks, the one reward multiplier and the Prepare toggle, plus the first four Omens that the Guild Hall and Smithy unlock. The rest of the Omens and conducts stay in M6.
 6. **M3 – Behavior rules and AI:** the rules editor, Library, presets, doctrines (clear vs. stairs, formation), smarter baseline escapes; rules balance capstone.
 7. **M4 – Classes and roles:** proficiencies and aptitudes, signature abilities, class-aware AI roles, the talent tree engine (three trees per class, per-adventurer builds), a resurrection class; composition balance capstone.
 8. **M5 – Foes and loot:** uniques, monster families, elites and mini-bosses, sleeping monsters, affixes and artifacts, more enchantments, food buffs, gear score, identify polish, party-scaled return surge; danger and loot capstone.

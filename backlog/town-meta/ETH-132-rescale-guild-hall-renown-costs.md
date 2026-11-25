@@ -2,9 +2,9 @@
 id: ETH-132
 title: Rebuild the Guild Hall tree deeper, with ranked nodes and tiered costs
 type: content
-status: idea
-priority: P2
-milestone: M2
+status: ready
+priority: P1
+milestone: M2.1
 epic: town-meta
 size: M
 depends_on: [ETH-085, ETH-172, ETH-170, ETH-036]
@@ -13,49 +13,57 @@ updated: 2026-11-24
 ---
 
 ## Summary
-Rescale Guild Hall upgrade costs in `src/content/town/guildHall.ts` to match the higher Renown income introduced by depth-weighted rewards (ETH-085).
+Rebuild the Guild Hall tree in `src/content/town/guildHall.ts` as Tiers I–II of the approved town-tree page (v4): ranked nodes, a quest-locked Tier II, and costs that grow by tier. This item ships the nodes that need no new mechanics; ETH-187 adds the rest and ETH-186 adds the Omen unlocks.
 
 ## Why
-ETH-085 increased banked Renown per 10-floor victory from ~250 to ~1,120 (+348%), while the full Guild Hall tree in `src/content/town/guildHall.ts` still totals ~2,020 Renown (50–600 per node). That drops full tree completion from ~8 victories to ~2. Logged as a follow-up from the PR #82 review so cost tuning can be done deliberately alongside other M2 town-meta work.
+ETH-085 increased banked Renown per 10-floor victory from ~250 to ~1,120 (+348%), while the whole Guild Hall tree still totals ~2,020 Renown, so it can be finished in about 2 victories. Nate (2026-11-24) wants slower pacing where every run still buys something: deeper trees (about 15 to 25 nodes), cheap early nodes, costs growing by tier and some ranked nodes (`CLAUDE.md` §4).
 
-## Decided (Nate, 2026-11-24)
-Pacing should feel slower than about 2 victories for the whole tree, yet every run should buy something. Trees get deeper (about 15 to 25 nodes) with cheap early nodes, costs growing by tier, and some ranked numeric nodes (ETH-172). So this becomes: rebuild the Guild Hall tree to that shape, not just rescale its costs.
+## The tree (approved v4, 2026-11-24)
+The source is the Guild Hall panel of the town-tree page (artifact "Ethuathia town trees", https://claude.ai/artifact/GG26YiRZpYzgWLsxfQ5XHP). Costs are a starting shape for ETH-161, not final tuning.
 
-## What exists to build on
-- The tree today: 8 nodes, 2,020 Renown (Second, Third and Fourth Berth; Roster Ledger; Hardy Recruits or Contract Board; Drill Yard or Open Muster).
-- Ranks (ETH-172), tier gates opened by a tier quest (ETH-170; *The Long Muster*: reach floor 6 and walk out), class and race unlock nodes with reveal milestones (ETH-036).
-- Capacities a node can raise: party size, contract slots, rule slots (roster size goes away, below). Bundles can add stats to every adventurer.
-- Income today (200 seeds, solo Vanguard): about 340 Renown banked per run on average, about 1,100 per victory.
+**Tier I** (open from the start)
+| Row | Node | Effect | Cost (Renown) | Item |
+|---|---|---|---|---|
+| 1 | Second Berth | Party size +1 | 60 | here |
+| 1 | Hardy Recruits I–V | +3 max HP per rank | 40, ×1.5 per rank | here |
+| 2 | Contract Bounty I–III | +10% contract reward per rank | 80, ×1.5 | here |
+| 2 | Scout's Charter | Unlocks the Outrider (ETH-036 reveal) | 150 | here |
+| 2 | Field Rations I–III | +1 starting field ration per adventurer per rank | 50, ×1.5 | ETH-187 |
+| 3 | pick: Contract Board / Extraction Drills I–III | Contract slot +1 / +10% move speed while fleeing per rank | 250 / 90, ×1.5 | here / ETH-187 |
+| 3 | Marsh Envoy | Unlocks the Fenling | 200 | here |
+| 3 | Omen: Stalker's Ledger | Unlocks an Omen | 100 | ETH-186 |
 
-## Proposed tree (for Nate to shape)
-The proposal is the **Guild Hall panel of the town-tree page** Nate reviews (artifact "Ethuathia town trees", https://claude.ai/artifact/GG26YiRZpYzgWLsxfQ5XHP), which replaced the first table here on 2026-11-24. In short:
-- **Tier I** (open from the start): Second Berth (party +1), Hardy Recruits I–V, Contract Bounty I–III, Scout's Charter (Outrider), a Contract Board / Drill Yard pick, Marsh Envoy (Fenling).
-- **Tier II** (*The Long Muster*): Library Ties (Lorekeeper), Medic's Satchel, a Footwork Drills / Seasoned Hands pick, a Second Contract Board / Rule Clerk pick.
-- **Tier III** (M4): Training Grounds, which opens the talent trees (ETH-088).
+**Tier II** (quest: *The Long Muster*, reach floor 6 and walk out)
+| Row | Node | Effect | Cost | Item |
+|---|---|---|---|---|
+| 4 | Library Ties | Unlocks the Lorekeeper | 250 | here |
+| 4 | Medic's Satchel | Every adventurer starts with a mending draught (a kit item, never sold) | 450 | here |
+| 4 | Omen: Deep Surge | Unlocks an Omen | 500 | ETH-186 |
+| 5 | pick: Guild Chronicles I–III / Waymark Lanterns | +10% in-run XP per rank / +2 sight and +10% speed on the return trip | 250, ×1.6 / 600 | here / ETH-187 |
+| 5 | Seasoned Constitution I–III | +8 status resistance per rank | 200, ×1.5 | here |
+| 6 | pick: Second Contract Board / Rule Clerk | Contract slot +1 / rule slot +1 (inert until M3; its tooltip says so) | 1,200 each | here |
+| 6 | Quartermaster's Mystery Crate | Opt-in: one random unidentified curiosity in the pack at the start of each run | 500 | ETH-187 |
 
-The Reaver and Stonekin unlock in the Smithy (ETH-036, ETH-159). The third and fourth party berths sit in other buildings, so party size isn't bought in one place; Nate is choosing between a cap of 4 (berths in the Guild Hall, Smithy and Library) and one berth in every building. Costs stay in the range above: the cheapest purchase under 100 Renown, about 4–5 average runs for Tier I and about 18 more for Tier II.
+Tier III (Training Grounds, Guild Trophy Room, Guild Horn, Warden) and the Retreat threshold doctrine are later milestones and not built here.
+
+**Guild Chronicles is in-run XP only.** Class Mastery still rises with it, because Mastery XP counts the in-run XP each member earned (`src/meta/mastery.ts`); the run-end Mastery bonus is unaffected. Its tooltip says both.
 
 ## Acceptance criteria
-- [ ] Spec reviewed by Nate before building (spec gate): the tree, names and costs above, or his changes
-- [ ] `src/content/town/guildHall.ts` holds the new tree: ranks via ETH-172, the Tier II gate with *The Long Muster* via ETH-170 (its contract def ships here), and ETH-036's unlock nodes placed as above
-- [ ] Every tier with a numeric node also offers a capability (CLAUDE.md §4); every node has tooltip and Codex text; the `validateContent` checks pass (tree rules, quest depth order)
-- [ ] **No roster upgrades** (Nate, 2026-11-24): the roster holds a flat `ROSTER_SIZE` = 50 adventurers. Remove the `rosterSize` capacity key and its nodes (Roster Ledger, Open Muster); Contract Bounty and Medic's Satchel take their places. Medic's Satchel adds a mending draught to every adventurer's starting kit (a kit item, so never sold, ETH-176/171).
-- [ ] **Old saves:** owned node ids that no longer exist are refunded at their old price in a migration (today a removed id is silently ignored, which would lose the Renown); nodes that keep their id keep their purchase
-- [ ] Tests that pin Guild Hall costs or node ids updated; a test that Tier II is locked until *The Long Muster* is done
-- [ ] **T1 (20 seeds):** confirm the harness still runs (it fields a fixed party and doesn't buy upgrades, so no change expected); ETH-161 measures the pacing for real
+- [ ] `src/content/town/guildHall.ts` holds the "here" nodes above, with ranks via ETH-172 and the Tier II gate via ETH-170 (*The Long Muster*'s contract def ships here). Pick-one rows whose other half belongs to ETH-187 ship as single nodes; ETH-187 turns them into picks.
+- [ ] **No roster upgrades** (Nate, 2026-11-24): the roster is a flat `ROSTER_SIZE` = 50. Remove the `rosterSize` capacity key and its nodes (Roster Ledger, Open Muster), and Drill Yard.
+- [ ] Guild Chronicles multiplies XP earned in the run (kills and anything else that grants XP) and nothing else; a test shows Mastery gains follow from it.
+- [ ] Every tier with a numeric node also offers a capability (`CLAUDE.md` §4); every node has tooltip and Codex text; `validateContent` passes.
+- [ ] **Old saves:** owned node ids that no longer exist are refunded at their old price in a migration; nodes that keep their id keep their purchase.
+- [ ] Tests that pin Guild Hall costs or ids are updated, plus a test that Tier II stays locked until *The Long Muster* is done.
+- [ ] **T1 (20 seeds):** the harness still runs (it fields a fixed party and buys nothing, so no change is expected); ETH-161 measures pacing.
 
 ## Notes
-- Current node costs in `src/content/town/guildHall.ts`: 50, 80, 120 / 120 (tier 2 exclusive), 250, 600, 400 / 400 (tier 4 exclusive) — 2,020 total across all nodes (1,500 for one branch per exclusive tier).
-- Nate (2026-11-24) isn't worried about fine balance yet: the costs are a starting shape for ETH-161, not a final tuning.
-
-Open decisions:
-- (default) The Guild Hall panel of the town-tree page: two tiers plus a later Tier III, about 22 average runs to finish Tiers I and II.
-- (default) Rule Clerk sits here now and does nothing until M3's rules editor (its tooltip says so). Alternative: leave the row-7 pick for M3.
-- (default) Old saves get a refund for removed nodes rather than a mapping to new ones.
+- Defaults: old saves get a refund for removed nodes rather than a mapping to new ones; Rule Clerk ships inert.
+- Status resistance already exists as the `statusResist` stat; Seasoned Constitution adds to it.
 
 ## Log
 - 2026-11-20: Created from PR #82 (ETH-085) review balance note.
 - 2026-11-23: Renumbered from ETH-129 to ETH-132 on rebase onto main (ETH-129 was claimed by Guild Hall constant respawn in PR #83).
 - 2026-11-24: Progression discussion with Nate: slower pacing and deeper trees; this now rebuilds the Guild Hall tree on ETH-172 ranks and tiers.
-- 2026-11-24: (spec gate) Proposed tree written (17 nodes, two tiers, ETH-036 unlock nodes and *The Long Muster* gate); awaiting Nate's review.
-- 2026-11-24: The proposal moved to the town-tree page (classes spread across buildings, party berths spread out). Nate: drop roster upgrades for a flat roster of 50; Contract Bounty and Medic's Satchel replace the roster nodes.
+- 2026-11-24: (spec gate) Proposed tree written; the proposal moved to the town-tree page. Nate: flat roster of 50.
+- 2026-11-24: Town trees v4 approved (Gemini's themed rework merged with doctrines, Omen unlocks and Hardy Recruits). Moved to M2.1 as P1 and `ready`; nodes needing new mechanics split out to ETH-187, Omen nodes to ETH-186.

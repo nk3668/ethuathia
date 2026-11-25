@@ -4,12 +4,12 @@ title: Guild Hall upgrade: constant floor respawns on revisit
 type: feature
 status: idea
 priority: P2
-milestone: M2
+milestone: M6
 epic: town-meta
 size: S
-depends_on: [ETH-025, ETH-063]
+depends_on: [ETH-025, ETH-063, ETH-185]
 created: 2026-11-22
-updated: 2026-11-22
+updated: 2026-11-24
 ---
 
 ## Summary
@@ -29,3 +29,4 @@ Requested alongside ETH-025 so players who want constant floor respawns beyond t
 
 ## Log
 - 2026-11-22: Created during ETH-025 planning from Nate's feedback.
+- 2026-11-24: Town trees v4 (Nate): no tree node turns on dungeon systems directly, and extra risk pays through Omens. Moved to M6 to become an Omen (unlocked by a node, switched on at Prepare, paid through the Omen multiplier, ETH-185) instead of a plain Guild Hall upgrade. Rewrite the criteria when it is picked up.
