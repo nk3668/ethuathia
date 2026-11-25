@@ -13,6 +13,7 @@ import { newRecord } from '../adventurers';
 import { ownedNodes, rankOf } from '../upgrades';
 import { CHOICE_ENTRIES } from './index';
 import type { RunChoices } from './index';
+import { withOptIns } from './optIns';
 import { fillParty, MAX_PARTY_SIZE, partySize } from './party';
 import { upgradeStartConfig } from './startPerks';
 
@@ -90,12 +91,14 @@ export function buildRunConfig(profile: Profile, choices: RunChoices, seed: numb
   const config: RunConfig = { party: [] };
   const ctx = { profile, seed, rng: Rng.seeded(seed, PREPARE_STREAM), config };
   for (const [key, section] of CHOICE_ENTRIES) section.apply(ctx, choices[key]);
-  const bundles = upgradePartyBundles(profile);
+  // Opt-in nodes count only when switched on (ETH-187); the sections above read the real profile.
+  const active = withOptIns(profile, choices.optIns);
+  const bundles = upgradePartyBundles(active);
   if (bundles.length > 0) config.partyBundles = [...(config.partyBundles ?? []), ...bundles];
-  const mods = [...upgradeRunModifiers(profile), ...upgradeBonusModifiers(profile)];
+  const mods = [...upgradeRunModifiers(active), ...upgradeBonusModifiers(active)];
   if (mods.length > 0) config.runModifiers = [...(config.runModifiers ?? []), ...mods];
   // The Smithy's start perks and trade bonus (ETH-159).
-  Object.assign(config, upgradeStartConfig(profile));
+  Object.assign(config, upgradeStartConfig(active));
   // The locked `metInRun` milestones' requirements, for `track.requirements` (ETH-121).
   const watch = milestoneRequirements(profile);
   if (watch.length > 0) config.watchRequirements = watch;

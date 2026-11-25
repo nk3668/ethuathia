@@ -10,6 +10,7 @@ import {
   UPGRADE_HARDY_RECRUITS,
   UPGRADE_REINFORCED_WAGON,
   UPGRADE_SECOND_BERTH,
+  maxRank,
   UPGRADES,
 } from '../../src/content';
 import {
@@ -28,7 +29,9 @@ import {
   upgradeBonusModifiers,
   upgradePartyBundles,
   upgradeRunModifiers,
+  tierGate,
   upgradeStartConfig,
+  withOptIns,
 } from '../../src/meta';
 import type { Profile } from '../../src/meta';
 import { CONDITIONS, RULE_ACTIONS } from '../../src/sim';
@@ -117,6 +120,8 @@ export interface HeadlessOptions {
   preset?: HeadlessPreset;
   /** Explicit upgrade node ids to apply via `meta` helpers. */
   upgrades?: readonly string[];
+  /** Count owned opt-in nodes (ETH-187) as switched on. Default true. */
+  optIns?: boolean;
   /** Behavior rule preset (`baseline` or `cautious`) or explicit rules ahead of `BASELINE_RULES`. */
   rules?: HeadlessRulesPreset | readonly Rule[];
   /**
@@ -131,6 +136,24 @@ export interface HeadlessOptions {
 
 /** The contracts a headless run takes on by default (ETH-024): Recover the relic, the Prepare default. */
 export const HEADLESS_CONTRACTS: readonly string[] = [CONTRACT_RECOVER_RELIC.id];
+
+/**
+ * One `--upgrades` entry (ETH-187): a node id, optionally `id*N` for rank N of a ranked node and a
+ * trailing `!` to attach a node whose building tier is still closed (`upgrade.waymark_lanterns!`).
+ * Plain ids stay rank 1 and respect closed tiers, as before.
+ */
+export function parseUpgradeEntry(raw: string): { id: string; rank: number; force: boolean } {
+  const trimmed = raw.trim();
+  const force = trimmed.endsWith('!');
+  const [idPart = '', rankPart, ...extra] = (force ? trimmed.slice(0, -1) : trimmed).split('*');
+  const id = idPart.trim();
+  if (id === '') throw new Error('Upgrade id must not be empty');
+  if (extra.length > 0) throw new Error(`Upgrade entry "${raw}" must be an id, id*rank or id*rank!`);
+  if (rankPart === undefined) return { id, rank: 1, force };
+  const rank = Number(rankPart);
+  if (!Number.isSafeInteger(rank) || rank < 1) throw new Error(`Upgrade "${id}": rank must be a whole number from 1, got "${rankPart}"`);
+  return { id, rank, force };
+}
 
 /**
  * Builds a checked `Profile` for a headless sweep from `preset` and `upgrades`.
@@ -149,9 +172,8 @@ export function buildHeadlessProfile(preset: HeadlessPreset = 'fresh', upgrades:
     for (const id of PROGRESSED_UPGRADES) profile = purchase(profile, id);
   }
 
-  for (const rawId of upgrades) {
-    const id = rawId.trim();
-    if (id === '') throw new Error('Upgrade id must not be empty');
+  for (const rawEntry of upgrades) {
+    const { id, rank: wantRank, force } = parseUpgradeEntry(rawEntry);
     if (!UPGRADES.has(id)) {
       const available = UPGRADES.all().map((u) => u.id).join(', ');
       throw new Error(`Unknown upgrade "${id}". Available upgrades: ${available}`);
@@ -167,11 +189,18 @@ export function buildHeadlessProfile(preset: HeadlessPreset = 'fresh', upgrades:
     const check = canPurchase(profile, id);
     if (check.ok) {
       profile = purchase(profile, id);
-    } else if (check.status === 'locked' && ((check.missing?.length ?? 0) > 0 || node.reveal !== undefined)) {
-      // Missing prerequisites, or a node a run must reveal first (ETH-036): a sweep attaches it directly.
+    } else if (
+      check.status === 'locked' &&
+      ((check.missing?.length ?? 0) > 0 || node.reveal !== undefined || (force && tierGate(profile, node.building, node.tier) !== null))
+    ) {
+      // Missing prerequisites, a node a run must reveal first (ETH-036), or (with a trailing !) a closed building tier: a sweep attaches it directly.
       profile = { ...profile, upgrades: { ...profile.upgrades, owned: [...profile.upgrades.owned, id] } };
     } else {
       throw new Error(`Cannot apply upgrade "${id}": ${check.reason}`);
+    }
+    if (wantRank > 1) {
+      if (wantRank > maxRank(node)) throw new Error(`Upgrade "${id}" has at most ${maxRank(node)} ranks, got ${wantRank}`);
+      profile = { ...profile, upgrades: { ...profile.upgrades, ranks: { ...profile.upgrades.ranks, [id]: wantRank } } };
     }
   }
 
@@ -194,8 +223,10 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): Ru
   const upgrades = options.upgrades ?? [];
   const profile = buildHeadlessProfile(preset, upgrades);
   const hasUpgrades = profile.upgrades.owned.length > 0;
-  const partyBundles = upgradePartyBundles(profile);
-  const runModifiers = [...upgradeRunModifiers(profile), ...upgradeBonusModifiers(profile)];
+  // Owned opt-in nodes count as switched on unless `optIns` is false (ETH-187).
+  const active = options.optIns === false ? withOptIns(profile, { enabled: [] }) : profile;
+  const partyBundles = upgradePartyBundles(active);
+  const runModifiers = [...upgradeRunModifiers(active), ...upgradeBonusModifiers(active)];
   const watchRequirements = milestoneRequirements(profile);
   const contracts =
     options.contracts ??
@@ -209,7 +240,7 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): Ru
     ...(options.depth === undefined ? {} : { depth: options.depth }),
     ...(partyBundles.length === 0 ? {} : { partyBundles }),
     ...(runModifiers.length === 0 ? {} : { runModifiers }),
-    ...upgradeStartConfig(profile),
+    ...upgradeStartConfig(active),
     ...(watchRequirements.length === 0 ? {} : { watchRequirements }),
   };
   const problems = checkRunConfig(config);

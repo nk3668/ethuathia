@@ -28,7 +28,9 @@ describe('PrepareScreen', () => {
     });
     render(<PrepareScreen />);
 
-    for (const panel of PREPARE_PANELS) expect(screen.getByTestId(`prepare-${panel.id}`)).toBeTruthy();
+    // Panels that leave themselves out (no opt-in upgrade owned yet) are not on the screen.
+    expect(screen.queryByTestId('prepare-opt-ins')).toBeNull();
+    for (const panel of PREPARE_PANELS.filter((p) => p.id !== 'opt-ins')) expect(screen.getByTestId(`prepare-${panel.id}`)).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Party' })).toBeTruthy();
     // One slot to start; the others are locked until the Guild Hall adds berths.
     const party = within(screen.getByTestId('prepare-party'));

@@ -2,7 +2,7 @@
 id: ETH-187
 title: Guild Hall nodes that need new mechanics - Field Rations, Extraction Drills, Waymark Lanterns, Mystery Crate
 type: feature
-status: idea
+status: in-progress
 priority: P1
 milestone: M2.1
 epic: town-meta
