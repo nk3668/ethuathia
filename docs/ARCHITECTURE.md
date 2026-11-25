@@ -1895,8 +1895,9 @@ interface RuleActionDef extends Def {
     heading out or the floor is overstayed. Conditions and actions: `src/sim/combat/habitRules.ts`
     and `src/sim/items/habitRules.ts`. **Secrecy:** Curious chooses by known category and
     `isInstanceTypeKnown` only; `test/sim/tacticsHabits.test.ts` checks the decision is the same for
-    two different unknown potion types. The baseline's emergency gamble on unknown potions still
-    applies, so Quick to quaff with no known healing drinks an unknown potion at 60%.
+    two different unknown potion types. The baseline's emergency gamble on an unknown potion stays at
+    its own 35% line (`act.quaff_healing` refuses it above that), whatever `healBelow` a habit sets:
+    Quick to quaff drinks known healing at 60% but gambles on an unknown potion only below 35%.
   - **Habit slots.** `capacity(profile, 'habitSlots', 1)` (`habitSlotsOf`, `src/meta/prepare/habits.ts`,
     clamped to `MAX_HABITS` 3; the Guild Hall's Habit Tutor, id `upgrade.rule_clerk` kept so owned
     nodes in saves stay valid, grants +1) goes into `RunConfig.habitSlots` in `buildRunConfig`. The sim

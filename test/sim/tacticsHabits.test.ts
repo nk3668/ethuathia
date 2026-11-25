@@ -135,6 +135,17 @@ describe('Quick to quaff and Sparing with potions', () => {
     expect([quaffsAt(SPARING, 30), quaffsAt(SPARING, 15)]).toEqual([false, true]);
   });
 
+  it('keeps the gamble on an unknown potion at the baseline line, whatever the habit', () => {
+    const gamble = (habit: string | null, percent: number): boolean => {
+      const { state, actors } = party({}, member('Hero', habit === null ? {} : { habits: [habit] }));
+      const hero = actors[0] as AiActor;
+      hero.inventory = { items: [{ def: DRAUGHT, qty: 1, identified: false }] };
+      hero.actor.hp = Math.round((statValue(state, hero, 'hp') * percent) / 100);
+      return choose(state, hero)?.action === 'act.quaff_healing';
+    };
+    expect([gamble(QUICK, 50), gamble(QUICK, 30), gamble(null, 50), gamble(SPARING, 15)]).toEqual([false, true, false, true]);
+  });
+
   it('names the habit in the trace', () => {
     const { state, actors } = party({}, member('Hero', { habits: [QUICK] }));
     const hero = actors[0] as AiActor;

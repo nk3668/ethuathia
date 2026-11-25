@@ -204,6 +204,9 @@ export const ACT_QUAFF_HEALING = defineRuleAction({
   resolve(ctx): Resolved | null {
     const best = bestHealing(ctx);
     if (best === null) return null;
+    // Gambling on an unknown potion is an emergency: it stays at the baseline's own line whatever
+    // threshold a habit (Quick to quaff) sets for known healing (ETH-194).
+    if (best.heal === 0 && ctx.actor.actor.hp * 100 >= statValue(ctx.state, ctx.actor, 'hp') * HEAL_BELOW_PERCENT) return null;
     const name = itemName(ctx.state, inventoryOf(ctx.actor)[best.index] as ItemInstance, ctx.actor);
     return { request: { id: 'use', index: best.index }, detail: `quaffing a ${name}` };
   },
