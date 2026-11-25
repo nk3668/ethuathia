@@ -381,6 +381,16 @@ function statWord(stat: string): string {
   return isStatId(stat) ? STAT_INFO[stat].label : stat;
 }
 
+/** The `OmenRankDef` that created `mod`, when `mod.source.id` names an Omen and its rank is in config or source label. */
+function omenRankFor(mod: RunModifier, state?: RunState) {
+  if (!OMENS.has(mod.source.id)) return undefined;
+  const def = OMENS.get(mod.source.id);
+  const fromConfig = state?.config.omens?.find((o) => o.id === mod.source.id)?.rank;
+  if (fromConfig !== undefined) return omenRank(def, fromConfig);
+  const match = /\(Omen, rank (\d+)\)$/.exec(mod.source.label);
+  return match === null ? undefined : omenRank(def, Number(match[1]));
+}
+
 /**
  * One line describing a modifier for its tooltip: what it does, to whom, the reward bonus and
  * when it ends. "Monsters: Sight −2. Rewards +20%. Ends when the party leaves floor 3."
@@ -402,7 +412,11 @@ export function describeRunModifier(mod: RunModifier, state?: RunState): string 
     }
   }
   if (mod.when !== undefined) parts.push(`Only ${RUN_GATE_INFO[mod.when].name}.`);
-  if (mod.flags !== undefined && mod.flags.length > 0) parts.push(`Sets ${mod.flags.join(', ')}.`);
+  if (mod.flags !== undefined && mod.flags.length > 0) {
+    const rank = omenRankFor(mod, state);
+    if (rank === undefined) parts.push(`Sets ${mod.flags.join(', ')}.`);
+    else if (mod.bundle === undefined) parts.push(rank.text.endsWith('.') ? rank.text : `${rank.text}.`);
+  }
   if (mod.rewardBonus !== undefined && mod.rewardBonus !== 0) parts.push(`Rewards ${rewardBonusText(mod.rewardBonus)}.`);
   if (mod.xpBonus !== undefined && mod.xpBonus !== 0) parts.push(`XP ${rewardBonusText(mod.xpBonus)}.`);
   if (mod.contractBonus !== undefined && mod.contractBonus !== 0) parts.push(`Contract pay ${rewardBonusText(mod.contractBonus)}.`);

@@ -68,6 +68,18 @@ describe('the Omens panel', () => {
     expect(useProfileStore.getState().profile.prepare.choices.omens).toEqual({ ranks: {} });
     expect(panel.getByTestId('omen-multiplier').textContent).toContain('×1.00');
   });
+
+  it('reveals full description and ranks for an unlocked Omen on Prepare even with an empty Codex', async () => {
+    const user = userEvent.setup();
+    useProfileStore.setState((s) => ({ profile: { ...s.profile, codex: { entries: {}, kills: {} }, upgrades: { owned: [WRIT.id], ranks: {} } } }));
+    render(<PrepareScreen />);
+    const panel = within(screen.getByTestId('prepare-omens'));
+    await user.click(panel.getByText(DUSK.name));
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toContain(DUSK.description);
+    expect(tip.textContent).toContain('Opt-in');
+    expect(tip.textContent).not.toContain('???');
+  });
 });
 
 describe('the Codex entry and the run summary', () => {
