@@ -52,3 +52,4 @@ More items are added when M2 becomes the current milestone.
 - [x] [ETH-172 Upgrade engine supports ranked nodes and quest-locked tiers](ETH-172-upgrade-ranks-and-tiers.md)
 - [x] [ETH-180 Stat tooltips name a ranked upgrade once, with its rank count](ETH-180-ranked-tooltip-stacking.md)
 - [ ] [ETH-174 The Cartographer building](ETH-174-cartographer.md)
+- [ ] [ETH-190 Cartographer Tier I node that raises the quality of dungeon loot](ETH-190-better-loot-nodes.md)

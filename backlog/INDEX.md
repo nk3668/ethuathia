@@ -1,6 +1,6 @@
 # Backlog Index
 
-**Next ID: ETH-190**
+**Next ID: ETH-191**
 
 **Current milestone: M2 (Meta loop).** M2's remaining work runs as M2.1 (town trees), then M2.2 (minimal Omens), then the ETH-161 capstone.
 
@@ -228,6 +228,7 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-128](saves-platform/ETH-128-time-away-catch-up.md) | Time-away catch-up simulation and summary | saves-platform | M8 | P2 | idea | M |
 | [ETH-169](tools-balance/ETH-169-gods-and-world-balance-pass.md) | Deities, merchants and themed dungeons balance pass (M8 capstone) | tools-balance | M8 | P2 | idea | M |
 | [ETH-174](town-meta/ETH-174-cartographer.md) | The Cartographer building | town-meta | M8 | P2 | idea | M |
+| [ETH-190](town-meta/ETH-190-better-loot-nodes.md) | Cartographer Tier I node that raises the quality of dungeon loot | town-meta | M8 | P2 | idea | S |
 | [ETH-049](dungeon-gen/ETH-049-dungeon-merchants.md) | Dungeon merchants | dungeon-gen | M8 | P3 | idea | M |
 | [ETH-098](dungeon-gen/ETH-098-hand-made-vaults.md) | Hand-made room vaults | dungeon-gen | M8 | P3 | idea | M |
 | [ETH-107](dungeon-gen/ETH-107-dungeon-events.md) | Rare floor-wide dungeon events | dungeon-gen | M8 | P3 | idea | M |
