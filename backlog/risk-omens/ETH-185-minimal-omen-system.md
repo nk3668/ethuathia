@@ -2,14 +2,14 @@
 id: ETH-185
 title: Minimal Omen system with ranks, one reward multiplier and a Prepare toggle, unlocked by town nodes
 type: feature
-status: ready
+status: in-progress
 priority: P1
 milestone: M2.2
 epic: risk-omens
 size: M
 depends_on: [ETH-115, ETH-064, ETH-023, ETH-172]
 created: 2026-11-24
-updated: 2026-11-24
+updated: 2026-11-25
 ---
 
 ## Summary
@@ -34,3 +34,4 @@ Town trees v4 (Nate, 2026-11-24) turns every risk node into an Omen unlock, so a
 
 ## Log
 - 2026-11-24: Created from the town trees v4 decision (Nate): risk nodes unlock Omens; a minimal Omen system ships in M2.2.
+- 2026-11-25: Started (branch eth-185-minimal-omen-system, stacked on ETH-188).

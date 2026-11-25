@@ -110,6 +110,8 @@ export type { QuestOffer, UpgradeShare } from './prepare/buildingQuests';
 export type { ContractsChoice } from './prepare/contracts';
 export { enabledOptIns, optInNodes, withOptIns } from './prepare/optIns';
 export type { OptInsChoice } from './prepare/optIns';
+export { activeOmens, availableOmens, multiplierText, OMEN_MULTIPLIER_TEXT, omenBreakdown, omenMultiplier } from './prepare/omens';
+export type { OmenBreakdownLine, OmensChoice } from './prepare/omens';
 export { upgradeStartConfig } from './prepare/startPerks';
 export { buildRunConfig, checkRunConfig, PREPARE_STREAM, recruitParty, startRun, upgradeBonusModifiers, upgradePartyBundles, upgradeRunModifiers } from './prepare/build';
 export {

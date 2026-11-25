@@ -10,6 +10,7 @@
 import type { ChoiceOf, RunChoiceSection } from './choice';
 import { CONTRACTS_CHOICE } from './contracts';
 import { DUNGEON_CHOICE } from './dungeon';
+import { OMENS_CHOICE } from './omens';
 import { OPT_INS_CHOICE } from './optIns';
 import { PARTY_CHOICE } from './party';
 
@@ -18,6 +19,7 @@ export const RUN_CHOICES = {
   dungeon: DUNGEON_CHOICE,
   contracts: CONTRACTS_CHOICE,
   optIns: OPT_INS_CHOICE,
+  omens: OMENS_CHOICE,
 } as const;
 
 type Sections = typeof RUN_CHOICES;

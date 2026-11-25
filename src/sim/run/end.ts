@@ -12,6 +12,7 @@ import { GOLD_PER_TROPHY, goldToTrophies } from '../../content';
 import { deathPredicate, killerOf } from '../combat/death';
 import type { Killer } from '../combat/death';
 import type { Emit, SimEvent } from '../events';
+import { rewardMultiplier } from '../stats/runModifiers';
 import { depthRevealed, dungeonDepth, floorNode, floorTypeOf } from '../floors/dungeon';
 import { carriesCrate, enchantedKitIds, issuedKitIds, stampedKitIds } from '../items/kit';
 import { itemSale, tradeBonusOf } from '../items/sale';
@@ -67,6 +68,12 @@ export interface PartyMemberRecord {
 export interface RunReport {
   result: RunResult;
   end: RunEnd;
+}
+
+/** The Omens a run had on, in `RunResult.extras['run.omens']` (ETH-185); present only when one was on. `multiplier` is the run's reward multiplier at its end. */
+export interface OmensRecord {
+  readonly omens: readonly { readonly id: string; readonly rank: number }[];
+  readonly multiplier: number;
 }
 
 /** Leftover in-run gold settlement recorded in `RunResult.extras['run.gold']` (ETH-083). */
@@ -274,8 +281,22 @@ export function runResult(state: RunState): RunResult {
     ...(converted > 0 ? { converted: { [TROPHIES]: converted } } : {}),
     turns: state.turn,
     deepestDepth: state.domains.floors.deepest,
-    extras: { ...trackerExtras(state), 'run.end': runEnd, 'run.party': partyRecords(state), 'run.gold': goldRecord, 'run.items': sale },
+    extras: {
+      ...trackerExtras(state),
+      'run.end': runEnd,
+      'run.party': partyRecords(state),
+      'run.gold': goldRecord,
+      'run.items': sale,
+      ...omensExtra(state),
+    },
   });
+}
+
+/** `extras['run.omens']` when the config had Omens on, else nothing (a run without Omens is unchanged). */
+function omensExtra(state: RunState): Record<string, OmensRecord> {
+  const omens = state.config.omens ?? [];
+  if (omens.length === 0) return {};
+  return { 'run.omens': { omens: omens.map((o) => ({ id: o.id, rank: o.rank })), multiplier: rewardMultiplier(state) } };
 }
 
 /** Who set out, in party order, for the run summary and the run history. */

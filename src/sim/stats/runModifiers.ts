@@ -12,7 +12,7 @@
  * The list lives in the stats slice, `state.domains.stats.runModifiers`. Change it only through
  * `addRunModifier` and `removeRunModifier`, which emit `runModifierAdded` / `runModifierRemoved`.
  */
-import { RUN_GATE_INFO, RUN_GATES, UPGRADES, upgradeBundle } from '../../content';
+import { OMENS, omenRank, RUN_GATE_INFO, RUN_GATES, UPGRADES, upgradeBundle } from '../../content';
 import type { Bundle, RunGate } from '../../content';
 import { defineCondition } from '../ai/types';
 import type { ParamParser } from '../ai/types';
@@ -120,6 +120,14 @@ export function toRunModifier(config: RunModifierConfig): RunModifier {
  * other def's bundle (`bundleOf`). Throws on an unknown id or one without a bundle.
  */
 export function runBundleOf(id: string): Bundle {
+  // An Omen rank's bundle (ETH-185): `omen.gloom#2`.
+  const hash = id.indexOf('#');
+  if (hash > 0 && id.startsWith('omen.')) {
+    const base = id.slice(0, hash);
+    const bundle = OMENS.has(base) ? omenRank(OMENS.get(base), Number(id.slice(hash + 1)))?.bundle : undefined;
+    if (bundle === undefined) throw new Error(`Omen rank "${id}" has no bundle`);
+    return bundle;
+  }
   if (UPGRADES.has(id)) {
     const bundle = upgradeBundle(UPGRADES.get(id), 'run');
     if (bundle === undefined) throw new Error(`Upgrade "${id}" has no run-scope bundle grant`);

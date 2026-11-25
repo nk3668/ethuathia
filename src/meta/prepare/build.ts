@@ -5,7 +5,7 @@
  */
 import { CLASSES, CONTRACTS, isBuildingQuest, ITEMS, RACES, RUN_GATE_INFO, upgradeBundle, upgradeRunGate } from '../../content';
 import { Rng } from '../../core';
-import { configDepth, hasBundle, requirementProblems, runModifierListProblems } from '../../sim';
+import { configDepth, hasBundle, omenProblems, requirementProblems, runModifierListProblems } from '../../sim';
 import type { AdventurerConfig, RunConfig, RunModifierConfig } from '../../sim';
 import type { Profile } from '../profile';
 import { milestoneRequirements } from '../milestones';
@@ -176,6 +176,7 @@ export function checkRunConfig(config: RunConfig): string[] {
   });
   for (const id of config.partyBundles ?? []) if (!hasBundle(id)) problems.push(`unknown party bundle "${id}"`);
   problems.push(...runModifierListProblems(config.runModifiers ?? []));
+  problems.push(...omenProblems(config.omens));
   for (const { item } of config.startStock ?? []) if (!ITEMS.has(item)) problems.push(`unknown starting item "${item}"`);
   const contracts = config.contracts ?? [];
   for (const id of contracts) if (!CONTRACTS.has(id)) problems.push(`unknown contract "${id}"`);
