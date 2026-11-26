@@ -236,7 +236,7 @@ describe('stale picks', () => {
     }
     expect(note).toContain('tactic.gone, tactic.vanished is not available, using the default');
     // The note is added to what the rule did, not put in its place.
-    expect(note).toMatch(/^[A-Z][^;]+: .+; tactic\.gone/);
+    expect(note).toMatch(/^[A-Z][^;]+: .+; tactic tactic\.gone/);
   });
 });
 
