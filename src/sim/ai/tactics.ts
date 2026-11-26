@@ -18,20 +18,45 @@ import { classTactics, CLASSES, DEFAULT_FORMATION, DEFAULT_STANCE, FOCUS_PREFERE
 import type { AdventurerPicks, FocusPreference, TacticDef } from '../../content';
 import type { AiCtx, AiPart, ResolvedTactics, Rule, TacticPicks } from './types';
 
-/** The option with this id. Throws on an unknown id, so bad picks fail loudly where they are made. */
-function option(id: string): TacticDef {
-  return TACTICS.get(id);
+/**
+ * The option with this id on `axis`, or the class's default for that axis when the id is unknown
+ * or on another axis (a save or roster record naming an option the content dropped). Never throws:
+ * the decision loop must survive stale picks, and the engine notes it in the trace (`stalePicks`).
+ */
+function option(axis: 'stance' | 'formation' | 'role' | 'range' | 'focus' | 'habit', id: string, fallback: string | undefined): TacticDef | undefined {
+  if (TACTICS.has(id) && TACTICS.get(id).axis === axis) return TACTICS.get(id);
+  return fallback !== undefined && TACTICS.has(fallback) ? TACTICS.get(fallback) : undefined;
 }
 
-/** `picks` resolved to option defs. Throws on an unknown id. */
-export function resolveTactics(picks: TacticPicks): ResolvedTactics {
+/** The ids in `picks` that name no option on their axis. */
+export function stalePicks(picks: TacticPicks): string[] {
+  const out: string[] = [];
+  const check = (axis: Parameters<typeof option>[0], id: string) => {
+    if (!(TACTICS.has(id) && TACTICS.get(id).axis === axis)) out.push(id);
+  };
+  check('stance', picks.stance);
+  check('formation', picks.formation);
+  check('role', picks.role);
+  check('range', picks.range);
+  check('focus', picks.focus);
+  for (const h of picks.habits) check('habit', h);
+  return out;
+}
+
+/**
+ * `picks` resolved to option defs. An id that is not a playable option on its axis falls back to
+ * `classId`'s default for that axis (a stale habit is dropped); it never throws.
+ */
+export function resolveTactics(picks: TacticPicks, classId?: string): ResolvedTactics {
+  const base = defaultPicks(classId);
+  const def = (axis: Parameters<typeof option>[0], id: string, fallback: string) => option(axis, id, fallback) as TacticDef;
   return {
-    stance: option(picks.stance),
-    formation: option(picks.formation),
-    role: option(picks.role),
-    range: option(picks.range),
-    focus: option(picks.focus),
-    habits: picks.habits.map(option),
+    stance: def('stance', picks.stance, base.stance),
+    formation: def('formation', picks.formation, base.formation),
+    role: def('role', picks.role, base.role),
+    range: def('range', picks.range, base.range),
+    focus: def('focus', picks.focus, base.focus),
+    habits: picks.habits.flatMap((h) => option('habit', h, undefined) ?? []),
   };
 }
 
@@ -41,16 +66,14 @@ export function resolveTactics(picks: TacticPicks): ResolvedTactics {
  */
 export function tacticsOf(ctx: AiCtx): ResolvedTactics {
   if (ctx.tactics !== undefined) return ctx.tactics;
-  const picks = ctx.actor.ai.tactics;
-  if (picks !== undefined) return resolveTactics(picks);
-  return resolveTactics(defaultPicks(ctx.actor.adventurer?.classId));
+  const classId = ctx.actor.adventurer?.classId;
+  return resolveTactics(ctx.actor.ai.tactics ?? defaultPicks(classId), classId);
 }
-
 /** The focus preference in force for `ctx.actor`: whom it strikes first among adjacent enemies. */
 export function focusPreference(ctx: AiCtx): FocusPreference {
   // Monsters and hand-built actors have no picks: the baseline's own choice, without resolving anything.
   const picks = ctx.actor.ai.tactics;
-  const focus = ctx.tactics?.focus ?? (picks === undefined ? undefined : TACTICS.get(picks.focus));
+  const focus = ctx.tactics?.focus ?? (picks === undefined ? undefined : resolveTactics(picks, ctx.actor.adventurer?.classId).focus);
   const prefer = focus?.params?.prefer;
   return FOCUS_PREFERENCES.find((p) => p === prefer) ?? 'weakest';
 }
@@ -111,8 +134,8 @@ export function tacticPickProblems(picks: TacticPicks, slots?: number): string[]
  * The player rule list `picks` build, in order: the stance's rows, each habit's rows in pick order,
  * then the role's rows. Pure. Each row carries the id of the option it came from.
  */
-export function buildTacticRules(picks: TacticPicks): Rule[] {
-  const resolved = resolveTactics(picks);
+export function buildTacticRules(picks: TacticPicks, classId?: string): Rule[] {
+  const resolved = resolveTactics(picks, classId);
   const rules: Rule[] = [];
   for (const def of [resolved.stance, ...resolved.habits, resolved.role]) {
     for (const row of def.rows ?? []) {

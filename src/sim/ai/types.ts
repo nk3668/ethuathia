@@ -128,6 +128,15 @@ export interface AiMemory {
   fleeing: { since: number; lastSeen: number; held: number } | null;
   /** The threats seen recently and where, newest sighting per monster (ETH-148). */
   threats: ThreatMark[];
+  /**
+   * Flee/return cycle tracking (ETH-189), absent until the first flight and cleared when HP is back
+   * to the release level: how many flights began within `FLEE_CYCLE_WINDOW` turns and `FLEE_CYCLE_RADIUS` tiles of each
+   * other without recovering, the turn and place the last began, and, once the cycle is broken, the turn the
+   * resting that follows ends (`restUntil`), and, once hopeless, the spot of the foe it keeps fleeing (`blocked`, ETH-189).
+   */
+  fleeCycle?: { episodes: number; last: number; pos: Pos; restUntil?: number; rests?: number; blocked?: Pos };
+  /** The turn the adventurer was boxed in (wounded, no healing, a threat on every way forward) and began resting; cleared once it recovers (ETH-154). */
+  boxedIn?: number;
 }
 
 /**

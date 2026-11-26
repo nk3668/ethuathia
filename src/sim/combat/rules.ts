@@ -11,11 +11,12 @@ import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, RuleActionDef } from '../ai/types';
 import { stepBlocker } from '../coreActions';
 import { blockerAt, featureAt, getEntity, getFloor, mayShareTile } from '../entities';
-import { buildFleeMap, buildGoalMap, floorPathGrid, OPEN_DOOR_COST, pathAlong, stepToward, UNREACHABLE } from '../goalMap';
+import { buildFleeMap, buildGoalMap, floorPathGrid, OPEN_DOOR_COST, pathAlong, UNREACHABLE } from '../goalMap';
 import type { PathGrid } from '../goalMap';
 import { fieldOfView, sightRadius } from '../perception';
 import type { ActorEntity, Entity, RunState } from '../state';
 import { statValue } from '../stats/getStat';
+import { escapeStep } from './escape';
 import { BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_RELEASE_PERCENT } from './fleeConfig';
 import { chooseTarget } from './focus';
 import { freshThreats, visibleThreats } from './threat';
@@ -247,7 +248,7 @@ export const ACT_FLEE = defineRuleAction({
   name: 'Flee',
   description:
     'Run from the enemies in sight that will come and hurt you (harmless ones, like a moss tender that only mends its ' +
-    'kin, are ignored), toward open ground rather than into a corner. An adventurer that is already fleeing keeps ' +
+    'kin, are ignored), toward open ground rather than into a corner. When two ways out are about as good, it picks the one toward a living ally, then the one toward the stairs up. An adventurer that is already fleeing keeps ' +
     'running from where it last saw them until it has recovered or the coast has been clear for a while. Only possible ' +
     'when there is an escape route: a free step that leaves no enemy next to you. Cornered, the creature does something ' +
     'else. Breaking away from an enemy next to you takes a Flee check (Finesse); failing it loses the turn.',
@@ -273,12 +274,14 @@ export const ACT_FLEE = defineRuleAction({
     const paths = pathGridFor(ctx);
     const dangers = enemies.length > 0 ? enemies.map((e) => e.pos) : marks.map((m) => m.pos);
     const flee = buildFleeMap(paths, buildGoalMap(paths, dangers));
-    const dir = stepToward(paths, flee, actor.pos);
-    if (dir === null) return null;
+    const escape = escapeStep(ctx, paths, flee, dangers);
+    if (escape === null) return null;
+    const dir = escape.dir;
     const to = { x: actor.pos.x + dir.x, y: actor.pos.y + dir.y };
     const near = Math.min(...dangers.map((p) => distance(p, to)));
     if (near <= 1 || blockerAt(state, actor, actor.floor, to) !== undefined) return null;
     const goal = pathAlong(paths, flee, actor.pos).at(-1);
+    const toward = escape.toward === null ? '' : `, fleeing toward ${escape.toward}`;
     const withGoal = goal === undefined ? {} : { goal };
     const who = enemies.length > 0 ? listNames(enemies) : marks.map((m) => m.name).join(', ');
     const pursuit = enemies.length > 0 ? 'in pursuit' : 'last seen nearby';
@@ -288,13 +291,13 @@ export const ACT_FLEE = defineRuleAction({
         : null;
     const door = featureAt(state, actor.floor, to)?.feature;
     if (door?.kind === 'door' && !door.open) {
-      return { request: { id: 'openDoor', dir }, detail: `${still ?? `escaping ${who}`}; opening a door`, ...withGoal };
+      return { request: { id: 'openDoor', dir }, detail: `${still ?? `escaping ${who}`}${toward}; opening a door`, ...withGoal };
     }
     // `flee`, not `move`: with an enemy adjacent it takes a Flee check (ETH-081, `flee.ts`).
     const adjacent = enemies.some((e) => distance(e.pos, actor.pos) <= 1);
     return {
       request: { id: 'flee', dir },
-      detail: still ?? `${adjacent ? 'breaking away from' : 'running from'} ${who}`,
+      detail: `${still ?? `${adjacent ? 'breaking away from' : 'running from'} ${who}`}${toward}`,
       ...withGoal,
     };
   },

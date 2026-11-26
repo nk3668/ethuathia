@@ -63,6 +63,9 @@ backlog/
    them on the side unless the fix is trivial.
 5. **Keep `INDEX.md` in sync.** Every time an item is created or changes status, update its row
    in the same change.
+6. **Save and state version bumps** (`SAVE_VERSION`, `STATE_VERSION`): an item bumps once and
+   ships its migration. When two items in flight both bump, the one that merges first keeps its
+   number; the other rebases onto `main`, takes the next number and keeps both migrations.
 
 ## Creating an item
 

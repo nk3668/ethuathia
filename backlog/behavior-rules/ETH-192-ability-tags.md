@@ -27,7 +27,7 @@ New classes have to work with every tactic without AI changes (Nate, 2026-11-25)
   - healing potions: `heal`
   - escape items: `escape`
   - and so on
-- [x] `bestByTag(ctx, tag, target?)` in `src/sim/ai/` returns the best usable source with a reason, or `null`. Existing rule actions (`act.mend_ally`, `act.quaff_healing`, `act.cast_bolt`, ...) use it where that changes nothing.
+- [x] `bestByTag(ctx, tag, target?)` in `src/sim/ai/` returns the best usable source with a reason, or `null`. `bestHealing` (behind `act.quaff_healing`) is built on it, with no behavior change. Monster powers (`act.mend_ally`, `act.bolster_ally`, `act.cast_bolt`) have no tags yet; converting them is left open for ETH-037 / ETH-195.
 - [x] **No behavior change:** T0 identity (0 hash diffs).
 - [x] The Codex and tooltips show an ability's or item's tags in plain words. Hidden items reveal tags only once identified, with a guard per `docs/ARCHITECTURE.md` §11.6.
 - [x] Unit tests for the resolver on hand-built states. `npm run check` passes.
