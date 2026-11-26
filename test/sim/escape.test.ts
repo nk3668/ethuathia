@@ -4,7 +4,7 @@
  * every way forward is near a remembered threat rests instead of walking past it.
  */
 import { describe, expect, it } from 'vitest';
-import { checkInvariants, chooseRule, createRun, FLEE_RELEASE_PERCENT, getEntity, getFloor, getMemory, isWounded, spawnMonster, step } from '../../src/sim';
+import { addToInventory, checkInvariants, chooseRule, createRun, FLEE_RELEASE_PERCENT, getEntity, getFloor, getMemory, isWounded, newItem, spawnMonster, step } from '../../src/sim';
 import type { ActorEntity, AiActor, EntityId, RunState, SimEvent } from '../../src/sim';
 
 const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
@@ -167,6 +167,96 @@ describe('boxed in', () => {
     hpTo(hero, FLEE_RELEASE_PERCENT - 20);
     for (let i = 0; i < 1; i++) step(state, []);
     expect(hero.ai.memory.boxedIn).toBeUndefined();
+  });
+});
+
+const flee = (choice: ReturnType<typeof chooseRule>): { x: number; y: number } => (choice?.request as { dir: { x: number; y: number } }).dir;
+
+describe('escape direction, edge cases', () => {
+  it('ignores an ally on another floor', () => {
+    const state = createRun({ party: [HERO, ALLY], floorTexts: [ROOM, ROOM], depth: 2, monsters: false }, 1);
+    know(state);
+    const hero = getEntity(state, state.party[0] as EntityId) as AiActor;
+    const ally = getEntity(state, state.party[1] as EntityId) as AiActor;
+    ally.floor = 'd2';
+    still(state, 'monster.pit_badger', 10, 5);
+    hpTo(hero, 20);
+    const choice = chooseRule({ state, actor: hero });
+    expect(choice?.action).toBe('act.flee');
+    expect(choice?.detail).not.toContain('fleeing toward');
+  });
+
+  it("ignores a dead ally, and with no ally or stairs just takes the flee map's step", () => {
+    const { state, hero, ally } = room(true);
+    (ally as AiActor).actor.hp = 0;
+    (ally as AiActor).pos = { x: 5, y: hero.pos.y + 4 };
+    const choice = chooseRule({ state, actor: hero });
+    expect(choice?.action).toBe('act.flee');
+    expect(choice?.detail).not.toContain('fleeing toward');
+  });
+
+  it('prefers an ally over the stairs up when both are on offer', () => {
+    const rows = [...ROOM];
+    rows[2] = `${rows[2]?.slice(0, 5)}<${rows[2]?.slice(6)}`;
+    const state = createRun({ party: [HERO, ALLY], floorText: rows, depth: 1, monsters: false }, 1);
+    know(state);
+    const hero = getEntity(state, state.party[0] as EntityId) as AiActor;
+    const ally = getEntity(state, state.party[1] as EntityId) as AiActor;
+    ally.pos = { x: 5, y: 9 };
+    still(state, 'monster.pit_badger', 10, 5);
+    hpTo(hero, 20);
+    const choice = chooseRule({ state, actor: hero });
+    expect(Math.sign(flee(choice).y)).toBe(1);
+    expect(choice?.detail).toContain('fleeing toward Isolde');
+  });
+
+  it("does not claim a preference when the flee map's own step was taken", () => {
+    const { state, hero, ally } = room(true);
+    // The ally is straight west: the best step already heads there.
+    (ally as AiActor).pos = { x: 2, y: hero.pos.y };
+    const choice = chooseRule({ state, actor: hero });
+    expect(choice?.action).toBe('act.flee');
+    expect(choice?.detail).not.toContain('fleeing toward');
+  });
+
+  it('falls back to a free step when the best one is occupied', () => {
+    const { state, hero } = room(false);
+    still(state, 'monster.moss_tender', hero.pos.x - 1, hero.pos.y);
+    const choice = chooseRule({ state, actor: hero });
+    expect(choice?.action).toBe('act.flee');
+    const dir = flee(choice);
+    expect(dir.x).toBeLessThan(0);
+    expect(dir.y).not.toBe(0);
+  });
+});
+
+describe('boxed in, edge cases', () => {
+  it('a member carrying a field ration is not wounded, so it never latches boxed in', () => {
+    const { state, hero } = hall();
+    guardShaft(state, hero);
+    hpTo(hero, FLEE_RELEASE_PERCENT - 20);
+    expect(isWounded(state, hero)).toBe(true);
+    addToInventory(hero, newItem('item.field_ration', 2));
+    expect(isWounded(state, hero)).toBe(false);
+    for (let i = 0; i < 3; i++) step(state, []);
+    expect(hero.ai.memory.boxedIn).toBeUndefined();
+  });
+
+  it('is boxed in when the only way forward is the stairs down, and it is guarded', () => {
+    // A closed hall: no unexplored ground, stairs down at the east end with a badger beside them.
+    const rows = [wall, `#<${'.'.repeat(8)}@${'.'.repeat(W - 13)}>#`, wall];
+    const below = [wall, `#<${'.'.repeat(W - 5)}>#`, wall];
+    const state = createRun({ party: [HERO], floorTexts: [rows, below], depth: 2, monsters: false }, 1);
+    know(state);
+    const hero = getEntity(state, state.party[0] as EntityId) as AiActor;
+    const badger = still(state, 'monster.pit_badger', W - 4, 1);
+    hero.ai.memory.threats = [{ id: badger.id, name: 'the pit badger', floor: 'd1', pos: { x: W - 4, y: 1 }, seen: state.turn }];
+    hpTo(hero, FLEE_RELEASE_PERCENT - 20);
+    const lines: Stuck[] = [];
+    for (let i = 0; i < 5; i++) lines.push(...stucks(step(state, [])));
+    expect(lines).toHaveLength(1);
+    expect(hero.ai.memory.boxedIn).toBeDefined();
+    expect(state.domains.run.leaving).toBeNull();
   });
 });
 

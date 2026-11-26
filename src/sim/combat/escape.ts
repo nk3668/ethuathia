@@ -38,8 +38,14 @@ function better(a: Key, b: Key): boolean {
 
 /**
  * The step `ctx.actor` takes along `flee`: the best one, or an almost-as-good free one nearer an ally
- * or the stairs up. Null when there is no step downhill, as `stepToward`. `dangers` are the tiles
- * fled from; a step ending next to one is never taken in place of the best.
+ * or the stairs up. When the best step is occupied, the best free candidate instead. Null when there
+ * is no step downhill, as `stepToward`. `dangers` are the tiles fled from; a step ending next to one
+ * is never taken in place of the best. `toward` is set only when the tie-break chose a step other
+ * than the flee map's own best.
+ *
+ * Cost: only when two or more steps are in the margin, and only for a party member, this builds two
+ * goal maps (allies, stairs up), one Dijkstra pass each over the floor (about 0.1 ms on a
+ * rooms-and-corridors floor, docs/ARCHITECTURE.md goal maps), once per flee decision. Not cached.
  */
 export function escapeStep(ctx: AiCtx, paths: PathGrid, flee: Grid, dangers: readonly Pos[]): EscapeStep | null {
   const { state, actor } = ctx;
@@ -50,15 +56,18 @@ export function escapeStep(ctx: AiCtx, paths: PathGrid, flee: Grid, dangers: rea
   const index = (d: Pos): number => (actor.pos.y + d.y) * width + actor.pos.x + d.x;
   const here = flee.cells[actor.pos.y * width + actor.pos.x] as number;
   const total = (d: Pos): number => (flee.cells[index(d)] as number) + (paths.cost[index(d)] as number);
+  const free = (d: Pos): boolean => {
+    const to = { x: actor.pos.x + d.x, y: actor.pos.y + d.y };
+    return Math.min(...dangers.map((p) => distance(p, to))) > 1 && blockerAt(state, actor, actor.floor, to) === undefined;
+  };
+  const bestFree = free(best);
   const limit = total(best) + ESCAPE_TIE_MARGIN;
   const candidates = DIRS_8.filter((d) => {
     if (!canStep(paths, actor.pos.x, actor.pos.y, d)) return false;
     const value = flee.cells[index(d)] as number;
-    if (value === UNREACHABLE || value >= here || total(d) > limit) return false;
-    const to = { x: actor.pos.x + d.x, y: actor.pos.y + d.y };
-    return Math.min(...dangers.map((p) => distance(p, to))) > 1 && blockerAt(state, actor, actor.floor, to) === undefined;
+    return value !== UNREACHABLE && value < here && total(d) <= limit && free(d);
   });
-  if (candidates.length < 2) return { dir: best, toward: null };
+  if (candidates.length === 0 || (bestFree && candidates.length < 2)) return { dir: best, toward: null };
 
   const allies = partyOnFloor(state, actor.floor).filter((e) => e.id !== actor.id);
   const stairs = knownStairs(state, actor.floor, 'up');
@@ -69,6 +78,9 @@ export function escapeStep(ctx: AiCtx, paths: PathGrid, flee: Grid, dangers: rea
     const p = { x: actor.pos.x + d.x, y: actor.pos.y + d.y };
     return [at(allyMap, p), at(stairsMap, p), total(d)];
   };
+  // The best step is taken (the flee map's own choice) unless it is occupied: then the cheapest free one.
+  const same = (d: Pos): boolean => d.x === best.x && d.y === best.y;
+  if (!bestFree) return { dir: candidates.reduce((p, d) => (total(d) < total(p) ? d : p)), toward: null };
   let pick: Pos = best;
   let pickKey = keyOf(best);
   for (const d of candidates) {
@@ -78,6 +90,7 @@ export function escapeStep(ctx: AiCtx, paths: PathGrid, flee: Grid, dangers: rea
       pickKey = key;
     }
   }
+  if (same(pick)) return { dir: pick, toward: null };
   const to = { x: actor.pos.x + pick.x, y: actor.pos.y + pick.y };
   if (allyMap !== null && at(allyMap, to) < at(allyMap, actor.pos)) {
     const nearest = allies.reduce((a, b) => (distance(b.pos, actor.pos) < distance(a.pos, actor.pos) ? b : a));
