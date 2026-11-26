@@ -103,9 +103,9 @@ export function addTrait(slice: Adventurers, id: AdventurerId, trait: string): A
 export function setRecordTactics(slice: Adventurers, id: AdventurerId, picks: AdventurerPicks | null): Adventurers {
   const record = existing(slice, id);
   if (picks === null) {
-    const { tactics, ...rest } = record;
-    void tactics;
-    return { ...slice, records: { ...slice.records, [id]: rest } };
+    const rest: Record<string, unknown> = { ...record };
+    delete rest.tactics;
+    return { ...slice, records: { ...slice.records, [id]: rest as unknown as AdventurerRecord } };
   }
   const problems = picksProblems(picks);
   if (problems.length > 0) throw new RangeError(`Invalid tactics for "${id}": ${problems.join('; ')}`);

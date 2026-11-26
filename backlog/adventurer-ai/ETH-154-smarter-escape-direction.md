@@ -7,7 +7,7 @@ priority: P2
 milestone: M3
 epic: adventurer-ai
 size: M
-depends_on: [ETH-148]
+depends_on: [ETH-148, ETH-189]
 created: 2026-11-24
 updated: 2026-11-25
 ---
@@ -56,3 +56,4 @@ help, wastes it.
 - 2026-11-24: Created (Nate approved filing).
 - 2026-11-24: Moved from M2 to M3 in the backlog reorganization by theme.
 - 2026-11-25: Now `ready` (M3 kickoff). The sim gate now matches the 2026-11-25 policy (no T2 in work items).
+- 2026-11-25: Depends on ETH-189: both change the flee code, so this one builds on ETH-189's fix.

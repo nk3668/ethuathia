@@ -20,8 +20,9 @@ import type { PathGrid } from '../goalMap';
 import type { AiActor, AiCtx, ThreatMark } from '../ai/types';
 import { nameOf } from '../ai/navigate';
 import type { ActorEntity, Entity, RunState } from '../state';
-import { AVOID_PENALTY, AVOID_RADIUS, FLEE_CALM_TURNS, FLEE_HOLD_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
+import { AVOID_PENALTY, AVOID_RADIUS, FLEE_CALM_TURNS, FLEE_CYCLE_RADIUS, FLEE_CYCLE_WINDOW, FLEE_HOLD_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
 import { hpPercent, visibleEnemies } from './rules';
+import { blockFleeZone, cycleRecoverPercent } from './zone';
 import { overlayOf, templatesOf } from './overlay';
 
 /** Rule actions that make a creature come after its enemies. */
@@ -92,9 +93,22 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
     return e?.actor !== undefined && e.actor.hp > 0;
   });
   const hp = hpPercent(state, actor);
+  // Recovered: whatever flee/return cycle there was is over (ETH-189).
+  if (memory.fleeCycle !== undefined && hp >= cycleRecoverPercent(memory.fleeCycle, fleeReleaseOf(actor))) delete memory.fleeCycle;
   const fleeing = memory.fleeing;
   if (fleeing === null) {
-    if (hp < fleeBelowOf(actor) && visible.length > 0) memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
+    if (hp < fleeBelowOf(actor) && visible.length > 0) {
+      memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
+      const cycle = memory.fleeCycle;
+      const pos = { x: actor.pos.x, y: actor.pos.y };
+      const again = cycle !== undefined && state.turn - cycle.last <= FLEE_CYCLE_WINDOW && Math.max(Math.abs(cycle.pos.x - pos.x), Math.abs(cycle.pos.y - pos.y)) <= FLEE_CYCLE_RADIUS;
+      // A cycle that goes on keeps its rest and give-up marks, so each is announced once; a new one
+      // after a long gap (the rest) still remembers how many rests failed to bring HP back.
+      // A flight after a rest that has ended (or was cut short) clears `restUntil`, so the next rest can start in the same cycle.
+      const next = again ? { ...cycle, episodes: cycle.episodes + 1, last: state.turn, pos } : null;
+      if (next !== null) delete next.restUntil;
+      memory.fleeCycle = next ?? { episodes: 1, last: state.turn, pos, ...(cycle?.rests === undefined ? {} : { rests: cycle.rests }), ...(cycle?.blocked === undefined ? {} : { blocked: cycle.blocked }) };
+    }
     return;
   }
   if (visible.length > 0) fleeing.lastSeen = state.turn;
@@ -116,6 +130,8 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
 export function avoidThreats(ctx: AiCtx, paths: PathGrid): string | null {
   const { state, actor } = ctx;
   if (actor.actor.faction !== 'party') return null;
+  const zone = blockFleeZone(ctx, paths);
+  if (zone !== null) return zone;
   const marks = freshThreats(state, actor);
   if (marks.length === 0 || !isWounded(state, actor)) return null;
   const { width, height, cost } = paths;

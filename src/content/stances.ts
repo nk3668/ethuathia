@@ -93,8 +93,8 @@ export const STANCE_PLUNDER = defineTactic({
   id: 'tactic.plunder',
   name: 'Plunder',
   description:
-    `Clears every floor and detours up to ${PLUNDER_PICKUP_DETOUR} steps for loot, with ${PLUNDER_FLOOR_CAP_PERCENT}% of the usual ` +
-    'turn limit per floor so a thorough sweep isn’t cut short. Never leaves a floor before it is explored.',
+    `Clears every floor and detours up to ${PLUNDER_PICKUP_DETOUR} steps for loot. Gets ${PLUNDER_FLOOR_CAP_PERCENT}% of the usual ` +
+    'turn limit per floor so a thorough sweep isn’t cut short, and leaves a floor once it is explored or its longer turn limit runs out.',
   hint: 'Leave nothing behind but footprints.',
   tags: [],
   axis: 'stance',

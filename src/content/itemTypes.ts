@@ -204,7 +204,7 @@ export const ITEM_KIND: ContentKind<ItemDef> = {
       loot: lootSchema.optional(),
       abilityTags: abilityTagsSchema.optional(),
     })
-    .refine((d) => ((d.bundle?.effects?.length ?? 0) > 0) === ((d.abilityTags?.length ?? 0) > 0), {
+    .refine((d) => isUsable(d as unknown as ItemDef) === ((d.abilityTags?.length ?? 0) > 0), {
       message: 'a usable item needs at least one ability tag, and an item that cannot be used may not have any',
       path: ['abilityTags'],
     })

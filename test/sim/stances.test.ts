@@ -18,7 +18,7 @@ import {
   STANCE_RECKLESS,
   tacticsOn,
 } from '../../src/content';
-import { checkInvariants, CONDITIONS, createRun, FLOOR_TURN_CAP, getEntity, getFloor, getMemory, moveEntity, placeItem, spawnMonster, step } from '../../src/sim';
+import { checkInvariants, CONDITIONS, createRun, RULE_ACTIONS, FLOOR_TURN_CAP, getEntity, getFloor, getMemory, moveEntity, placeItem, spawnMonster, step } from '../../src/sim';
 import type { ActorEntity, AiActor, AiCtx, Command, EntityId, Rule, RunState, SimEvent } from '../../src/sim';
 
 const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
@@ -195,6 +195,17 @@ describe('Plunder', () => {
     };
     expect(remembered(undefined)).not.toBe('act.pick_up');
     expect(remembered(STANCE_PLUNDER.id)).toBe('act.pick_up');
+  });
+
+  it('only replaces the default detour: an explicit maxDetour in a rule wins', () => {
+    const s = hall(STANCE_PLUNDER.id, 60);
+    placeItem(s.state, 'd1', { x: 8, y: 2 }, { def: POTION, qty: 1 });
+    step(s.state, []);
+    moveEntity(s.state, s.hero.id, 'd1', { x: 40, y: 1 });
+    const ctx = { state: s.state, actor: s.hero } as AiCtx;
+    const pickUp = RULE_ACTIONS.get('act.pick_up');
+    expect(pickUp.resolve(ctx, undefined)).not.toBeNull();
+    expect(pickUp.resolve(ctx, { maxDetour: 8 })).toBeNull();
   });
 
   it('gets the stance’s share of the per-floor turn cap more than Steady', () => {

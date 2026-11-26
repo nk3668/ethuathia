@@ -122,3 +122,21 @@ describe('building rules from picks', () => {
   });
 });
 
+
+describe('the neutral defaults', () => {
+  const defs = TACTICS.all();
+  it('have exactly one default per axis but habits, with no rows and baseline parameters', () => {
+    expect(TACTIC_KIND.check?.(defs)).toEqual([]);
+  });
+
+  it('are reported when broken', () => {
+    const broken = defs.map((d) =>
+      d.id === 'tactic.stick_together' ? { ...d, params: { leash: 9, close: 3 } } : d.id === 'tactic.steady' ? { ...d, rows: STANCE_FALL_BACK.rows } : d,
+    );
+    const problems = (TACTIC_KIND.check?.(broken) ?? []).join('\n');
+    expect(problems).toContain('default formation must have leash');
+    expect(problems).toContain('default option must have no rows');
+    const two = defs.map((d) => (d.id === 'tactic.fall_back' ? { ...d, tags: ['default'] } : d));
+    expect((TACTIC_KIND.check?.(two) ?? []).join()).toContain('exactly one default option');
+  });
+});
