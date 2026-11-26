@@ -1875,8 +1875,8 @@ interface RuleActionDef extends Def {
     flip it back to exploring); it does not touch `act.approach_enemy`. Rows that head down pair
     `act.descend` with `act.gather`, or the member at the stairs would wander off to explore
     while the party gathers. Fall back and Cautious's retreat set `RunDomainState.leaving`,
-    which is one way: re-picking a stance does not turn the party back. Cautious's `leash` is
-    its own until ETH-151 folds it into formation. The old `doctrine` content kind stays as an
+    which is one way: re-picking a stance does not turn the party back. Cautious's and
+    Reckless's `leashPercent` (60 and 175) scales the picked formation's leash (ETH-151). The old `doctrine` content kind stays as an
     empty placeholder; stances replaced it, and `tactic.*` ids are what the Library unlocks.
     `npm run sim -- --stance ID` runs every adventurer on a stance.
   - **Tag fallback:** rows ask for tags through `act.use_ability { tag }` (`bestByTag`). With
@@ -1949,9 +1949,16 @@ As built in `src/sim/ai/` (ETH-009):
   are in
   `src/sim/run/rules.ts`; the floors ones (ETH-058) in `src/sim/floors/rules.ts`:
   - `cond.party_scattered → act.regroup` (ETH-145): walks a straggler back to `partyLead` (the
-    first living party member on the floor, who regroups on no one) when more than `PARTY_LEASH`
-    (8) tiles away, continuing until within `PARTY_CLOSE` (3) tiles, and only while `act.explore`
-    still resolves so it never fights the descent.
+    first living party member on the floor, who regroups on no one) when farther than the
+    formation's `leash`, continuing until within its `close`, and only while `act.explore`
+    still resolves so it never fights the descent. **Formation (ETH-151):** `partyCohesionOf(actor)`
+    (`src/sim/ai/stanceParams.ts`) returns `{ leash, close, formation }` from the actor's picked
+    formation option (Stick together 8/3, the default and the old `PARTY_LEASH`/`PARTY_CLOSE`;
+    Loose 14/6; Spread out 30/12; numbers in `src/content/formations.ts`), scaled by the stance's
+    `leashPercent` (`max(2, round(leash * pct / 100))`, close likewise, capped at the leash).
+    The regroup trace and `act.regroup` detail name the formation. Rules that range by the party
+    (the Scout, ETH-193) should read `partyCohesionOf(...).leash`. `--formation ID` on
+    `npm run sim` runs every adventurer on a formation.
   - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
     default) a member on the stairs takes them only when every living member on that floor is
     gathered (`gatheringAt`: within `GATHER_RADIUS`, 2, of the stairs or of a gathered member,

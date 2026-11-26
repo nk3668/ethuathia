@@ -26,6 +26,14 @@ import { z } from 'zod';
 import { Registry } from '../core';
 import type { Def } from '../core';
 import type { ContentKind, ContentRef } from './kind';
+import {
+  LOOSE_CLOSE,
+  LOOSE_LEASH,
+  SPREAD_OUT_CLOSE,
+  SPREAD_OUT_LEASH,
+  STICK_TOGETHER_CLOSE,
+  STICK_TOGETHER_LEASH,
+} from './formations';
 import { defShape, idSchema } from './schema';
 
 /** The six axes, in the order the panel lists them. */
@@ -94,15 +102,15 @@ const paramValue = z.union([z.number(), z.string()]);
  * The optional keys a stance option may carry, each a whole number within `[min, max]`. A stance
  * without a key plays the baseline's own constant for it, so Steady (no params) is the baseline.
  * `fleeBelow` / `fleeRelease`: HP percent to start / stop fleeing. `pickupDetour`: tiles walked for
- * an item. `floorCapPercent`: share of the per-floor turn cap. `leash`: tiles from the lead before
- * walking back.
+ * an item. `floorCapPercent`: share of the per-floor turn cap. `leashPercent`: share of the formation's leash and close
+ * the stance allows (ETH-151).
  */
 export const STANCE_PARAM_LIMITS = {
   fleeBelow: { min: 1, max: 99 },
   fleeRelease: { min: 1, max: 99 },
   pickupDetour: { min: 0, max: 200 },
   floorCapPercent: { min: 50, max: 400 },
-  leash: { min: 2, max: 40 },
+  leashPercent: { min: 25, max: 400 },
 } as const;
 export type StanceParamKey = keyof typeof STANCE_PARAM_LIMITS;
 
@@ -224,21 +232,37 @@ export const STANCE_STEADY = defineTactic({
 export const FORMATION_STICK_TOGETHER = defineTactic({
   id: 'tactic.stick_together',
   name: 'Stick together',
-  description: 'Stay within a few tiles of the party’s lead: a straggler more than 8 tiles away walks back until it is within 3.',
+  description:
+    `Stay close to the party’s lead: a straggler more than ${STICK_TOGETHER_LEASH} tiles away walks back until it is within ` +
+    `${STICK_TOGETHER_CLOSE}. Safest, because help is never far, but exploring is slower.`,
   hint: 'Close ranks, like a party that has lost someone before.',
   tags: ['default'],
   axis: 'formation',
-  params: { leash: 8, close: 3 },
+  params: { leash: STICK_TOGETHER_LEASH, close: STICK_TOGETHER_CLOSE },
 });
 
 export const FORMATION_LOOSE = defineTactic({
   id: 'tactic.loose',
   name: 'Loose',
-  description: 'Let the party drift apart: a straggler walks back only when more than 14 tiles away, until it is within 6.',
+  description:
+    `Let the party drift apart: a straggler walks back only when more than ${LOOSE_LEASH} tiles away, until it is within ` +
+    `${LOOSE_CLOSE}. Explores faster, at the price of help being further away.`,
   hint: 'Room to move, at the price of help being far away.',
   tags: [],
   axis: 'formation',
-  params: { leash: 14, close: 6 },
+  params: { leash: LOOSE_LEASH, close: LOOSE_CLOSE },
+});
+
+export const FORMATION_SPREAD_OUT = defineTactic({
+  id: 'tactic.spread_out',
+  name: 'Spread out',
+  description:
+    `Everyone goes their own way: a straggler walks back only when more than ${SPREAD_OUT_LEASH} tiles away, until it is ` +
+    `within ${SPREAD_OUT_CLOSE}. Explores fastest, but an adventurer who meets trouble meets it alone: suits a strong party.`,
+  hint: 'Cover more ground; trust everyone to look after themselves.',
+  tags: [],
+  axis: 'formation',
+  params: { leash: SPREAD_OUT_LEASH, close: SPREAD_OUT_CLOSE },
 });
 
 /** Fights whatever is in reach: the baseline's own fighting. No rows. */

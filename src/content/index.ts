@@ -46,6 +46,7 @@ export * from './milestones';
 export * from './requirements';
 export * from './startPerks';
 export * from './stamps';
+export * from './formations';
 export * from './tactics';
 export * from './stances';
 export * from './upgrades';
