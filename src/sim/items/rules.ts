@@ -8,6 +8,7 @@
 import type { Pos } from '../../core';
 import { EQUIP_SLOT_INFO, gearSlots, hasEffectKind, ITEMS, STATUS_REGENERATING } from '../../content';
 import { bestByTag } from '../ai/abilities';
+import { stanceParamOf } from '../ai/stanceParams';
 import { aiPathGrid, followMap } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams, parseMinCount } from '../ai/types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, Rule, RuleActionDef } from '../ai/types';
@@ -276,6 +277,17 @@ function tileIndex(ctx: AiCtx, pos: Pos): number {
 }
 
 /**
+ * `act.pick_up`'s params: an explicit `maxDetour` is kept as given; left out, the party stance's
+ * pickup detour (or `PICKUP_DETOUR`) applies (ETH-071).
+ */
+const parseDetour: ParamParser<{ maxDetour?: number }> = (raw) => {
+  const parsed = numberParam('maxDetour', PICKUP_DETOUR, 0, 200)(raw);
+  if (typeof parsed === 'string') return parsed;
+  const given = typeof raw === 'object' && raw !== null && (raw as Record<string, unknown>).maxDetour !== undefined;
+  return given ? parsed : {};
+};
+
+/**
  * Pick up items worth having: one on the actor's tile now (the most valuable it wants), or else
  * walk to the nearest remembered one it wants, if it is at most `maxDetour` steps away. Junk and
  * corpses are never picked up (`wantsItem`).
@@ -286,8 +298,9 @@ export const ACT_PICK_UP = defineRuleAction({
   description:
     'Pick up items worth having that the party has seen nearby, walking over to them if they are close. Junk is left ' +
     'where it lies, and nothing is taken that would only have to be dropped again.',
-  parse: numberParam('maxDetour', PICKUP_DETOUR, 0, 200),
-  resolve(ctx, { maxDetour }): Resolved | null {
+  parse: parseDetour,
+  resolve(ctx, { maxDetour: given }): Resolved | null {
+    const maxDetour = given ?? stanceParamOf(ctx.actor, 'pickupDetour', PICKUP_DETOUR);
     const { state, actor } = ctx;
     let best: { id: number; value: number; name: string } | null = null;
     for (const e of itemsAt(state, actor.floor, actor.pos)) {
@@ -337,7 +350,7 @@ export const ACT_PICK_UP = defineRuleAction({
     const step = followMap(ctx, paths, map, `going for a ${target.name}, ${turns(cost)} away`);
     return step === null || avoiding === null ? step : { ...step, skipped: avoiding };
   },
-  describe: ({ maxDetour }) => `pick up items within ${maxDetour} steps`,
+  describe: ({ maxDetour }) => `pick up items within ${maxDetour ?? PICKUP_DETOUR} steps`,
 });
 
 /**
@@ -475,5 +488,5 @@ export const ITEMS_BASELINE_LOOT: readonly Rule[] = [
   { condition: { id: 'cond.always' }, action: { id: 'act.use_identify' }, enabled: true },
   { condition: { id: 'cond.safe_to_test' }, action: { id: 'act.read_unknown_scroll' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.equip_upgrade' }, enabled: true },
-  { condition: { id: 'cond.always' }, action: { id: 'act.pick_up', params: { maxDetour: PICKUP_DETOUR } }, enabled: true },
+  { condition: { id: 'cond.always' }, action: { id: 'act.pick_up' }, enabled: true },
 ];

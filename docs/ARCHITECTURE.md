@@ -1859,6 +1859,26 @@ interface RuleActionDef extends Def {
     picks) or a helper such as `focusPreference(ctx)`. Today `act.attack_adjacent` reads the
     focus (`weakest`, the baseline's own choice, or `strongest`). Range and formation reach
     `AiCtx` the same way and are consumed by ETH-193 and ETH-151.
+  - **Party stances (ETH-071, `src/content/stances.ts`, `src/sim/ai/stanceRules.ts`,
+    `stanceParams.ts`).** A stance's rows run ahead of the whole baseline, so each row names a
+    **guarded condition**: `stanceBlock(ctx)` is the one place that says when the baseline has
+    something more urgent (heading out, fleeing, an enemy next to the actor, a threat in sight,
+    healing it carries and needs, overloaded); `cond.delve_ready`, `cond.party_worn`,
+    `cond.reckless_charge` and `cond.fall_back_ready` all start with it, and
+    `test/sim/stances.test.ts` pins the priority order. A stance may also carry **params**
+    (`STANCE_PARAM_LIMITS`: `fleeBelow`, `fleeRelease`, `pickupDetour`, `floorCapPercent`,
+    `leash`) that replace a baseline constant, read with `stanceParamOf(actor, key, fallback)`
+    in `cond.fleeing`, `act.flee`, `updateThreatMemory`, `cond.floor_overstayed`,
+    `act.pick_up` and `cond.party_scattered`. A stance with no key plays the baseline number,
+    so Steady (no rows, no params) is the baseline. `act.charge` is Reckless's own
+    walk-at-the-enemy action (it remembers a threat for `CHARGE_MEMORY_TURNS` so a corner can't
+    flip it back to exploring); it does not touch `act.approach_enemy`. Rows that head down pair
+    `act.descend` with `act.gather`, or the member at the stairs would wander off to explore
+    while the party gathers. Fall back and Cautious's retreat set `RunDomainState.leaving`,
+    which is one way: re-picking a stance does not turn the party back. Cautious's `leash` is
+    its own until ETH-151 folds it into formation. The old `doctrine` content kind stays as an
+    empty placeholder; stances replaced it, and `tactic.*` ids are what the Library unlocks.
+    `npm run sim -- --stance ID` runs every adventurer on a stance.
   - **Tag fallback:** rows ask for tags through `act.use_ability { tag }` (`bestByTag`). With
     nothing of the tag it returns a `RuleSkipped`, which the engine turns into a trace note
     named for the option ("Healer: no healing to use, carrying on as normal") on whichever rule

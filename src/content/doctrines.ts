@@ -1,12 +1,8 @@
 /**
- * Doctrines: party-wide behavior options (CLAUDE.md §5.2), such as "Prioritize clearing floors"
- * vs "Prioritize the stairs". Upgrade nodes make them available with an `unlock` grant of the
- * doctrine id (`{ kind: 'unlock', id: 'doctrine.clear_floors' }`), so a pick-one Guild Hall tier
- * can offer two doctrines with no engine change.
- *
- * A placeholder kind (docs/ARCHITECTURE.md, Contracts): the registry, schema and `define`
- * helper exist so upgrades can refer to `doctrine.*` ids, but there are no defs yet. The fields
- * and the first defs arrive with the doctrine item: extend the type and the schema together.
+ * Doctrines: a placeholder kind, kept so upgrade `unlock` grants can still name `doctrine.*` ids.
+ * Party stances (ETH-071, `stances.ts`) replaced them: "clear floors" vs "stairs" became Plunder
+ * and Delve, picked and swapped by the player, and the Library unlocks stances through `tactic.*`
+ * ids (ETH-163). There are no doctrine defs, and none are planned.
  */
 import { z } from 'zod';
 import { Registry } from '../core';

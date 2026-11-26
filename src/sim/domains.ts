@@ -10,6 +10,7 @@
  * any module that reads it at load time.
  */
 import { CORE_RULE_ACTIONS } from './ai/ruleActions';
+import { STANCE_CONDITIONS, STANCE_RULE_ACTIONS } from './ai/stanceRules';
 import { TACTIC_RULE_ACTIONS } from './ai/tacticActions';
 import { CORE_CONDITIONS } from './ai/conditions';
 import type { ActionDef, ActionRecord, ActionRequest, BaseRequest } from './actions';
@@ -105,8 +106,8 @@ export const COMMANDS: CommandRecord<Command> = join('command', [
   ...ALL.map((d) => d.commands),
 ]) as unknown as CommandRecord<Command>;
 
-for (const def of [...CORE_CONDITIONS, ...ALL.flatMap((d) => d.conditions ?? [])]) CONDITIONS.register(def);
-for (const def of [...CORE_RULE_ACTIONS, ...TACTIC_RULE_ACTIONS, ...ALL.flatMap((d) => d.ruleActions ?? [])]) RULE_ACTIONS.register(def);
+for (const def of [...CORE_CONDITIONS, ...STANCE_CONDITIONS, ...ALL.flatMap((d) => d.conditions ?? [])]) CONDITIONS.register(def);
+for (const def of [...CORE_RULE_ACTIONS, ...TACTIC_RULE_ACTIONS, ...STANCE_RULE_ACTIONS, ...ALL.flatMap((d) => d.ruleActions ?? [])]) RULE_ACTIONS.register(def);
 for (const def of [...ROOM_STEPS, ...ALL.flatMap((d) => d.genSteps ?? [])]) GEN_STEPS.register(def);
 
 for (const def of ALL.flatMap((d) => d.triggers ?? [])) TRIGGERS.register(def);

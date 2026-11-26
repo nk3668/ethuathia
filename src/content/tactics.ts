@@ -88,8 +88,43 @@ const rowSchema = z.strictObject({ condition: ruleRef('cond'), action: ruleRef('
 const fitSchema = z.strictObject({ classes: z.array(idSchema('class')).min(1).optional() });
 const paramValue = z.union([z.number(), z.string()]);
 
+// --- Stance parameters (ETH-071) --------------------------------------------------------------
+
+/**
+ * The optional keys a stance option may carry, each a whole number within `[min, max]`. A stance
+ * without a key plays the baseline's own constant for it, so Steady (no params) is the baseline.
+ * `fleeBelow` / `fleeRelease`: HP percent to start / stop fleeing. `pickupDetour`: tiles walked for
+ * an item. `floorCapPercent`: share of the per-floor turn cap. `leash`: tiles from the lead before
+ * walking back.
+ */
+export const STANCE_PARAM_LIMITS = {
+  fleeBelow: { min: 1, max: 99 },
+  fleeRelease: { min: 1, max: 99 },
+  pickupDetour: { min: 0, max: 200 },
+  floorCapPercent: { min: 50, max: 400 },
+  leash: { min: 2, max: 40 },
+} as const;
+export type StanceParamKey = keyof typeof STANCE_PARAM_LIMITS;
+
+/** Why `params` are wrong for a stance option, as problem lines. */
+export function stanceParamProblems(params: TacticParams | undefined): string[] {
+  const problems: string[] = [];
+  for (const [key, value] of Object.entries(params ?? {})) {
+    const limit = (STANCE_PARAM_LIMITS as Record<string, { min: number; max: number } | undefined>)[key];
+    if (limit === undefined) problems.push(`params.${key} is not a stance parameter`);
+    else if (typeof value !== 'number' || !Number.isInteger(value) || value < limit.min || value > limit.max) {
+      problems.push(`params.${key} must be a whole number from ${limit.min} to ${limit.max}`);
+    }
+  }
+  if (params !== undefined && typeof params.fleeBelow === 'number' && typeof params.fleeRelease === 'number' && params.fleeRelease <= params.fleeBelow) {
+    problems.push('params.fleeRelease must be above params.fleeBelow');
+  }
+  return problems;
+}
+
 /** Why `params` are wrong for `axis`, as problem lines (keys, types and ranges). */
 export function tacticParamProblems(axis: TacticAxis, params: TacticParams | undefined): string[] {
+  if (axis === 'stance') return stanceParamProblems(params);
   const keys = { formation: ['leash', 'close'], range: ['engage'], focus: ['prefer'] }[axis as 'formation' | 'range' | 'focus'];
   if (keys === undefined) return params === undefined ? [] : [`a ${axis} option takes no params`];
   if (params === undefined) return [`a ${axis} option needs params (${keys.join(', ')})`];
@@ -184,20 +219,6 @@ export const STANCE_STEADY = defineTactic({
   hint: 'The measured pace of a party that has done this before.',
   tags: ['default'],
   axis: 'stance',
-});
-
-/** Head home now: the whole party climbs out and the run ends as a retreat. */
-export const STANCE_FALL_BACK = defineTactic({
-  id: 'tactic.fall_back',
-  name: 'Fall back',
-  description:
-    'Head for the stairs up and out of the dungeon, whatever is left to explore. This placeholder comes before every ' +
-    'other rule, urgent ones included (ETH-071 replaces it with a guarded stance). The run ends as a retreat: ' +
-    'the party keeps everything it earned and every survivor returns to the roster.',
-  hint: 'The order to stop pushing and bring everyone home.',
-  tags: [],
-  axis: 'stance',
-  rows: [{ condition: { id: 'cond.always' }, action: { id: 'act.retreat_run' } }],
 });
 
 export const FORMATION_STICK_TOGETHER = defineTactic({
