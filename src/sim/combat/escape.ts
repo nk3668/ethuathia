@@ -5,9 +5,10 @@
  *   (within `ESCAPE_TIE_MARGIN`); among those it prefers the one closest to a living ally on the
  *   floor, then the one closest to the stairs up the party knows. A tie-break only: it never
  *   trades a clearly better escape for company.
- * - `cond.boxed_in`: wounded, no healing potion, and every unexplored tile and every known way down
- *   is near a remembered threat. Staying means walking back past the threat, so the party heads
- *   home (`act.retreat_run`).
+ * - `cond.boxed_in`: wounded, no healing, and every unexplored tile and every known way down is near
+ *   a remembered threat. Going on means walking back past the threat, so the adventurer rests
+ *   (`act.rest`) until it recovers and tells the player once; it never ends the run (Nate,
+ *   2026-11-25: retreat is the player's call, e.g. the Fall back stance).
  */
 import { DIRS_8 } from '../../core';
 import type { Grid, Pos } from '../../core';
