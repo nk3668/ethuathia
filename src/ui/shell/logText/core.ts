@@ -1,5 +1,5 @@
 /** Log wording for the core domain's events (`src/sim/coreEvents.ts`). */
-import { FEATURE_DOOR } from '../../../content';
+import { FEATURE_DOOR, TACTICS } from '../../../content';
 import type { CoreEvent, RuleRef } from '../../../sim';
 import { defineHighlight, mention } from './types';
 import { onFloor } from './types';
@@ -18,6 +18,8 @@ export const HIGHLIGHT_STUCK = defineHighlight({
  */
 export function ruleLabel(rule: RuleRef): string {
   if (rule.set === 'player') return 'player';
+  // A row built from a tactic option (ETH-162): the log line's detail already names the option.
+  if (rule.option !== undefined) return 'tactic';
   return `${rule.set === 'own' ? 'rule' : 'baseline'} #${rule.index + 1}`;
 }
 
@@ -41,6 +43,14 @@ export const CORE_LOG_TEXT: LogTextRecord<CoreEvent> = {
     text: (e, nameOf) => `You take control of ${nameOf(e.actor)}. Their turns now wait for your commands.`,
   },
   released: { category: 'ai', text: (e, nameOf) => `You release ${nameOf(e.actor)}; the AI takes over again.` },
+  tacticsSet: {
+    category: 'ai',
+    text: (e, nameOf) => {
+      const names = e.options.length === 0 ? 'none' : e.options.map((id) => (TACTICS.has(id) ? TACTICS.get(id).name : id)).join(', ');
+      const what = e.axis === 'habit' ? 'habits' : e.axis;
+      return e.actor === null ? `You set the party’s ${what} to ${names}.` : `You set ${nameOf(e.actor)}’s ${what} to ${names}.`;
+    },
+  },
   commandRejected: { category: 'system', text: (e) => `Command "${e.command}" ignored (${e.reason})` },
 };
 

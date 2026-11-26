@@ -13,6 +13,8 @@
 import { z } from 'zod';
 import { newRecord, ADVENTURER_ID_PATTERN, idNumber } from '../adventurers';
 import { defineSlice } from '../slice';
+import { MAX_HABITS } from '../../content';
+import type { AdventurerPicks } from '../../content';
 import type { RunResult } from '../../sim';
 
 /** A record's id: `adv.<n>`, issued from `Adventurers.nextId`. */
@@ -72,6 +74,12 @@ export interface AdventurerRecord {
   /** Set exactly when `status` is `fallen`. */
   readonly death?: AdventurerDeath;
   readonly origin?: AdventurerOrigin;
+  /**
+   * Their own tactics picks (ETH-162): role, range, focus and habits, as `tactic.*` ids. Absent
+   * until the player picks something, and the class's default build applies. A run starts them
+   * with these (`startRun`).
+   */
+  readonly tactics?: AdventurerPicks;
 }
 
 export interface Adventurers {
@@ -89,6 +97,7 @@ export const FALLEN_RECORD_CAP = 200;
 const MAX_TEXT = 200;
 const count = z.number().int().nonnegative();
 const idString = z.string().regex(ADVENTURER_ID_PATTERN);
+const tacticId = z.string().regex(/^tactic\.[a-z][a-z0-9_]*$/).max(80);
 
 const recordSchema = z.object({
   id: idString,
@@ -114,6 +123,14 @@ const recordSchema = z.object({
       kind: z.enum(['recruit', 'found', 'kin']),
       note: z.string().max(MAX_TEXT).optional(),
       kin: idString.optional(),
+    })
+    .optional(),
+  tactics: z
+    .object({
+      role: tacticId,
+      range: tacticId,
+      focus: tacticId,
+      habits: z.array(tacticId).max(MAX_HABITS),
     })
     .optional(),
 });
@@ -231,8 +248,13 @@ export function recordRun(slice: Adventurers, result: RunResult, run: number): A
 }
 
 export const adventurersSlice = defineSlice<Adventurers>({
-  version: 1,
+  version: 2,
   schema: adventurersSchema,
   init: () => ({ nextId: 1, records: {} }),
+  migrations: {
+    // v2 (ETH-162): records may carry their tactics picks. Every existing record has none yet, so
+    // it plays its class's default build; the data is unchanged.
+    2: (old) => old,
+  },
   onRunResult: (adventurers, result, before) => recordRun(adventurers, result, before.history.totals.runs + 1),
 });

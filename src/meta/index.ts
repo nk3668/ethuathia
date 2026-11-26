@@ -50,6 +50,7 @@ export {
   recordOf,
   retiredRecords,
   ROSTER_SIZE,
+  setRecordTactics,
   setStatus,
 } from './adventurers';
 export type { NewRecordInit } from './adventurers';

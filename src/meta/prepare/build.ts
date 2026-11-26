@@ -12,12 +12,13 @@ import {
   RACES,
   RUN_GATE_INFO,
   START_ENCHANT_PIECES,
+  picksProblems,
   START_KNOWN_CATEGORIES,
   upgradeBundle,
   upgradeRunGate,
 } from '../../content';
 import { Rng } from '../../core';
-import { configDepth, hasBundle, omenModifiers, omenProblems, requirementProblems, runModifierListProblems } from '../../sim';
+import { configDepth, hasBundle, omenModifiers, omenProblems, requirementProblems, runModifierListProblems, startingPicks, tacticPickProblems } from '../../sim';
 import type { AdventurerConfig, RunConfig, RunModifierConfig } from '../../sim';
 import type { Profile } from '../profile';
 import { milestoneRequirements } from '../milestones';
@@ -154,6 +155,12 @@ export function startRun(
   const run = profile.history.totals.runs + 1;
   let adventurers = profile.adventurers;
   const taken = new Set<string>();
+  // A record's own tactics picks (ETH-162) go into the config; ones that can no longer be played
+  // (an option the content dropped) are ignored, so the class's default build applies.
+  const withPicks = (member: AdventurerConfig, id: string): AdventurerConfig => {
+    const tactics = adventurers.records[id]?.tactics;
+    return tactics === undefined || picksProblems(tactics).length > 0 ? member : { ...member, tactics: { ...tactics, habits: [...tactics.habits] } };
+  };
   const party = built.party.map((member) => {
     const same = previous?.party.find(
       (p) =>
@@ -166,12 +173,12 @@ export function startRun(
     );
     if (same?.recordId !== undefined) {
       taken.add(same.recordId);
-      return { ...member, recordId: same.recordId };
+      return withPicks({ ...member, recordId: same.recordId }, same.recordId);
     }
     const made = newRecord(adventurers, { name: member.name, classId: member.classId, raceId: member.raceId, born: run });
     adventurers = made.slice;
     taken.add(made.record.id);
-    return { ...member, recordId: made.record.id };
+    return withPicks({ ...member, recordId: made.record.id }, made.record.id);
   });
   return { profile: { ...profile, adventurers }, config: { ...built, party } };
 }
@@ -186,6 +193,9 @@ export function checkRunConfig(config: RunConfig): string[] {
     if (!CLASSES.has(m.classId)) problems.push(`party[${i}] has unknown class "${m.classId}"`);
     if (!RACES.has(m.raceId)) problems.push(`party[${i}] has unknown race "${m.raceId}"`);
     if (m.stamp !== undefined && !isStampId(m.stamp)) problems.push(`party[${i}] has unknown stamp "${m.stamp}"`);
+    if (CLASSES.has(m.classId)) {
+      for (const p of tacticPickProblems(startingPicks(m.classId, config.tactics, m.tactics))) problems.push(`party[${i}] has invalid tactics: ${p}`);
+    }
   });
   for (const id of config.partyBundles ?? []) if (!hasBundle(id)) problems.push(`unknown party bundle "${id}"`);
   const omenIssues = omenProblems(config.omens);

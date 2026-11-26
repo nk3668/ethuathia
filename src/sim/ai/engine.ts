@@ -30,6 +30,7 @@ import { QUESTS_BASELINE } from '../quests/rules';
 import { CONDITIONS, RULE_ACTIONS } from '../registries';
 import type { Decide } from '../step';
 import type { EntityId, RunState } from '../state';
+import { optionName, resolveTactics, stalePicks } from './tactics';
 import type { AiActor, AiCtx, AiMemory, Rule, RuleRef, ThreatMark } from './types';
 
 /** Decisions in a row without progress after which the current goal is dropped. */
@@ -139,7 +140,9 @@ export interface Choice {
  */
 export const ruleDecide: Decide = ({ state, actor, emit }) => {
   if (actor.ai === undefined) return { id: 'wait' };
-  const ctx: AiCtx = { state, actor: actor as AiActor };
+  const aiActor = actor as AiActor;
+  const ctx: AiCtx =
+    aiActor.ai.tactics === undefined ? { state, actor: aiActor } : { state, actor: aiActor, tactics: resolveTactics(aiActor.ai.tactics, aiActor.adventurer?.classId) };
   const memory = ctx.actor.ai.memory;
   const traced = actor.actor.faction === 'party';
   const partyStill = traced && checkProgress(ctx, emit);
@@ -149,6 +152,12 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
   }
 
   let choice = chooseRule(ctx);
+  // Picks naming an option the content no longer has play the default instead; say so (ETH-162).
+  const stale = traced && aiActor.ai.tactics !== undefined ? stalePicks(aiActor.ai.tactics) : [];
+  if (stale.length > 0 && choice !== null) {
+    const note = `tactic ${stale.join(', ')} is not available, using the default`;
+    choice = { ...choice, detail: `${choice.detail}; ${note}`, skipped: [...(choice.skipped ?? []), note] };
+  }
   // Waiting too long with nobody moving drops the waiting rule; choose again without it.
   if (traced && choice !== null && countWaiting(ctx, choice, partyStill, emit)) choice = chooseRule(ctx);
   memory.waitingFor = choice?.waitingFor ?? null;
@@ -193,7 +202,9 @@ export function chooseRule(ctx: AiCtx): Choice | null {
     const resolved = action.resolve(ctx, rule.action.params);
     if (resolved === null) continue;
     if (!('request' in resolved)) {
-      if (resolved.skipped !== '' && !notes.includes(resolved.skipped)) notes.push(resolved.skipped);
+      // A tactic option says which option passed: "Healer: no healing to use, carrying on as normal".
+      const note = rule.option === undefined ? resolved.skipped : `${optionName(rule.option)}: ${resolved.skipped}`;
+      if (resolved.skipped !== '' && !notes.includes(note)) notes.push(note);
       continue;
     }
     if (validateAction(state, actor, resolved.request) !== null) continue;
@@ -202,12 +213,14 @@ export function chooseRule(ctx: AiCtx): Choice | null {
     }
     const because = held.detail === '' ? '' : ` (${held.detail})`;
     const skipped = notes.length === 0 ? '' : `; ${notes.join('; ')}`;
+    // A row from a tactic option (ETH-162) names the option: "Healer: using a potion of healing".
+    const what = rule.option === undefined ? `${action.name}: ${resolved.detail}` : `${optionName(rule.option)}: ${resolved.detail}`;
     return {
       rule: ref,
       condition: condition.id,
       action: action.id,
       request: resolved.request,
-      detail: `${action.name}: ${resolved.detail}${because}${skipped}`,
+      detail: `${what}${because}${skipped}`,
       waitingFor: resolved.waitingFor ?? null,
       ...(resolved.goal === undefined ? {} : { goal: { x: resolved.goal.x, y: resolved.goal.y } }),
       ...(notes.length === 0 ? {} : { skipped: notes }),
@@ -218,7 +231,9 @@ export function chooseRule(ctx: AiCtx): Choice | null {
 
 /** The actor's own rules, then (for adventurers) the baseline rules, each with its reference. */
 function* rulesOf(actor: AiActor): Generator<[Rule, RuleRef]> {
-  for (const [index, rule] of actor.ai.rules.entries()) yield [rule, { set: 'own', index }];
+  for (const [index, rule] of actor.ai.rules.entries()) {
+    yield [rule, rule.option === undefined ? { set: 'own', index } : { set: 'own', index, option: rule.option }];
+  }
   if (actor.adventurer === undefined) return;
   for (const [index, rule] of BASELINE_RULES.entries()) yield [rule, { set: 'baseline', index }];
 }

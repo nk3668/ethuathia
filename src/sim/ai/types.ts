@@ -7,6 +7,7 @@
  * registries.
  */
 import type { Def, Pos } from '../../core';
+import type { AdventurerPicks, TacticDef } from '../../content';
 import type { ActionRequest } from '../actions';
 import type { ActorEntity, EntityId, FloorId, RunState } from '../state';
 
@@ -27,6 +28,8 @@ export interface Rule {
   action: RulePart;
   /** A disabled rule is skipped, as if it were not in the list. */
   enabled: boolean;
+  /** The tactic option (`tactic.*`) that contributed this row (ETH-162), so the trace can name it. Absent on other rules. */
+  option?: string;
 }
 
 /**
@@ -38,6 +41,8 @@ export interface Rule {
 export interface RuleRef {
   set: 'own' | 'baseline' | 'player';
   index: number;
+  /** For an `own` rule built from a tactic option, the option's id (`Rule.option`, ETH-162). */
+  option?: string;
 }
 
 /** The rule that fired at an actor's last decision: its current goal, shown as its intent. */
@@ -140,6 +145,13 @@ export interface AiPart {
   rules: Rule[];
   memory: AiMemory;
   /**
+   * An adventurer's tactics picks (ETH-162): the party's stance and formation (kept the same on
+   * every member) and the adventurer's own role, range, focus and habits, as option ids. `rules`
+   * is built from them (`buildTacticRules`) and rebuilt whenever they change. Absent on monsters
+   * and on hand-built parts, which then carry only the rules they were given.
+   */
+  tactics?: TacticPicks;
+  /**
    * Set while the player possesses this adventurer (ETH-066): its turns wait for the player's
    * `playerAction` instead of running the rules. Absent when the AI is in control.
    */
@@ -168,6 +180,28 @@ export interface RunCtx {
 /** What conditions and rule actions get to look at. They must not change the run state. */
 export interface AiCtx extends RunCtx {
   readonly actor: AiActor;
+  /**
+   * The actor's tactics picks resolved to their options (ETH-162), set by the engine for an
+   * adventurer. Rule actions read range, focus and formation parameters through `tacticsOf`,
+   * which falls back to resolving the actor's picks when a caller built the ctx by hand.
+   */
+  readonly tactics?: ResolvedTactics;
+}
+
+/** An adventurer's picks as ids (ETH-162): what is stored in the AI part and on the roster record. */
+export interface TacticPicks extends AdventurerPicks {
+  readonly stance: string;
+  readonly formation: string;
+}
+
+/** `TacticPicks` resolved to option defs. */
+export interface ResolvedTactics {
+  readonly stance: TacticDef;
+  readonly formation: TacticDef;
+  readonly role: TacticDef;
+  readonly range: TacticDef;
+  readonly focus: TacticDef;
+  readonly habits: readonly TacticDef[];
 }
 
 /** Whether `ctx` has a deciding actor, so `actor`-scope conditions can be checked with it. */
