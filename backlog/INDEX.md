@@ -172,9 +172,9 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-163](behavior-rules/ETH-163-library-tree.md) | Library tree unlocks tactics and habit slots | behavior-rules | M3 | P1 | idea | M |
 | [ETH-164](behavior-rules/ETH-164-rule-presets.md) | Saved tactics loadouts for the party and each adventurer, ready for talent builds | behavior-rules | M3 | P1 | idea | S |
 | [ETH-165](tools-balance/ETH-165-rules-balance-pass.md) | Tactics balance pass (M3 capstone) | tools-balance | M3 | P1 | idea | M |
+| [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Party stances - Steady, Cautious, Reckless, Delve, Plunder and Fall back | town-meta | M3 | P2 | pending-review | M |
 | [ETH-189](adventurer-ai/ETH-189-flee-return-oscillation.md) | Break the flee-and-return loop against a ranged foe | adventurer-ai | M3 | P2 | pending-review | S |
-| [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Party stances - Steady, Cautious, Reckless, Delve, Plunder and Fall back | town-meta | M3 | P2 | idea | M |
-| [ETH-151](behavior-rules/ETH-151-formation-doctrine.md) | Formation tactic - Stick together, Loose or Spread out | behavior-rules | M3 | P2 | idea | S |
+| [ETH-151](behavior-rules/ETH-151-formation-doctrine.md) | Formation tactic - Stick together, Loose or Spread out | behavior-rules | M3 | P2 | pending-review | S |
 | [ETH-154](adventurer-ai/ETH-154-smarter-escape-direction.md) | Smarter escape direction: flee toward allies, stairs or home instead of just away | adventurer-ai | M3 | P2 | pending-review | M |
 | [ETH-195](behavior-rules/ETH-195-controller-role.md) | Controller role and Softens targets habit, with a stun status and the first control and debuff sources | behavior-rules | M3 | P2 | idea | M |
 | [ETH-035](characters/ETH-035-proficiencies-aptitudes.md) | Class equipment proficiencies and race aptitudes | characters | M4 | P2 | idea | M |

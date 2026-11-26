@@ -12,8 +12,8 @@ import type { AiCtx } from '../ai/types';
 import { FLEE_BLOCK_RADIUS, FLEE_HOPELESS_RECOVER_PERCENT, FLEE_RELEASE_PERCENT } from './fleeConfig';
 
 /** The HP percentage that ends a flee/return cycle: the release level, or higher once the cycle is hopeless. */
-export function cycleRecoverPercent(cycle: { blocked?: unknown }): number {
-  return cycle.blocked === undefined ? FLEE_RELEASE_PERCENT : FLEE_HOPELESS_RECOVER_PERCENT;
+export function cycleRecoverPercent(cycle: { blocked?: unknown }, release = FLEE_RELEASE_PERCENT): number {
+  return cycle.blocked === undefined ? release : FLEE_HOPELESS_RECOVER_PERCENT;
 }
 
 /**

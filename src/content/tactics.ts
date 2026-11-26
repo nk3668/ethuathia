@@ -26,6 +26,14 @@ import { z } from 'zod';
 import { Registry } from '../core';
 import type { Def } from '../core';
 import type { ContentKind, ContentRef } from './kind';
+import {
+  LOOSE_CLOSE,
+  LOOSE_LEASH,
+  SPREAD_OUT_CLOSE,
+  SPREAD_OUT_LEASH,
+  STICK_TOGETHER_CLOSE,
+  STICK_TOGETHER_LEASH,
+} from './formations';
 import { defShape, idSchema } from './schema';
 
 /** The six axes, in the order the panel lists them. */
@@ -122,9 +130,44 @@ export function habitParamProblems(params: TacticParams | undefined): string[] {
   return problems;
 }
 
+// --- Stance parameters (ETH-071) --------------------------------------------------------------
+
+/**
+ * The optional keys a stance option may carry, each a whole number within `[min, max]`. A stance
+ * without a key plays the baseline's own constant for it, so Steady (no params) is the baseline.
+ * `fleeBelow` / `fleeRelease`: HP percent to start / stop fleeing. `pickupDetour`: tiles walked for
+ * an item. `floorCapPercent`: share of the per-floor turn cap. `leashPercent`: share of the formation's leash and close
+ * the stance allows (ETH-151).
+ */
+export const STANCE_PARAM_LIMITS = {
+  fleeBelow: { min: 1, max: 99 },
+  fleeRelease: { min: 1, max: 99 },
+  pickupDetour: { min: 0, max: 200 },
+  floorCapPercent: { min: 50, max: 400 },
+  leashPercent: { min: 25, max: 400 },
+} as const;
+export type StanceParamKey = keyof typeof STANCE_PARAM_LIMITS;
+
+/** Why `params` are wrong for a stance option, as problem lines. */
+export function stanceParamProblems(params: TacticParams | undefined): string[] {
+  const problems: string[] = [];
+  for (const [key, value] of Object.entries(params ?? {})) {
+    const limit = (STANCE_PARAM_LIMITS as Record<string, { min: number; max: number } | undefined>)[key];
+    if (limit === undefined) problems.push(`params.${key} is not a stance parameter`);
+    else if (typeof value !== 'number' || !Number.isInteger(value) || value < limit.min || value > limit.max) {
+      problems.push(`params.${key} must be a whole number from ${limit.min} to ${limit.max}`);
+    }
+  }
+  if (params !== undefined && typeof params.fleeBelow === 'number' && typeof params.fleeRelease === 'number' && params.fleeRelease <= params.fleeBelow) {
+    problems.push('params.fleeRelease must be above params.fleeBelow');
+  }
+  return problems;
+}
+
 /** Why `params` are wrong for `axis`, as problem lines (keys, types and ranges). */
 export function tacticParamProblems(axis: TacticAxis, params: TacticParams | undefined): string[] {
   if (axis === 'habit') return habitParamProblems(params);
+  if (axis === 'stance') return stanceParamProblems(params);
   const keys = { formation: ['leash', 'close'], range: ['engage'], focus: ['prefer'] }[axis as 'formation' | 'range' | 'focus'];
   if (keys === undefined) return params === undefined ? [] : [`a ${axis} option takes no params`];
   if (params === undefined) return [`a ${axis} option needs params (${keys.join(', ')})`];
@@ -221,38 +264,40 @@ export const STANCE_STEADY = defineTactic({
   axis: 'stance',
 });
 
-/** Head home now: the whole party climbs out and the run ends as a retreat. */
-export const STANCE_FALL_BACK = defineTactic({
-  id: 'tactic.fall_back',
-  name: 'Fall back',
-  description:
-    'Head for the stairs up and out of the dungeon, whatever is left to explore. This placeholder comes before every ' +
-    'other rule, urgent ones included (ETH-071 replaces it with a guarded stance). The run ends as a retreat: ' +
-    'the party keeps everything it earned and every survivor returns to the roster.',
-  hint: 'The order to stop pushing and bring everyone home.',
-  tags: [],
-  axis: 'stance',
-  rows: [{ condition: { id: 'cond.always' }, action: { id: 'act.retreat_run' } }],
-});
-
 export const FORMATION_STICK_TOGETHER = defineTactic({
   id: 'tactic.stick_together',
   name: 'Stick together',
-  description: 'Stay within a few tiles of the party’s lead: a straggler more than 8 tiles away walks back until it is within 3.',
+  description:
+    `Stay close to the party’s lead: a straggler more than ${STICK_TOGETHER_LEASH} tiles away walks back until it is within ` +
+    `${STICK_TOGETHER_CLOSE}. Safest, because help is never far, but exploring is slower.`,
   hint: 'Close ranks, like a party that has lost someone before.',
   tags: ['default'],
   axis: 'formation',
-  params: { leash: 8, close: 3 },
+  params: { leash: STICK_TOGETHER_LEASH, close: STICK_TOGETHER_CLOSE },
 });
 
 export const FORMATION_LOOSE = defineTactic({
   id: 'tactic.loose',
   name: 'Loose',
-  description: 'Let the party drift apart: a straggler walks back only when more than 14 tiles away, until it is within 6.',
+  description:
+    `Let the party drift apart: a straggler walks back only when more than ${LOOSE_LEASH} tiles away, until it is within ` +
+    `${LOOSE_CLOSE}. Explores faster, at the price of help being further away.`,
   hint: 'Room to move, at the price of help being far away.',
   tags: [],
   axis: 'formation',
-  params: { leash: 14, close: 6 },
+  params: { leash: LOOSE_LEASH, close: LOOSE_CLOSE },
+});
+
+export const FORMATION_SPREAD_OUT = defineTactic({
+  id: 'tactic.spread_out',
+  name: 'Spread out',
+  description:
+    `Everyone goes their own way: a straggler walks back only when more than ${SPREAD_OUT_LEASH} tiles away, until it is ` +
+    `within ${SPREAD_OUT_CLOSE}. Explores fastest, but an adventurer who meets trouble meets it alone: suits a strong party.`,
+  hint: 'Cover more ground; trust everyone to look after themselves.',
+  tags: [],
+  axis: 'formation',
+  params: { leash: SPREAD_OUT_LEASH, close: SPREAD_OUT_CLOSE },
 });
 
 /** Fights whatever is in reach: the baseline's own fighting. No rows. */

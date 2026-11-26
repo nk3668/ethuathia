@@ -120,6 +120,10 @@ export interface HeadlessOptions {
   depth?: number;
   /** The contracts the run takes on. Default `HEADLESS_CONTRACTS` (or profile's `chosenContracts` when upgraded). */
   contracts?: string[];
+  /** The party stance every adventurer starts with (`--stance`, ETH-071). Default Steady. */
+  stance?: string;
+  /** The party formation every adventurer starts with (`--formation`, ETH-151). Default Stick together. */
+  formation?: string;
   /** Meta-progression preset (`fresh` or `progressed`). Default `'fresh'`. */
   preset?: HeadlessPreset;
   /** Explicit upgrade node ids to apply via `meta` helpers. */
@@ -258,6 +262,9 @@ export function buildHeadlessConfig(options: HeadlessOptions = {}, seed = 0): Ru
   const config: RunConfig = {
     party,
     contracts: [...contracts],
+    ...(options.stance === undefined && options.formation === undefined
+      ? {}
+      : { tactics: { ...(options.stance === undefined ? {} : { stance: options.stance }), ...(options.formation === undefined ? {} : { formation: options.formation }) } }),
     ...(options.depth === undefined ? {} : { depth: options.depth }),
     ...(options.omens === undefined || options.omens.length === 0 ? {} : { omens: options.omens.map((o) => ({ ...o })) }),
     ...(partyBundles.length === 0 ? {} : { partyBundles }),

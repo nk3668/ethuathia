@@ -12,8 +12,10 @@ import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiMemory, Resolved } from '../ai/types';
 import { FLEE_CYCLE_GIVE_UP, FLEE_HOPELESS_RECOVER_PERCENT, FLEE_RELEASE_PERCENT, FLEE_REST_GIVE_UP } from './fleeConfig';
+import { fleeReleaseOf } from '../ai/stanceParams';
 import { cycleRecoverPercent } from './zone';
 import { partyOnFloor, PARTY_CLOSE } from '../floors/rules';
+import { partyCohesionOf } from '../ai/stanceParams';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import type { ActorEntity } from '../state';
 import { hpPercent } from './rules';
@@ -31,7 +33,7 @@ export const COND_RECOVERING = defineCondition({
     const restUntil = actor.ai.memory.fleeCycle?.restUntil;
     if (restUntil === undefined || state.turn >= restUntil) return { ok: false, detail: '' };
     const hp = hpPercent(state, actor);
-    if (hp >= FLEE_RELEASE_PERCENT) return { ok: false, detail: '' };
+    if (hp >= fleeReleaseOf(actor)) return { ok: false, detail: '' };
     if (visibleThreats(state, actor).length > 0) return { ok: false, detail: '' };
     return { ok: true, detail: `fled ${actor.ai.memory.fleeCycle?.episodes ?? 0} times without recovering, HP ${Math.round(hp)}%` };
   },
@@ -51,8 +53,8 @@ export const ACT_REST = defineRuleAction({
     const { fleeCycle, boxedIn } = actor.ai.memory;
     if (actor.actor.faction !== 'party' || (fleeCycle === undefined && boxedIn === undefined)) return null;
     const hp = Math.round(hpPercent(state, actor));
-    if (fleeCycle === undefined) return { request: { id: 'wait' }, detail: `resting: wounded with no healing and threats on every way forward, HP ${hp}% (until ${FLEE_RELEASE_PERCENT}%)` };
-    return { request: { id: 'wait' }, detail: `resting to recover before going back, HP ${hp}% (until ${cycleRecoverPercent(fleeCycle)}%)` };
+    if (fleeCycle === undefined) return { request: { id: 'wait' }, detail: `resting: wounded with no healing and threats on every way forward, HP ${hp}% (until ${fleeReleaseOf(actor)}%)` };
+    return { request: { id: 'wait' }, detail: `resting to recover before going back, HP ${hp}% (until ${cycleRecoverPercent(fleeCycle, fleeReleaseOf(actor))}%)` };
   },
   describe: () => 'rest to recover',
 });
@@ -81,7 +83,7 @@ export const COND_CYCLE_BLOCKED = defineCondition({
     const cycle = actor.ai.memory.fleeCycle;
     if (cycle?.blocked === undefined) return { ok: false, detail: '' };
     const hp = hpPercent(state, actor);
-    if (hp >= cycleRecoverPercent(cycle)) return { ok: false, detail: '' };
+    if (hp >= cycleRecoverPercent(cycle, fleeReleaseOf(actor))) return { ok: false, detail: '' };
     return { ok: true, detail: `can't get past the foe near (${cycle.blocked.x}, ${cycle.blocked.y}), HP ${Math.round(hp)}%` };
   },
   describe: () => 'cannot get past a foe it keeps fleeing',
@@ -137,12 +139,12 @@ export const COND_ALLY_RESTING = defineCondition({
   describe: () => 'an ally is resting to recover',
 });
 
-/** Stay with a resting ally: walk back to within `PARTY_CLOSE` tiles of them, then wait. */
+/** Stay with a resting ally: walk back to within the formation's close distance of them (ETH-151), then wait. */
 export const ACT_WAIT_FOR_ALLY = defineRuleAction({
   id: 'act.wait_for_ally',
   name: 'Wait for an ally',
   description:
-    `Stay near a party member who is resting to recover: walk back to within ${PARTY_CLOSE} tiles of them if further, then wait ` +
+    `Stay near a party member who is resting to recover: walk back to within the formation's close distance of them (${PARTY_CLOSE} tiles for Stick together) if further, then wait ` +
     'until they are back on their feet. Waiting here never counts as being stuck.',
   idle: true,
   parse: noParams,
@@ -152,7 +154,7 @@ export const ACT_WAIT_FOR_ALLY = defineRuleAction({
     if (ally === null) return null;
     const gap = Math.max(Math.abs(ally.pos.x - actor.pos.x), Math.abs(ally.pos.y - actor.pos.y));
     const hp = Math.round(hpPercent(state, ally));
-    if (gap > PARTY_CLOSE) {
+    if (gap > partyCohesionOf(actor).close) {
       const paths = aiPathGrid(ctx);
       const map = buildGoalMap(paths, [ally.pos]);
       if (map.get(actor.pos.x, actor.pos.y) !== UNREACHABLE) {

@@ -15,12 +15,13 @@ import { MONSTERS, monsterPowers, STATUSES } from '../../content';
 import type { Bundle, Effect } from '../../content';
 import { bundleOf, statValue } from '../stats/getStat';
 import { carriesHealingPotion } from '../floors/fountains';
+import { fleeBelowOf, fleeReleaseOf } from '../ai/stanceParams';
 import type { PathGrid } from '../goalMap';
 import type { AiActor, AiCtx, ThreatMark } from '../ai/types';
 import { sourcesByTag } from '../ai/abilities';
 import { nameOf } from '../ai/navigate';
 import type { ActorEntity, Entity, RunState } from '../state';
-import { AVOID_PENALTY, AVOID_RADIUS, BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_CYCLE_RADIUS, FLEE_CYCLE_WINDOW, FLEE_HOLD_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
+import { AVOID_PENALTY, AVOID_RADIUS, FLEE_CALM_TURNS, FLEE_CYCLE_RADIUS, FLEE_CYCLE_WINDOW, FLEE_HOLD_TURNS, THREAT_MEMORY_TURNS } from './fleeConfig';
 import { hpPercent, visibleEnemies } from './rules';
 import { blockFleeZone, cycleRecoverPercent } from './zone';
 import { overlayOf, templatesOf } from './overlay';
@@ -72,7 +73,7 @@ export function freshThreats(state: RunState, actor: AiActor): ThreatMark[] {
  * known `heal`-tagged item such as a field ration), to steer clear of remembered threats.
  */
 export function isWounded(state: RunState, actor: AiActor): boolean {
-  if (hpPercent(state, actor) >= FLEE_RELEASE_PERCENT) return false;
+  if (hpPercent(state, actor) >= fleeReleaseOf(actor)) return false;
   return !carriesHealingPotion(state, actor) && sourcesByTag({ state, actor }, 'heal').length === 0;
 }
 
@@ -98,10 +99,10 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
   });
   const hp = hpPercent(state, actor);
   // Recovered: whatever flee/return cycle there was is over (ETH-189).
-  if (memory.fleeCycle !== undefined && hp >= cycleRecoverPercent(memory.fleeCycle)) delete memory.fleeCycle;
+  if (memory.fleeCycle !== undefined && hp >= cycleRecoverPercent(memory.fleeCycle, fleeReleaseOf(actor))) delete memory.fleeCycle;
   const fleeing = memory.fleeing;
   if (fleeing === null) {
-    if (hp < BASELINE_FLEE_PERCENT && visible.length > 0) {
+    if (hp < fleeBelowOf(actor) && visible.length > 0) {
       memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
       const cycle = memory.fleeCycle;
       const pos = { x: actor.pos.x, y: actor.pos.y };
@@ -122,7 +123,7 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
     memory.fleeing = null;
     return;
   }
-  if (hp >= FLEE_RELEASE_PERCENT || state.turn - fleeing.lastSeen >= FLEE_CALM_TURNS) memory.fleeing = null;
+  if (hp >= fleeReleaseOf(actor) || state.turn - fleeing.lastSeen >= FLEE_CALM_TURNS) memory.fleeing = null;
 }
 
 /**

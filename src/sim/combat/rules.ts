@@ -7,8 +7,9 @@
 import type { Pos } from '../../core';
 import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
 import { engageDistance } from '../ai/tactics';
+import { fleeBelowOf, fleeReleaseOf } from '../ai/stanceParams';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
-import type { AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, RuleActionDef } from '../ai/types';
+import type { AiActor, AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, RuleActionDef } from '../ai/types';
 import { stepBlocker } from '../coreActions';
 import { blockerAt, featureAt, getEntity, getFloor, mayShareTile } from '../entities';
 import { buildFleeMap, buildGoalMap, floorPathGrid, OPEN_DOOR_COST, pathAlong, UNREACHABLE } from '../goalMap';
@@ -77,7 +78,9 @@ export function hpPercent(state: RunState, actor: ActorEntity): number {
  * up, a Healer hanging back) leave the actor to the baseline's flee while this holds.
  */
 export function fleeingNow(state: RunState, actor: ActorEntity): boolean {
-  return hpPercent(state, actor) < BASELINE_FLEE_PERCENT || actor.ai?.memory.fleeing != null;
+  // The stance's flee line (ETH-071) when the actor has picks, else the baseline's.
+  const below = actor.ai === undefined ? BASELINE_FLEE_PERCENT : fleeBelowOf(actor as AiActor);
+  return hpPercent(state, actor) < below || actor.ai?.memory.fleeing != null;
 }
 
 /**
@@ -178,9 +181,9 @@ export const COND_FLEEING = defineCondition({
   parse: noParams,
   evaluate({ state, actor }) {
     const now = hpPercent(state, actor);
-    if (now < BASELINE_FLEE_PERCENT) return { ok: true, detail: `HP ${Math.round(now)}% < ${BASELINE_FLEE_PERCENT}%` };
+    if (now < fleeBelowOf(actor)) return { ok: true, detail: `HP ${Math.round(now)}% < ${fleeBelowOf(actor)}%` };
     if (actor.ai.memory.fleeing === null) return { ok: false, detail: '' };
-    return { ok: true, detail: `still fleeing, HP ${Math.round(now)}% (until ${FLEE_RELEASE_PERCENT}% or ${FLEE_CALM_TURNS} calm turns)` };
+    return { ok: true, detail: `still fleeing, HP ${Math.round(now)}% (until ${fleeReleaseOf(actor)}% or ${FLEE_CALM_TURNS} calm turns)` };
   },
   describe: () => 'fleeing (HP low, and until recovered)',
 });
@@ -265,9 +268,9 @@ export const ACT_FLEE = defineRuleAction({
     }
     // Still running after recovering above the start threshold, but cornered by a threat next to
     // it: turning to fight beats failing Flee checks and taking free hits (ETH-148).
-    if (actor.actor.faction === 'party' && hpPercent(state, actor) >= BASELINE_FLEE_PERCENT) {
+    if (actor.actor.faction === 'party' && hpPercent(state, actor) >= fleeBelowOf(actor)) {
       const close = enemies.filter((e) => distance(e.pos, actor.pos) <= 1);
-      if (close.length > 0) return { skipped: `not breaking away from ${listNames(close)} next to me: HP is above ${BASELINE_FLEE_PERCENT}%` };
+      if (close.length > 0) return { skipped: `not breaking away from ${listNames(close)} next to me: HP is above ${fleeBelowOf(actor)}%` };
     }
     // Enemy tiles stay enterable here, so the distance map spreads from them; the step taken
     // never leads onto one, since it is the highest ground on the flee map.
@@ -286,7 +289,7 @@ export const ACT_FLEE = defineRuleAction({
     const who = enemies.length > 0 ? listNames(enemies) : marks.map((m) => m.name).join(', ');
     const pursuit = enemies.length > 0 ? 'in pursuit' : 'last seen nearby';
     const still =
-      actor.actor.faction === 'party' && actor.ai.memory.fleeing !== null && hpPercent(state, actor) >= BASELINE_FLEE_PERCENT
+      actor.actor.faction === 'party' && actor.ai.memory.fleeing !== null && hpPercent(state, actor) >= fleeBelowOf(actor)
         ? `still fleeing: ${who} ${pursuit}, HP ${Math.round(hpPercent(state, actor))}%`
         : null;
     const door = featureAt(state, actor.floor, to)?.feature;

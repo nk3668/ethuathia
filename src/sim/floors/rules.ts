@@ -6,6 +6,8 @@
  */
 import type { Pos } from '../../core';
 import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
+import { STICK_TOGETHER_CLOSE, STICK_TOGETHER_LEASH } from '../../content';
+import { partyCohesionOf, stanceParamOf } from '../ai/stanceParams';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import { RULE_ACTIONS } from '../registries';
 import { blockFleeZone } from '../combat/zone';
@@ -25,20 +27,14 @@ import type { StairsDir } from './dungeon';
 export const GATHER_RADIUS = 2;
 
 /**
- * The baseline's cohesion (ETH-145): an adventurer more than this many tiles (diagonals count as
- * one) from the party's lead on the same floor stops what it is doing and walks back to it. A
- * party that spreads out meets monsters one at a time and dies one at a time, so the default
- * keeps it within reach of itself. The formation doctrine (CLAUDE.md §5.2, stick together or
- * spread out, M3) will override this; until then it is a fixed constant of the baseline.
+ * The default cohesion (ETH-145): an adventurer more than this many tiles (diagonals count as
+ * one) from the party's lead on the same floor stops what it is doing and walks back to it, and
+ * keeps going until it is within `PARTY_CLOSE`. A party that spreads out meets monsters one at a
+ * time and dies one at a time. Since ETH-151 the numbers in force come from the picked formation
+ * and stance (`partyCohesionOf`); these are the default formation's (Stick together).
  */
-export const PARTY_LEASH = 8;
-
-/**
- * Once regrouping, an adventurer keeps going until it is within this many tiles of the lead.
- * Smaller than `PARTY_LEASH` on purpose: the gap is a hysteresis band, so a member whose
- * exploring pulls it back out past the leash doesn't flip between the two rules every turn.
- */
-export const PARTY_CLOSE = 3;
+export const PARTY_LEASH = STICK_TOGETHER_LEASH;
+export const PARTY_CLOSE = STICK_TOGETHER_CLOSE;
 
 /**
  * Game turns the party may spend on one floor, counted from its first arrival, before the
@@ -173,7 +169,7 @@ export const COND_FLOOR_OVERSTAYED = defineCondition({
   parse: noParams,
   evaluate({ state, actor }) {
     const turns = turnsOnFloor(state, actor.floor);
-    const cap = floorTurnCap(state);
+    const cap = Math.round((floorTurnCap(state) * stanceParamOf(actor, 'floorCapPercent', 100)) / 100);
     return turns >= cap ? { ok: true, detail: `${turns} turns on this floor, the limit is ${cap}` } : { ok: false, detail: '' };
   },
   describe: () => 'overstayed the floor',
@@ -244,23 +240,25 @@ export const COND_AT_DEPTH = defineCondition({
 const ACT_REGROUP_ID = 'act.regroup';
 
 /**
- * True while a follower is farther from the party's lead than `PARTY_LEASH` tiles, or, once it
- * is regrouping, farther than `PARTY_CLOSE`. The lead itself is never scattered.
+ * True while a follower is farther from the party's lead than its formation's leash (`partyCohesionOf`), or, once it
+ * is regrouping, farther than the formation's close distance. The lead itself is never scattered.
  */
 export const COND_PARTY_SCATTERED = defineCondition({
   id: 'cond.party_scattered',
   name: 'Far from the party',
   description:
-    `True when this adventurer is more than ${PARTY_LEASH} tiles from the party's lead (the first living member ` +
-    `on the floor), and stays true while walking back until it is within ${PARTY_CLOSE} tiles. The lead is never scattered.`,
+    `True when this adventurer is farther from the party's lead (the first living member on the floor) than the party's ` +
+    `formation allows (${PARTY_LEASH} tiles for Stick together, more for Loose and Spread out), and stays true while walking ` +
+    `back until it is within the formation's close distance (${PARTY_CLOSE} for Stick together). The lead is never scattered.`,
   parse: noParams,
   evaluate({ state, actor }) {
     const lead = partyLead(state, actor.floor);
     if (lead === null || lead.id === actor.id) return { ok: false, detail: '' };
     const gap = Math.max(Math.abs(lead.pos.x - actor.pos.x), Math.abs(lead.pos.y - actor.pos.y));
     const regrouping = actor.ai?.memory.intent?.action === ACT_REGROUP_ID;
-    return gap > (regrouping ? PARTY_CLOSE : PARTY_LEASH)
-      ? { ok: true, detail: `${gap} tiles from ${nameOf(lead)}` }
+    const { leash, close, formation } = partyCohesionOf(actor);
+    return gap > (regrouping ? close : leash)
+      ? { ok: true, detail: `${gap} tiles from ${nameOf(lead)} (formation: ${formation.name})` }
       : { ok: false, detail: '' };
   },
   describe: () => 'I am far from the party',
@@ -335,7 +333,7 @@ export const ACT_REGROUP = defineRuleAction({
   description:
     'Walk back to the party’s lead (the first living member on the floor) and keep going until within a few tiles, ' +
     'so the party fights together instead of one at a time. The baseline does this whenever an adventurer has ' +
-    `strayed more than ${PARTY_LEASH} tiles from the lead.`,
+    `strayed farther from the lead than the party's formation allows (${PARTY_LEASH} tiles for Stick together).`,
   parse: noParams,
   resolve(ctx): Resolved | null {
     const { state, actor } = ctx;
@@ -349,7 +347,7 @@ export const ACT_REGROUP = defineRuleAction({
     const cost = map.get(actor.pos.x, actor.pos.y);
     if (cost === UNREACHABLE) return null;
     const gap = Math.max(Math.abs(lead.pos.x - actor.pos.x), Math.abs(lead.pos.y - actor.pos.y));
-    return followMap(ctx, paths, map, `regrouping with ${nameOf(lead)}, ${gap} tiles away`);
+    return followMap(ctx, paths, map, `regrouping with ${nameOf(lead)}, ${gap} tiles away (formation: ${partyCohesionOf(actor).formation.name})`);
   },
   describe: () => 'walk back to the party',
 });
