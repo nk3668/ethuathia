@@ -31,7 +31,7 @@ export interface TaggedSource {
   def: ItemDef;
   /**
    * How strong the source is for the tag. For `heal`, the HP it restores at once (0 for healing
-   * over time); 0 for tags with no measure yet.
+   * over time, so 0 means "over time" for `heal`); 0 for tags with no measure yet.
    */
   power: number;
   /** Why this one: readable, for the AI trace. Uses the name the actor knows the item by. */
@@ -45,6 +45,7 @@ export type SourceFilter = (item: ItemInstance, def: ItemDef) => boolean;
 export function sourcesByTag(ctx: AiCtx, tag: AbilityTag, target?: Entity, filter?: SourceFilter): TaggedSource[] {
   const { state, actor } = ctx;
   // Items act on their user only: nothing reaches another target until a ranged source exists.
+  // TODO(ETH-193, ETH-195): sources that reach allies or enemies must be returned here.
   if (target !== undefined && target.id !== actor.id) return [];
   const found: TaggedSource[] = [];
   for (const [index, item] of inventoryOf(actor).entries()) {

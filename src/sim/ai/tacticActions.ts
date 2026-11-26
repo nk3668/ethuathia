@@ -2,8 +2,9 @@
  * The rule actions tactic options are built from (ETH-162). They are ordinary `RuleActionDef`s:
  * a tactic's rows name them by id, and they take ability tags, never a class, a spell or an item.
  */
-import { ABILITY_TAG_INFO, isAbilityTag } from '../../content';
+import { ABILITY_TAG_INFO, healAmount, isAbilityTag, STATUS_REGENERATING } from '../../content';
 import type { AbilityTag } from '../../content';
+import { RATION_REFRESH_TURNS } from '../items/rules';
 import { bestByTag } from './abilities';
 import { defineRuleAction } from './types';
 import type { ParamParser, RuleActionDef } from './types';
@@ -34,7 +35,10 @@ export const ACT_USE_ABILITY = defineRuleAction({
     'Can’t be done without one: the log then says so and the adventurer carries on as normal.',
   parse: parseTag,
   resolve(ctx, { tag }) {
-    const best = bestByTag(ctx, tag);
+    // Like the baseline's ration (ETH-187): a heal-over-time source is not used again while Regenerating still has RATION_REFRESH_TURNS or more left.
+    const running = ctx.actor.stats?.statuses.find((s) => s.status === STATUS_REGENERATING.id);
+    const refreshing = running !== undefined && running.remaining >= RATION_REFRESH_TURNS;
+    const best = bestByTag(ctx, tag, undefined, tag === 'heal' && refreshing ? (_item, def) => healAmount(def) > 0 : undefined);
     if (best === null) return { skipped: `no ${ABILITY_TAG_INFO[tag].label.toLowerCase()} to use, carrying on as normal` };
     return { request: { id: 'use', index: best.index }, detail: `using ${best.reason}` };
   },

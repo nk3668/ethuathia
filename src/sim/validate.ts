@@ -4,10 +4,11 @@
  * registries. The app runs `validateGame` before it starts, and `tools/validate-content` runs
  * `checkGame` as part of `npm test`.
  */
-import { checkContent, ContentError, crateTableProblems, FEATURES, FLOOR_TYPES, TACTICS, TERRAIN } from '../content';
+import { checkContent, ContentError, crateTableProblems, FEATURES, FLOOR_TYPES, NEUTRAL_CLOSE, NEUTRAL_LEASH, TACTICS, TERRAIN } from '../content';
 import type { FloorTypeDef } from '../content';
 import { BASELINE_RULES } from './ai/engine';
 import { CONDITION_TARGET } from './ai/requirements';
+import { PARTY_CLOSE, PARTY_LEASH } from './floors/rules';
 import { checkFloorType } from './gen';
 import { CONDITIONS, GEN_STEPS, RULE_ACTIONS, TRIGGERS } from './registries';
 import { STAT_REFS } from './stats';
@@ -44,6 +45,7 @@ export function checkGame(): string[] {
       problems.push(`baseline rule #${i + 1}: unknown rule action "${rule.action.id}"`);
     }
   });
+  if (NEUTRAL_LEASH !== PARTY_LEASH || NEUTRAL_CLOSE !== PARTY_CLOSE) problems.push('content NEUTRAL_LEASH and NEUTRAL_CLOSE differ from the sim PARTY_LEASH and PARTY_CLOSE');
   // Tactic rows (ETH-162): each row's condition and rule action must accept the row's params.
   for (const def of TACTICS.all()) {
     (def.rows ?? []).forEach((row, i) => {

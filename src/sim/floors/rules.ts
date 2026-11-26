@@ -10,6 +10,7 @@ import { STICK_TOGETHER_CLOSE, STICK_TOGETHER_LEASH } from '../../content';
 import { partyCohesionOf, stanceParamOf } from '../ai/stanceParams';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import { RULE_ACTIONS } from '../registries';
+import { blockFleeZone } from '../combat/zone';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, RuleActionDef } from '../ai/types';
 import { actorsAt } from '../entities';
 import { buildGoalMap, UNREACHABLE } from '../goalMap';
@@ -316,6 +317,7 @@ export const ACT_DESCEND = defineRuleAction({
     }
 
     const paths = aiPathGrid(ctx);
+    blockFleeZone(ctx, paths);
     const map = buildGoalMap(paths, [stairs]);
     const cost = map.get(actor.pos.x, actor.pos.y);
     if (cost === UNREACHABLE) return null;
