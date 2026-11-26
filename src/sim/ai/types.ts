@@ -135,6 +135,8 @@ export interface AiMemory {
    * resting that follows ends (`restUntil`), and, once hopeless, the spot of the foe it keeps fleeing (`blocked`, ETH-189).
    */
   fleeCycle?: { episodes: number; last: number; pos: Pos; restUntil?: number; rests?: number; blocked?: Pos };
+  /** The turn the adventurer was boxed in (wounded, no healing, a threat on every way forward) and began resting; cleared once it recovers (ETH-154). */
+  boxedIn?: number;
 }
 
 /**
