@@ -109,6 +109,56 @@ describe('flee/return cycle (ETH-189)', () => {
     expect(after).toBeGreaterThan(0);
   });
 
+  it('a rest that ends, then another flight within the window, starts the next rest in the same cycle', () => {
+    const { state, hero, maxHp, foeX } = setup();
+    const rests: Stuck[] = [];
+    const collect = (): void => {
+      for (const e of step(state, [])) if (e.type === 'stuck' && e.detail.includes('Resting for')) rests.push(e);
+    };
+    for (let i = 0; i < 600 && rests.length === 0; i++) collect();
+    expect(rests).toHaveLength(1);
+    // The rest is cut short (a foe came into view), and the hero meets the foe again soon after.
+    const cycle = hero.ai.memory.fleeCycle as NonNullable<typeof hero.ai.memory.fleeCycle>;
+    cycle.restUntil = state.turn;
+    hero.pos = { x: foeX - 6, y: 1 };
+    hero.ai.memory.fleeing = null;
+    for (let i = 0; i < 100 && rests.length < 2; i++) {
+      hero.actor.hp = Math.round(maxHp * 0.2);
+      collect();
+    }
+    expect(rests).toHaveLength(2);
+    expect(hero.ai.memory.fleeCycle?.rests).toBe(2);
+    expect(hero.ai.memory.fleeCycle?.episodes).toBeGreaterThan(FLEE_CYCLE_LIMIT);
+    expect(checkInvariants(state)).toEqual([]);
+  });
+
+  it('the rest of the party stays with a resting member instead of walking off', () => {
+    const state = createRun({ party: [HERO, { ...HERO, name: 'Mira' }], floorText: HALL, depth: 1, monsters: false }, 1);
+    const [aId, bId] = state.party as [number, number];
+    const a = getEntity(state, aId) as AiActor;
+    const b = getEntity(state, bId) as AiActor;
+    const terrain = getFloor(state, 'd1').terrain.cells;
+    const memory = getMemory(state, 'd1').terrain.cells;
+    for (let i = 0; i < terrain.length; i++) memory[i] = (terrain[i] as number) + 1;
+    for (let y = 2; y < 4; y++) memory[y * W + 30] = 0;
+    a.actor.hp = Math.round(a.actor.hp * 0.3);
+    a.ai.memory.fleeCycle = { episodes: 3, last: 0, pos: { ...a.pos }, restUntil: 400, rests: 1 };
+    // The healthy one starts well away, with ground to explore.
+    b.pos = { x: a.pos.x + 14, y: a.pos.y };
+    const start = { ...a.pos };
+    const fired: string[] = [];
+    for (let i = 0; i < 80; i++) {
+      for (const e of step(state, [])) if (e.type === 'ruleFired' && e.actor === bId) fired.push(e.detail);
+    }
+    expect(a.ai.memory.intent?.action).toBe('act.rest');
+    expect(a.pos).toEqual(start);
+    expect(Math.max(Math.abs(b.pos.x - a.pos.x), Math.abs(b.pos.y - a.pos.y))).toBeLessThanOrEqual(3);
+    expect(b.ai.memory.intent?.action).toBe('act.wait_for_ally');
+    expect(fired.some((d) => d.includes('going back to Mira') === false && d.includes('resting'))).toBe(true);
+    expect(fired.some((d) => d.includes('waiting for'))).toBe(true);
+    expect(checkInvariants(state)).toEqual([]);
+  });
+
   it('never sends the party home: a hopeless cycle blocks the foe\'s area instead, with one log line', () => {
     const { state, hero, foeX } = setup();
     const stuck: Stuck[] = [];

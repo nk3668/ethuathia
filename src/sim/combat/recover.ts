@@ -8,10 +8,14 @@
  * recovery (`RECOVERY_INTERVAL`) does the healing; potions, rations and fountains come first
  * because their baseline rules sit above this one.
  */
+import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiMemory, Resolved } from '../ai/types';
 import { FLEE_CYCLE_GIVE_UP, FLEE_HOPELESS_RECOVER_PERCENT, FLEE_RELEASE_PERCENT, FLEE_REST_GIVE_UP } from './fleeConfig';
 import { cycleRecoverPercent } from './zone';
+import { partyOnFloor, PARTY_CLOSE } from '../floors/rules';
+import { buildGoalMap, UNREACHABLE } from '../goalMap';
+import type { ActorEntity } from '../state';
 import { hpPercent } from './rules';
 import { visibleThreats } from './threat';
 
@@ -102,5 +106,64 @@ export const COND_CYCLE_BLOCKED_ON_THE_WAY_OUT = defineCondition({
   describe: () => 'cannot get past a foe it keeps fleeing on the way out',
 });
 
-export const RECOVER_CONDITIONS = [COND_RECOVERING, COND_CYCLE_BLOCKED, COND_CYCLE_BLOCKED_ON_THE_WAY_OUT];
-export const RECOVER_RULE_ACTIONS = [ACT_REST];
+/** The nearest living party member on `actor`'s floor whose last decision was to rest (not `actor` itself). */
+function restingAlly(actor: ActorEntity, state: Parameters<typeof partyOnFloor>[0]): ActorEntity | null {
+  let best: ActorEntity | null = null;
+  let bestGap = Infinity;
+  for (const other of partyOnFloor(state, actor.floor)) {
+    if (other.id === actor.id || other.ai?.memory.intent?.action !== ACT_REST.id) continue;
+    const gap = Math.max(Math.abs(other.pos.x - actor.pos.x), Math.abs(other.pos.y - actor.pos.y));
+    if (gap < bestGap) {
+      best = other;
+      bestGap = gap;
+    }
+  }
+  return best;
+}
+
+/** True while another party member on the floor is resting to recover (ETH-189). */
+export const COND_ALLY_RESTING = defineCondition({
+  id: 'cond.ally_resting',
+  name: 'An ally is resting',
+  description:
+    'True while another party member on this floor is resting to recover after fleeing over and over. The party ' +
+    'does not walk off and leave them alone.',
+  parse: noParams,
+  evaluate({ state, actor }) {
+    if (actor.actor.faction !== 'party') return { ok: false, detail: '' };
+    const ally = restingAlly(actor, state);
+    return ally === null ? { ok: false, detail: '' } : { ok: true, detail: `${nameOf(ally)} is resting` };
+  },
+  describe: () => 'an ally is resting to recover',
+});
+
+/** Stay with a resting ally: walk back to within `PARTY_CLOSE` tiles of them, then wait. */
+export const ACT_WAIT_FOR_ALLY = defineRuleAction({
+  id: 'act.wait_for_ally',
+  name: 'Wait for an ally',
+  description:
+    `Stay near a party member who is resting to recover: walk back to within ${PARTY_CLOSE} tiles of them if further, then wait ` +
+    'until they are back on their feet. Waiting here never counts as being stuck.',
+  idle: true,
+  parse: noParams,
+  resolve(ctx): Resolved | null {
+    const { state, actor } = ctx;
+    const ally = restingAlly(actor, state);
+    if (ally === null) return null;
+    const gap = Math.max(Math.abs(ally.pos.x - actor.pos.x), Math.abs(ally.pos.y - actor.pos.y));
+    const hp = Math.round(hpPercent(state, ally));
+    if (gap > PARTY_CLOSE) {
+      const paths = aiPathGrid(ctx);
+      const map = buildGoalMap(paths, [ally.pos]);
+      if (map.get(actor.pos.x, actor.pos.y) !== UNREACHABLE) {
+        const step = followMap(ctx, paths, map, `going back to ${nameOf(ally)}, who is resting (HP ${hp}%)`);
+        if (step !== null) return step;
+      }
+    }
+    return { request: { id: 'wait' }, detail: `waiting for ${nameOf(ally)} to recover (HP ${hp}%)`, waitingFor: ally.id };
+  },
+  describe: () => 'wait for a resting ally',
+});
+
+export const RECOVER_CONDITIONS = [COND_RECOVERING, COND_CYCLE_BLOCKED, COND_CYCLE_BLOCKED_ON_THE_WAY_OUT, COND_ALLY_RESTING];
+export const RECOVER_RULE_ACTIONS = [ACT_REST, ACT_WAIT_FOR_ALLY];

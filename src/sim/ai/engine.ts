@@ -48,7 +48,7 @@ export const LOITER_RADIUS = 1;
 export const WAIT_STUCK_TURNS = 50;
 
 /** The baseline's last resort, "nothing else to do": waiting on it never counts as stuck. */
-const PLAIN_WAITS: ReadonlySet<string> = new Set(['act.wait', 'act.rest']);
+const PLAIN_WAITS: ReadonlySet<string> = new Set(['act.wait', 'act.rest', 'act.wait_for_ally']);
 
 /** How many turns a dropped goal's rule is skipped for. */
 export const DROP_TURNS = 20;
@@ -99,6 +99,8 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.recovering' }, action: { id: 'act.rest' }, enabled: true },
   // Wounded with no healing and a threat on every way forward: rest rather than walk past it (ETH-154).
   { condition: { id: 'cond.boxed_in' }, action: { id: 'act.rest' }, enabled: true },
+  // ...and the rest of the party stays with whoever is resting rather than walking off (ETH-189).
+  { condition: { id: 'cond.ally_resting' }, action: { id: 'act.wait_for_ally' }, enabled: true },
   // Items (ETH-061): pick up wanted items a short detour away.
   ...ITEMS_BASELINE_LOOT,
   // Cohesion (ETH-145): while there is still ground to explore, stay near the party's lead rather
@@ -425,6 +427,12 @@ registerInvariant('core.aiMemory', (state) => {
         problems.push(`actor ${entity.id} has invalid fleeCycle`);
       } else if (cycle.restUntil !== undefined && (!Number.isSafeInteger(cycle.restUntil) || cycle.restUntil > state.turn + FLEE_REST_TURNS)) {
         problems.push(`actor ${entity.id} has invalid fleeCycle.restUntil`);
+      } else if (cycle.rests !== undefined && (!Number.isSafeInteger(cycle.rests) || cycle.rests < 1)) {
+        problems.push(`actor ${entity.id} has invalid fleeCycle.rests`);
+      } else if (cycle.blocked !== undefined && (!Number.isSafeInteger(cycle.blocked.x) || !Number.isSafeInteger(cycle.blocked.y) || cycle.blocked.x < 0 || cycle.blocked.y < 0)) {
+        problems.push(`actor ${entity.id} has invalid fleeCycle.blocked`);
+      } else if (cycle.pos === undefined || !Number.isSafeInteger(cycle.pos.x) || !Number.isSafeInteger(cycle.pos.y)) {
+        problems.push(`actor ${entity.id} has invalid fleeCycle.pos`);
       }
     }
     if (memory.boxedIn !== undefined && (!Number.isSafeInteger(memory.boxedIn) || memory.boxedIn > state.turn)) problems.push(`actor ${entity.id} has invalid boxedIn`);
