@@ -117,7 +117,7 @@ describe('determinism', () => {
     const { events } = play(createRun(CONFIG, 3), 0, STEPS);
     const all = events.flat();
     expect(all.some((e) => e.type === 'commandRejected')).toBe(true);
-    // Four setTactics commands: role and focus, then formation and habits, then role again.
+    // Four setTactics commands (role and focus; formation; habits; role again) make five tacticsSet events.
     expect(all.filter((e) => e.type === 'tacticsSet')).toHaveLength(5);
     expect(all.some((e) => e.type === 'turnedBack' && e.reason === 'ordered')).toBe(true);
     // The run goes down the stairs, building a floor mid-run (seed 3: the party finds them within the steps).

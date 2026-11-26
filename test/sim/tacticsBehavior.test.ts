@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { FOCUS_STRONGEST, HABIT_QUICK_TO_QUAFF, ROLE_DAMAGE, ROLE_HEALER, STANCE_FALL_BACK } from '../../src/content';
 import { checkInvariants, chooseRule, createRun, defaultPicks, deserialize, getEntity, serialize, spawnMonster, step } from '../../src/sim';
-import type { ActorEntity, AdventurerConfig, AiActor, Command, EntityId, RunState, SimEvent } from '../../src/sim';
+import type { ActorEntity, AdventurerConfig, AiActor, TacticPicks, Command, EntityId, RunState, SimEvent } from '../../src/sim';
 
 const HERO: AdventurerConfig = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' };
 const ALLY: AdventurerConfig = { name: 'Mira', classId: 'class.outrider', raceId: 'race.human' };
@@ -166,15 +166,13 @@ describe('setTactics checking', () => {
 
   it.each(bad)('rejects %s and changes nothing', (_name, make) => {
     const { state, hero } = hall([HERO, ALLY]);
-    const before = JSON.stringify(state.entities);
     const events = step(state, [make(hero)]);
     expect(rejected(events)).toHaveLength(1);
     expect(events.filter((e) => e.type === 'tacticsSet')).toEqual([]);
     expect(hero.ai.tactics).toEqual(defaultPicks('class.vanguard'));
     expect(hero.ai.rules).toEqual([]);
-    // Nothing but the turn's own play changed: no rule list was touched anywhere.
+    // No rule list was touched anywhere.
     for (const id of state.party) expect((getEntity(state, id) as AiActor).ai.rules).toEqual([]);
-    void before;
   });
 
   it('accepts a command whose fields are all valid, with several axes at once', () => {
@@ -210,5 +208,49 @@ describe('tactics in saves', () => {
 
     again.ai.rules = [];
     expect(checkInvariants(loaded).join()).toContain('do not match its tactics');
+  });
+});
+
+describe('heal over time', () => {
+  it('does not burn a heal-over-time source every turn while Regenerating is still running', () => {
+    const { state, hero, maxHp } = hall([{ ...HERO, tactics: { role: ROLE_HEALER.id } }]);
+    hero.actor.hp = Math.round(maxHp * 0.3);
+    hero.inventory = { items: [{ def: 'item.scroll_of_renewal', qty: 3 }] };
+    expect(decide(state, hero)).toMatchObject({ action: 'act.use_ability' });
+    const second = decide(state, hero);
+    expect(second.rule.set).toBe('baseline');
+    expect(second.skipped?.join()).toContain('Healer: no healing to use');
+    for (let i = 0; i < 3; i++) step(state, []);
+    expect(hero.inventory?.items[0]?.qty).toBe(2);
+  });
+});
+
+describe('stale picks', () => {
+  it('fall back to the default and say so, never throwing in the decision loop', () => {
+    const { state, hero } = hall();
+    hero.ai.tactics = { ...(hero.ai.tactics as TacticPicks), role: 'tactic.gone', focus: 'tactic.weakest', habits: ['tactic.vanished'] };
+    let note = '';
+    for (let i = 0; i < 4; i++) {
+      const f = fired(step(state, [])).find((e) => e.actor === hero.id);
+      note = f?.detail ?? note;
+    }
+    expect(note).toContain('tactic.gone, tactic.vanished is not available, using the default');
+  });
+});
+
+describe('use_ability secrecy (ETH-192, section 11.6)', () => {
+  it('gives the identical choice and trace for an unidentified potion, whatever it really is', () => {
+    const traces = // Potions only: the baseline reads-to-test unknown scrolls on its own, which is not this action.
+    ['item.mending_draught', 'item.quickstep_tonic'].flatMap((def) =>
+      [undefined, 'blessed' as const, 'cursed' as const].map((blessing) => {
+        const { state, hero, maxHp } = hall([{ ...HERO, tactics: { role: ROLE_HEALER.id } }]);
+        hero.actor.hp = Math.round(maxHp * 0.4);
+        hero.inventory = { items: [{ def, qty: 1, identified: false, ...(blessing === undefined ? {} : { blessing }) }] };
+        const f = decide(state, hero);
+        return JSON.stringify({ rule: f.rule, action: f.action, skipped: f.skipped, request: chooseRule({ state, actor: hero })?.request.id });
+      }),
+    );
+    expect([...new Set(traces)]).toEqual([traces[0]]);
+    expect(traces[0]).toContain('Healer: no healing to use');
   });
 });

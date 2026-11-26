@@ -26,7 +26,7 @@ import { QUESTS_BASELINE } from '../quests/rules';
 import { CONDITIONS, RULE_ACTIONS } from '../registries';
 import type { Decide } from '../step';
 import type { EntityId, RunState } from '../state';
-import { optionName, resolveTactics } from './tactics';
+import { optionName, resolveTactics, stalePicks } from './tactics';
 import type { AiActor, AiCtx, AiMemory, Rule, RuleRef } from './types';
 
 /** Decisions in a row without progress after which the current goal is dropped. */
@@ -132,13 +132,19 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
   if (actor.ai === undefined) return { id: 'wait' };
   const aiActor = actor as AiActor;
   const ctx: AiCtx =
-    aiActor.ai.tactics === undefined ? { state, actor: aiActor } : { state, actor: aiActor, tactics: resolveTactics(aiActor.ai.tactics) };
+    aiActor.ai.tactics === undefined ? { state, actor: aiActor } : { state, actor: aiActor, tactics: resolveTactics(aiActor.ai.tactics, aiActor.adventurer?.classId) };
   const memory = ctx.actor.ai.memory;
   const traced = actor.actor.faction === 'party';
   const partyStill = traced && checkProgress(ctx, emit);
   if (traced) updateThreatMemory(state, ctx.actor);
 
   let choice = chooseRule(ctx);
+  // Picks naming an option the content no longer has play the default instead; say so (ETH-162).
+  const stale = traced && aiActor.ai.tactics !== undefined ? stalePicks(aiActor.ai.tactics) : [];
+  if (stale.length > 0 && choice !== null) {
+    const note = `tactic ${stale.join(', ')} is not available, using the default`;
+    choice = { ...choice, detail: `; ${note}`, skipped: [...(choice.skipped ?? []), note] };
+  }
   // Waiting too long with nobody moving drops the waiting rule; choose again without it.
   if (traced && choice !== null && countWaiting(ctx, choice, partyStill, emit)) choice = chooseRule(ctx);
   memory.waitingFor = choice?.waitingFor ?? null;

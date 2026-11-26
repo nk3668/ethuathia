@@ -79,6 +79,10 @@ export interface TacticDef extends Def {
 
 export const TACTICS = new Registry<TacticDef>('tactic');
 
+/** The baseline's own party leash and close distance (PARTY_LEASH, PARTY_CLOSE in the sim, checked by checkGame): what the default formation must say. */
+export const NEUTRAL_LEASH = 8;
+export const NEUTRAL_CLOSE = 3;
+
 const ruleRef = (prefix: string) => z.strictObject({ id: idSchema(prefix), params: z.unknown().optional() });
 const rowSchema = z.strictObject({ condition: ruleRef('cond'), action: ruleRef('act') });
 const fitSchema = z.strictObject({ classes: z.array(idSchema('class')).min(1).optional() });
@@ -134,6 +138,19 @@ export const TACTIC_KIND: ContentKind<TacticDef> = {
   ],
   check: (defs) => {
     const problems: string[] = [];
+    // The neutral default (ETH-162): exactly one `default` option per axis but habits (a habit
+    // is something extra), with no rows and parameters that reproduce the baseline.
+    for (const axis of TACTIC_AXES.filter((a) => a !== 'habit')) {
+      const defaults = defs.filter((d) => d.axis === axis && d.tags.includes('default'));
+      if (defaults.length !== 1) problems.push(`tactic axis "${axis}": needs exactly one default option, has ${defaults.length}`);
+    }
+    for (const def of defs.filter((d) => d.tags.includes('default'))) {
+      if ((def.rows ?? []).length > 0) problems.push(`tactic "${def.id}": a default option must have no rows`);
+      const p = def.params ?? {};
+      if (def.axis === 'formation' && (p.leash !== NEUTRAL_LEASH || p.close !== NEUTRAL_CLOSE)) problems.push(`tactic "${def.id}": the default formation must have leash ${NEUTRAL_LEASH} and close ${NEUTRAL_CLOSE}`);
+      if (def.axis === 'range' && p.engage !== 1) problems.push(`tactic "${def.id}": the default range must have engage 1`);
+      if (def.axis === 'focus' && p.prefer !== 'weakest') problems.push(`tactic "${def.id}": the default focus must prefer the weakest`);
+    }
     for (const def of defs) {
       for (const other of def.exclusiveWith ?? []) {
         if (!TACTICS.has(other)) continue;
@@ -174,7 +191,8 @@ export const STANCE_FALL_BACK = defineTactic({
   id: 'tactic.fall_back',
   name: 'Fall back',
   description:
-    'Head for the stairs up and out of the dungeon, whatever is left to explore. The run ends as a retreat: ' +
+    'Head for the stairs up and out of the dungeon, whatever is left to explore. This placeholder comes before every ' +
+    'other rule, urgent ones included (ETH-071 replaces it with a guarded stance). The run ends as a retreat: ' +
     'the party keeps everything it earned and every survivor returns to the roster.',
   hint: 'The order to stop pushing and bring everyone home.',
   tags: [],
