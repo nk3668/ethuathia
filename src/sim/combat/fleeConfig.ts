@@ -34,3 +34,8 @@ export const FLEE_BLOCK_RADIUS = 6;
 export const FLEE_HOPELESS_RECOVER_PERCENT = 90;
 /** The longest a cycle-breaking rest lasts, in turns: about 40 HP at `RECOVERY_INTERVAL` (ETH-189). */
 export const FLEE_REST_TURNS = 500;
+
+/** How much worse (in flee-map cost) an escape step may be than the best one and still count as "otherwise equal", so allies and the stairs up can break the tie (ETH-154). */
+export const ESCAPE_TIE_MARGIN = 2;
+/** How close (tiles, either axis) a remembered threat must be to a way forward for it to count as guarded; the same reach as the wounded route penalty (ETH-154). */
+export const GUARDED_RADIUS = AVOID_RADIUS;

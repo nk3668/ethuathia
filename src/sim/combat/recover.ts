@@ -45,13 +45,15 @@ export const ACT_REST = defineRuleAction({
   name: 'Rest',
   description:
     'Stand still and recover, rather than walk back toward the trouble that was fled. Ends when HP is back to ' +
-    `${FLEE_RELEASE_PERCENT}%, when the rest runs out (not while the foe is being avoided), or when a threat comes into sight. Waiting here never counts as being stuck.`,
+    `${FLEE_RELEASE_PERCENT}%, when the rest runs out (not while the foe is being avoided), or when a threat comes into sight. A wounded adventurer with no healing and a threat on every way forward rests the same way. Waiting here never counts as being stuck.`,
   idle: true,
   parse: noParams,
   resolve({ state, actor }): Resolved | null {
-    if (actor.actor.faction !== 'party' || actor.ai.memory.fleeCycle === undefined) return null;
+    const { fleeCycle, boxedIn } = actor.ai.memory;
+    if (actor.actor.faction !== 'party' || (fleeCycle === undefined && boxedIn === undefined)) return null;
     const hp = Math.round(hpPercent(state, actor));
-    return { request: { id: 'wait' }, detail: `resting to recover before going back, HP ${hp}% (until ${cycleRecoverPercent(actor.ai.memory.fleeCycle, fleeReleaseOf(actor))}%)` };
+    if (fleeCycle === undefined) return { request: { id: 'wait' }, detail: `resting: wounded with no healing and threats on every way forward, HP ${hp}% (until ${fleeReleaseOf(actor)}%)` };
+    return { request: { id: 'wait' }, detail: `resting to recover before going back, HP ${hp}% (until ${cycleRecoverPercent(fleeCycle, fleeReleaseOf(actor))}%)` };
   },
   describe: () => 'rest to recover',
 });
@@ -84,6 +86,25 @@ export const COND_CYCLE_BLOCKED = defineCondition({
     return { ok: true, detail: `can't get past the foe near (${cycle.blocked.x}, ${cycle.blocked.y}), HP ${Math.round(hp)}%` };
   },
   describe: () => 'cannot get past a foe it keeps fleeing',
+});
+
+/**
+ * `cond.cycle_blocked` while the party is heading out (ETH-154). On the way out nobody explores or
+ * descends, so the foe the adventurer keeps fleeing stands between it and the stairs up and the
+ * flee/walk-back loop would run to the turn cap: it rests (above `act.retreat_run`) until HP is back instead.
+ */
+export const COND_CYCLE_BLOCKED_ON_THE_WAY_OUT = defineCondition({
+  id: 'cond.cycle_blocked_leaving',
+  name: 'Cannot get past on the way out',
+  description:
+    `True while the party is heading out and the adventurer cannot get past a foe it keeps fleeing (see Cannot get past): it rests until HP is back to ${FLEE_HOPELESS_RECOVER_PERCENT}% rather than walk back into it. ` +
+    "Ending the run is the player's call (the Fall back stance).",
+  parse: noParams,
+  evaluate(ctx) {
+    if (ctx.state.domains.run.leaving === null) return { ok: false, detail: '' };
+    return COND_CYCLE_BLOCKED.evaluate(ctx, {});
+  },
+  describe: () => 'cannot get past a foe it keeps fleeing on the way out',
 });
 
 /** The nearest living party member on `actor`'s floor whose last decision was to rest (not `actor` itself). */
@@ -145,5 +166,5 @@ export const ACT_WAIT_FOR_ALLY = defineRuleAction({
   describe: () => 'wait for a resting ally',
 });
 
-export const RECOVER_CONDITIONS = [COND_RECOVERING, COND_CYCLE_BLOCKED, COND_ALLY_RESTING];
+export const RECOVER_CONDITIONS = [COND_RECOVERING, COND_CYCLE_BLOCKED, COND_CYCLE_BLOCKED_ON_THE_WAY_OUT, COND_ALLY_RESTING];
 export const RECOVER_RULE_ACTIONS = [ACT_REST, ACT_WAIT_FOR_ALLY];

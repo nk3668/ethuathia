@@ -23,8 +23,10 @@ import { ITEMS_BASELINE_LOOT, ITEMS_BASELINE_RECOVER, ITEMS_BASELINE_URGENT } fr
 import { registerInvariant } from '../invariants';
 import { cycleHopeless } from '../combat/recover';
 import { FLEE_CYCLE_LIMIT, FLEE_HOPELESS_RECOVER_PERCENT, FLEE_RELEASE_PERCENT, FLEE_REST_TURNS } from '../combat/fleeConfig';
+import { isBoxedIn } from '../combat/escape';
 import { hpPercent } from '../combat/rules';
-import { updateThreatMemory } from '../combat/threat';
+import { isWounded, updateThreatMemory } from '../combat/threat';
+import { nameOf } from './navigate';
 import { explored } from '../perception';
 import { QUESTS_BASELINE } from '../quests/rules';
 import { CONDITIONS, RULE_ACTIONS } from '../registries';
@@ -86,6 +88,8 @@ export const BASELINE_RULES: readonly Rule[] = [
   ...ITEMS_BASELINE_RECOVER,
   // Fleeing with nowhere left to run: hold still rather than walk back toward the threat (ETH-148).
   { condition: { id: 'cond.fleeing' }, action: { id: 'act.hold_position' }, enabled: true },
+  // On the way out with a foe it can't get past: rest rather than loop flee / walk back (ETH-154).
+  { condition: { id: 'cond.cycle_blocked_leaving' }, action: { id: 'act.rest' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   // Quests (ETH-024): once every contract is complete, head out; fetch a contract item once seen.
@@ -94,6 +98,8 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.hurt_no_healing', params: { below: 50 } }, action: { id: 'act.drink_fountain' }, enabled: true },
   // Fled the same trouble over and over without recovering: rest instead of walking back (ETH-189).
   { condition: { id: 'cond.recovering' }, action: { id: 'act.rest' }, enabled: true },
+  // Wounded with no healing and a threat on every way forward: rest rather than walk past it (ETH-154).
+  { condition: { id: 'cond.boxed_in' }, action: { id: 'act.rest' }, enabled: true },
   // ...and the rest of the party stays with whoever is resting rather than walking off (ETH-189).
   { condition: { id: 'cond.ally_resting' }, action: { id: 'act.wait_for_ally' }, enabled: true },
   // Items (ETH-061): pick up wanted items a short detour away.
@@ -149,6 +155,7 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
   if (traced) {
     updateThreatMemory(state, ctx.actor);
     checkFleeCycle(ctx, emit);
+    checkBoxedIn(ctx, emit);
   }
 
   let choice = chooseRule(ctx);
@@ -323,6 +330,26 @@ function checkFleeCycle({ state, actor }: AiCtx, emit: Emit): void {
 }
 
 /**
+ * Boxed in (ETH-154). A wounded adventurer with no healing whose every way forward is near a
+ * remembered threat (`isBoxedIn`) latches `AiMemory.boxedIn`, so `cond.boxed_in → act.rest` holds it
+ * still until it has recovered, and a `stuck` event says so once per episode. Ending the run early is
+ * the player's call (the Fall back stance), never the AI's.
+ */
+function checkBoxedIn(ctx: AiCtx, emit: Emit): void {
+  const { state, actor } = ctx;
+  const memory = actor.ai.memory;
+  if (memory.boxedIn !== undefined) {
+    if (!isWounded(state, actor)) delete memory.boxedIn;
+    return;
+  }
+  if (memory.fleeing !== null || !isBoxedIn(ctx)) return;
+  memory.boxedIn = state.turn;
+  const rule: RuleRef = { set: 'baseline', index: BASELINE_RULES.findIndex((r) => r.condition.id === 'cond.boxed_in') };
+  const detail = `${nameOf(actor)} is wounded with no healing and threats on every way forward: resting until HP is back to ${FLEE_RELEASE_PERCENT}%. Consider the Fall back stance.`;
+  emit({ type: 'stuck', actor: actor.id, rule, action: 'act.rest', turns: 0, detail, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
+}
+
+/**
  * Stuck detection for waiting (ETH-113). Counts decisions in a row where `choice` waits by an
  * idle rule other than the plain `act.wait` while nobody in the party has moved since the last
  * decision (`partyStill`). At `WAIT_STUCK_TURNS` the rule is dropped for `DROP_TURNS` turns, a
@@ -423,6 +450,7 @@ registerInvariant('core.aiMemory', (state) => {
         problems.push(`actor ${entity.id} has invalid fleeCycle.pos`);
       }
     }
+    if (memory.boxedIn !== undefined && (!Number.isSafeInteger(memory.boxedIn) || memory.boxedIn > state.turn)) problems.push(`actor ${entity.id} has invalid boxedIn`);
     const waitingFor = memory.waitingFor;
     if (waitingFor === null) continue;
     if (!Number.isSafeInteger(waitingFor) || waitingFor < 1 || waitingFor >= state.nextEntityId || waitingFor === entity.id) {

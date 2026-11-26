@@ -2059,6 +2059,18 @@ As built in `src/sim/ai/` (ETH-009):
   `act.rest`, baseline `cond.ally_resting → act.wait_for_ally` (same slot as the rest rule) keeps everyone
   else within `PARTY_CLOSE` of them, waiting ("waiting for X to recover").
   `fleeCycle` is optional state: absent until a flight begins, so no `STATE_VERSION` bump.
+- **Escape direction (ETH-154, `src/sim/combat/escape.ts`):** `act.flee` asks `escapeStep` for its step. It takes the flee
+  map's best step unless another free step (not next to a danger, not blocked) costs within `ESCAPE_TIE_MARGIN` (2) of it;
+  among those it picks the one closest to a living party member on the floor, then to the known stairs up (goal maps on
+  the same path grid), then the cheapest. A tie-break only, never a detour from a clearly better escape. The trace adds
+  ", fleeing toward Mira" or ", fleeing toward the stairs up" when that decided the step. `cond.boxed_in → act.rest`
+  (baseline, after `cond.recovering`) holds an adventurer still when it is wounded (`isWounded`), has fresh remembered
+  threats, and every frontier tile and known way down is within `GUARDED_RADIUS` (= `AVOID_RADIUS`, 6) of one (`isBoxedIn`).
+  `checkBoxedIn` (engine) latches `AiMemory.boxedIn` (optional, so no version bump) and emits one `stuck` line per episode
+  ("Mira is wounded with no healing and threats on every way forward: resting until HP is back to 60%. Consider the Fall back
+  stance."); the latch ends when the adventurer is no longer wounded. `act.rest` is ETH-189's. This never ends the run. On the
+  way out, `cond.cycle_blocked_leaving → act.rest` (above `act.retreat_run`) keeps a hopeless-cycle adventurer from looping
+  flee / walk back toward the stairs past the foe (the rest ends at `FLEE_HOPELESS_RECOVER_PERCENT`).
 - **Ability tags (ETH-192).** A source the AI can use (a usable item today; class abilities and
   wands later) declares `abilityTags`, a list from the closed `ABILITY_TAGS` vocabulary in
   `src/content/abilityTags.ts` (`heal`, `buff`, `damage`, `debuff`, `control`, `ranged`, `area`,

@@ -18,6 +18,7 @@ import { carriesHealingPotion } from '../floors/fountains';
 import { fleeBelowOf, fleeReleaseOf } from '../ai/stanceParams';
 import type { PathGrid } from '../goalMap';
 import type { AiActor, AiCtx, ThreatMark } from '../ai/types';
+import { sourcesByTag } from '../ai/abilities';
 import { nameOf } from '../ai/navigate';
 import type { ActorEntity, Entity, RunState } from '../state';
 import { AVOID_PENALTY, AVOID_RADIUS, FLEE_CALM_TURNS, FLEE_CYCLE_RADIUS, FLEE_CYCLE_WINDOW, FLEE_HOLD_TURNS, FLEE_RELEASE_PERCENT, THREAT_MEMORY_TURNS } from './fleeConfig';
@@ -67,9 +68,13 @@ export function freshThreats(state: RunState, actor: AiActor): ThreatMark[] {
   return actor.ai.memory.threats.filter((m) => m.floor === actor.floor && state.turn - m.seen <= THREAT_MEMORY_TURNS);
 }
 
-/** Whether `actor` is wounded enough, and without a healing potion, to steer clear of remembered threats. */
-export function isWounded(state: RunState, actor: ActorEntity): boolean {
-  return hpPercent(state, actor) < FLEE_RELEASE_PERCENT && !carriesHealingPotion(state, actor);
+/**
+ * Whether `actor` is wounded enough, and without anything that heals (a healing potion, or any
+ * known `heal`-tagged item such as a field ration), to steer clear of remembered threats.
+ */
+export function isWounded(state: RunState, actor: AiActor): boolean {
+  if (hpPercent(state, actor) >= FLEE_RELEASE_PERCENT) return false;
+  return !carriesHealingPotion(state, actor) && sourcesByTag({ state, actor }, 'heal').length === 0;
 }
 
 /**
