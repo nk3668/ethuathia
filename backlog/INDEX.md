@@ -163,19 +163,19 @@ From M2 on, each milestone is one theme (roadmap in [`../CLAUDE.md`](../CLAUDE.m
 | [ETH-185](risk-omens/ETH-185-minimal-omen-system.md) | Minimal Omen system with ranks, one reward multiplier and a Prepare toggle, unlocked by town nodes | risk-omens | M2.2 | P1 | done | M |
 | [ETH-186](risk-omens/ETH-186-first-town-omens.md) | The first four Omens and their town-tree unlock nodes | risk-omens | M2.2 | P1 | done | M |
 | [ETH-191](risk-omens/ETH-191-omens-that-bite.md) | Make Stalker's Ledger, Cursed Hoards and Armed Warbands cost win rate | risk-omens | M2.2 | P1 | done | S |
-| [ETH-192](behavior-rules/ETH-192-ability-tags.md) | Ability tags - abilities, consumables and wands declare what they do, and the AI picks the best of a tag | behavior-rules | M3 | P1 | pending-review | M |
-| [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Tactics engine - tactic options as content that build each adventurer's rules | behavior-rules | M3 | P1 | pending-review | M |
-| [ETH-193](behavior-rules/ETH-193-roles-ranges-focuses.md) | Roles, ranges and focuses - Tank, Healer, Damage and Scout; engagement distance; target choice | behavior-rules | M3 | P1 | pending-review | M |
-| [ETH-194](behavior-rules/ETH-194-habits-and-slots.md) | Habits and habit slots - several per adventurer, with exclusive pairs | behavior-rules | M3 | P1 | pending-review | M |
+| [ETH-192](behavior-rules/ETH-192-ability-tags.md) | Ability tags - abilities, consumables and wands declare what they do, and the AI picks the best of a tag | behavior-rules | M3 | P1 | done | M |
+| [ETH-162](behavior-rules/ETH-162-rules-editor.md) | Tactics engine - tactic options as content that build each adventurer's rules | behavior-rules | M3 | P1 | done | M |
+| [ETH-193](behavior-rules/ETH-193-roles-ranges-focuses.md) | Roles, ranges and focuses - Tank, Healer, Damage and Scout; engagement distance; target choice | behavior-rules | M3 | P1 | done | M |
+| [ETH-194](behavior-rules/ETH-194-habits-and-slots.md) | Habits and habit slots - several per adventurer, with exclusive pairs | behavior-rules | M3 | P1 | done | M |
 | [ETH-196](behavior-rules/ETH-196-tactics-panel.md) | Tactics panel, party-card intent and the Prepare tactics column | behavior-rules | M3 | P1 | idea | M |
 | [ETH-197](town-meta/ETH-197-library-building-quest.md) | The Library building and its building quest | town-meta | M3 | P1 | idea | S |
 | [ETH-163](behavior-rules/ETH-163-library-tree.md) | Library tree unlocks tactics and habit slots | behavior-rules | M3 | P1 | idea | M |
 | [ETH-164](behavior-rules/ETH-164-rule-presets.md) | Saved tactics loadouts for the party and each adventurer, ready for talent builds | behavior-rules | M3 | P1 | idea | S |
 | [ETH-165](tools-balance/ETH-165-rules-balance-pass.md) | Tactics balance pass (M3 capstone) | tools-balance | M3 | P1 | idea | M |
-| [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Party stances - Steady, Cautious, Reckless, Delve, Plunder and Fall back | town-meta | M3 | P2 | pending-review | M |
-| [ETH-189](adventurer-ai/ETH-189-flee-return-oscillation.md) | Break the flee-and-return loop against a ranged foe | adventurer-ai | M3 | P2 | pending-review | S |
-| [ETH-151](behavior-rules/ETH-151-formation-doctrine.md) | Formation tactic - Stick together, Loose or Spread out | behavior-rules | M3 | P2 | pending-review | S |
-| [ETH-154](adventurer-ai/ETH-154-smarter-escape-direction.md) | Smarter escape direction: flee toward allies, stairs or home instead of just away | adventurer-ai | M3 | P2 | pending-review | M |
+| [ETH-071](town-meta/ETH-071-doctrine-clear-or-stairs.md) | Party stances - Steady, Cautious, Reckless, Delve, Plunder and Fall back | town-meta | M3 | P2 | done | M |
+| [ETH-189](adventurer-ai/ETH-189-flee-return-oscillation.md) | Break the flee-and-return loop against a ranged foe | adventurer-ai | M3 | P2 | done | S |
+| [ETH-151](behavior-rules/ETH-151-formation-doctrine.md) | Formation tactic - Stick together, Loose or Spread out | behavior-rules | M3 | P2 | done | S |
+| [ETH-154](adventurer-ai/ETH-154-smarter-escape-direction.md) | Smarter escape direction: flee toward allies, stairs or home instead of just away | adventurer-ai | M3 | P2 | done | M |
 | [ETH-195](behavior-rules/ETH-195-controller-role.md) | Controller role and Softens targets habit, with a stun status and the first control and debuff sources | behavior-rules | M3 | P2 | idea | M |
 | [ETH-035](characters/ETH-035-proficiencies-aptitudes.md) | Class equipment proficiencies and race aptitudes | characters | M4 | P2 | idea | M |
 | [ETH-037](characters/ETH-037-class-signature-abilities.md) | A signature ability per class | characters | M4 | P2 | idea | M |

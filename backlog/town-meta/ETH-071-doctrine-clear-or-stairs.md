@@ -2,7 +2,7 @@
 id: ETH-071
 title: Party stances - Steady, Cautious, Reckless, Delve, Plunder and Fall back
 type: feature
-status: pending-review
+status: done
 priority: P2
 milestone: M3
 epic: town-meta
@@ -121,3 +121,4 @@ New: `src/sim/ai/stanceRules.ts`, `test/sim/stances.test.ts`. Shared with other 
 - 2026-11-25: Rewritten for the tactics design (Nate, 2026-11-25): the doctrine becomes the party stance axis (six stances, Delve vs Plunder covering clear-or-stairs). Back to `idea` until ETH-162 lands; size M.
 - 2026-11-25: In progress: refined plan written (planning gate), awaiting approval. Branch eth-071-party-stances from eth-162-tactics-engine.
 - 2026-11-25: Built (branch eth-071-party-stances). Approved plan followed with changes: Reckless uses its own act.charge (remembers a threat 5 turns; act.approach_enemy untouched, ETH-193), Delve and Reckless pair act.descend with act.gather, explored share is the snapshot's explored().fraction. New: src/content/stances.ts, src/sim/ai/stanceRules.ts, stanceParams.ts, `--stance` on npm run sim. No STATE_VERSION bump. T0 against eth-162: 20 seeds, every metric and state hash identical. ETH-151 must fold Cautious's own leash (5) and Reckless's (14) into formation. Cautious's worn-party retreat and Fall back are one-way (leaving). Doctrine kind kept as an empty placeholder (deletion is an idea for Nate).
+- 2026-11-25: Review feedback addressed and merged to main (PR #139). Done.

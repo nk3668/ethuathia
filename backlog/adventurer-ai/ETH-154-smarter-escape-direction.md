@@ -2,7 +2,7 @@
 id: ETH-154
 title: Smarter escape direction: flee toward allies, stairs or home instead of just away
 type: feature
-status: pending-review
+status: done
 priority: P2
 milestone: M3
 epic: adventurer-ai
@@ -60,3 +60,4 @@ help, wastes it.
 - 2026-11-25: Nate decided that one adventurer must never send the whole party home; ending a run early is the player's decision (a picked stance such as Fall back). Rebased on ETH-189 (e7cc372). `cond.boxed_in` now rests (`act.rest`, latch `AiMemory.boxedIn`) and logs one line per episode ending "Consider the Fall back stance", instead of retreating. Also added `cond.cycle_blocked_leaving → act.rest` above `act.retreat_run`: on the way out, flee and retreat_run looped to the turn cap in party-3 seeds 6 and 27 (60-seed run). Party 3 seed 30 still caps at 60 seeds: chronically wounded party on floor 9, ETH-189 rest/flee cycles never recover (see the PR).
 - 2026-11-25: Depends on ETH-189: both change the flee code, so this one builds on ETH-189's fix.
 - 2026-11-26: Review fixes. ETH-189 has merged into main, so this branch now builds on main (the earlier "rebased on e7cc372" note is history; main also carries ETH-189's review fixes, `cond.ally_resting → act.wait_for_ally`, and ETH-192's ability tags). `isWounded` now also counts any known `heal`-tagged item (field rations) via `sourcesByTag`, so a member with rations never latches boxed in. `toward` is set only when the tie-break chose a step other than the flee map's best. When the best step is occupied, `escapeStep` falls back to the cheapest free candidate instead of failing the flee. Cost note added: two goal maps per flee decision, only when two or more steps are within the margin. More tests: ally on another floor, dead ally, ally preferred over stairs, no preference claimed when the best step was taken, occupied best step, ration, boxed in with only the stairs down.
+- 2026-11-25: Review feedback addressed and merged to main (PR #137). Done.

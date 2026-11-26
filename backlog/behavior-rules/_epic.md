@@ -30,12 +30,12 @@ The player shapes how adventurers act by picking and swapping named tactics for 
 
 ## Items
 - [x] [ETH-121 Shared conditions: run-scope conditions and a Requirement type usable outside rules](ETH-121-shared-conditions-requirements.md)
-- [ ] [ETH-151 Formation tactic - Stick together, Loose or Spread out](ETH-151-formation-doctrine.md)
-- [ ] [ETH-162 Tactics engine - tactic options as content that build each adventurer's rules](ETH-162-rules-editor.md)
+- [x] [ETH-151 Formation tactic - Stick together, Loose or Spread out](ETH-151-formation-doctrine.md)
+- [x] [ETH-162 Tactics engine - tactic options as content that build each adventurer's rules](ETH-162-rules-editor.md)
 - [ ] [ETH-163 Library tree unlocks tactics and habit slots](ETH-163-library-tree.md)
 - [ ] [ETH-164 Saved tactics loadouts for the party and each adventurer, ready for talent builds](ETH-164-rule-presets.md)
-- [ ] [ETH-192 Ability tags](ETH-192-ability-tags.md)
-- [ ] [ETH-193 Roles, ranges and focuses](ETH-193-roles-ranges-focuses.md)
-- [ ] [ETH-194 Habits and habit slots](ETH-194-habits-and-slots.md)
+- [x] [ETH-192 Ability tags](ETH-192-ability-tags.md)
+- [x] [ETH-193 Roles, ranges and focuses](ETH-193-roles-ranges-focuses.md)
+- [x] [ETH-194 Habits and habit slots](ETH-194-habits-and-slots.md)
 - [ ] [ETH-195 Controller role and Softens targets habit](ETH-195-controller-role.md)
 - [ ] [ETH-196 Tactics panel, party-card intent and the Prepare tactics column](ETH-196-tactics-panel.md)

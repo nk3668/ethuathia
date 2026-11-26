@@ -2,7 +2,7 @@
 id: ETH-193
 title: Roles, ranges and focuses - Tank, Healer, Damage and Scout; engagement distance; target choice
 type: feature
-status: pending-review
+status: done
 priority: P1
 milestone: M3
 epic: behavior-rules
@@ -95,3 +95,4 @@ Neutral picks (Damage, Front line, Weakest) add no effective rows: Damage's row 
 - 2026-11-25: Implemented, `npm run check` green (1734 tests). Differences from the plan: the new actions live in `src/sim/combat/tacticRoles.ts` and the target choice in `src/sim/combat/focus.ts` (not `ai/`, to avoid an import cycle); the options added after the ETH-162 starter set are in `src/content/tacticsRoles.ts`; *Damage* has no row (a `damage`-tag row would only add a trace note every blow until a damage source exists); `act.hold_range` is a baseline rule with `cond.always` (cheap at engage 1); every tactic action only fires while an ally already fighting is nearer a threat (not a harmless support creature), and never while fleeing, next to a foe or alone, after the smoke run showed stalls and swap loops without those guards.
 - 2026-11-25: Smoke runs against ETH-162's branch (`--compare origin/eth-162-tactics-engine`, 20 seeds, fresh preset). T0 identity: Reaver (neutral) at party 1 identical on every metric. Party 1: Vanguard and Outrider identical on every metric (a lone adventurer has no ally up front), Lorekeeper wins 4 vs 3 (depth -0.1). Party 3 Vanguard (Tank, Protect allies): wins 10 vs 8, deaths 31 vs 37, stuck events 7 vs 1, turns +0.7%. Party 4 Vanguard: wins 11 vs 10, deaths -12%, stuck 9 vs 10. Party 3 Lorekeeper (Healer, Back line, Casters): wins 7 vs 7, depth +0.35, stuck 2 vs 1, no turn caps. Party 3 recruits (all Vanguards on the fresh preset): wins 9 vs 8, no turn caps. Outrider at party 3 lost wins in both Scout (12 vs 14 reached the bottom, deaths +5) and Close support (win 50% vs 60%) trials, so **Outrider stays neutral** until the Scout and range are better tuned (capstone question for Nate). State hashes differ from ETH-162 on every seed because the baseline rules after `act.hold_range` moved up one index (`RuleRef` is in the state); metrics are what is identical.
 - 2026-11-25: Existing tests that replace an adventurer's rules by hand (`ai.rules = ...`) now also clear `ai.tactics`, since Vanguard has a Tank row and the `core.tactics` invariant ties option rows to picks; the tactics tests that need a neutral hero use a Reaver.
+- 2026-11-25: Review feedback addressed and merged to main (PR #140). Done.

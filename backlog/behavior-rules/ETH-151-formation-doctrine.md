@@ -2,7 +2,7 @@
 id: ETH-151
 title: Formation tactic - Stick together, Loose or Spread out
 type: feature
-status: pending-review
+status: done
 priority: P2
 milestone: M3
 epic: behavior-rules
@@ -90,3 +90,4 @@ The defs keep their numbers; named constants `FORMATION_*_LEASH` / `_CLOSE` in a
 - 2026-11-25: Built (branch eth-151-formation). Numbers in src/content/formations.ts; Spread out option added; `partyCohesionOf(actor)` (exported from `src/sim`) is the one reader, used by `cond.party_scattered` and `act.regroup`; `partyClose()` deleted, `PARTY_LEASH`/`PARTY_CLOSE` kept as the default formation's values. Trace/log: `Regroup: regrouping with Bram, 9 tiles away (formation: Stick together)`; the condition detail is `9 tiles from Bram (formation: Stick together)`. Cautious and Reckless descriptions say they tighten/loosen whatever formation is picked. No STATE/SAVE bump. T0 against eth-071 on 20 seeds: default at party 1 and 3, and `--stance cautious` / `--stance reckless` at party 3, every metric and state hash identical. Smoke 20 seeds each, see the report. Per-option measured lines were not added to the tooltips: at 20 seeds the differences are within noise.
 - 2026-11-25: **When merging with ETH-193, Scout should read `partyCohesionOf(actor).leash` (not the raw `formation.params.leash`)** so Cautious ranges less.
 - 2026-11-25: Idea (not built): `tools/compare.ts` `simArgv` does not forward `--stance` (or `--formation`, `--contract`), so `--compare` ignores them for the baseline run; use `--baseline FILE` made on the ref instead.
+- 2026-11-25: Review feedback addressed and merged to main (PR #142). Done.
