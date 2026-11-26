@@ -33,7 +33,7 @@ Between runs the player spends three currencies on branching upgrade trees that 
 
 More items are added when M2 becomes the current milestone.
 - [x] [ETH-063 Upgrade engine and the Town screen with a Guild Hall](ETH-063-upgrade-engine-town.md)
-- [ ] [ETH-071 Party stances - Steady, Cautious, Reckless, Delve, Plunder and Fall back](ETH-071-doctrine-clear-or-stairs.md)
+- [x] [ETH-071 Party stances - Steady, Cautious, Reckless, Delve, Plunder and Fall back](ETH-071-doctrine-clear-or-stairs.md)
 - [ ] [ETH-197 The Library building and its building quest](ETH-197-library-building-quest.md)
 - [x] [ETH-074 Town buildings unlocked by milestones](ETH-074-locked-buildings.md)
 - [x] [ETH-083 Leftover gold converts to Trophies when the party exits](ETH-083-gold-to-trophies.md)

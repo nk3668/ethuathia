@@ -2,7 +2,7 @@
 id: ETH-194
 title: Habits and habit slots - several per adventurer, with exclusive pairs
 type: feature
-status: pending-review
+status: done
 priority: P1
 milestone: M3
 epic: behavior-rules
@@ -97,3 +97,4 @@ T0 identity (20 seeds): no habits picked -> metric-identical to ETH-162 (the bas
 - 2026-11-25: Correction to the item text: there is **no save migration** for `ruleSlots` -> `habitSlots`. Capacities are derived from the owned nodes' grants and never stored, and the node keeps its id, so old saves load as they are. The only version bump is `STATE_VERSION` 41 -> 42 for `RunConfig.habitSlots`.
 - 2026-11-25: Built: six habits (`src/content/tacticsHabits.ts`), conditions and actions in `src/sim/combat/habitRules.ts` and `src/sim/items/habitRules.ts`, `habitParams.ts`, slots in `RunConfig.habitSlots` (checked in `createRun`, `setTactics` and the `core.tactics` invariant), `habitSlotsOf` and `fitHabits` in `src/meta/prepare/habits.ts`, `--habit` in `npm run sim`. Finisher's threshold is 35% (a rat at 1 of 3 HP is 33%). Tests: `test/sim/tacticsHabits.test.ts`, `test/meta/habitSlots.test.ts`. `npm run check` green. T0 (20 seeds vs ETH-193, no habits): every metric identical; state hashes differ only because the state version changed. Smoke (20 seeds, `--recruits --party 3`, Bodyguard on 3 Lorekeepers): no habit breaks a run.
 - Out of scope: a trigger counter per habit in the sim report (hit counts for the tooltip belong with ETH-196); Softens targets with ETH-195; a note to the player when `fitHabits` drops habits (ETH-196's panel).
+- 2026-11-25: Review feedback addressed and merged to main (PR #141). Done.

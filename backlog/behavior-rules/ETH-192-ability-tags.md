@@ -2,7 +2,7 @@
 id: ETH-192
 title: Ability tags - abilities, consumables and wands declare what they do, and the AI picks the best of a tag
 type: feature
-status: pending-review
+status: done
 priority: P1
 milestone: M3
 epic: behavior-rules
@@ -39,3 +39,4 @@ New classes have to work with every tactic without AI changes (Nate, 2026-11-25)
 ## Log
 - 2026-11-25: Created from the tactics design (Nate, 2026-11-25).
 - 2026-11-25: Implemented on branch `eth-192-ability-tags`. `src/content/abilityTags.ts` holds the closed vocabulary (the eight named tags plus `utility` for identify and uncurse); `ItemDef.abilityTags` is validated by the item schema and required on exactly the usable items. Tags: mending draught, scroll of renewal, trail biscuit and field ration `heal`; quickstep tonic `buff`; scrolls of identify and uncursing `utility`. No class abilities or wands exist yet, so items are the only sources; `ETH-037` and `ETH-195` must tag theirs. `bestByTag` is in `src/sim/ai/abilities.ts`; `bestHealing` (the baseline quaff) is built on it, the other rule actions (identify, uncurse, eat ration) pick by effect and were left alone because they do not choose among sources. Unidentified-type items are never sources. Codex gains a "Works as" field. T0 vs origin/main, 20 seeds: all state hashes equal, 0 diffs. Decision: `target` other than the actor returns `null` (items only act on their user).
+- 2026-11-25: Review feedback addressed and merged to main (PR #135). Done.

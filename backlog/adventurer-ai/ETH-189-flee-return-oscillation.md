@@ -2,7 +2,7 @@
 id: ETH-189
 title: Break the flee-and-return loop against a ranged foe
 type: bug
-status: pending-review
+status: done
 priority: P2
 milestone: M3
 epic: adventurer-ai
@@ -35,3 +35,4 @@ Found while building ETH-187: with Extraction Drills the fleeing hero always esc
 - 2026-11-25: Fix: stuck detection counts flights (`AiMemory.fleeCycle`, optional, no STATE_VERSION bump). Three flights near one spot within 150 turns without recovering emit a `stuck` event and the hero rests (`cond.recovering` / `act.rest`, up to 500 turns or until 60% HP). Eight flights in a cycle, or two rests that did not bring HP back (a hunter that keeps finding it, seeds 14 and 86), make it give the run up (`cond.no_recovery` / `act.retreat_run`). Test: `test/sim/fleeCycle.test.ts`. 100 seeds, Drills alone: turn-cap endings 3 to 0; all ETH-187 nodes on: 4 to 0. T0 (20 seeds, no Drills): 5 seeds (4, 5, 6, 12, 13) play out differently because they had flee loops too; win rate unchanged. Pending review.
 - 2026-11-25: Nate's decision: one adventurer must never send the whole party home; ending a run early is the player's call (picked stances like Fall back are fine). Removed the `cond.no_recovery` / `act.retreat_run` escalation. A hopeless cycle (8 flights, or 2 rests that did not bring HP back) now blocks the area within 6 tiles of the foe for exploring, picking up and going down (`fleeCycle.blocked`, `combat/zone.ts`), emits one player-facing `stuck` line suggesting Fall back, and otherwise rests up to 90% HP (`cond.cycle_blocked` / `act.rest`) before trying again. The turn cap is the only hard net. Test `fleeCycle.test.ts` now checks the party is never sent home. 100 seeds: solo 0 caps, party of 3 0 caps, all ETH-187 nodes 0 caps, Drills x3 alone 1 cap (seed 95: the only way on is through a pack of gloomchanters and a basalt giant that beats it even at 90% HP; main had 3).
 - 2026-11-25: Review fixes. The rest of the party no longer walks off from a resting member (`cond.ally_resting` / `act.wait_for_ally`: walk back within 3 tiles, then "waiting for X to recover"). A flight after a finished or cut-short rest clears `restUntil`, so the next rest can start in the same cycle (`rests` then counts toward hopeless without depending on a gap). The `core.aiMemory` invariant now checks `rests`, `blocked` and `pos`. Note for reviewers: `fleeCycle` is written to the AI memory on every flight, so it shows up in serialized state and in the state hash: hashes differ from main on any seed where an adventurer fled, even when play is identical.
+- 2026-11-25: Review feedback addressed and merged to main (PR #136). Done.
