@@ -16,6 +16,7 @@ export const ITEM_MENDING_DRAUGHT = defineItem({
   weight: 1,
   value: 30,
   stack: 5,
+  abilityTags: ['heal'],
   bundle: { effects: [{ kind: 'heal', amount: 12 }] },
   loot: { weight: 22 },
 });
@@ -31,6 +32,7 @@ export const ITEM_QUICKSTEP_TONIC = defineItem({
   weight: 1,
   value: 60,
   stack: 5,
+  abilityTags: ['buff'],
   bundle: { effects: [{ kind: 'applyStatus', status: 'status.hasted', turns: 20 }] },
   loot: { weight: 3, minDepth: 2 },
 });
@@ -46,6 +48,7 @@ export const ITEM_SCROLL_OF_RENEWAL = defineItem({
   weight: 1,
   value: 35,
   stack: 5,
+  abilityTags: ['heal'],
   bundle: { effects: [{ kind: 'applyStatus', status: 'status.regenerating', turns: 15 }] },
   loot: { weight: 6 },
 });
@@ -61,6 +64,7 @@ export const ITEM_SCROLL_OF_IDENTIFY = defineItem({
   weight: 1,
   value: 30,
   stack: 5,
+  abilityTags: ['utility'],
   bundle: { effects: [{ kind: 'identify', scope: 'one' }] },
   loot: { weight: 3 },
 });
@@ -76,6 +80,7 @@ export const ITEM_SCROLL_OF_UNCURSING = defineItem({
   weight: 1,
   value: 40,
   stack: 5,
+  abilityTags: ['utility'],
   bundle: { effects: [{ kind: 'uncurse', scope: 'worn' }] },
   loot: { weight: 2.5 },
 });
@@ -91,6 +96,7 @@ export const ITEM_TRAIL_BISCUIT = defineItem({
   weight: 1,
   value: 5,
   stack: 10,
+  abilityTags: ['heal'],
   bundle: { effects: [{ kind: 'heal', amount: 2 }] },
   loot: { weight: 6, qty: { min: 1, max: 3 } },
 });

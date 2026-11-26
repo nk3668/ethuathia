@@ -20,6 +20,7 @@ export const ITEM_FIELD_RATION = defineItem({
   weight: 1,
   value: 25,
   stack: 10,
+  abilityTags: ['heal'],
   bundle: { effects: [{ kind: 'applyStatus', status: 'status.regenerating', turns: 10 }] },
 });
 
