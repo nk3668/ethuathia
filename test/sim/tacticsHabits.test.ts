@@ -167,6 +167,16 @@ describe('Treasure hunter', () => {
     expect(c?.detail).toMatch(/^Treasure hunter: going for a .*, 16 turns away/);
   });
 
+  it('quaffs the healing it carries before detouring for loot', () => {
+    const { state, actors } = party({}, member('Hero', { habits: [HUNTER] }));
+    const hero = actors[0] as AiActor;
+    remember(state, hero, 17);
+    expect(choose(state, hero)?.action).toBe('act.pick_up');
+    hero.inventory = { items: [{ def: DRAUGHT, qty: 1 }] };
+    hero.actor.hp = Math.round(statValue(state, hero, 'hp') * 0.33);
+    expect(choose(state, hero)).toMatchObject({ action: 'act.quaff_healing', rule: { set: 'baseline' } });
+  });
+
   it('plays the baseline without the habit, with an enemy in sight, and for items out of reach', () => {
     const plain = party({}, member('Hero'));
     remember(plain.state, plain.actors[0] as AiActor, 17);

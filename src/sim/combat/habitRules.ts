@@ -10,6 +10,7 @@
  * says nothing (`null`) when it can't be done, and the baseline carries on.
  */
 import { ROLE_HEALER } from '../../content';
+import { bestByTag } from '../ai/abilities';
 import { followMap, nameOf } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
 import type { AiCtx, ConditionDef, Resolved, RuleActionDef } from '../ai/types';
@@ -28,6 +29,17 @@ export const BODYGUARD_LEASH = 3;
 /** True while the party is heading out or the floor was overstayed: errands the baseline puts first. */
 function errandFirst(ctx: AiCtx): boolean {
   return ['cond.heading_out', 'cond.floor_overstayed'].some((id) => CONDITIONS.get(id).evaluate(ctx, undefined).ok);
+}
+
+/**
+ * The one gate every habit condition passes first (ETH-194 review): habit rows sit ahead of the
+ * baseline's urgent rows, so they must yield while the baseline has something urgent to do, namely
+ * quaffing healing it carries (it needs healing, by `cond.needs_healing`, and holds a `heal` source)
+ * or shedding weight while overloaded.
+ */
+export function habitYields(ctx: AiCtx): boolean {
+  if (CONDITIONS.get('cond.overloaded').evaluate(ctx, undefined).ok) return true;
+  return CONDITIONS.get('cond.needs_healing').evaluate(ctx, undefined).ok && bestByTag(ctx, 'heal') !== null;
 }
 
 /** The wounded enemy Finisher would go for: the nearest threat at or below the HP share, in range, none being next to the actor. */
@@ -66,7 +78,7 @@ export const COND_CALM = defineCondition({
   parse: noParams,
   evaluate(ctx) {
     const { state, actor } = ctx;
-    if (actor.actor.faction !== 'party' || visibleEnemies(state, actor).length > 0 || fleeingNow(state, actor) || errandFirst(ctx)) return { ok: false, detail: '' };
+    if (actor.actor.faction !== 'party' || visibleEnemies(state, actor).length > 0 || fleeingNow(state, actor) || habitYields(ctx) || errandFirst(ctx)) return { ok: false, detail: '' };
     return { ok: true, detail: 'nothing in sight and nothing more urgent' };
   },
   describe: () => 'calm: no enemy in sight',
@@ -78,8 +90,9 @@ export const COND_FINISHER_TARGET = defineCondition({
   name: 'Wounded enemy in reach',
   description: `True when an enemy at ${FINISHER_HP_PERCENT}% HP or less is in sight within ${FINISHER_RANGE} tiles, none is next to the adventurer, and it is not running away.`,
   parse: noParams,
-  evaluate({ state, actor }) {
-    if (actor.actor.faction !== 'party' || fleeingNow(state, actor)) return { ok: false, detail: '' };
+  evaluate(ctx) {
+    const { state, actor } = ctx;
+    if (actor.actor.faction !== 'party' || fleeingNow(state, actor) || habitYields(ctx)) return { ok: false, detail: '' };
     const target = finisherTarget(state, actor);
     return target === null ? { ok: false, detail: '' } : { ok: true, detail: `${nameOf(target)} is at ${Math.round(hpPercent(state, target))}% HP` };
   },
@@ -90,11 +103,11 @@ export const COND_FINISHER_TARGET = defineCondition({
 export const COND_HEALER_FAR = defineCondition({
   id: 'cond.healer_far',
   name: 'Healer far away',
-  description: `True when an ally whose role is Healer is more than ${BODYGUARD_LEASH} tiles away, nothing is next to the adventurer, it is not running away, and the party is not heading out.`,
+  description: `True when an ally whose role is Healer is more than ${BODYGUARD_LEASH} tiles away, nothing is next to the adventurer, it is not running away, and the party is not heading out. Like every habit condition, false while the adventurer needs healing it carries or is overloaded.`,
   parse: noParams,
   evaluate(ctx) {
     const { state, actor } = ctx;
-    if (actor.actor.faction !== 'party' || fleeingNow(state, actor) || adjacentEnemies(state, actor).length > 0 || errandFirst(ctx)) return { ok: false, detail: '' };
+    if (actor.actor.faction !== 'party' || fleeingNow(state, actor) || adjacentEnemies(state, actor).length > 0 || habitYields(ctx) || errandFirst(ctx)) return { ok: false, detail: '' };
     const healer = farHealer(state, actor);
     return healer === null ? { ok: false, detail: '' } : { ok: true, detail: `${nameOf(healer)} is ${distance(healer.pos, actor.pos)} tiles away` };
   },
