@@ -1983,7 +1983,8 @@ As built in `src/sim/ai/` (ETH-009):
   unidentified is never a source, so the answer is the same whatever it really is; the Codex
   "Works as" field shows tags only on the same gate as the rest of the card. `bestHealing` (the
   baseline quaff) is built on it; its unknown-potion emergency gamble stays in the rule action.
-  Every new ability must declare its tags (ETH-037).
+  `utility` (identify, uncurse) is outside the tactics-facing set: tactic options should not
+  target it. Every new ability must declare its tags (ETH-037).
 - **Speed:** a lone adventurer explores a generated Hewn Halls floor in about 200 party turns
   (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite. A
   ten-floor dungeon takes a lone adventurer about 2,400 turns and a party of four about 1,200.
