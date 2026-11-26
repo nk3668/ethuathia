@@ -7,15 +7,17 @@
 import type { Pos } from '../../core';
 import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
 import { engageDistance } from '../ai/tactics';
+import { fleeBelowOf, fleeReleaseOf } from '../ai/stanceParams';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
-import type { AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, RuleActionDef } from '../ai/types';
+import type { AiActor, AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, RuleActionDef } from '../ai/types';
 import { stepBlocker } from '../coreActions';
 import { blockerAt, featureAt, getEntity, getFloor, mayShareTile } from '../entities';
-import { buildFleeMap, buildGoalMap, floorPathGrid, OPEN_DOOR_COST, pathAlong, stepToward, UNREACHABLE } from '../goalMap';
+import { buildFleeMap, buildGoalMap, floorPathGrid, OPEN_DOOR_COST, pathAlong, UNREACHABLE } from '../goalMap';
 import type { PathGrid } from '../goalMap';
 import { fieldOfView, sightRadius } from '../perception';
 import type { ActorEntity, Entity, RunState } from '../state';
 import { statValue } from '../stats/getStat';
+import { escapeStep } from './escape';
 import { BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_RELEASE_PERCENT } from './fleeConfig';
 import { chooseTarget } from './focus';
 import { freshThreats, visibleThreats } from './threat';
@@ -76,7 +78,9 @@ export function hpPercent(state: RunState, actor: ActorEntity): number {
  * up, a Healer hanging back) leave the actor to the baseline's flee while this holds.
  */
 export function fleeingNow(state: RunState, actor: ActorEntity): boolean {
-  return hpPercent(state, actor) < BASELINE_FLEE_PERCENT || actor.ai?.memory.fleeing != null;
+  // The stance's flee line (ETH-071) when the actor has picks, else the baseline's.
+  const below = actor.ai === undefined ? BASELINE_FLEE_PERCENT : fleeBelowOf(actor as AiActor);
+  return hpPercent(state, actor) < below || actor.ai?.memory.fleeing != null;
 }
 
 /**
@@ -177,9 +181,9 @@ export const COND_FLEEING = defineCondition({
   parse: noParams,
   evaluate({ state, actor }) {
     const now = hpPercent(state, actor);
-    if (now < BASELINE_FLEE_PERCENT) return { ok: true, detail: `HP ${Math.round(now)}% < ${BASELINE_FLEE_PERCENT}%` };
+    if (now < fleeBelowOf(actor)) return { ok: true, detail: `HP ${Math.round(now)}% < ${fleeBelowOf(actor)}%` };
     if (actor.ai.memory.fleeing === null) return { ok: false, detail: '' };
-    return { ok: true, detail: `still fleeing, HP ${Math.round(now)}% (until ${FLEE_RELEASE_PERCENT}% or ${FLEE_CALM_TURNS} calm turns)` };
+    return { ok: true, detail: `still fleeing, HP ${Math.round(now)}% (until ${fleeReleaseOf(actor)}% or ${FLEE_CALM_TURNS} calm turns)` };
   },
   describe: () => 'fleeing (HP low, and until recovered)',
 });
@@ -247,7 +251,7 @@ export const ACT_FLEE = defineRuleAction({
   name: 'Flee',
   description:
     'Run from the enemies in sight that will come and hurt you (harmless ones, like a moss tender that only mends its ' +
-    'kin, are ignored), toward open ground rather than into a corner. An adventurer that is already fleeing keeps ' +
+    'kin, are ignored), toward open ground rather than into a corner. When two ways out are about as good, it picks the one toward a living ally, then the one toward the stairs up. An adventurer that is already fleeing keeps ' +
     'running from where it last saw them until it has recovered or the coast has been clear for a while. Only possible ' +
     'when there is an escape route: a free step that leaves no enemy next to you. Cornered, the creature does something ' +
     'else. Breaking away from an enemy next to you takes a Flee check (Finesse); failing it loses the turn.',
@@ -264,37 +268,39 @@ export const ACT_FLEE = defineRuleAction({
     }
     // Still running after recovering above the start threshold, but cornered by a threat next to
     // it: turning to fight beats failing Flee checks and taking free hits (ETH-148).
-    if (actor.actor.faction === 'party' && hpPercent(state, actor) >= BASELINE_FLEE_PERCENT) {
+    if (actor.actor.faction === 'party' && hpPercent(state, actor) >= fleeBelowOf(actor)) {
       const close = enemies.filter((e) => distance(e.pos, actor.pos) <= 1);
-      if (close.length > 0) return { skipped: `not breaking away from ${listNames(close)} next to me: HP is above ${BASELINE_FLEE_PERCENT}%` };
+      if (close.length > 0) return { skipped: `not breaking away from ${listNames(close)} next to me: HP is above ${fleeBelowOf(actor)}%` };
     }
     // Enemy tiles stay enterable here, so the distance map spreads from them; the step taken
     // never leads onto one, since it is the highest ground on the flee map.
     const paths = pathGridFor(ctx);
     const dangers = enemies.length > 0 ? enemies.map((e) => e.pos) : marks.map((m) => m.pos);
     const flee = buildFleeMap(paths, buildGoalMap(paths, dangers));
-    const dir = stepToward(paths, flee, actor.pos);
-    if (dir === null) return null;
+    const escape = escapeStep(ctx, paths, flee, dangers);
+    if (escape === null) return null;
+    const dir = escape.dir;
     const to = { x: actor.pos.x + dir.x, y: actor.pos.y + dir.y };
     const near = Math.min(...dangers.map((p) => distance(p, to)));
     if (near <= 1 || blockerAt(state, actor, actor.floor, to) !== undefined) return null;
     const goal = pathAlong(paths, flee, actor.pos).at(-1);
+    const toward = escape.toward === null ? '' : `, fleeing toward ${escape.toward}`;
     const withGoal = goal === undefined ? {} : { goal };
     const who = enemies.length > 0 ? listNames(enemies) : marks.map((m) => m.name).join(', ');
     const pursuit = enemies.length > 0 ? 'in pursuit' : 'last seen nearby';
     const still =
-      actor.actor.faction === 'party' && actor.ai.memory.fleeing !== null && hpPercent(state, actor) >= BASELINE_FLEE_PERCENT
+      actor.actor.faction === 'party' && actor.ai.memory.fleeing !== null && hpPercent(state, actor) >= fleeBelowOf(actor)
         ? `still fleeing: ${who} ${pursuit}, HP ${Math.round(hpPercent(state, actor))}%`
         : null;
     const door = featureAt(state, actor.floor, to)?.feature;
     if (door?.kind === 'door' && !door.open) {
-      return { request: { id: 'openDoor', dir }, detail: `${still ?? `escaping ${who}`}; opening a door`, ...withGoal };
+      return { request: { id: 'openDoor', dir }, detail: `${still ?? `escaping ${who}`}${toward}; opening a door`, ...withGoal };
     }
     // `flee`, not `move`: with an enemy adjacent it takes a Flee check (ETH-081, `flee.ts`).
     const adjacent = enemies.some((e) => distance(e.pos, actor.pos) <= 1);
     return {
       request: { id: 'flee', dir },
-      detail: still ?? `${adjacent ? 'breaking away from' : 'running from'} ${who}`,
+      detail: `${still ?? `${adjacent ? 'breaking away from' : 'running from'} ${who}`}${toward}`,
       ...withGoal,
     };
   },

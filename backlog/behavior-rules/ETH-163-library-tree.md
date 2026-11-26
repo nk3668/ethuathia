@@ -7,7 +7,7 @@ priority: P1
 milestone: M3
 epic: behavior-rules
 size: M
-depends_on: [ETH-162, ETH-086, ETH-197]
+depends_on: [ETH-162, ETH-086, ETH-197, ETH-193, ETH-194, ETH-071, ETH-151]
 created: 2026-11-24
 updated: 2026-11-25
 ---
@@ -39,7 +39,9 @@ The player starts with a small set of tactics, and the Library grows it (`CLAUDE
 
 ## Notes
 - Habit slots go to about 3 in total, counting the Guild Hall's Rule Clerk, which becomes a habit-slot node in ETH-194. Nate (2026-11-25): "we'll have to experiment with them", so the capstone (ETH-165) measures 1, 2 and 3 slots.
+- The Library's Tier II gate and tier quest come here, not in ETH-197 (Nate, 2026-11-25): with no nodes the tier share would be 0 of 0. If the tier quest recovers something from floor 6, note that floor 6 is also the shallowest possible bottom of The Old Delve (`depth.min` 6), so `checkQuestDepths` fails if a shallower dungeon is ever added.
 
 ## Log
 - 2026-11-24: Created in the backlog reorganization by theme.
 - 2026-11-25: Rewritten for the tactics design: unlocks tactic options and habit slots instead of rule conditions, actions and slots. Depends on the Library's building quest (ETH-197).
+- 2026-11-25: Also depends on ETH-193, ETH-194, ETH-071 and ETH-151, since the tree unlocks the options those items add.

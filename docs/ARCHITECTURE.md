@@ -1878,6 +1878,26 @@ interface RuleActionDef extends Def {
     support each cost about 2 wins in 20 at party 3; see ETH-193's Log). The baseline rules after
     `act.hold_range` moved up one index, so state hashes differ from ETH-162 though behavior with
     neutral picks is identical (a test compares neutral picks' event streams against no tactics).
+  - **Party stances (ETH-071, `src/content/stances.ts`, `src/sim/ai/stanceRules.ts`,
+    `stanceParams.ts`).** A stance's rows run ahead of the whole baseline, so each row names a
+    **guarded condition**: `stanceBlock(ctx)` is the one place that says when the baseline has
+    something more urgent (heading out, fleeing, an enemy next to the actor, a threat in sight,
+    healing it carries and needs, overloaded); `cond.delve_ready`, `cond.party_worn`,
+    `cond.reckless_charge` and `cond.fall_back_ready` all start with it, and
+    `test/sim/stances.test.ts` pins the priority order. A stance may also carry **params**
+    (`STANCE_PARAM_LIMITS`: `fleeBelow`, `fleeRelease`, `pickupDetour`, `floorCapPercent`,
+    `leashPercent`) that replace a baseline constant, read with `stanceParamOf(actor, key, fallback)`
+    in `cond.fleeing`, `act.flee`, `updateThreatMemory`, `cond.floor_overstayed`,
+    `act.pick_up` and `cond.party_scattered`. A stance with no key plays the baseline number,
+    so Steady (no rows, no params) is the baseline. `act.charge` is Reckless's own
+    walk-at-the-enemy action (it remembers a threat for `CHARGE_MEMORY_TURNS` so a corner can't
+    flip it back to exploring); it does not touch `act.approach_enemy`. Rows that head down pair
+    `act.descend` with `act.gather`, or the member at the stairs would wander off to explore
+    while the party gathers. Fall back and Cautious's retreat set `RunDomainState.leaving`,
+    which is one way: re-picking a stance does not turn the party back. Cautious's and
+    Reckless's `leashPercent` (60 and 175) scales the picked formation's leash (ETH-151). The old `doctrine` content kind stays as an
+    empty placeholder; stances replaced it, and `tactic.*` ids are what the Library unlocks.
+    `npm run sim -- --stance ID` runs every adventurer on a stance.
   - **Tag fallback:** rows ask for tags through `act.use_ability { tag }` (`bestByTag`). With
     nothing of the tag it returns a `RuleSkipped`, which the engine turns into a trace note
     named for the option ("Healer: no healing to use, carrying on as normal") on whichever rule
@@ -1948,9 +1968,16 @@ As built in `src/sim/ai/` (ETH-009):
   are in
   `src/sim/run/rules.ts`; the floors ones (ETH-058) in `src/sim/floors/rules.ts`:
   - `cond.party_scattered → act.regroup` (ETH-145): walks a straggler back to `partyLead` (the
-    first living party member on the floor, who regroups on no one) when more than `PARTY_LEASH`
-    (8) tiles away, continuing until within `PARTY_CLOSE` (3) tiles, and only while `act.explore`
-    still resolves so it never fights the descent.
+    first living party member on the floor, who regroups on no one) when farther than the
+    formation's `leash`, continuing until within its `close`, and only while `act.explore`
+    still resolves so it never fights the descent. **Formation (ETH-151):** `partyCohesionOf(actor)`
+    (`src/sim/ai/stanceParams.ts`) returns `{ leash, close, formation }` from the actor's picked
+    formation option (Stick together 8/3, the default and the old `PARTY_LEASH`/`PARTY_CLOSE`;
+    Loose 14/6; Spread out 30/12; numbers in `src/content/formations.ts`), scaled by the stance's
+    `leashPercent` (`max(2, round(leash * pct / 100))`, close likewise, capped at the leash).
+    The regroup trace and `act.regroup` detail name the formation. Rules that range by the party
+    (the Scout, ETH-193) should read `partyCohesionOf(...).leash`. `--formation ID` on
+    `npm run sim` runs every adventurer on a formation.
   - `act.descend` heads for the remembered stairs down and takes them. With `regroup` (the
     default) a member on the stairs takes them only when every living member on that floor is
     gathered (`gatheringAt`: within `GATHER_RADIUS`, 2, of the stairs or of a gathered member,
@@ -2035,6 +2062,41 @@ As built in `src/sim/ai/` (ETH-009):
   (50) that rule is dropped the same way, with a `stuck` event ("Waited 50 turns with nobody in
   the party moving (...)"), and the walk chooses again at once. A straggler still on the move
   resets the count, so gathering for the party is never cut short.
+  Flee/return cycles (ETH-189, `src/sim/combat/recover.ts`) are counted by flights, not position:
+  a hurt adventurer that flees a foe on the way to its goal, calms down, walks back and flees
+  again moves and explores, so none of the above sees it. `updateThreatMemory` keeps
+  `memory.fleeCycle` (flights begun within `FLEE_CYCLE_WINDOW` (150) turns and `FLEE_CYCLE_RADIUS` (8)
+  tiles of each other with HP never back to `FLEE_RELEASE_PERCENT`; cleared on recovery). At
+  `FLEE_CYCLE_LIMIT` (3) flights `checkFleeCycle` (engine) emits a `stuck` event ("Fled X 3 times
+  without recovering ... Resting ...") and sets `restUntil`, so baseline `cond.recovering →
+  act.rest` (idle, after the fountain rule; exempt from the waiting count like `act.wait`) holds the
+  adventurer still for up to `FLEE_REST_TURNS` (500) or until HP is back, with no threat in sight.
+  After `FLEE_CYCLE_GIVE_UP` (8) flights in one cycle, or `FLEE_REST_GIVE_UP` (2) rests that did not
+  bring HP back, the cycle is hopeless: `checkFleeCycle` sets `fleeCycle.blocked` (the newest remembered
+  threat's spot) and emits a second `stuck` event, the player-facing line ("Can't get past the X ... Consider
+  the Fall back stance."). While `blocked` is set, `blockFleeZone` (`combat/zone.ts`) makes every tile within
+  `FLEE_BLOCK_RADIUS` (6) of it impassable for `act.explore`, `act.pick_up` and `act.descend`, so the
+  adventurer explores elsewhere or goes down another way if one exists; if not, the baseline rule
+  `cond.cycle_blocked → act.rest` (below explore, descend and gather) holds it still until HP is back to
+  `FLEE_HOPELESS_RECOVER_PERCENT` (90), which ends the cycle and the zone. One adventurer never ends the run
+  (ending it early is the player's choice, e.g. the Fall back stance); the turn cap is the only hard net.
+  A flight that begins after a rest has ended or been cut short clears `restUntil`, so the next rest can
+  start inside the same cycle (`rests` counts them). While any other party member's last decision was
+  `act.rest`, baseline `cond.ally_resting → act.wait_for_ally` (same slot as the rest rule) keeps everyone
+  else within `PARTY_CLOSE` of them, waiting ("waiting for X to recover").
+  `fleeCycle` is optional state: absent until a flight begins, so no `STATE_VERSION` bump.
+- **Escape direction (ETH-154, `src/sim/combat/escape.ts`):** `act.flee` asks `escapeStep` for its step. It takes the flee
+  map's best step unless another free step (not next to a danger, not blocked) costs within `ESCAPE_TIE_MARGIN` (2) of it;
+  among those it picks the one closest to a living party member on the floor, then to the known stairs up (goal maps on
+  the same path grid), then the cheapest. A tie-break only, never a detour from a clearly better escape. The trace adds
+  ", fleeing toward Mira" or ", fleeing toward the stairs up" when that decided the step. `cond.boxed_in → act.rest`
+  (baseline, after `cond.recovering`) holds an adventurer still when it is wounded (`isWounded`), has fresh remembered
+  threats, and every frontier tile and known way down is within `GUARDED_RADIUS` (= `AVOID_RADIUS`, 6) of one (`isBoxedIn`).
+  `checkBoxedIn` (engine) latches `AiMemory.boxedIn` (optional, so no version bump) and emits one `stuck` line per episode
+  ("Mira is wounded with no healing and threats on every way forward: resting until HP is back to 60%. Consider the Fall back
+  stance."); the latch ends when the adventurer is no longer wounded. `act.rest` is ETH-189's. This never ends the run. On the
+  way out, `cond.cycle_blocked_leaving → act.rest` (above `act.retreat_run`) keeps a hopeless-cycle adventurer from looping
+  flee / walk back toward the stairs past the foe (the rest ends at `FLEE_HOPELESS_RECOVER_PERCENT`).
 - **Ability tags (ETH-192).** A source the AI can use (a usable item today; class abilities and
   wands later) declares `abilityTags`, a list from the closed `ABILITY_TAGS` vocabulary in
   `src/content/abilityTags.ts` (`heal`, `buff`, `damage`, `debuff`, `control`, `ranged`, `area`,
@@ -2048,7 +2110,8 @@ As built in `src/sim/ai/` (ETH-009):
   unidentified is never a source, so the answer is the same whatever it really is; the Codex
   "Works as" field shows tags only on the same gate as the rest of the card. `bestHealing` (the
   baseline quaff) is built on it; its unknown-potion emergency gamble stays in the rule action.
-  Every new ability must declare its tags (ETH-037).
+  `utility` (identify, uncurse) is outside the tactics-facing set: tactic options should not
+  target it. Every new ability must declare its tags (ETH-037).
 - **Speed:** a lone adventurer explores a generated Hewn Halls floor in about 200 party turns
   (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite. A
   ten-floor dungeon takes a lone adventurer about 2,400 turns and a party of four about 1,200.

@@ -2,12 +2,12 @@
 id: ETH-154
 title: Smarter escape direction: flee toward allies, stairs or home instead of just away
 type: feature
-status: ready
+status: pending-review
 priority: P2
 milestone: M3
 epic: adventurer-ai
 size: M
-depends_on: [ETH-148]
+depends_on: [ETH-148, ETH-189]
 created: 2026-11-24
 updated: 2026-11-25
 ---
@@ -32,19 +32,19 @@ The ETH-148 and ETH-080 agents found three problems:
 help, wastes it.
 
 ## Acceptance criteria
-- [ ] The flee map breaks ties toward a living ally on the same floor, then toward the stairs up.
+- [x] The flee map breaks ties toward a living ally on the same floor, then toward the stairs up.
       This builds on the existing flee map, not a new pathing system.
-- [ ] A wounded adventurer heads home via `act.retreat_run` when every unexplored tile and every way
+- [x] A wounded adventurer rests (`act.rest`, never a retreat: Nate, 2026-11-25) when every unexplored tile and every way
       down is near a remembered threat. Wounded means below `FLEE_RELEASE_PERCENT` with no healing
       potion. Any new threshold is a named constant in `src/sim/combat/fleeConfig.ts`.
-- [ ] The trace says why: "fleeing toward Mira", "fleeing toward the stairs up", "heading home:
+- [x] The trace says why: "fleeing toward Mira", "fleeing toward the stairs up", "resting:
       wounded, no healing, threats on every way forward".
-- [ ] The Codex and tooltip text for flee and retreat mention the new preferences.
-- [ ] Sim tests on a fixed seed with a hand-built map:
+- [x] The Codex and tooltip text for flee and retreat mention the new preferences.
+- [x] Sim tests on a fixed seed with a hand-built map:
   - an adventurer flees toward an ally when two escapes are otherwise equal;
-  - a boxed-in, wounded adventurer retreats home;
+  - a boxed-in, wounded adventurer rests where it is and never ends the run;
   - a healthy one in the same spot doesn't.
-- [ ] Sim gate per `docs/DIFFICULTY_PHILOSOPHY.md` §9 as tightened 2026-11-25 (work items run T0
+- [x] Sim gate per `docs/DIFFICULTY_PHILOSOPHY.md` §9 as tightened 2026-11-25 (work items run T0
       and a 20-seed smoke run only; T1–T3 wait for the capstone): a 20-seed smoke run for party 1
       and party 4. `npm run check` passes.
 
@@ -56,3 +56,7 @@ help, wastes it.
 - 2026-11-24: Created (Nate approved filing).
 - 2026-11-24: Moved from M2 to M3 in the backlog reorganization by theme.
 - 2026-11-25: Now `ready` (M3 kickoff). The sim gate now matches the 2026-11-25 policy (no T2 in work items).
+- 2026-11-25: Implemented, `pending-review`. `src/sim/combat/escape.ts`: `escapeStep` (tie-break among flee steps within `ESCAPE_TIE_MARGIN`, toward an ally, then the stairs up) and `cond.boxed_in`. Tests in `test/sim/escape.test.ts`.
+- 2026-11-25: Nate decided that one adventurer must never send the whole party home; ending a run early is the player's decision (a picked stance such as Fall back). Rebased on ETH-189 (e7cc372). `cond.boxed_in` now rests (`act.rest`, latch `AiMemory.boxedIn`) and logs one line per episode ending "Consider the Fall back stance", instead of retreating. Also added `cond.cycle_blocked_leaving → act.rest` above `act.retreat_run`: on the way out, flee and retreat_run looped to the turn cap in party-3 seeds 6 and 27 (60-seed run). Party 3 seed 30 still caps at 60 seeds: chronically wounded party on floor 9, ETH-189 rest/flee cycles never recover (see the PR).
+- 2026-11-25: Depends on ETH-189: both change the flee code, so this one builds on ETH-189's fix.
+- 2026-11-26: Review fixes. ETH-189 has merged into main, so this branch now builds on main (the earlier "rebased on e7cc372" note is history; main also carries ETH-189's review fixes, `cond.ally_resting → act.wait_for_ally`, and ETH-192's ability tags). `isWounded` now also counts any known `heal`-tagged item (field rations) via `sourcesByTag`, so a member with rations never latches boxed in. `toward` is set only when the tie-break chose a step other than the flee map's best. When the best step is occupied, `escapeStep` falls back to the cheapest free candidate instead of failing the flee. Cost note added: two goal maps per flee decision, only when two or more steps are within the margin. More tests: ally on another floor, dead ally, ally preferred over stairs, no preference claimed when the best step was taken, occupied best step, ration, boxed in with only the stairs down.

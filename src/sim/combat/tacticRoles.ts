@@ -11,6 +11,7 @@ import { DIRS_8 } from '../../core';
 import type { Pos } from '../../core';
 import { ABILITY_TAG_INFO } from '../../content';
 import { engageDistance, tacticsOf } from '../ai/tactics';
+import { partyCohesionOf } from '../ai/stanceParams';
 import { parseTag } from '../ai/tacticActions';
 import { followMap, nameOf } from '../ai/navigate';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
@@ -171,9 +172,10 @@ export const ACT_SCOUT_AHEAD = defineRuleAction({
     const lead = partyLead(state, actor.floor);
     if (lead === null || lead.id === actor.id) return null;
     if (visibleEnemies(state, actor).length > 0 || hpPercent(state, actor) < SCOUT_MIN_HP_PERCENT) return null;
-    const leash = tacticsOf(ctx).formation.params?.leash;
+    // The formation leash as the stance scales it (ETH-151): a Cautious scout ranges less far.
+    const leash = partyCohesionOf(actor).leash;
     const gap = distance(lead.pos, actor.pos);
-    if (typeof leash !== 'number' || gap > SCOUT_LEASH_FACTOR * leash) return null;
+    if (gap > SCOUT_LEASH_FACTOR * leash) return null;
     // Errands the baseline puts first (heading out, a floor overstayed) still come first.
     for (const id of ['cond.heading_out', 'cond.floor_overstayed']) if (CONDITIONS.get(id).evaluate(ctx, undefined).ok) return null;
     const explore = RULE_ACTIONS.get('act.explore').resolve(ctx, undefined);

@@ -12,7 +12,8 @@
  * walk picks something else. Waiting counts too (ETH-113): if an adventurer spends
  * `WAIT_STUCK_TURNS` decisions in a row waiting on a rule such as gathering at the stairs while
  * nobody in the party moves, that rule is dropped the same way, so a blocker nobody deals with
- * can't hang a run without a trace.
+ * can't hang a run without a trace. Repeated flee/return cycles are caught too (ETH-189), by counting
+ * flights rather than watching position.
  */
 import type { Pos } from '../../core';
 import { validateAction } from '../actions';
@@ -20,14 +21,19 @@ import type { ActionRequest } from '../actions';
 import type { Emit } from '../events';
 import { ITEMS_BASELINE_LOOT, ITEMS_BASELINE_RECOVER, ITEMS_BASELINE_URGENT } from '../items/rules';
 import { registerInvariant } from '../invariants';
-import { updateThreatMemory } from '../combat/threat';
+import { cycleHopeless } from '../combat/recover';
+import { FLEE_CYCLE_LIMIT, FLEE_HOPELESS_RECOVER_PERCENT, FLEE_RELEASE_PERCENT, FLEE_REST_TURNS } from '../combat/fleeConfig';
+import { isBoxedIn } from '../combat/escape';
+import { hpPercent } from '../combat/rules';
+import { isWounded, updateThreatMemory } from '../combat/threat';
+import { nameOf } from './navigate';
 import { explored } from '../perception';
 import { QUESTS_BASELINE } from '../quests/rules';
 import { CONDITIONS, RULE_ACTIONS } from '../registries';
 import type { Decide } from '../step';
 import type { EntityId, RunState } from '../state';
-import { optionName, resolveTactics } from './tactics';
-import type { AiActor, AiCtx, AiMemory, Rule, RuleRef } from './types';
+import { optionName, resolveTactics, stalePicks } from './tactics';
+import type { AiActor, AiCtx, AiMemory, Rule, RuleRef, ThreatMark } from './types';
 
 /** Decisions in a row without progress after which the current goal is dropped. */
 export const STUCK_TURNS = 10;
@@ -43,7 +49,7 @@ export const LOITER_RADIUS = 1;
 export const WAIT_STUCK_TURNS = 50;
 
 /** The baseline's last resort, "nothing else to do": waiting on it never counts as stuck. */
-const PLAIN_WAIT = 'act.wait';
+const PLAIN_WAITS: ReadonlySet<string> = new Set(['act.wait', 'act.rest', 'act.wait_for_ally']);
 
 /** How many turns a dropped goal's rule is skipped for. */
 export const DROP_TURNS = 20;
@@ -85,12 +91,20 @@ export const BASELINE_RULES: readonly Rule[] = [
   ...ITEMS_BASELINE_RECOVER,
   // Fleeing with nowhere left to run: hold still rather than walk back toward the threat (ETH-148).
   { condition: { id: 'cond.fleeing' }, action: { id: 'act.hold_position' }, enabled: true },
+  // On the way out with a foe it can't get past: rest rather than loop flee / walk back (ETH-154).
+  { condition: { id: 'cond.cycle_blocked_leaving' }, action: { id: 'act.rest' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.heading_out' }, action: { id: 'act.gather', params: { dir: 'up' } }, enabled: true },
   // Quests (ETH-024): once every contract is complete, head out; fetch a contract item once seen.
   ...QUESTS_BASELINE,
   { condition: { id: 'cond.floor_overstayed' }, action: { id: 'act.descend', params: { regroup: false } }, enabled: true },
   { condition: { id: 'cond.hurt_no_healing', params: { below: 50 } }, action: { id: 'act.drink_fountain' }, enabled: true },
+  // Fled the same trouble over and over without recovering: rest instead of walking back (ETH-189).
+  { condition: { id: 'cond.recovering' }, action: { id: 'act.rest' }, enabled: true },
+  // Wounded with no healing and a threat on every way forward: rest rather than walk past it (ETH-154).
+  { condition: { id: 'cond.boxed_in' }, action: { id: 'act.rest' }, enabled: true },
+  // ...and the rest of the party stays with whoever is resting rather than walking off (ETH-189).
+  { condition: { id: 'cond.ally_resting' }, action: { id: 'act.wait_for_ally' }, enabled: true },
   // Items (ETH-061): pick up wanted items a short detour away.
   ...ITEMS_BASELINE_LOOT,
   // Cohesion (ETH-145): while there is still ground to explore, stay near the party's lead rather
@@ -101,6 +115,8 @@ export const BASELINE_RULES: readonly Rule[] = [
   { condition: { id: 'cond.always' }, action: { id: 'act.gather' }, enabled: true },
   // Don't treat a temporarily dropped Explore as "bottom floor complete, abort the run": wait out
   // the drop instead (ETH-145).
+  // Nowhere else to go but past the foe it keeps fleeing: rest until HP is back (ETH-189).
+  { condition: { id: 'cond.cycle_blocked' }, action: { id: 'act.rest' }, enabled: true },
   { condition: { id: 'cond.stuck' }, action: { id: 'act.wait' }, enabled: true },
   { condition: { id: 'cond.bottom_floor' }, action: { id: 'act.retreat_run' }, enabled: true },
   { condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true },
@@ -135,13 +151,23 @@ export const ruleDecide: Decide = ({ state, actor, emit }) => {
   if (actor.ai === undefined) return { id: 'wait' };
   const aiActor = actor as AiActor;
   const ctx: AiCtx =
-    aiActor.ai.tactics === undefined ? { state, actor: aiActor } : { state, actor: aiActor, tactics: resolveTactics(aiActor.ai.tactics) };
+    aiActor.ai.tactics === undefined ? { state, actor: aiActor } : { state, actor: aiActor, tactics: resolveTactics(aiActor.ai.tactics, aiActor.adventurer?.classId) };
   const memory = ctx.actor.ai.memory;
   const traced = actor.actor.faction === 'party';
   const partyStill = traced && checkProgress(ctx, emit);
-  if (traced) updateThreatMemory(state, ctx.actor);
+  if (traced) {
+    updateThreatMemory(state, ctx.actor);
+    checkFleeCycle(ctx, emit);
+    checkBoxedIn(ctx, emit);
+  }
 
   let choice = chooseRule(ctx);
+  // Picks naming an option the content no longer has play the default instead; say so (ETH-162).
+  const stale = traced && aiActor.ai.tactics !== undefined ? stalePicks(aiActor.ai.tactics) : [];
+  if (stale.length > 0 && choice !== null) {
+    const note = `tactic ${stale.join(', ')} is not available, using the default`;
+    choice = { ...choice, detail: `${choice.detail}; ${note}`, skipped: [...(choice.skipped ?? []), note] };
+  }
   // Waiting too long with nobody moving drops the waiting rule; choose again without it.
   if (traced && choice !== null && countWaiting(ctx, choice, partyStill, emit)) choice = chooseRule(ctx);
   memory.waitingFor = choice?.waitingFor ?? null;
@@ -277,6 +303,56 @@ function checkProgress(ctx: AiCtx, emit: Emit): boolean {
 }
 
 /**
+ * Stuck detection for flee/return cycles (ETH-189). A flight that ends (calm, not recovered) and
+ * a walk back into the same trouble leave position and explore share changing, so `checkProgress`
+ * never sees the loop. `updateThreatMemory` counts the flights (`AiMemory.fleeCycle`); at
+ * `FLEE_CYCLE_LIMIT` of them within `FLEE_CYCLE_WINDOW` turns of each other, with HP still below
+ * `FLEE_RELEASE_PERCENT`, a `stuck` event says so and the adventurer rests (`act.rest`) for up to
+ * `FLEE_REST_TURNS` turns instead of going back.
+ */
+function checkFleeCycle({ state, actor }: AiCtx, emit: Emit): void {
+  const cycle = actor.ai.memory.fleeCycle;
+  if (cycle === undefined || cycle.episodes < FLEE_CYCLE_LIMIT || actor.ai.memory.fleeing !== null) return;
+  const giveUp = cycleHopeless(cycle);
+  if (giveUp ? cycle.blocked !== undefined : cycle.restUntil !== undefined) return;
+  const newest = actor.ai.memory.threats.reduce<ThreatMark | null>((a, m) => (a === null || m.seen > a.seen ? m : a), null);
+  if (giveUp) cycle.blocked = { x: (newest?.pos ?? cycle.pos).x, y: (newest?.pos ?? cycle.pos).y };
+  else {
+    cycle.restUntil = state.turn + FLEE_REST_TURNS;
+    cycle.rests = (cycle.rests ?? 0) + 1;
+  }
+  const rule: RuleRef = { set: 'baseline', index: BASELINE_RULES.findIndex((r) => r.condition.id === (giveUp ? 'cond.cycle_blocked' : 'cond.recovering')) };
+  const who = newest?.name ?? 'a threat';
+  const hp = Math.round(hpPercent(state, actor));
+  const detail =
+    `Fled ${who} ${cycle.episodes} times without recovering (HP ${hp}%). ` +
+    (giveUp
+      ? `Can't get past it: keeping clear of the area, exploring or going down elsewhere if there is a way, otherwise resting up to ${FLEE_HOPELESS_RECOVER_PERCENT}% HP before trying again. Consider the Fall back stance.`
+      : `Resting for up to ${FLEE_REST_TURNS} turns, until HP is back to ${FLEE_RELEASE_PERCENT}%, before going back.`);
+  emit({ type: 'stuck', actor: actor.id, rule, action: 'act.rest', turns: state.turn - cycle.last, detail, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
+}
+
+/**
+ * Boxed in (ETH-154). A wounded adventurer with no healing whose every way forward is near a
+ * remembered threat (`isBoxedIn`) latches `AiMemory.boxedIn`, so `cond.boxed_in → act.rest` holds it
+ * still until it has recovered, and a `stuck` event says so once per episode. Ending the run early is
+ * the player's call (the Fall back stance), never the AI's.
+ */
+function checkBoxedIn(ctx: AiCtx, emit: Emit): void {
+  const { state, actor } = ctx;
+  const memory = actor.ai.memory;
+  if (memory.boxedIn !== undefined) {
+    if (!isWounded(state, actor)) delete memory.boxedIn;
+    return;
+  }
+  if (memory.fleeing !== null || !isBoxedIn(ctx)) return;
+  memory.boxedIn = state.turn;
+  const rule: RuleRef = { set: 'baseline', index: BASELINE_RULES.findIndex((r) => r.condition.id === 'cond.boxed_in') };
+  const detail = `${nameOf(actor)} is wounded with no healing and threats on every way forward: resting until HP is back to ${FLEE_RELEASE_PERCENT}%. Consider the Fall back stance.`;
+  emit({ type: 'stuck', actor: actor.id, rule, action: 'act.rest', turns: 0, detail, floor: actor.floor, pos: { x: actor.pos.x, y: actor.pos.y } });
+}
+
+/**
  * Stuck detection for waiting (ETH-113). Counts decisions in a row where `choice` waits by an
  * idle rule other than the plain `act.wait` while nobody in the party has moved since the last
  * decision (`partyStill`). At `WAIT_STUCK_TURNS` the rule is dropped for `DROP_TURNS` turns, a
@@ -285,7 +361,7 @@ function checkProgress(ctx: AiCtx, emit: Emit): boolean {
 function countWaiting(ctx: AiCtx, choice: Choice, partyStill: boolean, emit: Emit): boolean {
   const memory = ctx.actor.ai.memory;
   const action = RULE_ACTIONS.get(choice.action);
-  const waiting = choice.request.id === 'wait' && action.idle && choice.action !== PLAIN_WAIT;
+  const waiting = choice.request.id === 'wait' && action.idle && !PLAIN_WAITS.has(choice.action);
   memory.waited = waiting && partyStill ? memory.waited + 1 : 0;
   if (memory.waited < WAIT_STUCK_TURNS) return false;
 
@@ -363,6 +439,21 @@ registerInvariant('core.aiMemory', (state) => {
         }
       }
     }
+    const cycle = memory.fleeCycle;
+    if (cycle !== undefined) {
+      if (!Number.isSafeInteger(cycle.episodes) || cycle.episodes < 1 || !Number.isSafeInteger(cycle.last) || cycle.last > state.turn) {
+        problems.push(`actor ${entity.id} has invalid fleeCycle`);
+      } else if (cycle.restUntil !== undefined && (!Number.isSafeInteger(cycle.restUntil) || cycle.restUntil > state.turn + FLEE_REST_TURNS)) {
+        problems.push(`actor ${entity.id} has invalid fleeCycle.restUntil`);
+      } else if (cycle.rests !== undefined && (!Number.isSafeInteger(cycle.rests) || cycle.rests < 1)) {
+        problems.push(`actor ${entity.id} has invalid fleeCycle.rests`);
+      } else if (cycle.blocked !== undefined && (!Number.isSafeInteger(cycle.blocked.x) || !Number.isSafeInteger(cycle.blocked.y) || cycle.blocked.x < 0 || cycle.blocked.y < 0)) {
+        problems.push(`actor ${entity.id} has invalid fleeCycle.blocked`);
+      } else if (cycle.pos === undefined || !Number.isSafeInteger(cycle.pos.x) || !Number.isSafeInteger(cycle.pos.y)) {
+        problems.push(`actor ${entity.id} has invalid fleeCycle.pos`);
+      }
+    }
+    if (memory.boxedIn !== undefined && (!Number.isSafeInteger(memory.boxedIn) || memory.boxedIn > state.turn)) problems.push(`actor ${entity.id} has invalid boxedIn`);
     const waitingFor = memory.waitingFor;
     if (waitingFor === null) continue;
     if (!Number.isSafeInteger(waitingFor) || waitingFor < 1 || waitingFor >= state.nextEntityId || waitingFor === entity.id) {

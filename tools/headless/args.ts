@@ -2,7 +2,7 @@
  * Command-line argument parsing and usage help for `tools/sim.ts` (and `int` helper shared with `tools/run-soak.ts`).
  */
 import { parseArgs } from 'node:util';
-import { CLASSES, CONTRACTS, maxOmenRank, OMENS, RACES } from '../../src/content';
+import { CLASSES, CONTRACTS, maxOmenRank, OMENS, RACES, tacticsOn } from '../../src/content';
 import type { OmenSelection } from '../../src/content';
 import { partySize } from '../../src/meta';
 import {
@@ -41,6 +41,10 @@ export interface SimArgs {
   omens: OmenSelection[];
   /** The one contract every run takes (`--contract`, ETH-093); null is the default, Recover the relic. */
   contract: string | null;
+  /** The party stance every adventurer starts with (`--stance`, ETH-071); null is Steady. */
+  stance: string | null;
+  /** The party formation every adventurer starts with (`--formation`, ETH-151); null is Stick together. */
+  formation: string | null;
   /** Field the Prepare screen's random party per seed (`--recruits`, ETH-178); `party` is its size. */
   recruits: boolean;
   /** Worker threads to run seeds on (`--jobs`); 1 is a serial run. Doesn't change the results. */
@@ -56,7 +60,7 @@ export interface SimArgs {
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
                       [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious] [--opt-ins on|off]
-                      [--class ID | --race ID | --recruits] [--contract ID] [--omens id:rank,...]
+                      [--class ID | --race ID | --recruits] [--contract ID] [--stance ID] [--formation ID] [--omens id:rank,...]
                       [--party-sweep] [--pacing] [--jobs N] [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
@@ -76,6 +80,8 @@ above the bottom or trigger stuck detection are listed at the end.
   --class ID              class of every adventurer, e.g. outrider or class.outrider (default vanguard)
   --race ID               race of every adventurer, e.g. fenling or race.fenling (default human)
   --contract ID           the contract every run takes, e.g. cold_anvil or contract.cold_anvil (default recover_relic)
+  --stance ID             the party stance every adventurer starts with, e.g. delve or tactic.delve (default steady)
+  --formation ID          the party formation every adventurer starts with, e.g. loose or tactic.spread_out (default stick_together)
   --omens ID:RANK,...     Omens switched on, each at a rank, e.g. deep_surge:3,omen.cursed_hoards:2 (default none). They need
                           not be unlocked in the town, so a sweep can measure one in isolation
   --recruits              field the party the Prepare screen gives a new player: random recruits from the
@@ -136,6 +142,22 @@ export function parseOmens(raw: string | undefined): OmenSelection[] {
   });
 }
 
+/** Resolves `--stance`: a full id or the part after the dot, one of the stance options. */
+function parseStance(raw: string | undefined): string | null {
+  if (raw === undefined) return null;
+  const id = raw.includes('.') ? raw : `tactic.${raw}`;
+  if (tacticsOn('stance').some((t) => t.id === id)) return id;
+  throw new Error(`--stance "${raw}" is not a stance. Available: ${tacticsOn('stance').map((t) => t.id).join(', ')}`);
+}
+
+/** Resolves `--formation`: a full id or the part after the dot, one of the formation options. */
+function parseFormation(raw: string | undefined): string | null {
+  if (raw === undefined) return null;
+  const id = raw.includes('.') ? raw : `tactic.${raw}`;
+  if (tacticsOn('formation').some((t) => t.id === id)) return id;
+  throw new Error(`--formation "${raw}" is not a formation. Available: ${tacticsOn('formation').map((t) => t.id).join(', ')}`);
+}
+
 /** Resolves `--contract`: a full id or the part after the dot. */
 function parseContract(raw: string | undefined): string | null {
   if (raw === undefined) return null;
@@ -168,6 +190,8 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       class: { type: 'string' },
       race: { type: 'string' },
       contract: { type: 'string' },
+      stance: { type: 'string' },
+      formation: { type: 'string' },
       omens: { type: 'string' },
       recruits: { type: 'boolean' },
       'party-sweep': { type: 'boolean' },
@@ -203,6 +227,8 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     classId: parseContentId('--class', 'class', values.class),
     raceId: parseContentId('--race', 'race', values.race),
     contract: parseContract(values.contract),
+    stance: parseStance(values.stance),
+    formation: parseFormation(values.formation),
     omens: parseOmens(values.omens),
     recruits: values.recruits ?? false,
     partySweep: values['party-sweep'] ?? false,
