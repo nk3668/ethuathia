@@ -1828,8 +1828,8 @@ interface RuleActionDef extends Def {
     (engagement distance, target choice, leash), not rows.
   - **Ability tags:** abilities, consumables and wands declare tags (`heal`, `control`, …) and
     rule actions pick "the best of tag X", so options never name a class, spell or item.
-  - **Defaults reproduce today:** with no picks (or the class default build, until it is
-    tuned) the baseline runs as it does now, so T0 identity holds with tactics off.
+  - **Defaults reproduce today:** with no picks, or the neutral picks (Damage, Front line, Weakest),
+    the baseline runs as it does now, so T0 identity holds with tactics off.
   - A `setTactics` command swaps picks mid-run; the trace's `RuleRef` names the option.
   - The old "presets" and "doctrine" become saved loadouts and the stance/formation axes.
   - **The option def** (`TacticDef`, content kind `tactic`, ids `tactic.<name>`): an `axis`, the
@@ -1843,7 +1843,7 @@ interface RuleActionDef extends Def {
   - **Picks** are option ids: `TacticPicks` = stance, formation (the party's, kept equal on every
     member) and role, range, focus, habits (`AdventurerPicks`, the adventurer's own, stored on a
     roster record). They live in `AiPart.tactics`. `ClassDef.tactics` is the class's default
-    build (neutral for every class today, `classTactics`); `createRun` starts a recruit with
+    build (Vanguard and Lorekeeper have one since ETH-193, the others are neutral; `classTactics`); `createRun` starts a recruit with
     `startingPicks`: class build, then `AdventurerConfig.tactics`, then `RunConfig.tactics`
     (stance and formation). `picksProblems` and `tacticPickProblems` reject an unknown id, an
     option on the wrong axis, a repeated or exclusive habit and more than `MAX_HABITS` (3; habit
@@ -1856,9 +1856,28 @@ interface RuleActionDef extends Def {
     what the picks build.
   - **Parameters through `AiCtx`:** the engine sets `ctx.tactics` (`ResolvedTactics`) for an
     adventurer; rule actions read it with `tacticsOf(ctx)` (falls back to resolving the actor's
-    picks) or a helper such as `focusPreference(ctx)`. Today `act.attack_adjacent` reads the
-    focus (`weakest`, the baseline's own choice, or `strongest`). Range and formation reach
-    `AiCtx` the same way and are consumed by ETH-193 and ETH-151.
+    picks) or a helper such as `focusPreference(ctx)` or `engageDistance(ctx)`. Focus is read by
+    `chooseTarget` (`src/sim/combat/focus.ts`), range by `act.hold_range` and `act.approach_enemy`;
+    formation reaches `AiCtx` the same way and is consumed by ETH-151 (and read by `act.scout_ahead`).
+  - **Roles, ranges and focuses (ETH-193).** Role rows: *Tank* `cond.ally_ahead` -> `act.guard_front`;
+    *Healer* `cond.wounded` -> `act.use_ability heal`, `cond.ally_hurt` -> `act.tend_ally heal` (skips
+    with a trace note until a source can reach an ally), `cond.enemy_visible` -> `act.hang_back`;
+    *Scout* `cond.enemy_visible` -> `act.avoid_fight`, `cond.party_scattered` -> `act.scout_ahead`
+    (up to `SCOUT_LEASH_FACTOR` x the formation leash); *Damage* has no rows (neutral, until a `damage`
+    source exists). The conditions and actions live in `src/sim/combat/tacticRoles.ts`. Ranges are the
+    `engage` parameter (1, 2, 4, 6): a new baseline rule `cond.always -> act.hold_range`, before
+    `act.attack_adjacent`, is null at engage 1 and with nobody up front, so Front line and a lone
+    adventurer play as the baseline always did. Focus `prefer` is `weakest`, `strongest`, `nearest`,
+    `casters`, `melee`, `ranged` or `protect` (`FOCUS_PREFERENCES`, `FOCUS_INFO`); a kind with no match
+    falls back to the weakest with a note. Enemy kinds come from monster role powers (`enemyKind`) and
+    "hitting an ally" from adjacency or the monster's last intent, so there is no new state. The tank,
+    healer and scout actions only act while an ally already in a fight is nearer a threat than the
+    actor, and never while the actor is fleeing or next to a foe: a lone adventurer, or one whose ally
+    is not fighting, plays as normal. Class defaults: Vanguard Tank / Front line / Protect allies,
+    Lorekeeper Healer / Back line / Casters, Reaver and Outrider neutral (the Scout role and Close
+    support each cost about 2 wins in 20 at party 3; see ETH-193's Log). The baseline rules after
+    `act.hold_range` moved up one index, so state hashes differ from ETH-162 though behavior with
+    neutral picks is identical (a test compares neutral picks' event streams against no tactics).
   - **Party stances (ETH-071, `src/content/stances.ts`, `src/sim/ai/stanceRules.ts`,
     `stanceParams.ts`).** A stance's rows run ahead of the whole baseline, so each row names a
     **guarded condition**: `stanceBlock(ctx)` is the one place that says when the baseline has
@@ -1867,7 +1886,7 @@ interface RuleActionDef extends Def {
     `cond.reckless_charge` and `cond.fall_back_ready` all start with it, and
     `test/sim/stances.test.ts` pins the priority order. A stance may also carry **params**
     (`STANCE_PARAM_LIMITS`: `fleeBelow`, `fleeRelease`, `pickupDetour`, `floorCapPercent`,
-    `leash`) that replace a baseline constant, read with `stanceParamOf(actor, key, fallback)`
+    `leashPercent`) that replace a baseline constant, read with `stanceParamOf(actor, key, fallback)`
     in `cond.fleeing`, `act.flee`, `updateThreatMemory`, `cond.floor_overstayed`,
     `act.pick_up` and `cond.party_scattered`. A stance with no key plays the baseline number,
     so Steady (no rows, no params) is the baseline. `act.charge` is Reckless's own

@@ -21,7 +21,10 @@ function withHero(rows: readonly string[], at: { x: number; y: number }): string
 function setup(floorText: string[], seed = 1, hold = true): { state: RunState; hero: ActorEntity } {
   const state = createRun({ party: [HERO], floorText, depth: 1 }, seed);
   const hero = getEntity(state, state.party[0] as number) as ActorEntity;
-  if (hold && hero.ai !== undefined) hero.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
+  if (hold && hero.ai !== undefined) {
+    hero.ai.rules = [{ condition: { id: 'cond.always' }, action: { id: 'act.wait' }, enabled: true }];
+    delete hero.ai.tactics;
+  }
   return { state, hero };
 }
 

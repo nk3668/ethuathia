@@ -33,6 +33,7 @@ const HERO = { name: 'Brannoc', classId: 'class.vanguard', raceId: 'race.human' 
 const still = (state: RunState, def: string, x: number, y: number, overlay?: { templates: string[] }): ActorEntity => {
   const m = spawnMonster(state, def, 'd1', { x, y }, overlay) as AiActor;
   m.ai.rules = [];
+  delete m.ai.tactics;
   return m;
 };
 
@@ -127,6 +128,7 @@ describe('flee hysteresis', () => {
   it('releases normally when nothing is pursuing: after FLEE_CALM_TURNS without a threat in sight', () => {
     const { state, hero, maxHp } = hall();
     hero.ai.rules = hold();
+    delete hero.ai.tactics;
     hpTo(hero, maxHp, BASELINE_FLEE_PERCENT + 10);
     hero.ai.memory.fleeing = { since: state.turn, lastSeen: state.turn, held: 0 };
     for (let i = 0; i < FLEE_CALM_TURNS - 3; i++) step(state, []);
@@ -159,6 +161,7 @@ describe('flee hysteresis', () => {
   it('never starts without a threat in sight', () => {
     const { state, hero, maxHp } = hall();
     hero.ai.rules = hold();
+    delete hero.ai.tactics;
     hpTo(hero, maxHp, BASELINE_FLEE_PERCENT - 10);
     step(state, []);
     expect(hero.ai.memory.fleeing).toBeNull();
@@ -215,6 +218,7 @@ describe('harmless enemies', () => {
     const state = createRun({ party: [HERO], floorText: rows, depth: 1, monsters: false }, 1);
     const hero = getEntity(state, state.party[0] as number) as AiActor;
     hero.ai.rules = hold();
+    delete hero.ai.tactics;
     hero.inventory = { items: [{ def: 'item.scroll_of_identify', qty: 1, identified: false }] };
     perceive(state, hero.id);
     // A known way out: stairs down three tiles east.

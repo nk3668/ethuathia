@@ -68,6 +68,7 @@ describe('party cohesion baseline', () => {
     const { state, actors } = party(LONG_HALL);
     const [lead, follower] = actors as [AiActor, AiActor];
     lead.ai.rules = hold();
+    delete lead.ai.tactics;
     place(follower, 1 + PARTY_LEASH + 12, 1);
     expect(dist(lead, follower)).toBeGreaterThan(PARTY_LEASH);
 
@@ -91,6 +92,7 @@ describe('party cohesion baseline', () => {
     const { state, actors } = party(LONG_HALL);
     const [lead, follower] = actors as [AiActor, AiActor];
     lead.ai.rules = hold();
+    delete lead.ai.tactics;
     place(follower, 1 + PARTY_LEASH, 1);
     const events = Array.from({ length: 5 }, () => step(state, [])).flat();
     expect(fired(events).some((e) => e.action === 'act.regroup')).toBe(false);
@@ -100,6 +102,7 @@ describe('party cohesion baseline', () => {
     const { state, actors } = party(LONG_HALL, [HERO, ALLY], false, false);
     const [lead, follower] = actors as [AiActor, AiActor];
     lead.ai.rules = hold();
+    delete lead.ai.tactics;
     place(follower, 1 + PARTY_LEASH + 12, 1);
     expect(chooseRule({ state, actor: follower })?.action).not.toBe('act.regroup');
   });
@@ -108,6 +111,7 @@ describe('party cohesion baseline', () => {
     const { state, actors } = party(LONG_HALL);
     const [lead, follower] = actors as [AiActor, AiActor];
     lead.ai.rules = hold();
+    delete lead.ai.tactics;
     place(follower, 1 + PARTY_LEASH + 12, 1);
     spawnMonster(state, 'monster.mossling', 'd1', { x: follower.pos.x - 1, y: 1 });
     const choice = chooseRule({ state, actor: follower });
@@ -118,6 +122,7 @@ describe('party cohesion baseline', () => {
     const { state, actors } = party(LONG_HALL, [HERO, ALLY, THIRD]);
     const [lead, a, b] = actors as [AiActor, AiActor, AiActor];
     lead.ai.rules = hold();
+    delete lead.ai.tactics;
     place(a, 30, 1);
     place(b, 20, 1);
     const closest = new Map<EntityId, number>();
@@ -145,9 +150,11 @@ describe('party cohesion baseline', () => {
     const { state, actors } = party(corridor, [HERO, ALLY, THIRD]);
     const [lead, mid, far] = actors as [AiActor, AiActor, AiActor];
     lead.ai.rules = hold();
+    delete lead.ai.tactics;
     // `mid` idles (waiting on the spot) between the lead and the straggler, so the straggler has
     // to squeeze past it to reach the lead.
     mid.ai.rules = hold();
+    delete mid.ai.tactics;
     place(mid, 12, 1);
     place(far, 30, 1);
     for (let i = 0; i < 80 && dist(lead, far) > PARTY_CLOSE; i++) {

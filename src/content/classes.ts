@@ -16,7 +16,8 @@ import { isStampId, STAMP_IDS, STAMPS } from './stamps';
 import type { StampId } from './stamps';
 import type { ContentKind } from './kind';
 import { defShape } from './schema';
-import { NEUTRAL_PICKS, picksProblems, picksRefs, picksSchema } from './tactics';
+import { NEUTRAL_PICKS, picksProblems, picksRefs, picksSchema, RANGE_BACK_LINE, RANGE_FRONT_LINE, ROLE_HEALER } from './tactics';
+import { FOCUS_CASTERS, FOCUS_PROTECT_ALLIES, ROLE_TANK } from './tacticsRoles';
 import type { AdventurerPicks } from './tactics';
 
 /**
@@ -228,8 +229,8 @@ export const CLASS_VANGUARD = defineClass({
   kitUpgrade: { weapon: 'item.flanged_mace', defense: 'item.banded_shield' },
   trinket: 'item.copper_band',
   stamp: 'warding',
-  // The neutral build until the role, range and focus items give each class its own (ETH-193).
-  tactics: { ...NEUTRAL_PICKS },
+  // Holds the front and answers whoever hits an ally (ETH-193, CLAUDE.md §5.2).
+  tactics: { role: ROLE_TANK.id, range: RANGE_FRONT_LINE.id, focus: FOCUS_PROTECT_ALLIES.id, habits: [] },
 });
 
 export const CLASS_OUTRIDER = defineClass({
@@ -253,7 +254,7 @@ export const CLASS_OUTRIDER = defineClass({
   kitUpgrade: { weapon: 'item.trail_dirk', defense: 'item.ridge_boots' },
   trinket: 'item.knotwork_pendant',
   stamp: 'nimble',
-  // The neutral build until the role, range and focus items give each class its own (ETH-193).
+  // Neutral for now (ETH-193): at party 3 the Scout role and Close support each cost about 2 wins in 20 against neutral (see the item Log).
   tactics: { ...NEUTRAL_PICKS },
 });
 
@@ -279,8 +280,8 @@ export const CLASS_LOREKEEPER = defineClass({
   kitUpgrade: { weapon: 'item.ironshod_staff', defense: 'item.scribes_coat' },
   trinket: 'item.hearthstone_amulet',
   stamp: 'warding',
-  // The neutral build until the role, range and focus items give each class its own (ETH-193).
-  tactics: { ...NEUTRAL_PICKS },
+  // A fragile scholar fights from behind the others, going for casters first (ETH-193).
+  tactics: { role: ROLE_HEALER.id, range: RANGE_BACK_LINE.id, focus: FOCUS_CASTERS.id, habits: [] },
 });
 
 export const CLASS_REAVER = defineClass({
@@ -303,6 +304,6 @@ export const CLASS_REAVER = defineClass({
   kitUpgrade: { weapon: 'item.bearded_axe', defense: 'item.brow_helm' },
   trinket: 'item.garnet_signet',
   stamp: 'keen',
-  // The neutral build until the role, range and focus items give each class its own (ETH-193).
+  // Neutral on purpose: the Reaver is the control group of the tactics defaults (ETH-193).
   tactics: { ...NEUTRAL_PICKS },
 });

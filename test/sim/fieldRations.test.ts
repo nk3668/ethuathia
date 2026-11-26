@@ -109,6 +109,7 @@ describe('eating a ration', () => {
     const { state, hero } = hall(1);
     const foe = spawnMonster(state, 'monster.pit_badger', 'd1', { x: 16, y: 1 }) as AiActor;
     foe.ai.rules = [];
+    delete foe.ai.tactics;
     hero.actor.hp = Math.round(hero.actor.hp * 0.5);
     const events = step(state, []);
     expect(fired(events).find((e) => e.actor === hero.id)?.action).not.toBe('act.eat_ration');

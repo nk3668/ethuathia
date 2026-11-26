@@ -6,10 +6,10 @@
  */
 import type { Pos } from '../../core';
 import { aiPathGrid, followMap, nameOf } from '../ai/navigate';
-import { focusPreference } from '../ai/tactics';
+import { engageDistance } from '../ai/tactics';
 import { fleeBelowOf, fleeReleaseOf } from '../ai/stanceParams';
 import { defineCondition, defineRuleAction, noParams } from '../ai/types';
-import type { AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, RuleActionDef } from '../ai/types';
+import type { AiActor, AiCtx, ConditionDef, ParamParser, ResolveResult, Resolved, RuleActionDef } from '../ai/types';
 import { stepBlocker } from '../coreActions';
 import { blockerAt, featureAt, getEntity, getFloor, mayShareTile } from '../entities';
 import { buildFleeMap, buildGoalMap, floorPathGrid, OPEN_DOOR_COST, pathAlong, UNREACHABLE } from '../goalMap';
@@ -19,6 +19,7 @@ import type { ActorEntity, Entity, RunState } from '../state';
 import { statValue } from '../stats/getStat';
 import { escapeStep } from './escape';
 import { BASELINE_FLEE_PERCENT, FLEE_CALM_TURNS, FLEE_RELEASE_PERCENT } from './fleeConfig';
+import { chooseTarget } from './focus';
 import { freshThreats, visibleThreats } from './threat';
 import { DIRS_8 } from '../../core';
 
@@ -69,6 +70,17 @@ export function visibleEnemies(state: RunState, actor: ActorEntity): ActorEntity
 /** `actor`'s HP as a percentage of its maximum. */
 export function hpPercent(state: RunState, actor: ActorEntity): number {
   return (actor.actor.hp / Math.max(1, statValue(state, actor, 'hp'))) * 100;
+}
+
+/**
+ * True while an adventurer is, or is about to be, running by the baseline's flee rule (HP below
+ * `BASELINE_FLEE_PERCENT`, or still fleeing). Tactic rows that stand their ground (a Tank stepping
+ * up, a Healer hanging back) leave the actor to the baseline's flee while this holds.
+ */
+export function fleeingNow(state: RunState, actor: ActorEntity): boolean {
+  // The stance's flee line (ETH-071) when the actor has picks, else the baseline's.
+  const below = actor.ai === undefined ? BASELINE_FLEE_PERCENT : fleeBelowOf(actor as AiActor);
+  return hpPercent(state, actor) < below || actor.ai?.memory.fleeing != null;
 }
 
 /**
@@ -191,15 +203,19 @@ export const ACT_ATTACK_ADJACENT = defineRuleAction({
   parse: noParams,
   resolve(ctx): Resolved | null {
     const { state, actor } = ctx;
-    const enemies = adjacentEnemies(state, actor);
-    if (enemies.length === 0) return null;
-    // The focus tactic (ETH-162) picks whom to strike: the weakest (the default) or the strongest.
-    const strongest = focusPreference(ctx) === 'strongest';
-    const target = [...enemies].sort((a, b) => (strongest ? b.actor.hp - a.actor.hp : a.actor.hp - b.actor.hp) || a.id - b.id)[0] as ActorEntity;
+    // The focus tactic (ETH-162, ETH-193) picks whom to strike; the default, Weakest, is the old choice.
+    const chosen = chooseTarget(ctx, adjacentEnemies(state, actor), 'strike');
+    if (chosen === null) return null;
+    const { target, note } = chosen;
     const dir = { x: target.pos.x - actor.pos.x, y: target.pos.y - actor.pos.y };
-    return { request: { id: 'attack', dir }, detail: `attacking ${nameOf(target)}`, goal: { x: target.pos.x, y: target.pos.y } };
+    return {
+      request: { id: 'attack', dir },
+      detail: `attacking ${nameOf(target)}`,
+      goal: { x: target.pos.x, y: target.pos.y },
+      ...(note === undefined ? {} : { skipped: note }),
+    };
   },
-  describe: () => 'attack the weakest adjacent enemy',
+  describe: () => 'attack the adjacent enemy the focus picks (the weakest, by default)',
 });
 
 /** Walk toward the nearest enemy in sight. */
@@ -209,15 +225,21 @@ export const ACT_APPROACH_ENEMY = defineRuleAction({
   description: 'Walk toward the nearest enemy in sight, opening doors on the way.',
   parse: noParams,
   resolve(ctx): Resolved | null {
-    const target = visibleEnemies(ctx.state, ctx.actor)[0];
+    const visible = visibleEnemies(ctx.state, ctx.actor);
+    // Adventurers choose by their focus and stop at their range (ETH-193); monsters close in on the nearest.
+    const party = ctx.actor.actor.faction === 'party';
+    const chosen = party ? chooseTarget(ctx, visible, 'approach') : null;
+    const target = chosen?.target ?? visible[0];
     if (target === undefined) return null;
+    if (party && distance(target.pos, ctx.actor.pos) <= engageDistance(ctx)) return null;
     const paths = pathGridFor(ctx);
     const map = buildGoalMap(paths, [target.pos]);
     const cost = map.get(ctx.actor.pos.x, ctx.actor.pos.y);
     if (cost === UNREACHABLE) return null;
-    return followMap(ctx, paths, map, `closing in on ${nameOf(target)}`);
+    const step = followMap(ctx, paths, map, `closing in on ${nameOf(target)}`);
+    return step === null || chosen?.note === undefined ? step : { ...step, skipped: chosen.note };
   },
-  describe: () => 'close in on the nearest enemy in sight',
+  describe: () => 'close in on an enemy in sight (the nearest, or the one the focus picks)',
 });
 
 /**

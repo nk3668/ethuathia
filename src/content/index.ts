@@ -48,6 +48,7 @@ export * from './startPerks';
 export * from './stamps';
 export * from './formations';
 export * from './tactics';
+export * from './tacticsRoles';
 export * from './stances';
 export * from './upgrades';
 export * from './town';

@@ -24,7 +24,8 @@ import { buildGoalMap, UNREACHABLE } from '../goalMap';
 import { fieldOfView, sightRadius } from '../perception';
 import type { ActorEntity, Entity, RunState } from '../state';
 import { templatesOf } from './overlay';
-import { adjacentEnemies, distance, hpPercent, isHostile, pathGridFor, visibleEnemies } from './rules';
+import { adjacentEnemies, distance, fleeingNow, hpPercent, isHostile, pathGridFor, visibleEnemies } from './rules';
+import { isThreat } from './threat';
 
 /** The role powers of an actor: those on its monster def, or none (adventurers, for now). */
 export interface RolePowers {
@@ -276,6 +277,15 @@ export const ACT_HANG_BACK = defineRuleAction({
     const powers = rolePowers(actor);
     const reach = Math.min(powers.mend?.range ?? 3, powers.bolster?.range ?? 3);
     const front = visibleAllies(state, actor).sort((a, b) => distance(a.pos, enemy.pos) - distance(b.pos, enemy.pos) || a.id - b.id)[0];
+    // An adventurer (a Healer, ETH-193) only hangs back behind an ally that is nearer the enemy, never
+    // when alone, in a melee of its own or running; then it plays as normal.
+    if (actor.actor.faction === 'party') {
+      if (!isThreat(state, enemy)) return null;
+      if (front === undefined || distance(front.pos, enemy.pos) >= distance(actor.pos, enemy.pos)) return null;
+      if (adjacentEnemies(state, actor).length > 0 || fleeingNow(state, actor)) return null;
+      // Only while the ally is actually fighting: waiting on a foe that is not coming would stall the party.
+      if (adjacentEnemies(state, front).length === 0) return null;
+    }
     if (front !== undefined && distance(front.pos, actor.pos) > reach) {
       const paths = pathGridFor(ctx);
       const step = followMap(ctx, paths, buildGoalMap(paths, [front.pos]), `staying close to ${nameOf(front)}`);

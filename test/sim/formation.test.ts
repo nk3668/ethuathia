@@ -43,6 +43,8 @@ function party(tactics: { stance?: string; formation?: string } | undefined, gap
   for (let i = 0; i < terrain.length; i++) memory[i] = (terrain[i] as number) + 1;
   for (let y = 3; y < 8; y++) for (let x = 2; x <= 4; x++) memory[y * WIDTH + x] = 0;
   lead.ai.rules = hold();
+  // Hand-set rules: the lead plays no tactics (the Vanguard's Tank rows would not match them).
+  delete lead.ai.tactics;
   follower.pos = { x: lead.pos.x + gap, y: lead.pos.y };
   return { state, lead, follower };
 }

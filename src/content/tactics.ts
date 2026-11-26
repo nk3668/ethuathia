@@ -61,8 +61,23 @@ export interface TacticFit {
 }
 
 /** The target preferences a focus option can have. */
-export const FOCUS_PREFERENCES = ['weakest', 'strongest'] as const;
+export const FOCUS_PREFERENCES = ['weakest', 'strongest', 'nearest', 'casters', 'melee', 'ranged', 'protect'] as const;
 export type FocusPreference = (typeof FOCUS_PREFERENCES)[number];
+
+/**
+ * How a focus reads in the trace (ETH-193): its name, and what it looked for when nothing matched
+ * ("Casters: no caster next to me, striking the weakest"). Weakest, Strongest and Nearest always
+ * have a target, so they have no `none`.
+ */
+export const FOCUS_INFO: Readonly<Record<FocusPreference, { readonly label: string; readonly none?: string }>> = {
+  weakest: { label: 'Weakest' },
+  strongest: { label: 'Strongest' },
+  nearest: { label: 'Nearest' },
+  casters: { label: 'Casters', none: 'no caster' },
+  melee: { label: 'Melee', none: 'no melee foe' },
+  ranged: { label: 'Ranged', none: 'no ranged foe' },
+  protect: { label: 'Protect allies', none: 'no foe is hitting an ally' },
+};
 
 /**
  * An option's parameters. The keys depend on the axis: formation `{ leash, close }` (tiles the party
@@ -279,12 +294,17 @@ export const ROLE_HEALER = defineTactic({
   id: 'tactic.healer',
   name: 'Healer',
   description:
-    'Looks after the party’s health first: uses the best healing it carries once below half HP. Without any healing it ' +
-    'says so in the log and carries on as normal.',
+    'Looks after the party’s health first: uses the best healing it carries once below half HP, tends an ally below 60% ' +
+    'with healing that can reach them, and keeps back from a fight its allies are already in. With no healing that fits ' +
+    'it says so in the log and carries on as normal (nothing the party carries reaches an ally yet).',
   hint: 'Keeps a hand on the wounded and a flask at the ready.',
   tags: [],
   axis: 'role',
-  rows: [{ condition: { id: 'cond.wounded', params: { percent: 50 } }, action: { id: 'act.use_ability', params: { tag: 'heal' } } }],
+  rows: [
+    { condition: { id: 'cond.wounded', params: { percent: 50 } }, action: { id: 'act.use_ability', params: { tag: 'heal' } } },
+    { condition: { id: 'cond.ally_hurt', params: { percent: 60 } }, action: { id: 'act.tend_ally', params: { tag: 'heal' } } },
+    { condition: { id: 'cond.enemy_visible' }, action: { id: 'act.hang_back' } },
+  ],
 });
 
 export const RANGE_FRONT_LINE = defineTactic({

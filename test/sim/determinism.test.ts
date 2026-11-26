@@ -2,14 +2,15 @@
  * The sim's core contract (docs/ARCHITECTURE.md §3.1 and §10): the same seed and the same commands
  * give the same state, and a save taken mid-run carries on exactly as if it had never been taken.
  */
+import { NEUTRAL_PICKS } from '../../src/content';
 import { describe, expect, it } from 'vitest';
 import { createRun, deserialize, serialize, stateHash, step } from '../../src/sim';
 import type { Command, EntityId, RunConfig, RunState, SimEvent } from '../../src/sim';
 
 const CONFIG: RunConfig = {
   party: [
-    { name: 'Mira', classId: 'class.vanguard', raceId: 'race.human' },
-    { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human' },
+    { name: 'Mira', classId: 'class.vanguard', raceId: 'race.human', tactics: NEUTRAL_PICKS },
+    { name: 'Oren', classId: 'class.vanguard', raceId: 'race.human', tactics: NEUTRAL_PICKS },
   ],
   // A short floor turn cap sends the party down the stairs within the run, so floors are built
   // mid-run and the party sometimes splits across them.
@@ -60,7 +61,7 @@ function commandsAt(state: RunState, i: number): Command[] {
       return [{ type: 'retreat' }];
     // Tactics (ETH-162): swap picks mid-run, for one adventurer and for the party, and swap one back.
     case 30:
-      return [{ type: 'setTactics', actor: b, role: 'tactic.healer', focus: 'tactic.strongest' }];
+      return [{ type: 'setTactics', actor: b, role: 'tactic.tank', focus: 'tactic.strongest' }];
     case 55:
       return [
         { type: 'setTactics', formation: 'tactic.loose' },
