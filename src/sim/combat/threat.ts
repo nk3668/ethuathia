@@ -103,7 +103,10 @@ export function updateThreatMemory(state: RunState, actor: AiActor): void {
       const again = cycle !== undefined && state.turn - cycle.last <= FLEE_CYCLE_WINDOW && Math.max(Math.abs(cycle.pos.x - pos.x), Math.abs(cycle.pos.y - pos.y)) <= FLEE_CYCLE_RADIUS;
       // A cycle that goes on keeps its rest and give-up marks, so each is announced once; a new one
       // after a long gap (the rest) still remembers how many rests failed to bring HP back.
-      memory.fleeCycle = again ? { ...cycle, episodes: cycle.episodes + 1, last: state.turn, pos } : { episodes: 1, last: state.turn, pos, ...(cycle?.rests === undefined ? {} : { rests: cycle.rests }), ...(cycle?.blocked === undefined ? {} : { blocked: cycle.blocked }) };
+      // A flight after a rest that has ended (or was cut short) clears `restUntil`, so the next rest can start in the same cycle.
+      const next = again ? { ...cycle, episodes: cycle.episodes + 1, last: state.turn, pos } : null;
+      if (next !== null) delete next.restUntil;
+      memory.fleeCycle = next ?? { episodes: 1, last: state.turn, pos, ...(cycle?.rests === undefined ? {} : { rests: cycle.rests }), ...(cycle?.blocked === undefined ? {} : { blocked: cycle.blocked }) };
     }
     return;
   }

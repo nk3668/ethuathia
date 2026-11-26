@@ -1988,6 +1988,10 @@ As built in `src/sim/ai/` (ETH-009):
   `cond.cycle_blocked → act.rest` (below explore, descend and gather) holds it still until HP is back to
   `FLEE_HOPELESS_RECOVER_PERCENT` (90), which ends the cycle and the zone. One adventurer never ends the run
   (ending it early is the player's choice, e.g. the Fall back stance); the turn cap is the only hard net.
+  A flight that begins after a rest has ended or been cut short clears `restUntil`, so the next rest can
+  start inside the same cycle (`rests` counts them). While any other party member's last decision was
+  `act.rest`, baseline `cond.ally_resting → act.wait_for_ally` (same slot as the rest rule) keeps everyone
+  else within `PARTY_CLOSE` of them, waiting ("waiting for X to recover").
   `fleeCycle` is optional state: absent until a flight begins, so no `STATE_VERSION` bump.
 - **Speed:** a lone adventurer explores a generated Hewn Halls floor in about 200 party turns
   (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite. A
