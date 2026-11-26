@@ -4,7 +4,7 @@
 
 **Current milestone: M3 (Tactics and AI).** M2 (Meta loop) is complete: its capstone ETH-161 and the follow-up ETH-191 merged 2026-11-25. On 2026-11-25 Nate replaced player-written behavior rules with **tactics** the player picks and swaps (`CLAUDE.md` §5.2), and the M3 items were rewritten for it.
 
-**Assigned to Gemini (Antigravity)**; All assigned items (ETH-083, ETH-095, ETH-157, ETH-158, ETH-175) are reviewed and merged.
+**Assigned to Gemini (Antigravity):** ETH-197 (M3). Earlier items (ETH-083, ETH-095, ETH-157, ETH-158, ETH-175) are reviewed and merged.
 
 Sorted by milestone, then priority. See [README.md](README.md) for conventions.
 
