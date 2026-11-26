@@ -57,6 +57,7 @@ import { carryLimit, carryWeight, floorItems, inventoryOf, noticeItems } from '.
 import type { KnownItems } from './inventory';
 import { GEN_LOOT } from './loot';
 import { ITEMS_CONDITIONS, ITEMS_RULE_ACTIONS } from './rules';
+import { ITEMS_HABIT_CONDITIONS, ITEMS_HABIT_RULE_ACTIONS } from './habitRules';
 import { itemValue } from './value';
 
 export * from './instance';
@@ -519,8 +520,8 @@ export const ITEMS_DOMAIN: SimDomain<ItemsTypes> = {
   commands: ITEMS_COMMANDS,
   init: initItems,
   snapshot: itemsSnapshot,
-  conditions: ITEMS_CONDITIONS,
-  ruleActions: ITEMS_RULE_ACTIONS,
+  conditions: [...ITEMS_CONDITIONS, ...ITEMS_HABIT_CONDITIONS],
+  ruleActions: [...ITEMS_RULE_ACTIONS, ...ITEMS_HABIT_RULE_ACTIONS],
   genSteps: [GEN_LOOT],
   bundleSources: [SOURCE_EQUIPPED],
   effectHandlers: ITEMS_EFFECT_HANDLERS,

@@ -68,7 +68,7 @@ describe('Town tab', () => {
       'Waymark Lanterns',
       'Seasoned Constitution0/3',
       'Second Contract Board',
-      'Rule Clerk',
+      'Habit Tutor',
       "Quartermaster's Mystery Crate",
       "Stalker's Ledger",
       'Deep Surge',
@@ -128,10 +128,10 @@ describe('Town tab', () => {
     expect(nodeButton('Second Contract Board').textContent).toContain('Not chosen');
     await user.click(nodeButton('Second Contract Board'));
     const detail = screen.getByRole('region', { name: 'Second Contract Board details' });
-    expect(detail.textContent).toContain('Instead of Rule Clerk');
+    expect(detail.textContent).toContain('Instead of Habit Tutor');
     expect(detail.textContent).toContain('no fee');
     expect(within(detail).queryByRole('button', { name: /Buy/ })).toBeNull();
-    await user.click(within(detail).getByRole('button', { name: 'Respec: give up Rule Clerk' }));
+    await user.click(within(detail).getByRole('button', { name: 'Respec: give up Habit Tutor' }));
     const { profile } = useProfileStore.getState();
     expect(profile.upgrades.owned).toEqual(['upgrade.second_berth', 'upgrade.contract_board']);
     expect(profile.currencies.renown).toBe(3700);

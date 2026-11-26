@@ -10,6 +10,7 @@
 import type { Pos } from '../../core';
 import { aiPathGrid, followMap, nameOf } from './navigate';
 import { fleeBelowOf } from './stanceParams';
+import { healBelowOf } from './habitParams';
 import { defineCondition, defineRuleAction, noParams } from './types';
 import type { AiCtx, ConditionDef, ParamParser, Resolved, RuleActionDef } from './types';
 import { adjacentEnemies, hpPercent } from '../combat/rules';
@@ -36,7 +37,7 @@ interface MayActOptions {
 /**
  * Why a stance row must not fire right now, or `null` when it may: the party is already heading
  * out, the actor is fleeing, an enemy is next to it or (with `threats`) a threat is in sight, it
- * needs healing it carries (below `HEAL_BELOW_PERCENT` with a healing potion) or is overloaded.
+ * needs healing it carries (below its healing line, `HEAL_BELOW_PERCENT` or a habit's `healBelow`, with a healing potion) or is overloaded.
  * The one place the stance rows learn what the baseline puts first.
  */
 export function stanceBlock(ctx: AiCtx, { hurt = false, threats = true }: MayActOptions = {}): string | null {
@@ -46,7 +47,7 @@ export function stanceBlock(ctx: AiCtx, { hurt = false, threats = true }: MayAct
   if (adjacentEnemies(state, actor).length > 0) return 'an enemy is next to me';
   if (threats && visibleThreats(state, actor).length > 0) return 'a threat is in sight';
   if (!hurt) {
-    if (hpPercent(state, actor) < HEAL_BELOW_PERCENT && carriesHealingPotion(state, actor)) return 'needs healing';
+    if (hpPercent(state, actor) < healBelowOf(actor, HEAL_BELOW_PERCENT) && carriesHealingPotion(state, actor)) return 'needs healing';
     if (isOverloaded(state, actor)) return 'overloaded';
   }
   return null;

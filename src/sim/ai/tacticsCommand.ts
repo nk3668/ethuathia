@@ -89,7 +89,7 @@ export const TACTICS_COMMANDS: CommandRecord<SetTacticsCommand> = {
       // Check every target's new picks before changing any.
       const next = targets.map((m): TacticPicks => ({ ...m.ai.tactics, ...(changes as Partial<TacticPicks>) }));
       for (const picks of next) {
-        const problems = tacticPickProblems(picks);
+        const problems = tacticPickProblems(picks, state.config.habitSlots);
         if (problems.length > 0) return problems.join('; ');
       }
 

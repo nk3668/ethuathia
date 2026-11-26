@@ -54,7 +54,7 @@ defineUpgrade({
   column: 0,
   cost: { renown: 7, trophies: 3 },
   requires: [],
-  grants: [{ kind: 'capacity', key: 'ruleSlots', amount: 1 }],
+  grants: [{ kind: 'capacity', key: 'habitSlots', amount: 1 }],
 });
 
 // A pick-one pair whose left node has a chain of dependents, for the respec cascade.
@@ -69,7 +69,7 @@ const testNode = (id: string, tier: number, column: number, renown: number, fiel
     column,
     cost: { renown },
     requires: [],
-    grants: [{ kind: 'capacity', key: 'ruleSlots', amount: 1 }],
+    grants: [{ kind: 'capacity', key: 'habitSlots', amount: 1 }],
     ...fields,
   });
 testNode('left', 1, 1, 7, { exclusiveGroup: 'test_shrine.t1' });
@@ -90,7 +90,7 @@ for (const [id, column] of [['pick_a', 1], ['pick_b', 2]] as const) {
     cost: { renown: 120 },
     requires: [],
     exclusiveGroup: 'test_forge.t1',
-    grants: [{ kind: 'capacity', key: 'ruleSlots', amount: 1 }],
+    grants: [{ kind: 'capacity', key: 'habitSlots', amount: 1 }],
   });
 }
 
@@ -322,7 +322,7 @@ describe('grants', () => {
     p = buy(p, 'upgrade.second_berth', 'upgrade.contract_board');
     expect(capacity(p, 'partySize', 1)).toBe(2);
     expect(capacity(p, 'contractSlots', 1)).toBe(2);
-    expect(capacity(p, 'ruleSlots', 1)).toBe(1);
+    expect(capacity(p, 'habitSlots', 1)).toBe(1);
   });
 
   it('derives unlocks from owned nodes and ignores ids no longer in content', () => {

@@ -116,9 +116,12 @@ export function startingPicks(
   };
 }
 
-/** Why `picks` can't be played, as problem lines: the adventurer's own picks, and the party's two axes. */
-export function tacticPickProblems(picks: TacticPicks): string[] {
-  const problems = picksProblems(picks);
+/**
+ * Why `picks` can't be played, as problem lines: the adventurer's own picks, and the party's two
+ * axes. `slots` is the run's habit slots (`RunConfig.habitSlots`); left out, no limit but `MAX_HABITS`.
+ */
+export function tacticPickProblems(picks: TacticPicks, slots?: number): string[] {
+  const problems = picksProblems(picks, undefined, slots);
   for (const axis of ['stance', 'formation'] as const) {
     const id = picks[axis];
     if (!TACTICS.has(id)) problems.push(`unknown ${axis} tactic "${id}"`);
@@ -175,7 +178,7 @@ registerInvariant('core.tactics', (state) => {
   for (const entity of Object.values(state.entities)) {
     const picks = entity.ai?.tactics;
     if (entity.ai === undefined || picks === undefined) continue;
-    const bad = tacticPickProblems(picks);
+    const bad = tacticPickProblems(picks, state.config.habitSlots);
     if (bad.length > 0) {
       problems.push(`actor ${entity.id} has unplayable tactics: ${bad.join('; ')}`);
       continue;

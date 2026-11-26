@@ -27,6 +27,7 @@ import { ownedNodes, rankOf } from '../upgrades';
 import { CHOICE_ENTRIES } from './index';
 import type { RunChoices } from './index';
 import { withOptIns } from './optIns';
+import { fitHabits, habitSlotsOf } from './habits';
 import { fillParty, MAX_PARTY_SIZE, partySize } from './party';
 import { upgradeStartConfig } from './startPerks';
 
@@ -118,6 +119,8 @@ export function buildRunConfig(profile: Profile, choices: RunChoices, seed: numb
   // The locked `metInRun` milestones' requirements, for `track.requirements` (ETH-121).
   const watch = milestoneRequirements(profile);
   if (watch.length > 0) config.watchRequirements = watch;
+  // Habit slots (ETH-194): the sim refuses more habits than this.
+  config.habitSlots = habitSlotsOf(profile);
   const problems = checkRunConfig(config);
   if (problems.length > 0) throw new RangeError(`Invalid run config: ${problems.join('; ')}`);
   return config;
@@ -156,10 +159,12 @@ export function startRun(
   let adventurers = profile.adventurers;
   const taken = new Set<string>();
   // A record's own tactics picks (ETH-162) go into the config; ones that can no longer be played
-  // (an option the content dropped) are ignored, so the class's default build applies.
+  // (an option the content dropped) are ignored, so the class's default build applies. A build
+  // with more habits than the profile has slots keeps its first ones (`fitHabits`).
   const withPicks = (member: AdventurerConfig, id: string): AdventurerConfig => {
     const tactics = adventurers.records[id]?.tactics;
-    return tactics === undefined || picksProblems(tactics).length > 0 ? member : { ...member, tactics: { ...tactics, habits: [...tactics.habits] } };
+    if (tactics === undefined || picksProblems(tactics).length > 0) return member;
+    return { ...member, tactics: fitHabits({ ...tactics, habits: [...tactics.habits] }, built.habitSlots ?? tactics.habits.length).picks };
   };
   const party = built.party.map((member) => {
     const same = previous?.party.find(
@@ -194,7 +199,7 @@ export function checkRunConfig(config: RunConfig): string[] {
     if (!RACES.has(m.raceId)) problems.push(`party[${i}] has unknown race "${m.raceId}"`);
     if (m.stamp !== undefined && !isStampId(m.stamp)) problems.push(`party[${i}] has unknown stamp "${m.stamp}"`);
     if (CLASSES.has(m.classId)) {
-      for (const p of tacticPickProblems(startingPicks(m.classId, config.tactics, m.tactics))) problems.push(`party[${i}] has invalid tactics: ${p}`);
+      for (const p of tacticPickProblems(startingPicks(m.classId, config.tactics, m.tactics), config.habitSlots)) problems.push(`party[${i}] has invalid tactics: ${p}`);
     }
   });
   for (const id of config.partyBundles ?? []) if (!hasBundle(id)) problems.push(`unknown party bundle "${id}"`);

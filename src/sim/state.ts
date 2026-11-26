@@ -23,7 +23,7 @@ import type { StatsConfig, StatsParts } from './stats';
  * A branch that changes the shape sets it to (the version on main) + 1 when it rebases, so two
  * branches never ship different shapes under one number (docs/ARCHITECTURE.md, Contracts).
  */
-export const STATE_VERSION = 41;
+export const STATE_VERSION = 42;
 
 /**
  * Entity ids are positive integers handed out in order from `RunState.nextEntityId` and never
@@ -106,6 +106,11 @@ export interface RunConfig
    * `tactic.*`) every member begins with. Left out, the neutral defaults.
    */
   tactics?: { stance?: string; formation?: string };
+  /**
+   * Habits each adventurer may carry (ETH-194): the Guild Hall's habit slots, 1 to `MAX_HABITS`.
+   * Left out, no limit but `MAX_HABITS`, so hand-built runs and tests need not set it.
+   */
+  habitSlots?: number;
   /**
    * A hand-built first floor as text (see `parseFloorText`). Tests use it for hand-built maps.
    * Leave it out to generate the first floor from the run's seed.

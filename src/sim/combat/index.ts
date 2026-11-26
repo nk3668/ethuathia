@@ -50,6 +50,7 @@ import { namesOf, overlayProblems, PROVIDER_OVERLAY, SOURCE_MONSTER_INNATE, SOUR
 import type { ShownName } from './overlay';
 import { boltable, canSee, isAlly, rolePowers, ROLE_CONDITIONS, ROLE_RULE_ACTIONS } from './roles';
 import { TACTIC_ROLE_CONDITIONS, TACTIC_ROLE_RULE_ACTIONS } from './tacticRoles';
+import { HABIT_CONDITIONS, HABIT_RULE_ACTIONS } from './habitRules';
 import { adjacentEnemies, COMBAT_CONDITIONS, COMBAT_RULE_ACTIONS, distance, hpPercent, isHostile } from './rules';
 import { ESCAPE_CONDITIONS } from './escape';
 import { RECOVER_CONDITIONS, RECOVER_RULE_ACTIONS } from './recover';
@@ -542,8 +543,8 @@ export const COMBAT_DOMAIN: SimDomain<CombatTypes> = {
   commands: COMBAT_COMMANDS,
   init: initCombat,
   snapshot: combatSnapshot,
-  conditions: [...COMBAT_CONDITIONS, ...RECOVER_CONDITIONS, ...ESCAPE_CONDITIONS, ...ROLE_CONDITIONS, ...GROUP_CONDITIONS, ...TACTIC_ROLE_CONDITIONS],
-  ruleActions: [...COMBAT_RULE_ACTIONS, ...RECOVER_RULE_ACTIONS, ...ROLE_RULE_ACTIONS, ...GROUP_RULE_ACTIONS, ...TACTIC_ROLE_RULE_ACTIONS],
+  conditions: [...COMBAT_CONDITIONS, ...RECOVER_CONDITIONS, ...ESCAPE_CONDITIONS, ...ROLE_CONDITIONS, ...GROUP_CONDITIONS, ...TACTIC_ROLE_CONDITIONS, ...HABIT_CONDITIONS],
+  ruleActions: [...COMBAT_RULE_ACTIONS, ...RECOVER_RULE_ACTIONS, ...ROLE_RULE_ACTIONS, ...GROUP_RULE_ACTIONS, ...TACTIC_ROLE_RULE_ACTIONS, ...HABIT_RULE_ACTIONS],
   genSteps: [GEN_MONSTERS],
   floorPlanHooks: [RISK_PLAN_HOOK],
   triggers: [TRIGGER_HIT, TRIGGER_STRUCK],

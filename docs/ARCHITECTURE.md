@@ -645,7 +645,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`), and ETH-147 36 (the `mix` item field: hidden blessing counts in a stack of unidentified potions or scrolls), then ETH-148 37 (`AiMemory.fleeing`, `AiMemory.threats`), ETH-119 38 (`AdventurerPart.recordId` and `track.kills.byActor`), and ETH-184 39 (`track.identified`), then 40 on main, and ETH-162 41 (`AiPart.tactics`, and the `option` tag on `Rule` and `RuleRef`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`), and ETH-147 36 (the `mix` item field: hidden blessing counts in a stack of unidentified potions or scrolls), then ETH-148 37 (`AiMemory.fleeing`, `AiMemory.threats`), ETH-119 38 (`AdventurerPart.recordId` and `track.kills.byActor`), and ETH-184 39 (`track.identified`), then 40 on main, and ETH-162 41 (`AiPart.tactics`, and the `option` tag on `Rule` and `RuleRef`), then ETH-194 42 (`RunConfig.habitSlots`).
 
 ### Contracts in the run (ETH-024)
 
@@ -1878,6 +1878,35 @@ interface RuleActionDef extends Def {
     support each cost about 2 wins in 20 at party 3; see ETH-193's Log). The baseline rules after
     `act.hold_range` moved up one index, so state hashes differ from ETH-162 though behavior with
     neutral picks is identical (a test compares neutral picks' event streams against no tactics).
+  - **Habits (ETH-194).** Content in `src/content/tacticsHabits.ts`, six habits, each rows or one
+    parameter, never both. *Quick to quaff* and *Sparing with potions* (an exclusive pair) carry
+    `params.healBelow` (60 and 20), which the baseline's first urgent rule reads through the new
+    condition `cond.needs_healing` (`habitParams.ts`: `healBelowOf(actor, 35)`), so with no habit that
+    rule is the old 35% line exactly; its trace detail names the habit. *Treasure hunter*
+    `cond.calm` -> `act.pick_up { maxDetour: 30 }` (the baseline's is 8); *Avoids combat*
+    `cond.enemy_visible` -> ETH-193's `act.avoid_fight`; *Finisher* `cond.finisher_target` (a threat
+    at 35% HP or less within 6 tiles, none adjacent) -> `act.finish_wounded`; *Bodyguard*
+    `cond.healer_far` (an ally whose picked role is Healer more than 3 tiles away, none adjacent) ->
+    `act.stay_by_healer`; *Curious* `cond.curious_ready` -> `act.test_unknown` (drink a potion whose
+    type is unknown, at 70% HP or more, no threat in sight, a known way out; `calmWithExit` is shared
+    with `cond.safe_to_test`). Exclusive pairs: Quick/Sparing and Avoids combat/Finisher. Habit rows sit
+    ahead of the whole baseline, so `cond.calm`, `cond.finisher_target` and `cond.healer_far` are safe
+    on their own: never with a threat in sight (or adjacent), while fleeing, or while the party is
+    heading out or the floor is overstayed. Conditions and actions: `src/sim/combat/habitRules.ts`
+    and `src/sim/items/habitRules.ts`. **Secrecy:** Curious chooses by known category and
+    `isInstanceTypeKnown` only; `test/sim/tacticsHabits.test.ts` checks the decision is the same for
+    two different unknown potion types. The baseline's emergency gamble on an unknown potion stays at
+    its own 35% line (`act.quaff_healing` refuses it above that), whatever `healBelow` a habit sets:
+    Quick to quaff drinks known healing at 60% but gambles on an unknown potion only below 35%.
+  - **Habit slots.** `capacity(profile, 'habitSlots', 1)` (`habitSlotsOf`, `src/meta/prepare/habits.ts`,
+    clamped to `MAX_HABITS` 3; the Guild Hall's Habit Tutor, id `upgrade.rule_clerk` kept so owned
+    nodes in saves stay valid, grants +1) goes into `RunConfig.habitSlots` in `buildRunConfig`. The sim
+    checks it in `tacticPickProblems(picks, slots)`, used by `createRun`, `setTactics` and the
+    `core.tactics` invariant ("2 habits, but only 1 habit slot"); left out, only `MAX_HABITS` applies, so
+    hand-built runs need not set it. `startRun` cuts a stored build to the slots (`fitHabits`, first
+    habits kept, so an exclusive pair is never left behind) so a respec never stops a run starting.
+    Capacities are derived from owned nodes, so renaming the key `ruleSlots` -> `habitSlots` needed no
+    save migration. `npm run sim -- --habit ID` gives every adventurer one habit.
   - **Party stances (ETH-071, `src/content/stances.ts`, `src/sim/ai/stanceRules.ts`,
     `stanceParams.ts`).** A stance's rows run ahead of the whole baseline, so each row names a
     **guarded condition**: `stanceBlock(ctx)` is the one place that says when the baseline has
@@ -1909,13 +1938,13 @@ interface RuleActionDef extends Def {
     `formation`, applied to every member; with `actor`, that adventurer's `role`, `range`,
     `focus` and `habits`. Checked whole before anything changes; emits one `tacticsSet` event per
     axis changed; the new rules apply at the adventurer's next decision. The sim never changes
-    picks on its own (no automatic switching). Unlock checks (Library, ETH-163) and habit slots
-    (ETH-194) belong to the callers and to those items.
+    picks on its own (no automatic switching). Habit slots are checked here (see Habits below);
+    unlock checks (Library, ETH-163) belong to the callers and to that item.
   - **Roster and saves:** `AdventurerRecord.tactics` (optional `AdventurerPicks`, adventurers
     slice version 2, a no-op migration since old records simply have none) is set with
     `setRecordTactics`; `startRun` copies a record's playable picks into the member's config.
-    The run state version is 41. The save envelope version is unchanged: nothing about its layout
-    changed.
+    The run state version is 42 (ETH-194: `RunConfig.habitSlots`, kept in `state.config`). The save
+    envelope version is unchanged: nothing about its layout changed.
 - **Stuck detection** lives in `AiMemory`: if position and explored percentage are unchanged
   for N turns, the current goal is dropped, a different one is chosen and the change is logged.
 
@@ -2241,7 +2270,7 @@ interface UpgradeNode extends Def {
 type Grant =
   | { kind: 'bundle'; scope: 'party' | 'run'; bundle: Bundle }
   | { kind: 'unlock'; id: string }                // class, race, condition, Omen, floor type…
-  | { kind: 'capacity'; what: CapacityId; amount: number }   // rule slots, party size…
+  | { kind: 'capacity'; what: CapacityId; amount: number }   // habit slots, party size…
 ```
 
 One engine and one tree view serve every building. `isUnlocked(profile, id)` and
@@ -2256,7 +2285,7 @@ As built (ETH-063):
   `{ kind: 'unlock', id }` and `{ kind: 'capacity', key, amount }`. `bundle` is the shared
   `Bundle` (§2.2, `bundleSchema` plus a check that it has a modifier or trigger; its refs come
   from `bundleRefs`). Capacity keys and their tooltip names are `CAPACITY_INFO` (`partySize`,
-  `contractSlots`, `ruleSlots`, and the run capacities `contractRewardBonus`, `xpBonus`,
+  `contractSlots`, `habitSlots`, and the run capacities `contractRewardBonus`, `xpBonus`,
   `fieldRations`, `tradeBonus`); a new capacity is one entry there.
 - **Doctrine choices** (e.g. "Prioritize clearing floors" vs "Prioritize the stairs") are
   `unlock` grants of `doctrine.*` ids in a pick-one group, with no separate grant kind. The

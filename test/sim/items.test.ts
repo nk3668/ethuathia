@@ -225,7 +225,7 @@ describe('the baseline with items', () => {
     hero.actor.hp = Math.floor(max * 0.2);
     events = run(state, 1);
     expect(ofType(events, 'used')).toMatchObject([{ actor: hero.id, item: POTION }]);
-    expect(ofType(events, 'ruleFired')[0]).toMatchObject({ action: 'act.quaff_healing', condition: 'cond.wounded' });
+    expect(ofType(events, 'ruleFired')[0]).toMatchObject({ action: 'act.quaff_healing', condition: 'cond.needs_healing' });
     expect(hero.inventory.items).toEqual([{ def: POTION, qty: 1 }]);
   });
 });

@@ -49,6 +49,7 @@ export * from './stamps';
 export * from './formations';
 export * from './tactics';
 export * from './tacticsRoles';
+export * from './tacticsHabits';
 export * from './stances';
 export * from './upgrades';
 export * from './town';

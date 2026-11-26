@@ -111,6 +111,25 @@ const rowSchema = z.strictObject({ condition: ruleRef('cond'), action: ruleRef('
 const fitSchema = z.strictObject({ classes: z.array(idSchema('class')).min(1).optional() });
 const paramValue = z.union([z.number(), z.string()]);
 
+/**
+ * The optional keys a habit may carry (ETH-194), each a whole number within `[min, max]`. A habit
+ * with `healBelow` replaces the baseline's 35% for quaffing healing (Quick to quaff 60, Sparing 20).
+ */
+export const HABIT_PARAM_LIMITS = { healBelow: { min: 1, max: 99 } } as const;
+
+/** Why `params` are wrong for a habit option, as problem lines. */
+export function habitParamProblems(params: TacticParams | undefined): string[] {
+  const problems: string[] = [];
+  for (const [key, value] of Object.entries(params ?? {})) {
+    const limit = (HABIT_PARAM_LIMITS as Record<string, { min: number; max: number } | undefined>)[key];
+    if (limit === undefined) problems.push(`params.${key} is not a habit parameter`);
+    else if (typeof value !== 'number' || !Number.isInteger(value) || value < limit.min || value > limit.max) {
+      problems.push(`params.${key} must be a whole number from ${limit.min} to ${limit.max}`);
+    }
+  }
+  return problems;
+}
+
 // --- Stance parameters (ETH-071) --------------------------------------------------------------
 
 /**
@@ -147,6 +166,7 @@ export function stanceParamProblems(params: TacticParams | undefined): string[] 
 
 /** Why `params` are wrong for `axis`, as problem lines (keys, types and ranges). */
 export function tacticParamProblems(axis: TacticAxis, params: TacticParams | undefined): string[] {
+  if (axis === 'habit') return habitParamProblems(params);
   if (axis === 'stance') return stanceParamProblems(params);
   const keys = { formation: ['leash', 'close'], range: ['engage'], focus: ['prefer'] }[axis as 'formation' | 'range' | 'focus'];
   if (keys === undefined) return params === undefined ? [] : [`a ${axis} option takes no params`];
@@ -348,16 +368,6 @@ export const FOCUS_STRONGEST = defineTactic({
   params: { prefer: 'strongest' },
 });
 
-export const HABIT_QUICK_TO_QUAFF = defineTactic({
-  id: 'tactic.quick_to_quaff',
-  name: 'Quick to quaff',
-  description: 'Uses the best healing it carries as soon as HP drops below 60%, rather than waiting for the baseline’s 35%.',
-  hint: 'Never lets the wounds pile up.',
-  tags: [],
-  axis: 'habit',
-  rows: [{ condition: { id: 'cond.wounded', params: { percent: 60 } }, action: { id: 'act.use_ability', params: { tag: 'heal' } } }],
-});
-
 /** The neutral option on each axis, which every default build uses. */
 export const DEFAULT_STANCE = STANCE_STEADY.id;
 export const DEFAULT_FORMATION = FORMATION_STICK_TOGETHER.id;
@@ -407,6 +417,7 @@ export const MAX_HABITS = 3;
 export function picksProblems(
   picks: AdventurerPicks,
   lookup: (id: string) => TacticDef | undefined = (id) => (TACTICS.has(id) ? TACTICS.get(id) : undefined),
+  slots: number = MAX_HABITS,
 ): string[] {
   const problems: string[] = [];
   const one = (axis: TacticAxis, id: string): TacticDef | undefined => {
@@ -418,7 +429,10 @@ export function picksProblems(
   one('role', picks.role);
   one('range', picks.range);
   one('focus', picks.focus);
-  if (picks.habits.length > MAX_HABITS) problems.push(`${picks.habits.length} habits, at most ${MAX_HABITS}`);
+  const limit = Math.min(MAX_HABITS, slots);
+  if (picks.habits.length > limit) {
+    problems.push(limit < MAX_HABITS ? `${picks.habits.length} habits, but only ${limit} habit ${limit === 1 ? 'slot' : 'slots'}` : `${picks.habits.length} habits, at most ${MAX_HABITS}`);
+  }
   const seen = new Set<string>();
   for (const id of picks.habits) {
     if (seen.has(id)) problems.push(`habit "${id}" is picked twice`);

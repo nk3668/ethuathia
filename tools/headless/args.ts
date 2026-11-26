@@ -2,7 +2,7 @@
  * Command-line argument parsing and usage help for `tools/sim.ts` (and `int` helper shared with `tools/run-soak.ts`).
  */
 import { parseArgs } from 'node:util';
-import { CLASSES, CONTRACTS, maxOmenRank, OMENS, RACES, tacticsOn } from '../../src/content';
+import { CLASSES, CONTRACTS, maxOmenRank, OMENS, RACES, TACTICS, tacticsOn } from '../../src/content';
 import type { OmenSelection } from '../../src/content';
 import { partySize } from '../../src/meta';
 import {
@@ -47,6 +47,8 @@ export interface SimArgs {
   formation: string | null;
   /** Field the Prepare screen's random party per seed (`--recruits`, ETH-178); `party` is its size. */
   recruits: boolean;
+  /** The one habit every adventurer carries (`--habit`, ETH-194); null is none. */
+  habit: string | null;
   /** Worker threads to run seeds on (`--jobs`); 1 is a serial run. Doesn't change the results. */
   jobs: number;
   /** Write the report as JSON to this file (`--json`). */
@@ -60,7 +62,7 @@ export interface SimArgs {
 
 export const USAGE = `Usage: npm run sim -- [--seeds N] [--from S] [--cap T] [--party P]
                       [--preset fresh|progressed] [--upgrades id1,id2,...] [--rules baseline|cautious] [--opt-ins on|off]
-                      [--class ID | --race ID | --recruits] [--contract ID] [--stance ID] [--formation ID] [--omens id:rank,...]
+                      [--class ID | --race ID | --recruits] [--contract ID] [--stance ID] [--formation ID] [--habit ID] [--omens id:rank,...]
                       [--party-sweep] [--pacing] [--jobs N] [--json FILE] [--compare REF | --baseline FILE]
 
 Runs N seeded runs headlessly, each until the party settles on the bottom floor or the cap is
@@ -84,6 +86,7 @@ above the bottom or trigger stuck detection are listed at the end.
   --formation ID          the party formation every adventurer starts with, e.g. loose or tactic.spread_out (default stick_together)
   --omens ID:RANK,...     Omens switched on, each at a rank, e.g. deep_surge:3,omen.cursed_hoards:2 (default none). They need
                           not be unlocked in the town, so a sweep can measure one in isolation
+  --habit ID              give every adventurer one habit, e.g. treasure_hunter or tactic.treasure_hunter (default none)
   --recruits              field the party the Prepare screen gives a new player: random recruits from the
                           available classes and races, drawn from each seed (--party sets the size), and add
                           a per-class and per-race breakdown to the report (not with --class or --race)
@@ -121,6 +124,14 @@ function parseContentId(flag: string, kind: 'class' | 'race', raw: string | unde
   const id = raw.includes('.') ? raw : `${kind}.${raw}`;
   if (registry.has(id)) return id;
   throw new Error(`${flag} "${raw}" is not a ${kind}. Available: ${registry.all().map((d) => d.id).join(', ')}`);
+}
+
+/** Reads `--habit`: a habit option id, with or without the `tactic.` prefix. */
+function parseHabit(raw: string | undefined): string | null {
+  if (raw === undefined) return null;
+  const id = raw.includes('.') ? raw : `tactic.${raw}`;
+  if (TACTICS.has(id) && TACTICS.get(id).axis === 'habit') return id;
+  throw new Error(`--habit "${raw}" is not a habit. Available: ${tacticsOn('habit').map((d) => d.id).join(', ')}`);
 }
 
 /** Reads `--omens`: `id:rank` pairs, an id with or without the `omen.` prefix and a rank from 1 to the Omen's top rank. */
@@ -194,6 +205,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
       formation: { type: 'string' },
       omens: { type: 'string' },
       recruits: { type: 'boolean' },
+      habit: { type: 'string' },
       'party-sweep': { type: 'boolean' },
       pacing: { type: 'boolean' },
       jobs: { type: 'string' },
@@ -231,6 +243,7 @@ export function parseSimArgs(argv: readonly string[]): SimArgs {
     formation: parseFormation(values.formation),
     omens: parseOmens(values.omens),
     recruits: values.recruits ?? false,
+    habit: parseHabit(values.habit),
     partySweep: values['party-sweep'] ?? false,
     pacing: values.pacing ?? false,
     jobs: int('--jobs', values.jobs, defaultJobs(), 1, MAX_JOBS),

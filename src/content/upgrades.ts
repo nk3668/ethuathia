@@ -135,7 +135,7 @@ export function defineBuilding(def: BuildingDef): BuildingDef {
 export const CAPACITY_INFO = {
   partySize: { name: 'Party size', about: 'How many adventurers descend together.' },
   contractSlots: { name: 'Contract slots', about: 'How many contracts a run can take on at once.' },
-  ruleSlots: { name: 'Rule slots', about: 'How many behavior rules each adventurer can hold.' },
+  habitSlots: { name: 'Habit slots', about: 'How many habits each adventurer can carry.' },
   tradeBonus: {
     name: 'Trade bonus (%)',
     about: 'Extra Trophies, in percent, from the gold and carried items the party brings out of the dungeon. Omens do not multiply it.',
