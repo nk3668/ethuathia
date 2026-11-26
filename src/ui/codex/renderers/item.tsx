@@ -2,7 +2,7 @@
  * Codex view of items (ETH-061): grouped by category, with weight, value and what using one does;
  * for weapons and armor (ETH-043) the slot, base type and stats while worn.
  */
-import { attributeDef, EQUIP_SLOT_INFO, GEAR_TYPE_INFO, isAppearanceCategory, isJunk, ITEM_CATEGORIES, ITEM_CATEGORY_INFO, ITEM_STATE_INFO, ITEMS, STATUSES, UNARMED_ATTRIBUTE } from '../../../content';
+import { abilityTagsHint, abilityTagsText, attributeDef, EQUIP_SLOT_INFO, GEAR_TYPE_INFO, isAppearanceCategory, isJunk, ITEM_CATEGORIES, ITEM_CATEGORY_INFO, ITEM_STATE_INFO, ITEMS, STATUSES, UNARMED_ATTRIBUTE } from '../../../content';
 import type { Effect, ItemDef } from '../../../content';
 import { bundleStatsText, DAMAGE_FORMULA } from '../../../sim';
 import type { CodexField } from '../types';
@@ -90,6 +90,16 @@ export default defineCodexRenderer({
       },
       ...gearFields(def),
       ...(use === null ? [] : [{ label: 'When used', value: use, hint: 'What using one does. It is used up.', key: true }]),
+      ...((def.abilityTags ?? []).length === 0
+        ? []
+        : [
+            {
+              label: 'Works as',
+              value: abilityTagsText(def.abilityTags),
+              hint: `What tactics and the AI treat it as. ${abilityTagsHint(def.abilityTags)}`,
+              key: true,
+            },
+          ]),
       { label: 'Weight', value: def.weight, hint: 'Counts against the carrier’s Carry stat. Over it, the least valuable things get dropped.' },
       { label: 'Value', value: def.value, hint: 'Worth of one, which decides what an adventurer keeps when its pack is full.', key: use === null && def.gear === undefined },
       ...((def.stack ?? 1) > 1 ? [{ label: 'Stacks', value: `up to ${def.stack}`, hint: 'How many share one pack slot.' }] : []),
