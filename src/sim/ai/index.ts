@@ -2,6 +2,10 @@
  * The decision engine and the baseline AI (docs/ARCHITECTURE.md §4).
  */
 export { bestByTag, sourcesByTag } from './abilities';
+export { ACT_USE_ABILITY, TACTIC_RULE_ACTIONS } from './tacticActions';
+export { applyTactics, buildTacticRules, defaultPicks, focusPreference, optionName, resolveTactics, startingPicks, tacticPickProblems, tacticsOf } from './tactics';
+export { TACTICS_COMMANDS } from './tacticsCommand';
+export type { SetTacticsCommand } from './tacticsCommand';
 export type { SourceFilter, TaggedSource } from './abilities';
 export { COND_ALWAYS, COND_STUCK, CORE_CONDITIONS } from './conditions';
 export { BASELINE_RULES, chooseRule, DROP_TURNS, ruleDecide, STUCK_TURNS, WAIT_STUCK_TURNS } from './engine';
@@ -41,6 +45,8 @@ export type {
   Intent,
   ParamParser,
   ProgressMark,
+  ResolvedTactics,
+  TacticPicks,
   Resolved,
   ResolveResult,
   Rule,

@@ -4,7 +4,7 @@
  */
 export * from './abilityTags';
 export * from './attributes';
-export { CLASS_KIND, CLASS_LOREKEEPER, CLASS_OUTRIDER, CLASS_REAVER, CLASS_VANGUARD, CLASSES, defineClass, expectedGrowth, kitPieceIds, MAX_GROWTH_RATE, smithyKitProblems } from './classes';
+export { CLASS_KIND, classTactics, CLASS_LOREKEEPER, CLASS_OUTRIDER, CLASS_REAVER, CLASS_VANGUARD, CLASSES, defineClass, expectedGrowth, kitPieceIds, MAX_GROWTH_RATE, smithyKitProblems } from './classes';
 export type { AttributeGrowth, ClassDef, GrowthRoll } from './classes';
 export {
   defineFeature,
@@ -46,6 +46,7 @@ export * from './milestones';
 export * from './requirements';
 export * from './startPerks';
 export * from './stamps';
+export * from './tactics';
 export * from './upgrades';
 export * from './town';
 export * from './bundles';

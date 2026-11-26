@@ -7,6 +7,7 @@
  */
 import type { GridBuffer, Pos, RngState } from '../core';
 import { FEATURE_DOOR, FEATURE_FOUNTAIN, FEATURE_STAIRS_DOWN, FEATURE_STAIRS_UP, TERRAIN_FLOOR, TERRAIN_WALL } from '../content';
+import type { AdventurerPicks } from '../content';
 import type { ActionRequest } from './actions';
 import type { AiPart } from './ai/types';
 import type { CombatConfig, CombatParts } from './combat';
@@ -22,7 +23,7 @@ import type { StatsConfig, StatsParts } from './stats';
  * A branch that changes the shape sets it to (the version on main) + 1 when it rebases, so two
  * branches never ship different shapes under one number (docs/ARCHITECTURE.md, Contracts).
  */
-export const STATE_VERSION = 40;
+export const STATE_VERSION = 41;
 
 /**
  * Entity ids are positive integers handed out in order from `RunState.nextEntityId` and never
@@ -84,6 +85,12 @@ export interface AdventurerConfig {
    * config sets `stamps`. Left out, the kit carries none.
    */
   stamp?: string;
+  /**
+   * This adventurer's own tactics picks (ETH-162): role, range, focus and habits, as `tactic.*`
+   * ids. Whatever is left out comes from the class's default build, so a recruit with none plays
+   * as their class does. A roster record's stored picks arrive here (`startRun`).
+   */
+  tactics?: Partial<AdventurerPicks>;
 }
 
 /**
@@ -94,6 +101,11 @@ export interface RunConfig
   extends StatsConfig, FloorsConfig, CombatConfig, ItemsConfig, QuestsConfig, RunDomainConfig {
   /** At least one adventurer. */
   party: AdventurerConfig[];
+  /**
+   * The party's tactics at the start (ETH-162): the stance and formation (`tactic.*`,
+   * `tactic.*`) every member begins with. Left out, the neutral defaults.
+   */
+  tactics?: { stance?: string; formation?: string };
   /**
    * A hand-built first floor as text (see `parseFloorText`). Tests use it for hand-built maps.
    * Leave it out to generate the first floor from the run's seed.

@@ -58,6 +58,16 @@ function commandsAt(state: RunState, i: number): Command[] {
     // Late enough that the party is below the first floor and can't walk out before the last check.
     case 85:
       return [{ type: 'retreat' }];
+    // Tactics (ETH-162): swap picks mid-run, for one adventurer and for the party, and swap one back.
+    case 30:
+      return [{ type: 'setTactics', actor: b, role: 'tactic.healer', focus: 'tactic.strongest' }];
+    case 55:
+      return [
+        { type: 'setTactics', formation: 'tactic.loose' },
+        { type: 'setTactics', actor: a, habits: ['tactic.quick_to_quaff'] },
+      ];
+    case 62:
+      return [{ type: 'setTactics', actor: b, role: 'tactic.damage' }];
     case 20:
       return [{ type: 'playerAction', actor: a, action: { id: 'stairs', dir: 'down' } }];
     case 41:
@@ -107,6 +117,8 @@ describe('determinism', () => {
     const { events } = play(createRun(CONFIG, 3), 0, STEPS);
     const all = events.flat();
     expect(all.some((e) => e.type === 'commandRejected')).toBe(true);
+    // Four setTactics commands (role and focus; formation; habits; role again) make five tacticsSet events.
+    expect(all.filter((e) => e.type === 'tacticsSet')).toHaveLength(5);
     expect(all.some((e) => e.type === 'turnedBack' && e.reason === 'ordered')).toBe(true);
     // The run goes down the stairs, building a floor mid-run (seed 3: the party finds them within the steps).
     expect(all.some((e) => e.type === 'floorEntered' && e.firstVisit)).toBe(true);

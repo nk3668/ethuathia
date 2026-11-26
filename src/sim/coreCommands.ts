@@ -5,6 +5,8 @@
 import type { ActionRequest } from './actions';
 import { POSSESSION_COMMANDS } from './ai/possession';
 import type { PossessionCommand } from './ai/possession';
+import { TACTICS_COMMANDS } from './ai/tacticsCommand';
+import type { SetTacticsCommand } from './ai/tacticsCommand';
 import { parseRequest } from './actions';
 import type { CommandRecord } from './commands';
 import type { EntityId } from './state';
@@ -19,8 +21,8 @@ export interface PlayerActionCommand {
   action: ActionRequest;
 }
 
-/** The core domain's commands: player actions, and possession (`ai/possession.ts`, ETH-066). */
-export type CoreCommand = PlayerActionCommand | PossessionCommand;
+/** The core domain's commands: player actions, possession (`ai/possession.ts`, ETH-066) and `setTactics` (`ai/tacticsCommand.ts`, ETH-162). */
+export type CoreCommand = PlayerActionCommand | PossessionCommand | SetTacticsCommand;
 
 export const CORE_COMMANDS: CommandRecord<CoreCommand> = {
   playerAction: {
@@ -37,4 +39,5 @@ export const CORE_COMMANDS: CommandRecord<CoreCommand> = {
     },
   },
   ...POSSESSION_COMMANDS,
+  ...TACTICS_COMMANDS,
 };

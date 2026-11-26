@@ -24,6 +24,7 @@ import { MONSTER_TEMPLATE_KIND } from './monsterTemplates';
 import { OMEN_KIND } from './omens';
 import { RACE_KIND } from './races';
 import { STATUS_KIND } from './statuses';
+import { TACTIC_KIND } from './tactics';
 import type { Glyph } from './schema';
 import { TERRAIN, TERRAIN_KIND } from './terrain';
 import './town';
@@ -51,6 +52,7 @@ export const CONTENT_KINDS: readonly ContentKind[] = [
   OMEN_KIND,
   DEITY_KIND,
   DOCTRINE_KIND,
+  TACTIC_KIND,
   BUILDING_KIND,
   UPGRADE_KIND,
   GRAMMAR_KIND,
@@ -78,6 +80,7 @@ export const HINT_REQUIRED_KINDS: ReadonlySet<string> = new Set([
   'omen',
   'deity',
   'doctrine',
+  'tactic',
 ]);
 
 /** Checks that every def in `kinds` belonging to `HINT_REQUIRED_KINDS` has a non-empty `hint`. */

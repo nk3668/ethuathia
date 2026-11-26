@@ -4,7 +4,7 @@
  * run-start log line names what each adventurer carries; kit items earn no Trophies.
  */
 import { describe, expect, it } from 'vitest';
-import { checkKinds, CLASS_KIND, CLASS_VANGUARD, defineClass, ITEMS, ITEM_ASHWOOD_STAFF, ITEM_FLANGED_MACE, ITEM_OAK_CUDGEL, ITEM_ROUND_SHIELD } from '../../src/content';
+import { checkKinds, CLASS_KIND, CLASS_VANGUARD, defineClass, ITEMS, TACTICS, ITEM_ASHWOOD_STAFF, ITEM_FLANGED_MACE, ITEM_OAK_CUDGEL, ITEM_ROUND_SHIELD } from '../../src/content';
 import type { ClassDef, ContentKind } from '../../src/content';
 import { Registry } from '../../src/core';
 import type { Def } from '../../src/core';
@@ -114,7 +114,7 @@ describe('kit content validation', () => {
       ...(stamp === undefined ? {} : { stamp }),
     });
     const kind: ContentKind<ClassDef> = { ...CLASS_KIND, registry };
-    return checkKinds([kind], [ITEMS]);
+    return checkKinds([kind], [ITEMS, TACTICS]);
   }
 
   it('accepts the shipped kits and a weapon with armor', () => {

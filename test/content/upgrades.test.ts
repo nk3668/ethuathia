@@ -9,6 +9,7 @@ import {
   DEITY_KIND,
   DOCTRINE_KIND,
   ITEMS,
+  TACTICS,
   UPGRADE_KIND,
   UPGRADES,
 } from '../../src/content';
@@ -47,7 +48,7 @@ const stats = { kind: 'stat', has: (id: string) => id === 'hp' };
 function check(nodes: unknown[]): string[] {
   return checkKinds(
     [withDefs(BUILDING_KIND, [hall, other]), withDefs(UPGRADE_KIND, nodes), CLASS_KIND, DEITY_KIND],
-    [stats, ITEMS],
+    [stats, ITEMS, TACTICS],
   );
 }
 

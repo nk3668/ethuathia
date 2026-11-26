@@ -4,6 +4,7 @@
 import { clonePlain, Grid, seedStreams } from '../core';
 import type { Pos } from '../core';
 import { CLASSES, isStampId, RACES } from '../content';
+import { startingPicks, tacticPickProblems, applyTactics } from './ai/tactics';
 import { newAiPart } from './ai/types';
 import { initDomains } from './domains';
 import { giveCrate } from './items/crate';
@@ -30,6 +31,20 @@ export function adventurerActor(member: AdventurerConfig): ActorPart {
   if (!CLASSES.has(member.classId)) throw new Error(`Adventurer "${member.name}" has unknown class id "${member.classId}"`);
   if (!RACES.has(member.raceId)) throw new Error(`Adventurer "${member.name}" has unknown race id "${member.raceId}"`);
   return { energy: 0, hp: 1, mp: 0, faction: 'party' };
+}
+
+/**
+ * An adventurer's starting AI part (ETH-162): their class's default tactics, their own picks over
+ * them, and the party's stance and formation, with the rules those build. Throws, naming the
+ * adventurer, if a pick is not a playable option.
+ */
+function startingAi(member: AdventurerConfig, config: RunConfig) {
+  const picks = startingPicks(member.classId, config.tactics, member.tactics);
+  const problems = tacticPickProblems(picks);
+  if (problems.length > 0) throw new Error(`Adventurer "${member.name}" has invalid tactics: ${problems.join('; ')}`);
+  const ai = newAiPart();
+  applyTactics(ai, picks);
+  return ai;
 }
 
 /**
@@ -80,7 +95,7 @@ export function createRun(config: RunConfig, seed: number): RunState {
         ...(member.recordId === undefined ? {} : { recordId: member.recordId }),
       },
       stats: newStatsPart(),
-      ai: newAiPart(),
+      ai: startingAi(member, config),
     });
     const stamp = config.stamps === true ? (isStampId(member.stamp) ? member.stamp : CLASSES.get(member.classId).stamp) : undefined;
     const worn = giveKit(entity, member.classId, config.kitEnchant, {

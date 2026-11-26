@@ -645,7 +645,7 @@ ETH-075 20 (`ActiveStatus.by` and the killer in `track.deaths`), ETH-121 21
 (`RunConfig.watchRequirements` and the `track.requirements` tracker state), ETH-120 22 (the
 `track.chronicle` tracker state), ETH-115 23 (the stats slice's `runModifiers` and
 `runModifiersAnnounced`), ETH-114 24 (the quests slice's `objectives` and `folded`, and the
-`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`), and ETH-147 36 (the `mix` item field: hidden blessing counts in a stack of unidentified potions or scrolls), then ETH-148 37 (`AiMemory.fleeing`, `AiMemory.threats`), ETH-119 38 (`AdventurerPart.recordId` and `track.kills.byActor`), and ETH-184 39 (`track.identified`).
+`quests.objectives` tracker state), ETH-117 25 (`monster.overlay`), ETH-019 26 (`intent.goal`), ETH-025 27 (`FloorsState.respawns`, `stirAnnounced`, `lastVacated`), ETH-044 28 (`ItemsState.identifiedTypes`), ETH-094 29 (`floors.observedFountains`), ETH-091 30 (`track.kills.byMonster`), ETH-133 31 (`FloorsConfig.dungeonId`, Danger-scaled floors, variable hidden depth), ETH-134 32 (`MonsterPart.ood`, `monsterSighted.ood`, `oodSighted` chronicle kind), ETH-135 33 (`MonsterPart.groupId`, `homeRoom`, `alert`, `patrol`), and ETH-142 34 (the `track.cursedGear` tracker state and the `identifyTried` item field), then 35 (`ItemsState.heldNotes`), and ETH-147 36 (the `mix` item field: hidden blessing counts in a stack of unidentified potions or scrolls), then ETH-148 37 (`AiMemory.fleeing`, `AiMemory.threats`), ETH-119 38 (`AdventurerPart.recordId` and `track.kills.byActor`), and ETH-184 39 (`track.identified`), then 40 on main, and ETH-162 41 (`AiPart.tactics`, and the `option` tag on `Rule` and `RuleRef`).
 
 ### Contracts in the run (ETH-024)
 
@@ -1820,7 +1820,8 @@ interface RuleActionDef extends Def {
 - **Tactics, not a rules editor (M3 design, 2026-11-25, `CLAUDE.md` §5.2).** The player never
   edits rules. They pick named **tactics** (content defs, kind `tactic`, each on one axis:
   stance, formation, role, range, focus or habit), and the sim builds each adventurer's player
-  rule list from the picks. Planned shape, to be fixed in ETH-162:
+  rule list from the picks. As built in ETH-162 (`src/content/tactics.ts`, `src/sim/ai/tactics.ts`,
+  `tacticActions.ts`, `tacticsCommand.ts`):
   - **Stance, role and habits contribute rule rows** in a fixed order: stance overrides (e.g.
     *Fall back*), then habits, then role, then the baseline.
   - **Range, focus and formation are parameters** that rule actions read from `AiCtx`
@@ -1831,6 +1832,51 @@ interface RuleActionDef extends Def {
     tuned) the baseline runs as it does now, so T0 identity holds with tactics off.
   - A `setTactics` command swaps picks mid-run; the trace's `RuleRef` names the option.
   - The old "presets" and "doctrine" become saved loadouts and the stance/formation axes.
+  - **The option def** (`TacticDef`, content kind `tactic`, ids `tactic.<name>`): an `axis`, the
+    usual `name`, `description` and `hint`, then by axis either `rows` (stance, role, habit: rule
+    rows naming conditions and rule actions by id, params checked by `checkGame`) or `params`
+    (formation `{ leash, close }`, range `{ engage }`, focus `{ prefer }`, checked by
+    `tacticParamProblems`). Habits may list `exclusiveWith` (mutual, checked at load).
+    `requires` and `favors` (`{ classes }`) are validated and unused until M4. An option with no
+    rows and no effect-bearing params is **neutral**; the first option on each axis (tagged
+    `default`) is, so default picks change nothing.
+  - **Picks** are option ids: `TacticPicks` = stance, formation (the party's, kept equal on every
+    member) and role, range, focus, habits (`AdventurerPicks`, the adventurer's own, stored on a
+    roster record). They live in `AiPart.tactics`. `ClassDef.tactics` is the class's default
+    build (neutral for every class today, `classTactics`); `createRun` starts a recruit with
+    `startingPicks`: class build, then `AdventurerConfig.tactics`, then `RunConfig.tactics`
+    (stance and formation). `picksProblems` and `tacticPickProblems` reject an unknown id, an
+    option on the wrong axis, a repeated or exclusive habit and more than `MAX_HABITS` (3; habit
+    slots, ETH-194, set the real limit under it).
+  - **Building the rules** (`buildTacticRules(picks)`, pure): stance rows, then each habit's rows in
+    pick order, then the role's rows. Each row is a `Rule` carrying `option` (the option id).
+    `applyTactics` stores the picks, replaces `AiPart.rules` with that list and forgets the
+    memory that pointed into the old list (`dropped`, `still`, `waited`). The baseline follows,
+    as always. Invariant `core.tactics`: the option-tagged rules in `AiPart.rules` are exactly
+    what the picks build.
+  - **Parameters through `AiCtx`:** the engine sets `ctx.tactics` (`ResolvedTactics`) for an
+    adventurer; rule actions read it with `tacticsOf(ctx)` (falls back to resolving the actor's
+    picks) or a helper such as `focusPreference(ctx)`. Today `act.attack_adjacent` reads the
+    focus (`weakest`, the baseline's own choice, or `strongest`). Range and formation reach
+    `AiCtx` the same way and are consumed by ETH-193 and ETH-151.
+  - **Tag fallback:** rows ask for tags through `act.use_ability { tag }` (`bestByTag`). With
+    nothing of the tag it returns a `RuleSkipped`, which the engine turns into a trace note
+    named for the option ("Healer: no healing to use, carrying on as normal") on whichever rule
+    fires instead.
+  - **Trace:** an option's rule has `RuleRef { set: 'own', index, option }`, and its `ruleFired`
+    detail starts with the option's name ("Healer: using Mending draught (...)"), so the log line
+    and the party card name it. The log label of such a rule reads `tactic`.
+  - **`setTactics` command** (`tacticsCommand.ts`): with no `actor`, the party's `stance` and
+    `formation`, applied to every member; with `actor`, that adventurer's `role`, `range`,
+    `focus` and `habits`. Checked whole before anything changes; emits one `tacticsSet` event per
+    axis changed; the new rules apply at the adventurer's next decision. The sim never changes
+    picks on its own (no automatic switching). Unlock checks (Library, ETH-163) and habit slots
+    (ETH-194) belong to the callers and to those items.
+  - **Roster and saves:** `AdventurerRecord.tactics` (optional `AdventurerPicks`, adventurers
+    slice version 2, a no-op migration since old records simply have none) is set with
+    `setRecordTactics`; `startRun` copies a record's playable picks into the member's config.
+    The run state version is 41. The save envelope version is unchanged: nothing about its layout
+    changed.
 - **Stuck detection** lives in `AiMemory`: if position and explored percentage are unchanged
   for N turns, the current goal is dropped, a different one is chosen and the change is logged.
 
