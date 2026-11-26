@@ -2001,6 +2001,21 @@ As built in `src/sim/ai/` (ETH-009):
   stance."); the latch ends when the adventurer is no longer wounded. `act.rest` is ETH-189's. This never ends the run. On the
   way out, `cond.cycle_blocked_leaving → act.rest` (above `act.retreat_run`) keeps a hopeless-cycle adventurer from looping
   flee / walk back toward the stairs past the foe (the rest ends at `FLEE_HOPELESS_RECOVER_PERCENT`).
+- **Ability tags (ETH-192).** A source the AI can use (a usable item today; class abilities and
+  wands later) declares `abilityTags`, a list from the closed `ABILITY_TAGS` vocabulary in
+  `src/content/abilityTags.ts` (`heal`, `buff`, `damage`, `debuff`, `control`, `ranged`, `area`,
+  `escape`, `utility`). They are separate from the free-form `Def.tags`. The item schema requires
+  them on exactly the usable items. `bestByTag(ctx, tag, target?, filter?)` in
+  `src/sim/ai/abilities.ts` returns the best usable `TaggedSource` (pack index, power, a readable
+  reason) or `null`; tactics (ETH-162) and rule actions ask for a tag, never a class, spell or
+  item. For `heal` it picks the weakest source that covers the missing HP, else the strongest, and
+  ranks heal-over-time after healing at once. Items act on their user only, so a target other than
+  the actor yields `null` until a ranged source exists. Secrecy: an item whose type is still
+  unidentified is never a source, so the answer is the same whatever it really is; the Codex
+  "Works as" field shows tags only on the same gate as the rest of the card. `bestHealing` (the
+  baseline quaff) is built on it; its unknown-potion emergency gamble stays in the rule action.
+  `utility` (identify, uncurse) is outside the tactics-facing set: tactic options should not
+  target it. Every new ability must declare its tags (ETH-037).
 - **Speed:** a lone adventurer explores a generated Hewn Halls floor in about 200 party turns
   (280 at worst over seeds 1–100), and 100 such floors run in about 3 s in the test suite. A
   ten-floor dungeon takes a lone adventurer about 2,400 turns and a party of four about 1,200.

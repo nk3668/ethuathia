@@ -7,7 +7,7 @@ priority: P2
 milestone: M3
 epic: adventurer-ai
 size: M
-depends_on: [ETH-148]
+depends_on: [ETH-148, ETH-189]
 created: 2026-11-24
 updated: 2026-11-25
 ---
@@ -58,3 +58,4 @@ help, wastes it.
 - 2026-11-25: Now `ready` (M3 kickoff). The sim gate now matches the 2026-11-25 policy (no T2 in work items).
 - 2026-11-25: Implemented, `pending-review`. `src/sim/combat/escape.ts`: `escapeStep` (tie-break among flee steps within `ESCAPE_TIE_MARGIN`, toward an ally, then the stairs up) and `cond.boxed_in`. Tests in `test/sim/escape.test.ts`.
 - 2026-11-25: Nate decided that one adventurer must never send the whole party home; ending a run early is the player's decision (a picked stance such as Fall back). Rebased on ETH-189 (e7cc372). `cond.boxed_in` now rests (`act.rest`, latch `AiMemory.boxedIn`) and logs one line per episode ending "Consider the Fall back stance", instead of retreating. Also added `cond.cycle_blocked_leaving → act.rest` above `act.retreat_run`: on the way out, flee and retreat_run looped to the turn cap in party-3 seeds 6 and 27 (60-seed run). Party 3 seed 30 still caps at 60 seeds: chronically wounded party on floor 9, ETH-189 rest/flee cycles never recover (see the PR).
+- 2026-11-25: Depends on ETH-189: both change the flee code, so this one builds on ETH-189's fix.

@@ -519,6 +519,19 @@ describe('Explain', () => {
     expect(tip.textContent).toContain('Unidentified');
     expect(tip.textContent).not.toContain('Mending draught');
     expect(tip.textContent).not.toContain('heals 12 HP');
+    // Ability tags (ETH-192) are as hidden as the effect: an unidentified card never says "Healing".
+    expect(tip.textContent).not.toContain('Healing');
+    expect(tip.textContent).not.toContain('Works as');
+  });
+
+  it("shows an identified item's ability tags in plain words (ETH-192)", async () => {
+    const user = userEvent.setup();
+    bank({ 'item.mending_draught': ['seen'] });
+    render(<Explain id="item.mending_draught" />);
+    await user.tab();
+    const tip = await screen.findByRole('tooltip');
+    expect(tip.textContent).toContain('Works as');
+    expect(tip.textContent).toContain('Healing');
   });
 
   it('includes an Enchantments section in the Codex (ETH-044)', () => {
